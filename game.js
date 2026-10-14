@@ -6,8 +6,12 @@
   "use strict";
 
   const STORAGE_KEY = "vocabSpotlight_v1";
-  const LEVELS = window.VOCAB_LEVELS || [];
-  const LEVEL_COUNT = LEVELS.length;
+  const TRACKS = (window.VOCAB_TRACKS || [{ id: "core", name: "原版核心" }]).map((t) =>
+    t.id === "core" ? Object.assign({}, t, { sets: window.VOCAB_LEVELS || [], titles: (window.VOCAB_LEVELS || []).map((_, i) => "原版核心 · 第" + (i + 1) + "组") }) : t
+  );
+  let currentTrack = "core";
+  let LEVELS = TRACKS[0].sets || [];
+  let LEVEL_COUNT = LEVELS.length;
   const MIN_MS = 60 * 1000;
   const DAY_MS = 24 * 60 * 60 * 1000;
   /** Learning step: 10 minutes */
@@ -59,7 +63,19 @@
   const $ = (id) => document.getElementById(id);
 
   function cardKey(levelIdx, word) {
-    return levelIdx + "::" + word.toLowerCase();
+    // core track keeps legacy keys so old backups stay valid
+    return (currentTrack === "core" ? "" : currentTrack + "|") + levelIdx + "::" + word.toLowerCase();
+  }
+
+  /** Add v6 fields (tracks, learning log, profile) to a save object. */
+  function extendSave(sv, data) {
+    data = data || {};
+    sv.track = data.track || "core";
+    sv.trackUnlock = data.trackUnlock || {};
+    sv.trackStars = data.trackStars || {};
+    sv.daily = data.daily || {};
+    sv.profile = data.profile || { name: "", cls: "" };
+    return sv;
   }
 
   function defaultCardProg() {
@@ -99,7 +115,7 @@
         const data = JSON.parse(raw);
         const cards = data.cards || {};
         for (const k of Object.keys(cards)) cards[k] = migrateCard(cards[k]);
-        return {
+        return extendSave({
           points: data.points || 0,
           streak: data.streak || 0,
           bestStreak: data.bestStreak || 0,
@@ -109,10 +125,10 @@
           sortMode: data.sortMode || "default",
           voiceOn: data.voiceOn !== false,
           dueOnly: !!data.dueOnly,
-        };
+        }, data);
       }
     } catch (_) {}
-    return {
+    return extendSave({
       points: 0,
       streak: 0,
       bestStreak: 0,
@@ -122,7 +138,7 @@
       sortMode: "default",
       voiceOn: true,
       dueOnly: false,
-    };
+    }, {});
   }
 
   function persist() {
@@ -277,7 +293,7 @@
       const cs = levelClearStats(i);
       const clearLabel = cs.ready ? "已通关" : ("通关 " + cs.solid + "/" + cs.need);
       card.innerHTML =
-        '<div class="ln">Level ' + i + (cs.ready ? " ✓" : "") + "</div>" +
+        '<div class="ln">' + escapeHtml(setTitle(i)) + (cs.ready ? " ✓" : "") + "</div>" +
         '<div class="meta">' + words.length + " words · " + mastered + "/" + words.length + " ★ · " +
         (function(){ const c=countSrs(i); return "Due "+c.due; })() +
         " · " + clearLabel + "</div>" +
@@ -1036,6 +1052,7 @@
     const fb = $("feedback");
     const nowMs = Date.now();
 
+    logAnswer(correct, prog);
     if (correct) {
       // Hype first; SRS waits for Good / Easy
       save.streak += 1;
@@ -1049,7 +1066,7 @@
       const easyLabel = previewScheduleLabel(prog, 2);
       fb.innerHTML =
         '<div class="fb-title">Correct! +' + bonus + "</div>" +
-        '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+        '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" + speakButtons(currentCard) +
         '<div class="fb-meta">选择复习力度（Anki：Good / Easy）</div>' +
         '<div class="rate-row">' +
         '<button type="button" class="rate-btn good" id="btn-rate-good">Good · ' + escapeHtml(goodLabel) + "</button>" +
@@ -1102,12 +1119,9 @@
           (currentCard.scene ? "场景：" + escapeHtml(currentCard.scene) : "") +
           "</div>";
       }
-      if (currentCard.example_en) {
-        why += '<div class="fb-ex">例：' + escapeHtml(currentCard.example_en) + "</div>";
-      }
       why +=
         '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
-      fb.innerHTML = '<div class="fb-title">Not yet</div>' + why;
+      fb.innerHTML = '<div class="fb-title">再想想 Not yet</div>' + speakButtons(currentCard) + why;
       fb.className = "bad show";
 
       flashStage("bad");
@@ -1327,7 +1341,7 @@
     return {
       app: "QuizMario",
       key: STORAGE_KEY,
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       save: save,
     };
@@ -1339,7 +1353,7 @@
     if (!payload || typeof payload !== "object") throw new Error("Invalid backup");
     const cards = payload.cards || {};
     for (const k of Object.keys(cards)) cards[k] = migrateCard(cards[k]);
-    save = {
+    save = extendSave({
       points: payload.points || 0,
       streak: payload.streak || 0,
       bestStreak: payload.bestStreak || 0,
@@ -1349,7 +1363,8 @@
       sortMode: payload.sortMode || "default",
       voiceOn: payload.voiceOn !== false,
       dueOnly: !!payload.dueOnly,
-    };
+    }, payload);
+    applyTrack(save.track, true);
     sortMode = save.sortMode === "root_affix" || save.sortMode === "scene" ? save.sortMode : "default";
     voiceOn = save.voiceOn !== false;
     dueOnly = !!save.dueOnly;
@@ -1441,6 +1456,278 @@
     reader.readAsText(file);
   }
 
+  // ===== v6: tracks · learning data · report code · pronunciation =====
+  function findTrack(id) { return TRACKS.find((t) => t.id === id) || TRACKS[0]; }
+
+  function setTitle(i) {
+    const t = findTrack(currentTrack);
+    return (t.titles && t.titles[i - 1]) || ("第" + i + "组");
+  }
+
+  /** Switch active word track; per-track unlock/stars are swapped in and out of save. */
+  function applyTrack(id, initial) {
+    const t = findTrack(id);
+    if (initial) {
+      // on load/import, save.unlockedLevel/levelStars belong to save.track
+      save.trackUnlock[t.id] = save.unlockedLevel;
+      save.trackStars[t.id] = save.levelStars;
+    } else {
+      save.trackUnlock[currentTrack] = save.unlockedLevel;
+      save.trackStars[currentTrack] = save.levelStars;
+    }
+    currentTrack = t.id;
+    LEVELS = t.sets || [];
+    LEVEL_COUNT = LEVELS.length;
+    save.track = t.id;
+    save.unlockedLevel = Math.max(1, save.trackUnlock[t.id] || 1);
+    save.levelStars = save.trackStars[t.id] || {};
+    currentLevel = Math.min(currentLevel || 1, LEVEL_COUNT || 1);
+    const sel = $("track-select");
+    if (sel) sel.value = t.id;
+    const d = $("track-desc");
+    if (d) d.textContent = (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + LEVELS.reduce((a, s) => a + s.length, 0) + " 词";
+  }
+
+  function switchTrack(id) {
+    applyTrack(id, false);
+    currentLevel = 1;
+    persist();
+    renderLevels();
+    renderStats();
+  }
+
+  function withTrack(id, fn) {
+    const prev = currentTrack, pl = LEVELS, pc = LEVEL_COUNT, pu = save.unlockedLevel, ps = save.levelStars;
+    currentTrack = id; LEVELS = findTrack(id).sets || []; LEVEL_COUNT = LEVELS.length;
+    try { return fn(); } finally { currentTrack = prev; LEVELS = pl; LEVEL_COUNT = pc; save.unlockedLevel = pu; save.levelStars = ps; }
+  }
+
+  function dayKey(ms) {
+    const d = new Date(ms || Date.now());
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  /** Daily log: c/w = correct/wrong, rc/rw = answers on cards already in review (retention), n = new cards seen. */
+  function logAnswer(correct, prog) {
+    const k = dayKey();
+    const d = save.daily[k] || (save.daily[k] = { c: 0, w: 0, rc: 0, rw: 0, n: 0 });
+    if (correct) d.c++; else d.w++;
+    if (isNewCard(prog)) d.n++;
+    else if (prog.state === "review" && (prog.interval || 0) >= 1) { if (correct) d.rc++; else d.rw++; }
+  }
+
+  function activeStreak() {
+    let n = 0;
+    const t = new Date(); t.setHours(12, 0, 0, 0);
+    if (!save.daily[dayKey(t.getTime())]) t.setDate(t.getDate() - 1); // today not yet studied: count to yesterday
+    while (save.daily[dayKey(t.getTime())]) { n++; t.setDate(t.getDate() - 1); }
+    return n;
+  }
+
+  function lastDays(n) {
+    const out = [];
+    const t = new Date(); t.setHours(12, 0, 0, 0);
+    for (let i = n - 1; i >= 0; i--) {
+      const x = new Date(t); x.setDate(t.getDate() - i);
+      const k = dayKey(x.getTime());
+      out.push(Object.assign({ day: k }, save.daily[k] || { c: 0, w: 0, rc: 0, rw: 0, n: 0 }));
+    }
+    return out;
+  }
+
+  function trackSummary(id) {
+    return withTrack(id, () => {
+      let learned = 0, total = 0;
+      const cleared = [];
+      LEVELS.forEach((words, li) => {
+        for (const w of words) {
+          total++;
+          const p = save.cards[cardKey(li, w.word)];
+          if (p && !isNewCard(p) && p.state === "review") learned++;
+        }
+        if (clearReadyPure(li, words)) cleared.push(li + 1);
+      });
+      return { learned, total, cleared, sets: LEVELS.length };
+    });
+  }
+
+  /** Same pass rule as levelClearStats, but never creates card entries. */
+  function clearReadyPure(li, words) {
+    const now = Date.now();
+    let neu = 0, due = 0, learning = 0, solid = 0;
+    for (const w of words) {
+      const p = save.cards[cardKey(li, w.word)];
+      if (!p || isNewCard(p)) { neu++; continue; }
+      if (isDue(p, now)) due++;
+      if (p.state === "review" && (p.interval || 0) >= CLEAR_MIN_INTERVAL_DAYS) solid++; else learning++;
+    }
+    return words.length > 0 && neu === 0 && due === 0 && learning === 0 && solid >= Math.ceil(words.length * CLEAR_SOLID_PCT);
+  }
+
+  function weakWords(limit) {
+    const list = [];
+    for (const t of TRACKS) {
+      withTrack(t.id, () => {
+        LEVELS.forEach((words, li) => {
+          for (const w of words) {
+            const p = save.cards[cardKey(li, w.word)];
+            if (p && (p.wrong || 0) > 0) list.push([w.word, w.meaning_zh, p.wrong || 0, (p.correct || 0)]);
+          }
+        });
+      });
+    }
+    list.sort((a, b) => (b[2] - b[3] * 0.3) - (a[2] - a[3] * 0.3));
+    return list.slice(0, limit || 12);
+  }
+
+  function computeStats() {
+    const d7 = lastDays(7);
+    const sum = (arr, f) => arr.reduce((a, x) => a + (x[f] || 0), 0);
+    const all = Object.values(save.daily);
+    const tracks = {};
+    let learned = 0;
+    for (const t of TRACKS) { tracks[t.id] = trackSummary(t.id); learned += tracks[t.id].learned; }
+    const rc7 = sum(d7, "rc"), rw7 = sum(d7, "rw"), c7 = sum(d7, "c"), w7 = sum(d7, "w");
+    return {
+      streak: activeStreak(),
+      activeDays: Object.keys(save.daily).length,
+      learned,
+      answers: sum(all, "c") + sum(all, "w"),
+      acc: (sum(all, "c") + sum(all, "w")) ? sum(all, "c") / (sum(all, "c") + sum(all, "w")) : null,
+      acc7: (c7 + w7) ? c7 / (c7 + w7) : null,
+      ret7: (rc7 + rw7) ? rc7 / (rc7 + rw7) : null,
+      tracks,
+    };
+  }
+
+  const pct = (x) => (x == null ? "—" : Math.round(x * 100) + "%");
+
+  function renderStats() {
+    const box = $("stats-body");
+    if (!box) return;
+    const st = computeStats();
+    const days = lastDays(14);
+    const maxN = Math.max(1, ...days.map((d) => d.c + d.w));
+    const W = 300, H = 110, bw = W / days.length;
+    let bars = "", line = "";
+    days.forEach((d, i) => {
+      const n = d.c + d.w;
+      const h = (n / maxN) * (H - 20);
+      bars += '<rect x="' + (i * bw + 3) + '" y="' + (H - 14 - h) + '" width="' + (bw - 6) + '" height="' + h + '" rx="2" fill="rgba(61,231,255,.55)"><title>' + d.day + " 答题 " + n + "</title></rect>";
+      if (n) {
+        const y = H - 14 - (d.c / n) * (H - 20);
+        line += (line ? " L" : "M") + (i * bw + bw / 2).toFixed(1) + " " + y.toFixed(1);
+      }
+      if (i % 2 === 0) bars += '<text x="' + (i * bw + bw / 2) + '" y="' + (H - 2) + '" font-size="8" text-anchor="middle" fill="#aaa">' + d.day.slice(5) + "</text>";
+    });
+    const svg = '<svg viewBox="0 0 ' + W + " " + H + '" class="stats-chart" role="img" aria-label="近14天答题量与正确率">' + bars +
+      (line ? '<path d="' + line + '" fill="none" stroke="#ffd84d" stroke-width="2"/>' : "") + "</svg>";
+    let tr = "";
+    for (const t of TRACKS) {
+      const s = st.tracks[t.id];
+      tr += "<li>" + escapeHtml(t.name) + "：已学会 " + s.learned + "/" + s.total + " · 通关 " + s.cleared.length + "/" + s.sets + " 组</li>";
+    }
+    box.innerHTML =
+      '<div class="stats-grid">' +
+      "<div><b>" + st.streak + "</b>连续打卡(天)</div>" +
+      "<div><b>" + st.learned + "</b>已学会词数</div>" +
+      "<div><b>" + pct(st.acc7) + "</b>近7天正确率</div>" +
+      "<div><b>" + pct(st.ret7) + "</b>近7天复习保持率</div>" +
+      "</div>" + svg +
+      '<p class="stats-legend">柱：每日答题量 · 黄线：每日正确率 · 累计答题 ' + st.answers + " 次 · 学习 " + st.activeDays + " 天</p>" +
+      '<ul class="stats-tracks">' + tr + "</ul>";
+  }
+
+  // ---- report code for teacher (compact, no full card dump) ----
+  function buildReport() {
+    persist();
+    const st = computeStats();
+    const tr = {};
+    for (const id of Object.keys(st.tracks)) { const s = st.tracks[id]; tr[id] = [s.learned, s.total, s.cleared]; }
+    return {
+      v: 1,
+      n: (save.profile.name || "").slice(0, 40),
+      k: (save.profile.cls || "").slice(0, 40).toUpperCase(),
+      at: new Date().toISOString(),
+      s: st.streak, ad: st.activeDays, a: st.answers, acc: st.acc, a7: st.acc7, r7: st.ret7,
+      tr,
+      d: lastDays(30).filter((d) => d.c + d.w).map((d) => [d.day, d.c, d.w, d.rc, d.rw, d.n]),
+      wk: weakWords(12),
+    };
+  }
+
+  function reportCode() {
+    return "QMR1." + btoa(unescape(encodeURIComponent(JSON.stringify(buildReport()))));
+  }
+
+  // ---- pronunciation (browser speechSynthesis, en-GB preferred) ----
+  function pickGbVoice() {
+    if (!("speechSynthesis" in window)) return null;
+    const vs = window.speechSynthesis.getVoices() || [];
+    return vs.find((v) => /en[-_]GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null;
+  }
+
+  function sayEn(text) {
+    if (!text || !("speechSynthesis" in window)) return false;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-GB";
+      const v = pickGbVoice();
+      if (v) u.voice = v;
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+      return true;
+    } catch (_) { return false; }
+  }
+
+  function speakButtons(card) {
+    return '<div class="speak-row">' +
+      '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '">🔈 读单词</button>' +
+      (card.example_en ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '">🔈 读例句</button>' +
+        '<div class="fb-ex">例：' + escapeHtml(card.example_en) + "</div>" : "") +
+      "</div>";
+  }
+
+  function initV6Ui() {
+    const sel = $("track-select");
+    if (sel) {
+      sel.innerHTML = TRACKS.map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + "</option>").join("");
+      sel.value = currentTrack;
+      sel.addEventListener("change", () => switchTrack(sel.value));
+      applyTrack(currentTrack, false);
+    }
+    document.addEventListener("click", (e) => {
+      const b = e.target.closest && e.target.closest(".speak-btn");
+      if (b) { e.preventDefault(); sayEn(b.getAttribute("data-say")); }
+    });
+    if ("speechSynthesis" in window) window.speechSynthesis.onvoiceschanged = () => {};
+    const nm = $("profile-name"), cl = $("profile-cls");
+    if (nm) nm.value = save.profile.name || "";
+    if (cl) cl.value = save.profile.cls || "";
+    const saveProfile = () => {
+      save.profile = { name: (nm ? nm.value : "").trim(), cls: (cl ? cl.value : "").trim().toUpperCase() };
+      persist();
+    };
+    if (nm) nm.addEventListener("change", saveProfile);
+    if (cl) cl.addEventListener("change", saveProfile);
+    const rb = $("btn-report");
+    if (rb) rb.addEventListener("click", () => {
+      saveProfile();
+      const st = $("report-status");
+      if (!save.profile.name || !save.profile.cls) { if (st) st.textContent = "请先填写姓名和班级码。"; return; }
+      const code = reportCode();
+      $("report-code").value = code;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(() => st && (st.textContent = "学习报告码已复制，发给老师即可（微信/QQ）。"), () => st && (st.textContent = "已生成，请手动全选复制。"));
+      } else if (st) st.textContent = "已生成，请手动全选复制。";
+    });
+    renderStats();
+  }
+
+  // test hook (harmless in production)
+  window.__QM = { switchTrack, computeStats, buildReport, reportCode, get track() { return currentTrack; }, get levels() { return LEVELS; } };
+
   // --- Wire UI ---
 
   if ($("btn-export")) $("btn-export").addEventListener("click", exportProgressFile);
@@ -1470,6 +1757,7 @@
       voiceOn = true;
       dueOnly = false;
       currentLevel = 1;
+      applyTrack("core", true);
       killStreak = 0;
       pendingRate = false;
       refreshHud();
@@ -1498,10 +1786,12 @@
   });
   $("btn-quit").addEventListener("click", () => {
     showScreen("home");
+    renderStats();
     refreshHud();
   });
   $("btn-clear-home").addEventListener("click", () => {
     showScreen("home");
+    renderStats();
     refreshHud();
   });
   $("btn-next-level").addEventListener("click", () => {
@@ -1595,7 +1885,9 @@
   if (!LEVELS.length) {
     $("screen-home").innerHTML = "<p style='padding:24px;text-align:center'>No vocabulary loaded. Check words.js.</p>";
   }
+  applyTrack(save.track, true);
   updateSortButtons();
   syncDueOnlyBtn();
   refreshHud();
+  initV6Ui();
 })();

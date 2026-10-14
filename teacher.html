@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vocab Spotlight · 教师看板</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0f1024; color: #eee; margin: 0; padding: 16px; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; } .sub { opacity: .75; font-size: .88rem; margin: 0 0 12px; }
+  textarea { width: 100%; min-height: 120px; box-sizing: border-box; background: #14162b; color: #fff; border: 1px solid #444; border-radius: 10px; padding: 8px; font-size: .78rem; }
+  button, .btn { background: #3de7ff; color: #000; border: 0; border-radius: 10px; padding: 10px 14px; font-size: .95rem; margin: 6px 6px 0 0; cursor: pointer; }
+  button.ghost { background: transparent; color: #3de7ff; border: 1px solid #3de7ff; }
+  select { padding: 8px; border-radius: 8px; background: #14162b; color: #fff; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 14px 0; }
+  .cards div { background: rgba(255,255,255,.06); border-radius: 10px; padding: 10px; text-align: center; font-size: .78rem; }
+  .cards b { display: block; font-size: 1.4rem; color: #ffd84d; }
+  .tbl-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+  th, td { border-bottom: 1px solid #333; padding: 6px; text-align: left; white-space: nowrap; }
+  th { color: #3de7ff; cursor: pointer; }
+  .bar { display: inline-block; height: 8px; background: #3de7ff; border-radius: 4px; vertical-align: middle; }
+  #status { font-size: .85rem; margin-top: 6px; color: #ffd84d; }
+  a { color: #3de7ff; }
+</style>
+</head>
+<body>
+  <h1>🧑‍🏫 教师看板 · 班级学习数据</h1>
+  <p class="sub">纯静态页面：数据只在你这台设备的浏览器里处理，不上传任何服务器。把学生发来的「学习报告码」（QMR1. 开头）粘贴到下面，每行一个；也可导入 .json / .txt 文件。<a href="index.html">← 返回游戏</a></p>
+  <textarea id="codes" placeholder="QMR1.xxxxx&#10;QMR1.yyyyy"></textarea>
+  <div>
+    <button id="btn-parse">导入报告码</button>
+    <button class="ghost" id="btn-file">导入文件</button>
+    <input id="file" type="file" accept=".json,.txt,application/json,text/plain" multiple hidden>
+    <button class="ghost" id="btn-csv">导出 CSV</button>
+    <button class="ghost" id="btn-clear">清空</button>
+    班级：<select id="cls"><option value="">全部</option></select>
+  </div>
+  <div id="status"></div>
+  <div class="cards" id="summary"></div>
+  <h3>学生进度</h3>
+  <div class="tbl-wrap"><table id="tbl"></table></div>
+  <h3>全班易错词 Top 20</h3>
+  <div class="tbl-wrap"><table id="weak"></table></div>
+  <script src="teacher.js"></script>
+</body>
+</html>
