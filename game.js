@@ -649,10 +649,53 @@
 
   let preferredVoice = null;
   let audioCtx = null;
+  // getVoices() inside a voiceschanged listener re-fires voiceschanged on
+  // Safari and on Chrome when the speech engine wakes on the first tap.
+  // pickEnglishVoice is that listener, so an unguarded call recurses and
+  // wedges the main thread (the 🔈 tap, including 闹钟 / alarm, never returns).
+  let pickingVoice = false;
+  let cachedVoices = [];
+  let speakGen = 0;
+
+  function readVoices() {
+    if (!window.speechSynthesis) return cachedVoices;
+    // Hold the lock through the rest of this turn. A voiceschanged queued by
+    // getVoices() then no-ops instead of calling getVoices() again.
+    if (pickingVoice) return cachedVoices;
+    pickingVoice = true;
+    try {
+      cachedVoices = speechSynthesis.getVoices() || [];
+      return cachedVoices;
+    } catch (_) {
+      return cachedVoices;
+    } finally {
+      setTimeout(() => { pickingVoice = false; }, 0);
+    }
+  }
+
+  function cancelSpeech() {
+    speakGen++;
+    try {
+      if (window.speechSynthesis) speechSynthesis.cancel();
+    } catch (_) {}
+  }
+
+  /** cancel() + speak() in the same turn hangs speechSynthesis and can freeze the tab. */
+  function speakUtterance(u) {
+    const ss = window.speechSynthesis;
+    if (!ss || !u) return;
+    const gen = ++speakGen;
+    try { ss.cancel(); } catch (_) {}
+    setTimeout(() => {
+      if (gen !== speakGen) return;
+      try { ss.speak(u); } catch (_) {}
+    }, 0);
+  }
 
   function pickEnglishVoice() {
-    if (!window.speechSynthesis) return null;
-    const voices = speechSynthesis.getVoices() || [];
+    if (!window.speechSynthesis || pickingVoice) return preferredVoice;
+    const voices = readVoices();
+    if (!voices.length) return preferredVoice;
     // Prefer deeper / announcer-like English male voices when available
     const prefer = [
       /Daniel/i,
@@ -758,14 +801,13 @@
     }
     if (!clips.length) return false;
     stopCustomVo();
-    if (window.speechSynthesis) {
-      try {
-        speechSynthesis.cancel();
-      } catch (_) {}
-    }
+    cancelSpeech();
     let i = 0;
+    let steps = 0;
     const playNext = () => {
-      if (i >= clips.length) {
+      // onerror and a rejected play() can both re-enter; cap so a broken clip
+      // cannot recurse on the main thread.
+      if (i >= clips.length || steps++ > clips.length) {
         voPlaying = [];
         return;
       }
@@ -795,7 +837,6 @@
     if (!window.speechSynthesis) return;
     try {
       stopCustomVo();
-      speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-US";
       const p = resolveVoiceProfile(text, opts);
@@ -807,7 +848,7 @@
         u.voice = v;
         if (v.lang) u.lang = v.lang;
       }
-      speechSynthesis.speak(u);
+      speakUtterance(u);
     } catch (_) {}
   }
 
@@ -1014,15 +1055,38 @@
     }
   }
 
+  /**
+   * 进度百分比 for the current word set (how far through this set, not 进步).
+   * A card counts once it meets the existing clearance "solid" review-state:
+   * state === "review" and interval >= CLEAR_MIN_INTERVAL_DAYS.
+   * pct = round(solid / total * 100). 100% means every card in the set is solid.
+   * The pass bar is still 80% of the set (stats.need), tracked separately.
+   */
+  function setCompletionPercent(stats) {
+    const total = stats && stats.total ? stats.total : 0;
+    if (!total) return 0;
+    return Math.max(0, Math.min(100, Math.round((stats.solid / total) * 100)));
+  }
+
   function updateProgress() {
     const s = levelClearStats(currentLevel);
-    const pct = s.need ? Math.min(100, Math.round((s.solid / s.need) * 100)) : 0;
-    $("play-progress").style.width = pct + "%";
+    const pct = setCompletionPercent(s);
+    const bar = $("play-progress");
+    if (bar) bar.style.width = pct + "%";
+    const pctEl = $("set-progress-pct");
+    if (pctEl) pctEl.textContent = pct + "%";
+    const barWrap = $("set-progress-bar");
+    if (barWrap) {
+      barWrap.setAttribute("aria-valuenow", String(pct));
+      barWrap.setAttribute("aria-valuetext", "本组进度 " + pct + "%");
+    }
     const label = $("play-clear-label");
     if (label) {
       label.textContent = s.ready
-        ? "通关完成"
-        : ("通关进度 " + s.solid + "/" + s.need + " · 新" + s.neu + " 到期" + s.due + " 学" + s.learning);
+        ? "通关完成 · 本组进度 " + pct + "%"
+        : ("本组进度 " + pct + "% · 巩固 " + s.solid + "/" + s.total +
+           " · 通关需 " + s.need +
+           " · 新" + s.neu + " 到期" + s.due + " 学" + s.learning);
     }
   }
 
@@ -1663,20 +1727,19 @@
   // ---- pronunciation (browser speechSynthesis, en-GB preferred) ----
   function pickGbVoice() {
     if (!("speechSynthesis" in window)) return null;
-    const vs = window.speechSynthesis.getVoices() || [];
+    const vs = readVoices();
     return vs.find((v) => /en[-_]GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null;
   }
 
   function sayEn(text) {
     if (!text || !("speechSynthesis" in window)) return false;
     try {
-      window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-GB";
       const v = pickGbVoice();
       if (v) u.voice = v;
       u.rate = 0.9;
-      window.speechSynthesis.speak(u);
+      speakUtterance(u);
       return true;
     } catch (_) { return false; }
   }
