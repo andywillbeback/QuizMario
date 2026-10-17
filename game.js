@@ -1,13 +1,18 @@
 /* Vocab Spotlight — quiz-show English vocabulary trainer
  * Spaced repetition (Anki-lite / SM-2) + active recall. Offline HTML5.
- * v5: Good/Easy · ≥50/set · clearance · custom VO · export/import backup · PWA homescreen
+ * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
  */
 (function () {
   "use strict";
 
   const STORAGE_KEY = "vocabSpotlight_v1";
   const TRACKS = (window.VOCAB_TRACKS || [{ id: "core", name: "原版核心" }]).map((t) =>
-    t.id === "core" ? Object.assign({}, t, { sets: window.VOCAB_LEVELS || [], titles: (window.VOCAB_LEVELS || []).map((_, i) => "原版核心 · 第" + (i + 1) + "组") }) : t
+    t.id === "core" ? Object.assign({}, t, { sets: window.VOCAB_LEVELS || [], titles: (window.VOCAB_LEVELS || []).map((part, i) => {
+      const setNum = Math.floor(i / 2) + 1;
+      const partLetter = (i % 2 === 0) ? "A" : "B";
+      const scene = (part && part[0] && part[0].scene) ? part[0].scene : "复习 · Review";
+      return scene + " · 第" + setNum + "组 · Part " + partLetter;
+    }) }) : t
   );
   let currentTrack = "core";
   let LEVELS = TRACKS[0].sets || [];
@@ -393,6 +398,7 @@
       word: w.word,
       meaning_zh: w.meaning_zh,
       example_en: w.example_en || "",
+      example_zh: w.example_zh || "",
       pos: w.pos || "",
       roots: w.roots || "",
       affix: w.affix || "",
@@ -554,7 +560,7 @@
     $("choices").hidden = true;
     $("type-row").style.display = "flex";
     showScreen("play");
-    $("play-level").textContent = String(levelNum);
+    $("play-level").textContent = setTitle(levelNum);
     updateSortButtons();
     syncDueOnlyBtn();
     renderBrowseStrip();
@@ -624,6 +630,9 @@
   };
   /** Longest-first so "Double kill" wins over shorter substrings. */
   const VO_PHRASE_KEYS = Object.keys(CUSTOM_VO).sort((a, b) => b.length - a.length);
+
+  // Part A / Part B clearance lines. Not in CUSTOM_VO, so they never play a kill clip.
+  const PART_CLEAR_TTS = { A: "Part A clear", B: "Part B clear" };
   /** @type {Object.<string, HTMLAudioElement>} */
   const voCache = {};
   /** @type {HTMLAudioElement[]} */
@@ -649,10 +658,53 @@
 
   let preferredVoice = null;
   let audioCtx = null;
+  // getVoices() inside a voiceschanged listener re-fires voiceschanged on
+  // Safari and on Chrome when the speech engine wakes on the first tap.
+  // pickEnglishVoice is that listener, so an unguarded call recurses and
+  // wedges the main thread (the 🔈 tap, including 闹钟 / alarm, never returns).
+  let pickingVoice = false;
+  let cachedVoices = [];
+  let speakGen = 0;
+
+  function readVoices() {
+    if (!window.speechSynthesis) return cachedVoices;
+    // Hold the lock through the rest of this turn. A voiceschanged queued by
+    // getVoices() then no-ops instead of calling getVoices() again.
+    if (pickingVoice) return cachedVoices;
+    pickingVoice = true;
+    try {
+      cachedVoices = speechSynthesis.getVoices() || [];
+      return cachedVoices;
+    } catch (_) {
+      return cachedVoices;
+    } finally {
+      setTimeout(() => { pickingVoice = false; }, 0);
+    }
+  }
+
+  function cancelSpeech() {
+    speakGen++;
+    try {
+      if (window.speechSynthesis) speechSynthesis.cancel();
+    } catch (_) {}
+  }
+
+  /** cancel() + speak() in the same turn hangs speechSynthesis and can freeze the tab. */
+  function speakUtterance(u) {
+    const ss = window.speechSynthesis;
+    if (!ss || !u) return;
+    const gen = ++speakGen;
+    try { ss.cancel(); } catch (_) {}
+    setTimeout(() => {
+      if (gen !== speakGen) return;
+      try { ss.speak(u); } catch (_) {}
+    }, 0);
+  }
 
   function pickEnglishVoice() {
-    if (!window.speechSynthesis) return null;
-    const voices = speechSynthesis.getVoices() || [];
+    if (!window.speechSynthesis || pickingVoice) return preferredVoice;
+    const voices = readVoices();
+    if (!voices.length) return preferredVoice;
     // Prefer deeper / announcer-like English male voices when available
     const prefer = [
       /Daniel/i,
@@ -758,14 +810,13 @@
     }
     if (!clips.length) return false;
     stopCustomVo();
-    if (window.speechSynthesis) {
-      try {
-        speechSynthesis.cancel();
-      } catch (_) {}
-    }
+    cancelSpeech();
     let i = 0;
+    let steps = 0;
     const playNext = () => {
-      if (i >= clips.length) {
+      // onerror and a rejected play() can both re-enter; cap so a broken clip
+      // cannot recurse on the main thread.
+      if (i >= clips.length || steps++ > clips.length) {
         voPlaying = [];
         return;
       }
@@ -795,7 +846,6 @@
     if (!window.speechSynthesis) return;
     try {
       stopCustomVo();
-      speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-US";
       const p = resolveVoiceProfile(text, opts);
@@ -807,7 +857,7 @@
         u.voice = v;
         if (v.lang) u.lang = v.lang;
       }
-      speechSynthesis.speak(u);
+      speakUtterance(u);
     } catch (_) {}
   }
 
@@ -922,12 +972,13 @@
           ? "学习中 Learning"
           : formatDue(prog);
     metaBits.unshift(srsTag);
+    const hint = hintForCard(currentCard);
+    const exampleZh = currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
     $("prompt-hint").innerHTML =
       starsHtml +
       (metaBits.length ? "  ·  " + escapeHtml(metaBits.join(" · ")) : "") +
-      (currentCard.example_en
-        ? "  ·  hint: " + softenHint(currentCard.example_en, currentCard.word)
-        : "");
+      (hint ? "  ·  hint: " + escapeHtml(hint) : "") +
+      exampleZh;
     $("play-queue").textContent = String(queue.length + requeueSoon.length);
     updateProgress();
 
@@ -935,6 +986,7 @@
       renderChoices();
     } else {
       $("choices").hidden = true;
+      $("choices").innerHTML = "";
       $("type-row").style.display = "flex";
       setTimeout(() => $("answer-input").focus(), 30);
     }
@@ -942,13 +994,16 @@
 
   function nextCard() {
     injectRequeues();
-    awaiting = false;
+    // Keep the previous prompt on screen during the exit animation. Do not
+    // grade or swap currentCard until the new card is painted, or a fast tap
+    // answers the next word against the previous Chinese prompt.
+    awaiting = true;
     const fb = $("feedback");
     fb.innerHTML = "";
     fb.className = "";
     $("answer-input").value = "";
-    $("answer-input").disabled = false;
-    $("btn-submit").disabled = false;
+    $("answer-input").disabled = true;
+    $("btn-submit").disabled = true;
 
     if (isLevelClear(currentLevel) && queue.length === 0 && requeueSoon.length === 0) {
       onLevelClear();
@@ -982,12 +1037,16 @@
       }
     }
 
-    currentCard = queue.shift();
+    const card = queue.shift();
     stepCounter += 1;
     sessionSeen += 1;
 
     const box = $("prompt-box");
     const doEnter = () => {
+      currentCard = card;
+      awaiting = false;
+      $("answer-input").disabled = false;
+      $("btn-submit").disabled = false;
       fillCardContent();
       animRestart(box, "card-enter");
       clearAnim(box, "card-enter", 420);
@@ -1014,15 +1073,58 @@
     }
   }
 
+  function isPlaceholderExample(example) {
+    return !example || /junior-high English sentence/i.test(example) ||
+      /^Please .+ carefully during the lesson\.?$/i.test(example) ||
+      /^I saw a .+ near the /i.test(example) ||
+      /^Please listen .+ in class\.?$/i.test(example) ||
+      /^It feels .+ at the /i.test(example) ||
+      /^There is a .+ in our classroom\.?$/i.test(example);
+  }
+
+  /** Prefer a blanked real example; never show a placeholder template as the hint. */
+  function hintForCard(card) {
+    if (!card) return "";
+    if (card.example_en && !isPlaceholderExample(card.example_en)) {
+      return softenHint(card.example_en, card.word);
+    }
+    if (card.meaning_zh) return "意思：" + card.meaning_zh;
+    if (card.scene) return String(card.scene).split("·")[0].trim();
+    return "";
+  }
+
+  /**
+   * 进度百分比 for the current word set (how far through this set, not 进步).
+   * A card counts once it meets the existing clearance "solid" review-state:
+   * state === "review" and interval >= CLEAR_MIN_INTERVAL_DAYS.
+   * pct = round(solid / total * 100). 100% means every card in the set is solid.
+   * The pass bar is still 80% of the set (stats.need), tracked separately.
+   */
+  function setCompletionPercent(stats) {
+    const total = stats && stats.total ? stats.total : 0;
+    if (!total) return 0;
+    return Math.max(0, Math.min(100, Math.round((stats.solid / total) * 100)));
+  }
+
   function updateProgress() {
     const s = levelClearStats(currentLevel);
-    const pct = s.need ? Math.min(100, Math.round((s.solid / s.need) * 100)) : 0;
-    $("play-progress").style.width = pct + "%";
+    const pct = setCompletionPercent(s);
+    const bar = $("play-progress");
+    if (bar) bar.style.width = pct + "%";
+    const pctEl = $("set-progress-pct");
+    if (pctEl) pctEl.textContent = pct + "%";
+    const barWrap = $("set-progress-bar");
+    if (barWrap) {
+      barWrap.setAttribute("aria-valuenow", String(pct));
+      barWrap.setAttribute("aria-valuetext", "本组进度 " + pct + "%");
+    }
     const label = $("play-clear-label");
     if (label) {
       label.textContent = s.ready
-        ? "通关完成"
-        : ("通关进度 " + s.solid + "/" + s.need + " · 新" + s.neu + " 到期" + s.due + " 学" + s.learning);
+        ? "通关完成 · 本组进度 " + pct + "%"
+        : ("本组进度 " + pct + "% · 巩固 " + s.solid + "/" + s.total +
+           " · 通关需 " + s.need +
+           " · 新" + s.neu + " 到期" + s.due + " 学" + s.learning);
     }
   }
 
@@ -1242,7 +1344,11 @@
       LEVELS[li].forEach((w) => add(w, li));
     }
 
-    const ranked = pool
+    // Prefer same POS family first (adv/det/prep stay with peers — never here/much vs ever)
+    const samePos = pool.filter((w) => w.pos && target.pos && w.pos === target.pos);
+    const usePool = samePos.length >= count + 2 ? samePos : pool;
+
+    const ranked = usePool
       .map((w) => ({ w, s: scoreDistractor(w, target, levelWords) }))
       .filter((x) => x.s > -1e8)
       .sort((a, b) => b.s - a.s);
@@ -1304,6 +1410,13 @@
     return levelClearStats(levelNum).ready;
   }
 
+  /** Distinct Part A vs Part B finish line. Kill-streak ladder stays untouched. */
+  function playPartClearCue(levelNum) {
+    if (!voiceOn) return;
+    const part = (levelNum % 2 === 1) ? "A" : "B";
+    speakLine(PART_CLEAR_TTS[part]);
+  }
+
   function onLevelClear() {
     const stars = levelStars(currentLevel);
     save.levelStars[String(currentLevel)] = Math.max(save.levelStars[String(currentLevel)] || 0, stars);
@@ -1314,7 +1427,7 @@
     persist();
     const cs = levelClearStats(currentLevel);
     $("clear-msg").textContent =
-      "Set " + currentLevel + " cleared (+50). Rule: 新词0 · 到期0 · 学习中0 · 巩固 " +
+      setTitle(currentLevel) + " cleared (+50). Rule: 新词0 · 到期0 · 学习中0 · 巩固 " +
       cs.solid + "/" + cs.need + " (≥80%, interval≥1天). Stars: " + stars + "/3.";
     const starEl = $("clear-stars");
     starEl.className = "stars star-pop";
@@ -1327,7 +1440,7 @@
     showScreen("clear");
     spawnPointsFloater(50);
     flashStage("ok");
-    speakLine("Victory");
+    playPartClearCue(currentLevel);
   }
 
 
@@ -1461,7 +1574,10 @@
 
   function setTitle(i) {
     const t = findTrack(currentTrack);
-    return (t.titles && t.titles[i - 1]) || ("第" + i + "组");
+    if (t.titles && t.titles[i - 1]) return t.titles[i - 1];
+    const setNum = Math.floor((i - 1) / 2) + 1;
+    const part = (i % 2 === 1) ? "A" : "B";
+    return "第" + setNum + "组 · Part " + part;
   }
 
   /** Switch active word track; per-track unlock/stars are swapped in and out of save. */
@@ -1663,20 +1779,19 @@
   // ---- pronunciation (browser speechSynthesis, en-GB preferred) ----
   function pickGbVoice() {
     if (!("speechSynthesis" in window)) return null;
-    const vs = window.speechSynthesis.getVoices() || [];
+    const vs = readVoices();
     return vs.find((v) => /en[-_]GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null;
   }
 
   function sayEn(text) {
     if (!text || !("speechSynthesis" in window)) return false;
     try {
-      window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-GB";
       const v = pickGbVoice();
       if (v) u.voice = v;
       u.rate = 0.9;
-      window.speechSynthesis.speak(u);
+      speakUtterance(u);
       return true;
     } catch (_) { return false; }
   }
@@ -1685,7 +1800,8 @@
     return '<div class="speak-row">' +
       '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '">🔈 读单词</button>' +
       (card.example_en ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '">🔈 读例句</button>' +
-        '<div class="fb-ex">例：' + escapeHtml(card.example_en) + "</div>" : "") +
+        '<div class="fb-ex">例：' + escapeHtml(card.example_en) +
+        (card.example_zh ? " " + escapeHtml(card.example_zh) : "") + "</div>" : "") +
       "</div>";
   }
 
@@ -1774,12 +1890,13 @@
     }
   });
   $("btn-mc-toggle").addEventListener("click", () => {
+    if (!currentCard || awaiting) return;
     mcMode = !mcMode;
     $("btn-mc-toggle").textContent = mcMode ? "Type answer" : "Multiple choice";
-    if (!currentCard || awaiting) return;
     if (mcMode) renderChoices();
     else {
       $("choices").hidden = true;
+      $("choices").innerHTML = "";
       $("type-row").style.display = "flex";
       $("answer-input").focus();
     }

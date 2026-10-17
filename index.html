@@ -335,8 +335,17 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  .set-progress { margin: 10px 0 2px; }
+  .set-progress-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 8px; margin-bottom: 4px; font-size: .85rem;
+  }
+  #set-progress-pct {
+    color: var(--gold); font-size: 1.25rem; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
   .progress-bar {
-    height: 8px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; margin: 10px 0 4px;
+    height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; margin: 0 0 4px;
     position: relative;
   }
   .progress-bar > i {
@@ -575,7 +584,7 @@
   </div>
   <header>
     <h1>Vocab Spotlight</h1>
-    <p>剑桥口语考官带你背单词 · 间隔重复 SRS · 中考 / KET / PET / 四级 词库 · 每组 ≥50 词</p>
+    <p>剑桥口语考官带你背单词 · 间隔重复 SRS · 核心 3000 词（Part A/B 各 15）· 中考 / KET / PET / 四级</p>
   </header>
 
   <div id="hud">
@@ -608,7 +617,7 @@
         <p class="sub">See a Chinese meaning → type the English word.<br>
           <b>SRS:</b> 答对后选 <b>Good / Easy</b>（间隔不同）；答错约 10 分钟重现。到期优先，可开「只练到期」。<br>
           <b>通关:</b> 该组 新词=0 · 到期=0 · 学习中=0 · ≥80% 卡片复习间隔≥1天 → 解锁下一组。<br>
-          Wrong = 讲解 + Shut down（连杀≥3被终结）. 每组 ≥50 词。</p>
+          Wrong = 讲解 + Shut down（连杀≥3被终结）. 核心词库 3000 词，Part A/B 各 15 词；考试词库每组 50 词。</p>
         <div class="btn-row">
           <button id="btn-continue" type="button">继续闯关</button>
           <button id="btn-levels" class="secondary" type="button">选择关卡</button>
@@ -670,7 +679,7 @@
     <section id="screen-levels" class="screen">
       <div class="title-card">
         <h2>选择关卡 Word sets</h2>
-        <p class="sub">Each set has ≥50 words. Cleared when due/new/learning are 0 and ≥80% cards have review interval ≥1 day. Next set unlocks on clear.</p>
+        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. Cleared when due/new/learning are 0 and ≥80% cards have review interval ≥1 day. Next part unlocks on clear.</p>
         <div id="level-grid" class="level-grid"></div>
         <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
       </div>
@@ -694,8 +703,16 @@
         <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
       </div>
       <div id="browse-strip" hidden></div>
-      <div class="progress-bar"><i id="play-progress"></i></div>
-      <div id="play-clear-label">通关进度 —</div>
+      <div class="set-progress">
+        <div class="set-progress-top">
+          <span id="set-progress-label">本组进度</span>
+          <strong id="set-progress-pct">0%</strong>
+        </div>
+        <div class="progress-bar" id="set-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="set-progress-label">
+          <i id="play-progress"></i>
+        </div>
+      </div>
+      <div id="play-clear-label">本组进度 —</div>
       <div id="prompt-box">
         <div id="prompt-label">Chinese meaning</div>
         <div id="prompt-main">—</div>
@@ -726,7 +743,7 @@
   </main>
 
   <footer>
-    Offline HTML5 · Anki-lite SRS · Good/Easy · ≥50/set · clearance bar · custom streak VO<br>
+    Offline HTML5 · Anki-lite SRS · Good/Easy · 3000-word core · Part A/B · clearance bar · custom streak VO<br>
     Progress is <b>per-browser</b> (localStorage). Export JSON / backup code before switching devices.
   </footer>
 
