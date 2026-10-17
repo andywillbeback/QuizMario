@@ -544,6 +544,27 @@
     background: rgba(61,231,255,.08); border: 1px dashed rgba(61,231,255,.35);
     font-size: .8rem; line-height: 1.4; opacity: .95;
   }
+  #account-bar {
+    display: flex; flex-wrap: wrap; gap: 8px 12px;
+    align-items: center; justify-content: center;
+    width: min(780px, 94vw); padding: 0 8px 8px;
+    font-size: .8rem;
+  }
+  #account-bar [hidden] { display: none !important; }
+  #sync-status {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 999px; padding: 4px 10px;
+  }
+  #sync-status.is-error { border-color: rgba(255,92,108,.7); color: #ffb4c0; }
+  #account-bar a { color: var(--cyan); }
+  #account-bar button {
+    padding: 4px 10px; font-size: .78rem; font-weight: 600;
+  }
+  #wipe-label {
+    display: flex; align-items: center; gap: 4px;
+    font-size: .75rem; opacity: .85;
+  }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -586,6 +607,13 @@
     <h1>Vocab Spotlight</h1>
     <p>剑桥口语考官带你背单词 · 间隔重复 SRS · 核心 3000 词（Part A/B 各 15）· 中考 / KET / PET / 四级</p>
   </header>
+
+  <div id="account-bar">
+    <span id="sync-status" aria-live="polite">未登录本地</span>
+    <a id="login-link" href="login.html">登录 / 同步进度</a>
+    <button id="btn-logout" class="ghost" type="button" hidden>退出登录</button>
+    <label id="wipe-label" hidden><input id="wipe-local" type="checkbox"> 退出时清除本机</label>
+  </div>
 
   <div id="hud">
     <div class="stat" id="stat-points">Points <b id="hud-points">0</b></div>
@@ -647,7 +675,7 @@
 
         <div id="backup-panel">
           <h3>进度备份（换手机 / 换浏览器必看）</h3>
-          <p class="warn">进度默认只存在<strong>当前浏览器</strong>的 localStorage。清缓存、换 Safari/Chrome、换设备都会丢，除非你先导出。</p>
+          <p class="warn">不登录时，进度只存在<strong>当前浏览器</strong>的 localStorage。清缓存、换 Safari/Chrome、换设备都会丢，除非你先导出，或用 <a href="login.html">登录 / 同步进度</a>。</p>
           <p>推荐：点「导出 JSON」保存文件；换设备后用「导入 JSON」。手机不方便存文件时，可用下方「复制备份码」粘贴到备忘录，再到新浏览器「从备份码导入」。</p>
           <div class="btn-row">
             <button id="btn-export" class="secondary" type="button">导出 JSON</button>
@@ -665,7 +693,7 @@
           <p><b>主动回忆。</b>看中文、自己拼出英文，比“看一眼认识”记得更深；答错立刻给讲解和例句，可点 🔈 听英式发音。</p>
           <p><b>通关标准。</b>一组词：新词=0、到期=0、学习中=0，且 ≥80% 的词复习间隔≥1 天，才算真正掌握并解锁下一组。</p>
           <p><b>考官带练。</b>作者是一线英语教师、剑桥英语口语考官。连杀 / 终结语音由作者本人录制，把背单词变成一场闯关秀。词库对齐中考、剑桥 KET(A2)/PET(B1) 与大学四级。</p>
-          <p><b>数据与隐私。</b>进度只保存在本机浏览器；学习报告码只含统计数据，由学生自愿发送给老师。</p>
+          <p><b>数据与隐私。</b>不登录时进度只保存在本机浏览器。登录后，进度会同步到你自己的云端账号（只有该账号能读写）。学习报告码只含统计数据，由学生自愿发送给老师。</p>
         </details>
 
         <div id="homescreen-tip">
@@ -744,11 +772,16 @@
 
   <footer>
     Offline HTML5 · Anki-lite SRS · Good/Easy · 3000-word core · Part A/B · clearance bar · custom streak VO<br>
-    Progress is <b>per-browser</b> (localStorage). Export JSON / backup code before switching devices.
+    不登录时进度在本机 (localStorage)。换设备可 <a href="login.html">登录 / 同步进度</a>，或先导出 JSON / 备份码。
   </footer>
 
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+  <script src="sync-merge.js"></script>
+  <script src="cloud-client.js"></script>
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="game.js"></script>
+  <script src="sync.js"></script>
 </body>
 </html>
