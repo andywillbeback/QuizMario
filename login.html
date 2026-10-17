@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a0f3d">
+<title>登录 · QuizMario</title>
+<style>
+  :root {
+    --bg: #0b0620;
+    --gold: #ffd84d;
+    --cyan: #3de7ff;
+    --green: #3dff9a;
+    --red: #ff8b98;
+    --text: #fff8ee;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", system-ui, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(ellipse at 20% 0%, #3b1a6e 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 10%, #6a1a4a 0%, transparent 45%),
+      var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px;
+  }
+  main {
+    width: min(420px, 100%);
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,216,77,.35);
+    border-radius: 18px;
+    padding: 22px 18px 18px;
+    box-shadow: 0 16px 40px rgba(0,0,0,.35);
+  }
+  h1 { margin: 0 0 6px; font-size: 1.45rem; color: var(--gold); }
+  p.lead { margin: 0 0 14px; opacity: .8; font-size: .92rem; line-height: 1.45; }
+  .modes { display: flex; gap: 8px; margin-bottom: 14px; }
+  label { display: block; font-size: .82rem; margin: 10px 0 4px; opacity: .85; }
+  input {
+    width: 100%; font-size: 16px; padding: 12px 12px; border-radius: 12px;
+    border: 2px solid rgba(255,255,255,.2); background: rgba(0,0,0,.35); color: #fff;
+  }
+  input:focus { outline: none; border-color: var(--cyan); }
+  button, .btn {
+    appearance: none; border: 1px solid transparent; cursor: pointer;
+    font: inherit; font-weight: 700;
+    padding: 12px 16px; border-radius: 12px;
+    background: linear-gradient(180deg, #ffe27a, #f0b429);
+    color: #2a1600;
+  }
+  button.secondary, button.ghost {
+    background: transparent; color: #fff;
+    border: 1px solid rgba(255,255,255,.28); font-weight: 600;
+  }
+  .modes button[aria-pressed="true"] {
+    background: linear-gradient(180deg, #ffe27a, #f0b429);
+    color: #2a1600; border-color: transparent;
+  }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .row button { flex: 1 1 120px; }
+  #auth-msg { min-height: 1.4em; font-size: .88rem; line-height: 1.45; margin: 12px 0 0; }
+  #auth-msg.ok { color: var(--green); }
+  #auth-msg.bad { color: var(--red); }
+  #config-banner, .note {
+    font-size: .82rem; line-height: 1.45; margin: 0 0 12px;
+    padding: 8px 10px; border-radius: 10px;
+    background: rgba(255,216,77,.1); border: 1px dashed rgba(255,216,77,.4);
+  }
+  a { color: var(--cyan); }
+  .back { display: inline-block; margin-top: 16px; font-size: .9rem; }
+  #session-panel h2 { margin: 0 0 8px; font-size: 1.1rem; }
+  #password-form { margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>登录 / 同步进度</h1>
+  <p class="lead">用邮箱在手机和电脑上恢复同一份进度。不登录也可以直接玩游戏，进度只留在这台设备。</p>
+  <p id="config-banner" class="note" hidden></p>
+
+  <form id="auth-form">
+    <div class="modes" role="group" aria-label="登录或注册">
+      <button type="button" id="mode-login" aria-pressed="true">登录</button>
+      <button type="button" class="secondary" id="mode-register" aria-pressed="false">注册</button>
+    </div>
+    <label for="email">邮箱</label>
+    <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="you@example.com">
+    <label for="password">密码</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="至少 6 位">
+    <div id="confirm-label" hidden>
+      <label for="confirm">确认密码</label>
+      <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" placeholder="再输入一次">
+    </div>
+    <div class="row">
+      <button type="submit" id="btn-submit">登录</button>
+      <button type="button" class="ghost" id="btn-forgot">忘记密码</button>
+    </div>
+  </form>
+
+  <section id="session-panel" hidden>
+    <h2>已登录</h2>
+    <p>当前账号：<b id="session-email"></b></p>
+    <div class="row">
+      <a class="btn" href="index.html" style="text-align:center;text-decoration:none">进入游戏</a>
+      <button type="button" class="ghost" id="btn-session-logout">退出登录</button>
+    </div>
+    <form id="password-form">
+      <label for="new-password">设置新密码</label>
+      <input id="new-password" type="password" autocomplete="new-password" minlength="6" placeholder="至少 6 位">
+      <label for="new-password-2">再输入一次</label>
+      <input id="new-password-2" type="password" autocomplete="new-password" minlength="6">
+      <div class="row">
+        <button type="submit" id="btn-update-password">更新密码</button>
+      </div>
+    </form>
+  </section>
+
+  <p id="auth-msg" role="status"></p>
+  <a class="back" href="index.html">← 返回游戏（不登录）</a>
+</main>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="sync-merge.js"></script>
+<script src="cloud-client.js"></script>
+<script src="auth-page.js"></script>
+</body>
+</html>
