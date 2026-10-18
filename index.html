@@ -6,11 +6,12 @@
 <meta name="theme-color" content="#1a0f3d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="QuizMario">
+<meta name="apple-mobile-web-app-title" content="聚光单词">
+<meta name="application-name" content="聚光单词">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>QuizMario — Vocab Spotlight</title>
+<title>聚光单词 — Vocab Spotlight</title>
 <style>
   :root {
     --bg: #0b0620;
@@ -68,6 +69,10 @@
     50% { filter: drop-shadow(0 0 18px rgba(61,231,255,.45)); }
   }
   header p { margin: 4px 0 0; opacity: .75; font-size: .92rem; }
+  header .brand-en {
+    margin: 2px 0 0; opacity: .72; font-size: .78rem;
+    letter-spacing: .14em; font-weight: 650;
+  }
 
   #hud {
     display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
@@ -615,7 +620,8 @@
     <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
   </div>
   <header>
-    <h1>Vocab Spotlight</h1>
+    <h1>聚光单词</h1>
+    <p class="brand-en">Vocab Spotlight</p>
     <p>剑桥口语考官带你背单词 · 间隔重复 SRS · 核心 3000 词（Part A/B 各 15）· 中考 / KET / PET / 四级</p>
   </header>
 
