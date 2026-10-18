@@ -33,9 +33,11 @@
   function renderAccount() {
     var logged = !!user;
     var link = $("login-link");
+    var cta = $("login-cta");
     var out = $("btn-logout");
     var wipe = $("wipe-label");
     if (link) link.hidden = logged;
+    if (cta) cta.hidden = logged;
     if (out) out.hidden = !logged;
     if (wipe) wipe.hidden = !logged;
     if (!logged) {
