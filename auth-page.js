@@ -3,7 +3,7 @@
   "use strict";
 
   var CLIENT = window.QuizMarioCloudClient;
-  var mode = "login";
+  var mode = "register";
 
   function $(id) { return document.getElementById(id); }
 
@@ -92,7 +92,7 @@
   }
 
   async function boot() {
-    setMode("login");
+    setMode("register");
     var banner = $("config-banner");
     if (!configured()) {
       if (banner) {
