@@ -629,26 +629,6 @@
       letter-spacing: 0;
     }
   }
-  #backup-panel {
-    margin-top: 14px; padding: 12px; border-radius: 14px;
-    background: rgba(9, 14, 28, 0.42); border: 1px solid rgba(255,255,255,.16);
-    text-align: left; font-size: .82rem; line-height: 1.45;
-  }
-  #backup-panel h3 { margin: 0 0 6px; font-size: .95rem; color: var(--gold); }
-  #backup-panel .warn { color: #ffb4c0; margin: 0 0 8px; }
-  #backup-panel textarea {
-    width: 100%; min-height: 72px; margin: 8px 0; resize: vertical;
-    border-radius: 10px; border: 1px solid rgba(255,255,255,.18);
-    background: rgba(3, 6, 14, 0.42); color: var(--text); padding: 8px;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem;
-  }
-  #backup-panel .btn-row { margin-top: 6px; }
-  #backup-status { min-height: 1.2em; margin: 6px 0 0; opacity: .9; color: var(--cyan); }
-  #homescreen-tip {
-    margin-top: 12px; padding: 10px 12px; border-radius: 12px;
-    background: rgba(230, 201, 138, 0.08); border: 1px dashed rgba(230, 201, 138, 0.4);
-    font-size: .8rem; line-height: 1.4; opacity: .95;
-  }
   #account-bar {
     display: flex; flex-wrap: wrap; gap: 8px 12px;
     align-items: center; justify-content: center;
@@ -701,10 +681,6 @@
   .stats-chart { width: 100%; height: auto; margin-top: 8px; }
   .stats-legend { font-size: .75rem !important; opacity: .75; }
   .stats-tracks { margin: 4px 0 0; padding-left: 18px; font-size: .82rem; line-height: 1.6; }
-  .form-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .form-row input { flex: 1 1 140px; padding: 10px; font-size: 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(3, 6, 14, 0.55); color: #fff; }
-  #report-code { width: 100%; min-height: 54px; margin-top: 8px; font-size: .72rem; box-sizing: border-box; }
-  .ghost-link { color: var(--cyan); align-self: center; font-size: .9rem; }
   .speak-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .speak-btn { padding: 6px 10px; font-size: .85rem; border-radius: 999px; }
   .speak-row .fb-ex { flex-basis: 100%; }
@@ -882,46 +858,6 @@
         <div id="stats-panel" class="panel">
           <h3>📈 我的学习数据</h3>
           <div id="stats-body"></div>
-        </div>
-
-        <div id="report-panel" class="panel">
-          <h3>🧑‍🏫 交给老师：学习报告码</h3>
-          <p>填写姓名和老师给的<b>班级码</b>，点「生成报告码」，把码发给老师。只包含统计和易错词，不含账号密码。</p>
-          <div class="form-row">
-            <input id="profile-name" type="text" maxlength="40" placeholder="姓名，如：张三">
-            <input id="profile-cls" type="text" maxlength="40" placeholder="班级码，如：DG-801">
-          </div>
-          <div class="btn-row"><button id="btn-report" class="secondary" type="button">生成报告码</button>
-            <a class="ghost-link" href="teacher.html">老师入口 →</a></div>
-          <textarea id="report-code" readonly placeholder="报告码会显示在这里" spellcheck="false"></textarea>
-          <div id="report-status" aria-live="polite"></div>
-        </div>
-
-        <div id="backup-panel">
-          <h3>进度备份（换手机 / 换浏览器必看）</h3>
-          <p class="warn">不登录时，进度只存在<strong>当前浏览器</strong>的 localStorage。清缓存、换 Safari/Chrome、换设备都会丢，除非你先导出，或用 <a href="login.html">登录 / 同步进度</a>。</p>
-          <p>推荐：点「导出 JSON」保存文件；换设备后用「导入 JSON」。手机不方便存文件时，可用下方「复制备份码」粘贴到备忘录，再到新浏览器「从备份码导入」。</p>
-          <div class="btn-row">
-            <button id="btn-export" class="secondary" type="button">导出 JSON</button>
-            <button id="btn-import" class="secondary" type="button">导入 JSON</button>
-            <button id="btn-copy-code" class="ghost" type="button">复制备份码</button>
-            <button id="btn-paste-code" class="ghost" type="button">从备份码导入</button>
-          </div>
-          <input id="import-file" type="file" accept="application/json,.json" hidden>
-          <textarea id="backup-code" placeholder="备份码会显示在这里；也可粘贴后点「从备份码导入」" spellcheck="false"></textarea>
-          <div id="backup-status" aria-live="polite"></div>
-        </div>
-        <details id="about-panel" class="panel">
-          <summary><b>关于 / 学习方法</b></summary>
-          <p><b>为什么有效：间隔重复（SRS）。</b>每个词按记忆曲线安排复习：答错约 10 分钟后再现；答对选 Good（正常间隔）或 Easy（更长间隔），间隔会随熟练度逐步拉长（1 天 → 数天 → 数周）。只在“快忘了”的时候复习，用最少的时间记得最牢。</p>
-          <p><b>主动回忆。</b>看中文、自己拼出英文，比“看一眼认识”记得更深；答错立刻给讲解和例句，可点 🔈 听英式发音。</p>
-          <p><b>通关标准。</b>一组词：新词=0、到期=0、学习中=0，且 ≥80% 的词复习间隔≥1 天，才算真正掌握并解锁下一组。</p>
-          <p><b>考官带练。</b>作者是一线英语教师、剑桥英语口语考官。连杀 / 终结语音由作者本人录制，把背单词变成一场闯关秀。词库对齐中考、剑桥 KET(A2)/PET(B1) 与大学四级。</p>
-          <p><b>数据与隐私。</b>不登录时进度只保存在本机浏览器。登录后，进度会同步到你自己的云端账号（只有该账号能读写）。学习报告码只含统计数据，由学生自愿发送给老师。</p>
-        </details>
-
-        <div id="homescreen-tip">
-          <b>添加到手机主屏幕：</b>iPhone Safari → 底部分享按钮 →「添加到主屏幕」→ 添加。Android Chrome → 菜单 →「添加到主屏幕」/「安装应用」。
         </div>
 
       </div>
