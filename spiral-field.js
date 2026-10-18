@@ -38,8 +38,8 @@
   var panX = 0;
   var panY = 0;
 
-  var ARMS = 4;
-  var TURNS = 3.15;
+  var ARMS = 5;
+  var TURNS = 1.9;
   var TAU = Math.PI * 2;
 
   var scratchX = new Float32Array(40);
@@ -67,7 +67,7 @@
     }
     tier = "desktop";
     budget = 280;
-    sampleCap = 20;
+    sampleCap = 28;
     floor = 140;
   }
 
@@ -82,14 +82,14 @@
     f.jitter = (Math.random() - 0.5) * (f.clustered ? 0.08 : 0.22);
     f.depth = Math.random();
     if (f.kind === 1) {
-      f.len = 0.1 + Math.random() * 0.14;
-      f.speed = 0.055 + Math.random() * 0.04;
+      f.len = 0.28 + Math.random() * 0.24;
+      f.speed = 0.05 + Math.random() * 0.035;
     } else if (f.kind === 2) {
-      f.len = 0.16 + Math.random() * 0.18;
-      f.speed = 0.04 + Math.random() * 0.03;
+      f.len = 0.34 + Math.random() * 0.28;
+      f.speed = 0.036 + Math.random() * 0.028;
     } else {
-      f.len = 0.22 + Math.random() * 0.38;
-      f.speed = 0.026 + Math.random() * 0.028;
+      f.len = 0.46 + Math.random() * 0.42;
+      f.speed = 0.022 + Math.random() * 0.02;
     }
     f.u = atEdge ? 0.96 + Math.random() * 0.12 : Math.pow(Math.random(), 0.72);
   }
@@ -129,13 +129,13 @@
     }
     return {
       x: width * 0.5 + panX * 0.35,
-      y: height * 0.38 + panY * 0.35,
+      y: height * 0.34 + panY * 0.35,
     };
   }
 
   function place(f, u, ox, oy, maxRx, maxRy) {
     var clamped = u < 0 ? 0 : u > 1.25 ? 1.25 : u;
-    var fall = Math.pow(clamped, 0.62);
+    var fall = Math.pow(clamped, 0.78);
     var ang = f.base + spin * (0.65 + f.depth * 0.7) + clamped * TURNS * TAU + f.jitter * clamped;
     var depthScale = 0.7 + f.depth * 0.42;
     var parallax = 0.25 + f.depth;
@@ -206,8 +206,8 @@
 
   function draw(dt) {
     ctx.clearRect(0, 0, width, height);
-    var maxRx = Math.min(width * 0.62, Math.max(height, width) * 0.58);
-    var maxRy = Math.min(height * 0.62, maxRx * 0.9);
+    var maxRx = Math.min(width * 0.72, Math.max(height, width) * 0.7);
+    var maxRy = Math.min(height * 0.7, maxRx * 0.86);
     var o = origin();
     var reach = Math.max(maxRx, maxRy);
     var i;
@@ -226,54 +226,71 @@
     ctx.lineJoin = "round";
     ctx.globalCompositeOperation = "lighter";
 
-    var unit = Math.max(0.85, Math.min(width, height) / 920);
+    var washR = Math.max(width, height) * 0.62;
+    var wash = radial(o.x, o.y, washR, [
+      [0, "rgba(255,255,255,0.55)"],
+      [0.08, "rgba(214,228,255,0.32)"],
+      [0.2, "rgba(150,186,245,0.16)"],
+      [0.42, "rgba(70,110,190,0.07)"],
+      [1, "rgba(40,70,140,0)"],
+    ]);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = wash;
+    ctx.beginPath();
+    ctx.arc(o.x, o.y, washR, 0, TAU);
+    ctx.fill();
+
+    var unit = Math.max(0.9, Math.min(width, height) / 860);
     var ice = radial(o.x, o.y, reach, [
       [0, "rgba(255,255,255,1)"],
-      [0.06, "rgba(236,244,255,0.95)"],
-      [0.18, "rgba(176,208,255,0.72)"],
-      [0.42, "rgba(126,168,232,0.28)"],
-      [0.72, "rgba(110,150,210,0.08)"],
-      [1, "rgba(110,150,210,0)"],
+      [0.1, "rgba(236,244,255,0.98)"],
+      [0.24, "rgba(186,214,255,0.9)"],
+      [0.48, "rgba(150,188,255,0.62)"],
+      [0.74, "rgba(128,170,235,0.28)"],
+      [1, "rgba(120,160,220,0)"],
     ]);
     var warm = radial(o.x, o.y, reach * 0.92, [
-      [0, "rgba(255,246,230,0.95)"],
-      [0.14, "rgba(236,206,150,0.55)"],
-      [0.4, "rgba(210,170,110,0.12)"],
+      [0, "rgba(255,248,236,0.95)"],
+      [0.16, "rgba(240,214,170,0.7)"],
+      [0.46, "rgba(220,180,120,0.22)"],
       [1, "rgba(210,170,110,0)"],
     ]);
 
     ctx.strokeStyle = ice;
     if (strokePass(0, o.x, o.y, maxRx, maxRy)) {
-      ctx.lineWidth = 3.4 * unit;
-      ctx.globalAlpha = 0.05;
+      ctx.lineWidth = 12 * unit;
+      ctx.globalAlpha = 0.09;
       ctx.stroke();
-      ctx.lineWidth = 1.05 * unit;
-      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 2.6 * unit;
+      ctx.globalAlpha = 0.28;
+      ctx.stroke();
+      ctx.lineWidth = 1.15 * unit;
+      ctx.globalAlpha = 0.78;
       ctx.stroke();
     }
 
     ctx.strokeStyle = ice;
     if (strokePass(1, o.x, o.y, maxRx, maxRy)) {
-      ctx.lineWidth = 5.2 * unit;
-      ctx.globalAlpha = 0.075;
+      ctx.lineWidth = 18 * unit;
+      ctx.globalAlpha = 0.12;
       ctx.stroke();
-      ctx.lineWidth = 1.45 * unit;
-      ctx.globalAlpha = 0.62;
+      ctx.lineWidth = 2.1 * unit;
+      ctx.globalAlpha = 0.95;
       ctx.stroke();
     }
 
     ctx.strokeStyle = warm;
     if (strokePass(2, o.x, o.y, maxRx, maxRy)) {
-      ctx.lineWidth = 2.4 * unit;
-      ctx.globalAlpha = 0.05;
+      ctx.lineWidth = 7 * unit;
+      ctx.globalAlpha = 0.08;
       ctx.stroke();
-      ctx.lineWidth = 1.1 * unit;
-      ctx.globalAlpha = 0.28;
+      ctx.lineWidth = 1.25 * unit;
+      ctx.globalAlpha = 0.42;
       ctx.stroke();
     }
 
     var pulse = reduced ? 1 : 0.94 + 0.06 * Math.sin(clock * 0.9);
-    var coreR = Math.max(36, Math.min(width, height) * 0.075) * pulse;
+    var coreR = Math.max(48, Math.min(width, height) * 0.11) * pulse;
     var halo = radial(o.x, o.y, coreR * 3.3, [
       [0, "rgba(255,255,255,0.9)"],
       [0.12, "rgba(226,238,255,0.48)"],
