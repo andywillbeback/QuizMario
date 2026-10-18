@@ -1,4 +1,4 @@
-/* Discrete photon spiral for the login page.
+/* Discrete photon spiral shared by login, home, and teacher chrome.
  * Canvas 2D only: capped count, capped DPR, paused while the tab is hidden.
  * No audio. Reduced motion draws one still frame.
  */
