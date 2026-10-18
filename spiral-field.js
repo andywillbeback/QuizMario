@@ -1,6 +1,10 @@
 /* Discrete photon spiral shared by login, home, and teacher chrome.
- * Canvas 2D only: capped count, capped DPR, paused while the tab is hidden.
+ * Canvas 2D only: hard particle caps, DPR 1.25, paused while the tab is hidden.
+ * Draws at ~60fps. A frame is skipped only when the callback is already behind.
  * No audio. Reduced motion draws one still frame.
+ *
+ * Emergency caps (were phone 360 / small 480 / desktop 880):
+ *   phone ≤120, tablet ≤180, desktop ≤280.
  */
 (function () {
   "use strict";
@@ -49,9 +53,10 @@
     var h = window.innerHeight || 640;
     var memory = navigator.deviceMemory || 8;
     var cores = navigator.hardwareConcurrency || 8;
-    if (memory <= 2 || cores <= 2 || Math.min(w, h) < 420) return 360;
-    if (w < 760) return 480;
-    return 880;
+    var shortSide = Math.min(w, h);
+    if (memory <= 2 || cores <= 2 || shortSide < 520 || w < 700) return 120;
+    if (shortSide < 900 || w < 1200) return 180;
+    return 280;
   }
 
   function seed(p, atEdge) {
@@ -79,8 +84,7 @@
   }
 
   function resize() {
-    var cap = (window.innerWidth || 800) < 800 ? 1.25 : 1.5;
-    var dpr = Math.min(window.devicePixelRatio || 1, cap);
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.25);
     width = window.innerWidth || canvas.clientWidth || 360;
     height = window.innerHeight || canvas.clientHeight || 640;
     canvas.width = Math.max(1, Math.floor(width * dpr));
@@ -112,11 +116,13 @@
       var r = p.rad;
       var x = cx + Math.cos(ang) * r * maxRx;
       var y = cy + Math.sin(ang) * r * maxRy;
+      var dim = (p.kind === "amber" ? 8.5 : 5.2) * p.size;
+      var half = dim * 0.5;
+      if (x + half < 0 || y + half < 0 || x - half > width || y - half > height) continue;
       var twinkle = 0.7 + 0.3 * Math.sin(p.tw);
       var alpha = Math.min(0.92, twinkle * p.bright * (0.55 + (1 - p.rad) * 0.4));
-      var dim = (p.kind === "amber" ? 8.5 : 5.2) * p.size;
       ctx.globalAlpha = alpha;
-      ctx.drawImage(sprites[p.kind], x - dim * 0.5, y - dim * 0.5, dim, dim);
+      ctx.drawImage(sprites[p.kind], x - half, y - half, dim, dim);
     }
 
     var haloR = Math.max(28, Math.min(width, height) * 0.04);
@@ -145,8 +151,15 @@
     raf = window.requestAnimationFrame(tick);
     if (!lastTs) lastTs = ts;
     var elapsed = ts - lastTs;
-    if (elapsed < 33) return;
-    var dt = Math.min(0.05, elapsed / 1000);
+    // ~60fps pacing. Early callbacks (90/120Hz) wait. A late one draws now.
+    if (elapsed < 15) return;
+    // Skip only when this callback is already behind, and rebase so one hitch
+    // does not fast-forward the spiral or queue a burst of catch-up draws.
+    if (elapsed > 48) {
+      lastTs = ts;
+      return;
+    }
+    var dt = Math.min(0.032, elapsed / 1000);
     lastTs = ts;
     draw(dt);
   }
