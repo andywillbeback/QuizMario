@@ -1,0 +1,322 @@
+[
+  {
+    "word": "buried",
+    "list": "zhongkao",
+    "reason": "past participle of bury, which is already a headword"
+  },
+  {
+    "word": "buttom",
+    "list": "zhongkao",
+    "reason": "typo of bottom, which is already taught"
+  },
+  {
+    "word": "can't",
+    "list": "zhongkao",
+    "reason": "contraction of cannot; can is already taught"
+  },
+  {
+    "word": "dan",
+    "list": "zhongkao",
+    "reason": "lowercase name token between damage and dance, not an English headword"
+  },
+  {
+    "word": "expanation",
+    "list": "zhongkao",
+    "reason": "typo of explanation"
+  },
+  {
+    "word": "fourteenth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "govenment",
+    "list": "zhongkao",
+    "reason": "typo of government"
+  },
+  {
+    "word": "ice-cream",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "lastest",
+    "list": "zhongkao",
+    "reason": "typo of latest"
+  },
+  {
+    "word": "let's",
+    "list": "zhongkao",
+    "reason": "contraction of let us; let is already taught"
+  },
+  {
+    "word": "nineteenth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "office,",
+    "list": "zhongkao",
+    "reason": "punctuation scrape of office, which is already taught"
+  },
+  {
+    "word": "percent",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "returf",
+    "list": "zhongkao",
+    "reason": "non-word sitting between retell and return on the Shenzhen list"
+  },
+  {
+    "word": "runnel",
+    "list": "zhongkao",
+    "reason": "one-letter lookalike of tunnel/runner, not an exam headword"
+  },
+  {
+    "word": "sperate",
+    "list": "zhongkao",
+    "reason": "typo of separate"
+  },
+  {
+    "word": "seventeenth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "sixteenth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "stanger",
+    "list": "zhongkao",
+    "reason": "typo of stranger"
+  },
+  {
+    "word": "strenghth",
+    "list": "zhongkao",
+    "reason": "typo of strength"
+  },
+  {
+    "word": "sunglass",
+    "list": "zhongkao",
+    "reason": "clipped singular of sunglasses (sunglasses is kept)"
+  },
+  {
+    "word": "thirteenth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "thirtieth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "thirty-five",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "top-right",
+    "list": "zhongkao",
+    "reason": "layout label from a word-list page, not a lemma"
+  },
+  {
+    "word": "twelfth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "twentieth",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "twenty-eighth",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "twenty-fifth",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "twenty-first",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "twenty-ninth",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "twenty-second",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "varous",
+    "list": "zhongkao",
+    "reason": "typo of various"
+  },
+  {
+    "word": "won't",
+    "list": "zhongkao",
+    "reason": "contraction of will; will is already taught"
+  },
+  {
+    "word": "woops",
+    "list": "zhongkao",
+    "reason": "misspelling of oops (oops is kept)"
+  },
+  {
+    "word": "york",
+    "list": "zhongkao",
+    "reason": "fragment of New York, which is on the official 课标 list"
+  },
+  {
+    "word": "yourselves",
+    "list": "zhongkao",
+    "reason": "inflected pronoun; yourself is already present"
+  },
+  {
+    "word": "good-bye",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "mid-autumn",
+    "list": "zhongkao",
+    "reason": "covered by the official headword Mid-Autumn Festival"
+  },
+  {
+    "word": "mommy",
+    "list": "zhongkao",
+    "reason": "spelling variant of mum, which is already taught"
+  },
+  {
+    "word": "mooncake",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "the Pacific Ocean",
+    "list": "zhongkao",
+    "reason": "already on this track's official list (spelling alias included)"
+  },
+  {
+    "word": "really v",
+    "list": "zhongkao",
+    "reason": "part-of-speech tag glued onto really; not a headword"
+  },
+  {
+    "word": "silentˈsailənt] a. 无声的，无对话的",
+    "list": "zhongkao",
+    "reason": "dictionary scrape, not a headword (silent is already taught)"
+  },
+  {
+    "word": "twenty-one",
+    "list": "zhongkao",
+    "reason": "compositional number whose parts (twenty, one, eight, …) are already taught"
+  },
+  {
+    "word": "amazed",
+    "list": "zhongkao",
+    "reason": "inflected form of amaze, which is already present"
+  },
+  {
+    "word": "delighted",
+    "list": "zhongkao",
+    "reason": "inflected form of delight, which is already present"
+  },
+  {
+    "word": "fries",
+    "list": "zhongkao",
+    "reason": "inflected form of fry, which is already present"
+  },
+  {
+    "word": "frightened",
+    "list": "zhongkao",
+    "reason": "inflected form of frighten, which is already present"
+  },
+  {
+    "word": "geese",
+    "list": "zhongkao",
+    "reason": "inflected form of goose, which is already present"
+  },
+  {
+    "word": "regards",
+    "list": "zhongkao",
+    "reason": "inflected form of regard, which is already present"
+  },
+  {
+    "word": "grandparents",
+    "list": "zhongkao",
+    "reason": "inflected form of grandparent, which is already present"
+  },
+  {
+    "word": "airplane",
+    "list": "zhongkao",
+    "reason": "spelling variant of aeroplane, which is kept"
+  },
+  {
+    "word": "café",
+    "list": "zhongkao",
+    "reason": "spelling variant of café, which is kept"
+  },
+  {
+    "word": "check-out",
+    "list": "zhongkao",
+    "reason": "spelling variant of checkout, which is kept"
+  },
+  {
+    "word": "delighted",
+    "list": "gaokao",
+    "reason": "inflected form of delight, which is already present"
+  },
+  {
+    "word": "favor",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  },
+  {
+    "word": "fiber",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  },
+  {
+    "word": "gram",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  },
+  {
+    "word": "ice-cream",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  },
+  {
+    "word": "millimeter",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  },
+  {
+    "word": "mommy",
+    "list": "gaokao",
+    "reason": "spelling variant of mum, which is already taught"
+  },
+  {
+    "word": "organization",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  },
+  {
+    "word": "percent",
+    "list": "gaokao",
+    "reason": "already on the 高考 official list (spelling alias included)"
+  }
+]

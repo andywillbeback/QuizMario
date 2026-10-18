@@ -1,0 +1,932 @@
+{
+  "abolish": {
+    "pos": "v.",
+    "meaning_zh": "废除；废止",
+    "example_en": "The government decided to abolish the outdated tax after public debate.",
+    "example_zh": "政府经过公开讨论后决定废除这项过时的税。"
+  },
+  "abortion": {
+    "pos": "n.",
+    "meaning_zh": "堕胎",
+    "example_en": "Doctors discussed abortion as a medical option during the hospital consultation.",
+    "example_zh": "医生在医院会诊时把堕胎作为一种医疗选择进行了讨论。"
+  },
+  "abrupt": {
+    "pos": "adj.",
+    "meaning_zh": "突然的；唐突的",
+    "example_en": "His abrupt departure left the meeting without a clear conclusion.",
+    "example_zh": "他的突然离去使会议没有得出明确结论。"
+  },
+  "absolute": {
+    "pos": "adj.",
+    "meaning_zh": "绝对的；完全的",
+    "example_en": "Scientists demand absolute accuracy before they publish any new result.",
+    "example_zh": "科学家在发表任何新成果之前都要求绝对准确。"
+  },
+  "absurd": {
+    "pos": "adj.",
+    "meaning_zh": "荒谬的；荒唐的",
+    "example_en": "It seemed absurd to cross the desert without carrying any water.",
+    "example_zh": "不带水就穿越沙漠似乎很荒谬。"
+  },
+  "abundant": {
+    "pos": "adj.",
+    "meaning_zh": "丰富的；充裕的",
+    "example_en": "Rainfall is abundant in this valley, so the rice fields stay green.",
+    "example_zh": "这个山谷雨水充沛，所以稻田一直翠绿。"
+  },
+  "accelerate": {
+    "pos": "v.",
+    "meaning_zh": "加速；加快",
+    "example_en": "Electric cars accelerate quickly when the traffic light turns green.",
+    "example_zh": "交通信号灯变绿时，电动汽车会迅速加速。"
+  },
+  "accessible": {
+    "pos": "adj.",
+    "meaning_zh": "可到达的；易使用的",
+    "example_en": "The new library is accessible to wheelchair users through the side entrance.",
+    "example_zh": "新图书馆可通过侧门供轮椅使用者进入。"
+  },
+  "accomplish": {
+    "pos": "v.",
+    "meaning_zh": "完成；实现",
+    "example_en": "She managed to accomplish her research goal before the semester ended.",
+    "example_zh": "她在学期结束前设法完成了研究目标。"
+  },
+  "accumulate": {
+    "pos": "v.",
+    "meaning_zh": "积累；积聚",
+    "example_en": "Dust can accumulate on unused shelves if nobody cleans them weekly.",
+    "example_zh": "如果没有人每周打扫，灰尘就会在闲置的架子上积聚。"
+  },
+  "accuracy": {
+    "pos": "n.",
+    "meaning_zh": "准确；精确",
+    "example_en": "Weather forecasts have improved in accuracy over the past decade.",
+    "example_zh": "过去十年里，天气预报的准确性有所提高。"
+  },
+  "accustomed": {
+    "pos": "adj.",
+    "meaning_zh": "习惯的；适应的",
+    "example_en": "Students soon became accustomed to the early morning train schedule.",
+    "example_zh": "学生们很快就习惯了清晨的火车时刻表。"
+  },
+  "acquaintance": {
+    "pos": "n.",
+    "meaning_zh": "熟人；相识",
+    "example_en": "I met an old acquaintance at the railway station yesterday afternoon.",
+    "example_zh": "昨天下午我在火车站遇见了一位老熟人。"
+  },
+  "acquisition": {
+    "pos": "n.",
+    "meaning_zh": "获得；习得",
+    "example_en": "Language acquisition is easier for children who hear two languages daily.",
+    "example_zh": "对每天接触两种语言的儿童来说，语言习得更容易。"
+  },
+  "acre": {
+    "pos": "n.",
+    "meaning_zh": "英亩",
+    "example_en": "Each acre of this orchard produces several tons of apples yearly.",
+    "example_zh": "这座果园每一英亩每年能产出数吨苹果。"
+  },
+  "actual": {
+    "pos": "adj.",
+    "meaning_zh": "实际的；真实的",
+    "example_en": "The actual cost of the trip was higher than our first estimate.",
+    "example_zh": "这次旅行的实际费用高于我们最初的估计。"
+  },
+  "acute": {
+    "pos": "adj.",
+    "meaning_zh": "急性的；敏锐的",
+    "example_en": "Nurses eased her acute pain before the doctor examined the injured knee.",
+    "example_zh": "医生检查她受伤的膝盖之前，护士先缓解了她的急性疼痛。"
+  },
+  "adequate": {
+    "pos": "adj.",
+    "meaning_zh": "足够的；合格的",
+    "example_en": "The shelter had adequate food and blankets for every visitor.",
+    "example_zh": "庇护所为每一位来访者准备了足够的食物和毯子。"
+  },
+  "admission": {
+    "pos": "n.",
+    "meaning_zh": "准许进入；录取",
+    "example_en": "University admission depends partly on exam scores and a personal statement.",
+    "example_zh": "大学录取在一定程度上取决于考试成绩和个人陈述。"
+  },
+  "adolescence": {
+    "pos": "n.",
+    "meaning_zh": "青春期",
+    "example_en": "During adolescence, many teenagers question the rules they once accepted.",
+    "example_zh": "青春期里，许多青少年会质疑自己曾经接受的规则。"
+  },
+  "adolescent": {
+    "pos": "n.",
+    "meaning_zh": "青少年",
+    "example_en": "An adolescent may need more sleep than a busy adult schedule allows.",
+    "example_zh": "青少年需要的睡眠可能比繁忙的成人作息所允许的更多。"
+  },
+  "adore": {
+    "pos": "v.",
+    "meaning_zh": "热爱；喜爱",
+    "example_en": "Children often adore stories in which brave animals help their friends.",
+    "example_zh": "孩子们常常喜爱那些勇敢的动物帮助朋友的故事。"
+  },
+  "affection": {
+    "pos": "n.",
+    "meaning_zh": "喜爱；感情",
+    "example_en": "She showed quiet affection by cooking soup for her tired father.",
+    "example_zh": "她为疲惫的父亲煮汤，以此表达默默的关爱。"
+  },
+  "agent": {
+    "pos": "n.",
+    "meaning_zh": "代理人；代理商",
+    "example_en": "A travel agent booked our train tickets and a small hotel room.",
+    "example_zh": "一位旅行代理为我们预订了火车票和一间小旅馆。"
+  },
+  "aggressive": {
+    "pos": "adj.",
+    "meaning_zh": "好斗的；侵略性的",
+    "example_en": "An aggressive dog ran toward the gate until its owner called it back.",
+    "example_zh": "一条好斗的狗冲向大门，直到主人把它叫了回来。"
+  },
+  "airmail": {
+    "pos": "n.",
+    "meaning_zh": "航空邮件",
+    "example_en": "Please send the contract by airmail so it arrives before Friday.",
+    "example_zh": "请用航空邮件寄出这份合同，以便它在周五前送达。"
+  },
+  "airspace": {
+    "pos": "n.",
+    "meaning_zh": "领空",
+    "example_en": "Pilots must request permission before entering another country's airspace.",
+    "example_zh": "飞行员在进入另一个国家的领空之前必须申请许可。"
+  },
+  "album": {
+    "pos": "n.",
+    "meaning_zh": "相册；专辑",
+    "example_en": "Grandmother keeps an album of family photos from every summer holiday.",
+    "example_zh": "祖母保存着一本收录每个暑假家庭照片的相册。"
+  },
+  "algebra": {
+    "pos": "n.",
+    "meaning_zh": "代数",
+    "example_en": "Solving algebra problems trained her to think in clear logical steps.",
+    "example_zh": "解代数题训练她以清晰的逻辑步骤进行思考。"
+  },
+  "allergic": {
+    "pos": "adj.",
+    "meaning_zh": "过敏的",
+    "example_en": "He is allergic to peanuts, so he checks every food label carefully.",
+    "example_zh": "他对花生过敏，所以会仔细查看每一种食品标签。"
+  },
+  "alley": {
+    "pos": "n.",
+    "meaning_zh": "小巷；胡同",
+    "example_en": "A narrow alley behind the market leads to a quiet courtyard.",
+    "example_zh": "市场后面一条狭窄的小巷通向一个安静的庭院。"
+  },
+  "allocate": {
+    "pos": "v.",
+    "meaning_zh": "分配；拨出",
+    "example_en": "City planners allocate extra funds to repair aging school buildings.",
+    "example_zh": "城市规划人员拨出额外资金来修缮老旧的校舍。"
+  },
+  "altitude": {
+    "pos": "n.",
+    "meaning_zh": "海拔；高度",
+    "example_en": "At this altitude, the air is thin and breathing becomes harder.",
+    "example_zh": "在这个海拔，空气稀薄，呼吸会变得更加困难。"
+  },
+  "aluminium": {
+    "pos": "n.",
+    "meaning_zh": "铝",
+    "example_en": "Recycled aluminium can be melted and shaped into new drink cans.",
+    "example_zh": "回收的铝可以熔化并制成新的饮料罐。"
+  },
+  "ambassador": {
+    "pos": "n.",
+    "meaning_zh": "大使",
+    "example_en": "The ambassador welcomed visiting students at the embassy garden party.",
+    "example_zh": "大使在使馆花园聚会上欢迎来访的学生。"
+  },
+  "ambassadress": {
+    "pos": "n.",
+    "meaning_zh": "女大使",
+    "example_en": "The ambassadress spoke about cultural exchange during the evening reception.",
+    "example_zh": "女大使在晚间招待会上谈了文化交流。"
+  },
+  "ambiguous": {
+    "pos": "adj.",
+    "meaning_zh": "模棱两可的；含糊的",
+    "example_en": "His ambiguous reply left both teams unsure about the final decision.",
+    "example_zh": "他含糊的答复让两支队伍都对最终决定没有把握。"
+  },
+  "ample": {
+    "pos": "adj.",
+    "meaning_zh": "充足的；宽敞的",
+    "example_en": "There is ample space in the hall for chairs and a small stage.",
+    "example_zh": "大厅里有足够的空间摆放椅子和一个小舞台。"
+  },
+  "analysis": {
+    "pos": "n.",
+    "meaning_zh": "分析",
+    "example_en": "A careful analysis of the data revealed an unexpected seasonal pattern.",
+    "example_zh": "对数据的仔细分析揭示了一个意想不到的季节性规律。"
+  },
+  "anchor": {
+    "pos": "n.",
+    "meaning_zh": "锚",
+    "example_en": "The heavy anchor held the fishing boat steady during the storm.",
+    "example_zh": "沉重的锚在暴风雨中使渔船保持稳定。"
+  },
+  "anecdote": {
+    "pos": "n.",
+    "meaning_zh": "轶事；趣闻",
+    "example_en": "His anecdote about getting lost in Tokyo made everyone at dinner laugh.",
+    "example_zh": "他在东京迷路的轶事逗得晚餐时在场的每个人都笑了。"
+  },
+  "anniversary": {
+    "pos": "n.",
+    "meaning_zh": "周年纪念日",
+    "example_en": "They celebrated their tenth anniversary with a quiet dinner by the lake.",
+    "example_zh": "他们在湖边安静地共进晚餐，庆祝结婚十周年。"
+  },
+  "apparent": {
+    "pos": "adj.",
+    "meaning_zh": "明显的；表面上的",
+    "example_en": "It became apparent that the bridge needed repairs before winter arrived.",
+    "example_zh": "显然，这座桥在冬天到来之前需要维修。"
+  },
+  "appendix": {
+    "pos": "n.",
+    "meaning_zh": "附录；阑尾",
+    "example_en": "The appendix at the back of the book lists every scientific term.",
+    "example_zh": "书后的附录列出了每一个科学术语。"
+  },
+  "appoint": {
+    "pos": "v.",
+    "meaning_zh": "任命；委派",
+    "example_en": "The board will appoint a new director at next month's meeting.",
+    "example_zh": "董事会将在下个月的会议上任命一位新主任。"
+  },
+  "appreciation": {
+    "pos": "n.",
+    "meaning_zh": "欣赏；感激",
+    "example_en": "She expressed her appreciation by writing a short thank-you letter.",
+    "example_zh": "她写了一封简短的感谢信来表达谢意。"
+  },
+  "approximately": {
+    "pos": "adv.",
+    "meaning_zh": "大约；近似地",
+    "example_en": "The museum is approximately twenty minutes from the central railway station.",
+    "example_zh": "博物馆距离中央火车站大约二十分钟路程。"
+  },
+  "apron": {
+    "pos": "n.",
+    "meaning_zh": "围裙",
+    "example_en": "He tied an apron around his waist before he started baking bread.",
+    "example_zh": "他开始烤面包之前，在腰间系上了一条围裙。"
+  },
+  "arbitrary": {
+    "pos": "adj.",
+    "meaning_zh": "任意的；武断的",
+    "example_en": "An arbitrary rule that ignores local conditions often causes public anger.",
+    "example_zh": "无视当地情况的武断规定常常引起公众不满。"
+  },
+  "architecture": {
+    "pos": "n.",
+    "meaning_zh": "建筑学；建筑风格",
+    "example_en": "Modern architecture in this district mixes glass towers with old courtyards.",
+    "example_zh": "这个地区的现代建筑把玻璃高楼与古老庭院结合在一起。"
+  },
+  "arithmetic": {
+    "pos": "n.",
+    "meaning_zh": "算术",
+    "example_en": "Basic arithmetic helps shoppers check prices before they pay at the counter.",
+    "example_zh": "基础算术帮助购物者在柜台付款前核对价格。"
+  },
+  "arrange": {
+    "pos": "v.",
+    "meaning_zh": "安排；整理",
+    "example_en": "Can you arrange a meeting with the engineer sometime next week?",
+    "example_zh": "你能在下周某个时间安排一次与工程师的会面吗？"
+  },
+  "ash": {
+    "pos": "n.",
+    "meaning_zh": "灰；灰烬",
+    "example_en": "Grey ash covered the ground after the forest fire finally died out.",
+    "example_zh": "森林大火最终熄灭后，灰色的灰烬覆盖了地面。"
+  },
+  "assistance": {
+    "pos": "n.",
+    "meaning_zh": "帮助；援助",
+    "example_en": "Volunteers offered assistance to families whose homes were damaged by floods.",
+    "example_zh": "志愿者向家园被洪水损坏的家庭提供了援助。"
+  },
+  "associate": {
+    "pos": "v.",
+    "meaning_zh": "联系；交往",
+    "example_en": "People often associate this city with its ancient walls and night markets.",
+    "example_zh": "人们常常把这座城市与它的古城墙和夜市联系在一起。"
+  },
+  "athletic": {
+    "pos": "adj.",
+    "meaning_zh": "运动的；健壮的",
+    "example_en": "Her athletic training includes running, swimming, and strength exercises each week.",
+    "example_zh": "她的运动训练包括每周跑步、游泳和力量练习。"
+  },
+  "atom": {
+    "pos": "n.",
+    "meaning_zh": "原子",
+    "example_en": "Every atom contains a nucleus surrounded by one or more electrons.",
+    "example_zh": "每个原子都有一个被一个或多个电子包围的原子核。"
+  },
+  "attractive": {
+    "pos": "adj.",
+    "meaning_zh": "有吸引力的",
+    "example_en": "The coastal town is attractive to visitors who enjoy walking and seafood.",
+    "example_zh": "这座海滨小镇对喜欢散步和海鲜的游客很有吸引力。"
+  },
+  "authentic": {
+    "pos": "adj.",
+    "meaning_zh": "真正的；地道的",
+    "example_en": "This restaurant serves authentic noodles made from a family recipe.",
+    "example_zh": "这家餐馆供应按家庭食谱制作的地道面条。"
+  },
+  "avenue": {
+    "pos": "n.",
+    "meaning_zh": "大街；途径",
+    "example_en": "Tall trees line the avenue that leads toward the city museum.",
+    "example_zh": "高大的树木排列在通向城市博物馆的大街两侧。"
+  },
+  "bachelor": {
+    "pos": "n.",
+    "meaning_zh": "学士；单身汉",
+    "example_en": "A bachelor of science can apply for this laboratory assistant post.",
+    "example_zh": "理学学士可以申请这个实验室助理职位。"
+  },
+  "bacteria": {
+    "pos": "n.",
+    "meaning_zh": "细菌",
+    "example_en": "Some bacteria help digest food, while others can cause serious illness.",
+    "example_zh": "有些细菌帮助消化食物，另一些则可能引起严重疾病。"
+  },
+  "baggage": {
+    "pos": "n.",
+    "meaning_zh": "行李",
+    "example_en": "Passengers should keep their baggage close until the train reaches the platform.",
+    "example_zh": "乘客应把行李放在身边，直到火车到达站台。"
+  },
+  "balcony": {
+    "pos": "n.",
+    "meaning_zh": "阳台",
+    "example_en": "From the balcony, we could see the river and the evening lights.",
+    "example_zh": "从阳台上，我们可以看到河流和夜晚的灯火。"
+  },
+  "bandage": {
+    "pos": "n.",
+    "meaning_zh": "绷带",
+    "example_en": "The nurse wrapped a clean bandage around his cut finger.",
+    "example_zh": "护士用干净的绷带包扎了他划破的手指。"
+  },
+  "barber": {
+    "pos": "n.",
+    "meaning_zh": "理发师",
+    "example_en": "The barber trimmed his hair and mentioned the weekend football match.",
+    "example_zh": "理发师给他修剪了头发，并提起了周末的足球比赛。"
+  },
+  "barbershop": {
+    "pos": "n.",
+    "meaning_zh": "理发店",
+    "example_en": "A small barbershop on the corner has served this neighbourhood for decades.",
+    "example_zh": "街角的一家小理发店为这个社区服务了几十年。"
+  },
+  "bare": {
+    "pos": "adj.",
+    "meaning_zh": "赤裸的；光秃的",
+    "example_en": "The trees stood bare after the last leaves fell in late autumn.",
+    "example_zh": "深秋最后的叶子落下后，树木变得光秃秃的。"
+  },
+  "bargain": {
+    "pos": "n.",
+    "meaning_zh": "便宜货；交易",
+    "example_en": "This coat was a bargain because the shop reduced its price yesterday.",
+    "example_zh": "这件外套很划算，因为商店昨天降了价。"
+  },
+  "bathe": {
+    "pos": "v.",
+    "meaning_zh": "洗澡；沐浴",
+    "example_en": "They bathe in the warm spring after a long hike through the hills.",
+    "example_zh": "他们在山间长途徒步之后，到温泉里沐浴。"
+  },
+  "bathtub": {
+    "pos": "n.",
+    "meaning_zh": "浴缸",
+    "example_en": "The hotel bathtub was large enough for a tired traveller to relax.",
+    "example_zh": "酒店的浴缸很大，足够疲惫的旅客放松身体。"
+  },
+  "beast": {
+    "pos": "n.",
+    "meaning_zh": "野兽",
+    "example_en": "A wild beast crossed the road and disappeared into the dark forest.",
+    "example_zh": "一头野兽穿过公路，消失在黑暗的森林里。"
+  },
+  "beddings": {
+    "pos": "n.",
+    "meaning_zh": "寝具；床上用品",
+    "example_en": "Fresh beddings were placed on every bed before the guests arrived.",
+    "example_zh": "客人到达之前，每张床上都铺好了新的寝具。"
+  },
+  "bench": {
+    "pos": "n.",
+    "meaning_zh": "长凳",
+    "example_en": "An old wooden bench stands under the tree in the school garden.",
+    "example_zh": "校园花园的树下摆着一张旧木长凳。"
+  },
+  "beneficial": {
+    "pos": "adj.",
+    "meaning_zh": "有益的；有利的",
+    "example_en": "Regular exercise is beneficial to both physical health and mental focus.",
+    "example_zh": "经常锻炼对身体健康和精神集中都有益。"
+  },
+  "betray": {
+    "pos": "v.",
+    "meaning_zh": "背叛；泄露",
+    "example_en": "He refused to betray the friends who had hidden him during the war.",
+    "example_zh": "他拒绝背叛那些在战争期间藏匿过他的朋友。"
+  },
+  "bid": {
+    "pos": "n.",
+    "meaning_zh": "出价；投标",
+    "example_en": "The company made a higher bid for the bridge construction project.",
+    "example_zh": "这家公司对桥梁建设项目提出了更高的投标价。"
+  },
+  "bingo": {
+    "pos": "n.",
+    "meaning_zh": "宾戈游戏",
+    "example_en": "Residents play bingo in the community hall every Saturday evening.",
+    "example_zh": "居民们每个星期六晚上在社区礼堂玩宾戈游戏。"
+  },
+  "biochemistry": {
+    "pos": "n.",
+    "meaning_zh": "生物化学",
+    "example_en": "She chose biochemistry because she wanted to study how cells work.",
+    "example_zh": "她选择了生物化学，因为她想研究细胞如何运作。"
+  },
+  "biography": {
+    "pos": "n.",
+    "meaning_zh": "传记",
+    "example_en": "This biography describes how the scientist overcame poverty and doubt.",
+    "example_zh": "这部传记描述了那位科学家如何克服贫困和自我怀疑。"
+  },
+  "birthplace": {
+    "pos": "n.",
+    "meaning_zh": "出生地",
+    "example_en": "Shakespeare's birthplace in Stratford attracts visitors from many countries.",
+    "example_zh": "莎士比亚在斯特拉特福的出生地吸引着来自许多国家的游客。"
+  },
+  "bishop": {
+    "pos": "n.",
+    "meaning_zh": "主教",
+    "example_en": "The bishop attended the ceremony and greeted families outside the church.",
+    "example_zh": "主教参加了典礼，并在教堂外问候了各个家庭。"
+  },
+  "booth": {
+    "pos": "n.",
+    "meaning_zh": "摊位；小隔间",
+    "example_en": "Each booth at the science fair displayed a student project and poster.",
+    "example_zh": "科学展上的每个展位都展示了一个学生项目和一张海报。"
+  },
+  "botany": {
+    "pos": "n.",
+    "meaning_zh": "植物学",
+    "example_en": "Fieldwork in botany took the students into the hills to identify plants.",
+    "example_zh": "植物学野外实践把学生们带到山里辨认植物。"
+  },
+  "boycott": {
+    "pos": "v.",
+    "meaning_zh": "抵制",
+    "example_en": "Customers began to boycott the shop after it raised prices unfairly.",
+    "example_zh": "这家商店不公平地涨价后，顾客开始抵制它。"
+  },
+  "brake": {
+    "pos": "n.",
+    "meaning_zh": "刹车；制动器",
+    "example_en": "The driver pressed the brake when a child ran into the street.",
+    "example_zh": "一个孩子跑上街道时，司机踩下了刹车。"
+  },
+  "brand": {
+    "pos": "n.",
+    "meaning_zh": "品牌；商标",
+    "example_en": "This brand of tea is popular among office workers in the city.",
+    "example_zh": "这个品牌的茶在城里的上班族中很受欢迎。"
+  },
+  "bravery": {
+    "pos": "n.",
+    "meaning_zh": "勇敢；勇气",
+    "example_en": "Her bravery during the flood inspired neighbours to help one another.",
+    "example_zh": "她在洪水中的勇敢激励了邻居们互相帮助。"
+  },
+  "breakthrough": {
+    "pos": "n.",
+    "meaning_zh": "突破；重大进展",
+    "example_en": "The medical breakthrough may help doctors treat the disease more effectively.",
+    "example_zh": "这项医学突破可能帮助医生更有效地治疗这种疾病。"
+  },
+  "brewery": {
+    "pos": "n.",
+    "meaning_zh": "啤酒厂",
+    "example_en": "The old brewery now offers tours and sells freshly made local beer.",
+    "example_zh": "这家老啤酒厂现在提供参观，并出售新酿的本地啤酒。"
+  },
+  "brunch": {
+    "pos": "n.",
+    "meaning_zh": "早午餐",
+    "example_en": "We had brunch at a cafe near the park before continuing our walk.",
+    "example_zh": "我们在公园附近的咖啡馆吃了早午餐，然后继续散步。"
+  },
+  "bungalow": {
+    "pos": "n.",
+    "meaning_zh": "平房",
+    "example_en": "Their bungalow has a small garden and a porch facing the sea.",
+    "example_zh": "他们的平房有一座小花园和一面向海的门廊。"
+  },
+  "burden": {
+    "pos": "n.",
+    "meaning_zh": "负担；重担",
+    "example_en": "Heavy debt became a burden that the young family struggled to carry.",
+    "example_zh": "沉重的债务成了这个年轻家庭努力承受的负担。"
+  },
+  "bureaucratic": {
+    "pos": "adj.",
+    "meaning_zh": "官僚的；官僚主义的",
+    "example_en": "Long bureaucratic delays kept the building permit waiting for months.",
+    "example_zh": "漫长的官僚拖延使建筑许可等了好几个月。"
+  },
+  "burglar": {
+    "pos": "n.",
+    "meaning_zh": "入室窃贼",
+    "example_en": "A burglar broke the window and took the laptop from the desk.",
+    "example_zh": "一名入室窃贼打破窗户，从书桌上拿走了笔记本电脑。"
+  },
+  "bush": {
+    "pos": "n.",
+    "meaning_zh": "灌木",
+    "example_en": "A flowering bush beside the path attracted bees throughout the spring.",
+    "example_zh": "小路旁一丛开花的灌木整个春天都吸引着蜜蜂。"
+  },
+  "businesswoman": {
+    "pos": "n.",
+    "meaning_zh": "女商人；女企业家",
+    "example_en": "The businesswoman opened a second shop after her first store succeeded.",
+    "example_zh": "这位女企业家在第一家店成功之后又开了第二家店。"
+  },
+  "cab": {
+    "pos": "n.",
+    "meaning_zh": "出租车",
+    "example_en": "We took a cab from the airport because the last bus had left.",
+    "example_zh": "我们从机场乘了出租车，因为末班公共汽车已经开走了。"
+  },
+  "carpenter": {
+    "pos": "n.",
+    "meaning_zh": "木匠",
+    "example_en": "A skilled carpenter built the wooden shelves for the new classroom.",
+    "example_zh": "一位熟练的木匠为新教室做了木架子。"
+  },
+  "cassette": {
+    "pos": "n.",
+    "meaning_zh": "盒式磁带",
+    "example_en": "He found an old cassette of folk songs in his father's drawer.",
+    "example_zh": "他在父亲的抽屉里发现了一盒民歌老磁带。"
+  },
+  "casual": {
+    "pos": "adj.",
+    "meaning_zh": "随便的；非正式的",
+    "example_en": "Wear casual clothes if you plan to walk along the rocky coast.",
+    "example_zh": "如果打算沿着多岩石的海岸步行，就穿休闲的衣服。"
+  },
+  "catalogue": {
+    "pos": "n.",
+    "meaning_zh": "目录",
+    "example_en": "The library catalogue lists every book by author, title, and subject.",
+    "example_zh": "图书馆目录按作者、书名和主题列出每一本书。"
+  },
+  "catastrophe": {
+    "pos": "n.",
+    "meaning_zh": "大灾难；灾祸",
+    "example_en": "The earthquake was a catastrophe that destroyed roads, homes, and schools.",
+    "example_zh": "这场地震是一场摧毁了道路、房屋和学校的大灾难。"
+  },
+  "caution": {
+    "pos": "n.",
+    "meaning_zh": "小心；谨慎",
+    "example_en": "Drivers should use caution when the mountain road is covered with ice.",
+    "example_zh": "山路结冰时，司机应当格外小心。"
+  },
+  "cautious": {
+    "pos": "adj.",
+    "meaning_zh": "谨慎的；小心的",
+    "example_en": "Be cautious when you cross the busy street near the railway station.",
+    "example_zh": "在火车站附近穿过繁忙街道时要谨慎。"
+  },
+  "centigrade": {
+    "pos": "adj.",
+    "meaning_zh": "摄氏的",
+    "example_en": "Water freezes at zero degrees centigrade under normal atmospheric pressure.",
+    "example_zh": "在正常大气压下，水在零摄氏度时结冰。"
+  },
+  "ceremony": {
+    "pos": "n.",
+    "meaning_zh": "典礼；仪式",
+    "example_en": "The opening ceremony included music, speeches, and a short parade.",
+    "example_zh": "开幕式包括音乐、演讲和一场短暂的游行。"
+  },
+  "choir": {
+    "pos": "n.",
+    "meaning_zh": "合唱团",
+    "example_en": "The school choir practised a folk song for the spring concert.",
+    "example_zh": "学校合唱团为春季音乐会排练了一首民歌。"
+  },
+  "cigar": {
+    "pos": "n.",
+    "meaning_zh": "雪茄",
+    "example_en": "He never smokes a cigar indoors because the smell bothers other people.",
+    "example_zh": "他从不在室内抽雪茄，因为气味会打扰别人。"
+  },
+  "circulate": {
+    "pos": "v.",
+    "meaning_zh": "循环；传播",
+    "example_en": "Warm air will circulate through the room once you open both windows.",
+    "example_zh": "一旦你打开两扇窗，暖空气就会在房间里循环。"
+  },
+  "civilization": {
+    "pos": "n.",
+    "meaning_zh": "文明",
+    "example_en": "Ancient civilization along this river developed writing, trade, and law.",
+    "example_zh": "这条河沿岸的古代文明发展出了文字、贸易和法律。"
+  },
+  "claw": {
+    "pos": "n.",
+    "meaning_zh": "爪；爪子",
+    "example_en": "The cat caught the toy with one claw and pulled it closer.",
+    "example_zh": "猫用一只爪子抓住玩具，并把它拉得更近。"
+  },
+  "clumsy": {
+    "pos": "adj.",
+    "meaning_zh": "笨拙的",
+    "example_en": "His clumsy movement knocked a glass off the table during dinner.",
+    "example_zh": "晚饭时，他笨拙的动作把一只杯子从桌上碰了下来。"
+  },
+  "coincidence": {
+    "pos": "n.",
+    "meaning_zh": "巧合",
+    "example_en": "By coincidence, we booked the same flight and sat in neighbouring seats.",
+    "example_zh": "巧合的是，我们订了同一航班，而且座位相邻。"
+  },
+  "colleague": {
+    "pos": "n.",
+    "meaning_zh": "同事",
+    "example_en": "A colleague helped me finish the report before the afternoon deadline.",
+    "example_zh": "一位同事帮我在下午的截止时间前完成了报告。"
+  },
+  "collision": {
+    "pos": "n.",
+    "meaning_zh": "碰撞；冲突",
+    "example_en": "The collision between two cars blocked traffic for nearly an hour.",
+    "example_zh": "两车相撞使交通堵塞了将近一个小时。"
+  },
+  "command": {
+    "pos": "n.",
+    "meaning_zh": "掌握；命令",
+    "example_en": "She has a good command of English after living abroad for years.",
+    "example_zh": "在国外生活多年之后，她的英语掌握得很好。"
+  },
+  "communism": {
+    "pos": "n.",
+    "meaning_zh": "共产主义",
+    "example_en": "Historians still debate how communism shaped life in several twentieth-century countries.",
+    "example_zh": "历史学家仍在讨论共产主义如何塑造了若干二十世纪国家的生活。"
+  },
+  "companion": {
+    "pos": "n.",
+    "meaning_zh": "同伴；伙伴",
+    "example_en": "Her travelling companion carried the map while she checked the train times.",
+    "example_zh": "她的旅伴拿着地图，而她则核对火车时刻。"
+  },
+  "compass": {
+    "pos": "n.",
+    "meaning_zh": "指南针；圆规",
+    "example_en": "A small compass helped the hikers find north when the fog grew thick.",
+    "example_zh": "雾变浓时，一只小指南针帮助徒步者找到了北方。"
+  },
+  "compensate": {
+    "pos": "v.",
+    "meaning_zh": "补偿；赔偿",
+    "example_en": "Employers agreed to compensate workers who lost wages during the closure.",
+    "example_zh": "雇主同意补偿停业期间损失工资的工人。"
+  },
+  "compromise": {
+    "pos": "n.",
+    "meaning_zh": "妥协；折中",
+    "example_en": "After long talks, both sides reached a compromise on the working hours.",
+    "example_zh": "长时间商谈之后，双方就工作时间达成了妥协。"
+  },
+  "compulsory": {
+    "pos": "adj.",
+    "meaning_zh": "强制的；义务的",
+    "example_en": "Physical education is compulsory for every student in the first two years.",
+    "example_zh": "前两年里，体育对每一名学生都是必修的。"
+  },
+  "condemn": {
+    "pos": "v.",
+    "meaning_zh": "谴责",
+    "example_en": "Leaders from several countries condemn violence against peaceful demonstrators.",
+    "example_zh": "几个国家的领导人谴责针对和平示威者的暴力行为。"
+  },
+  "confidential": {
+    "pos": "adj.",
+    "meaning_zh": "机密的；保密的",
+    "example_en": "These confidential files should stay locked when nobody is in the office.",
+    "example_zh": "办公室没有人时，这些机密文件应当锁好。"
+  },
+  "confuse": {
+    "pos": "v.",
+    "meaning_zh": "使困惑；混淆",
+    "example_en": "Similar street names can confuse visitors who are new to the city.",
+    "example_zh": "相似的街名会让初到这座城市的游客感到困惑。"
+  },
+  "connection": {
+    "pos": "n.",
+    "meaning_zh": "联系；连接",
+    "example_en": "There is a direct connection between sleep and a student's ability to concentrate.",
+    "example_zh": "睡眠与学生的专注能力之间有直接联系。"
+  },
+  "conscience": {
+    "pos": "n.",
+    "meaning_zh": "良心",
+    "example_en": "His conscience would not let him keep the wallet he found on the bus.",
+    "example_zh": "他的良心不允许他把在公共汽车上捡到的钱包留下。"
+  },
+  "consensus": {
+    "pos": "n.",
+    "meaning_zh": "共识；一致意见",
+    "example_en": "The committee reached a consensus after discussing the budget for two hours.",
+    "example_zh": "委员会讨论预算两个小时后达成了共识。"
+  },
+  "conservative": {
+    "pos": "adj.",
+    "meaning_zh": "保守的",
+    "example_en": "Her conservative estimate of the cost still left room for unexpected repairs.",
+    "example_zh": "她对费用的保守估计仍然为意外维修留出了余地。"
+  },
+  "considerate": {
+    "pos": "adj.",
+    "meaning_zh": "体贴的；考虑周到的",
+    "example_en": "It was considerate of him to lower his voice in the quiet library.",
+    "example_zh": "他在安静的图书馆里放低声音，这很体贴。"
+  },
+  "consideration": {
+    "pos": "n.",
+    "meaning_zh": "考虑；体谅",
+    "example_en": "Safety should receive careful consideration before any new road is opened.",
+    "example_zh": "任何新道路开放之前，安全问题都应得到仔细考虑。"
+  },
+  "construct": {
+    "pos": "v.",
+    "meaning_zh": "建造；构筑",
+    "example_en": "Engineers plan to construct a bridge across the river next spring.",
+    "example_zh": "工程师计划明年春天在这条河上建造一座桥。"
+  },
+  "consult": {
+    "pos": "v.",
+    "meaning_zh": "咨询；查阅",
+    "example_en": "You should consult a doctor if the fever lasts more than three days.",
+    "example_zh": "如果发烧持续超过三天，你应该咨询医生。"
+  },
+  "contradict": {
+    "pos": "v.",
+    "meaning_zh": "反驳；与……矛盾",
+    "example_en": "New evidence may contradict the earlier explanation of how the fire started.",
+    "example_zh": "新证据可能与早先关于火灾如何发生的解释相矛盾。"
+  },
+  "contribute": {
+    "pos": "v.",
+    "meaning_zh": "贡献；捐献",
+    "example_en": "Local families contribute food and clothes to the winter relief centre.",
+    "example_zh": "当地家庭向冬季救济中心捐献食物和衣物。"
+  },
+  "controversial": {
+    "pos": "adj.",
+    "meaning_zh": "有争议的",
+    "example_en": "The controversial plan to widen the road divided opinion across the town.",
+    "example_zh": "拓宽道路这项有争议的计划使全镇意见出现了分歧。"
+  },
+  "convenience": {
+    "pos": "n.",
+    "meaning_zh": "方便；便利",
+    "example_en": "For convenience, many passengers buy tickets on their phones before travelling.",
+    "example_zh": "为了方便，许多乘客在出行前用手机购买车票。"
+  },
+  "convey": {
+    "pos": "v.",
+    "meaning_zh": "传达；运送",
+    "example_en": "A simple drawing can convey an idea when words are hard to find.",
+    "example_zh": "当难以找到合适的词语时，一幅简单的图画可以传达想法。"
+  },
+  "corporation": {
+    "pos": "n.",
+    "meaning_zh": "公司；企业",
+    "example_en": "The corporation employs thousands of workers in factories across the country.",
+    "example_zh": "这家公司在全国各地的工厂雇用了数千名工人。"
+  },
+  "correction": {
+    "pos": "n.",
+    "meaning_zh": "改正；修正",
+    "example_en": "A small correction in the map saved the hikers from taking the wrong path.",
+    "example_zh": "地图上的一处小修正使徒步者没有走错路。"
+  },
+  "corrupt": {
+    "pos": "adj.",
+    "meaning_zh": "腐败的；贪污的",
+    "example_en": "A corrupt official accepted money and ignored the safety rules.",
+    "example_zh": "一名腐败官员收受钱财，并忽视了安全规定。"
+  },
+  "cosy": {
+    "pos": "adj.",
+    "meaning_zh": "舒适的；温暖的",
+    "example_en": "The cosy cafe by the station serves hot soup on cold evenings.",
+    "example_zh": "车站旁这家舒适的咖啡馆在寒冷的晚上供应热汤。"
+  },
+  "courtyard": {
+    "pos": "n.",
+    "meaning_zh": "庭院；院子",
+    "example_en": "Children played football in the courtyard until it grew too dark.",
+    "example_zh": "孩子们在院子里踢足球，直到天色变得太暗。"
+  },
+  "criminal": {
+    "pos": "n.",
+    "meaning_zh": "罪犯",
+    "example_en": "The criminal was arrested near the station after a short police search.",
+    "example_zh": "经过警方短时间搜查，这名罪犯在车站附近被逮捕。"
+  },
+  "crossroads": {
+    "pos": "n.",
+    "meaning_zh": "十字路口",
+    "example_en": "Turn left at the crossroads and you will see the hospital entrance.",
+    "example_zh": "在十字路口向左转，你就会看到医院的入口。"
+  },
+  "cube": {
+    "pos": "n.",
+    "meaning_zh": "立方体；方块",
+    "example_en": "She cut the cheese into a small cube and placed it on the plate.",
+    "example_zh": "她把奶酪切成一个小方块，放在盘子上。"
+  },
+  "cubic": {
+    "pos": "adj.",
+    "meaning_zh": "立方的",
+    "example_en": "The tank holds about two cubic metres of water when it is full.",
+    "example_zh": "水箱装满时大约能容纳两立方米的水。"
+  },
+  "currency": {
+    "pos": "n.",
+    "meaning_zh": "货币",
+    "example_en": "Travellers should check the local currency before they exchange money abroad.",
+    "example_zh": "旅客在国外兑换钱币之前，应当先了解当地货币。"
+  },
+  "curriculum": {
+    "pos": "n.",
+    "meaning_zh": "课程",
+    "example_en": "The school curriculum includes science, history, art, and physical education.",
+    "example_zh": "学校课程包括科学、历史、美术和体育。"
+  },
+  "daddy": {
+    "pos": "n.",
+    "meaning_zh": "爸爸",
+    "example_en": "Her daddy walked her to school and waved from the gate each morning.",
+    "example_zh": "她爸爸每天早上送她去学校，并在门口向她挥手。"
+  },
+  "dam": {
+    "pos": "n.",
+    "meaning_zh": "水坝",
+    "example_en": "The dam holds back the river and supplies water to nearby farms.",
+    "example_zh": "水坝拦住河水，并向附近的农田供水。"
+  },
+  "dash": {
+    "pos": "v.",
+    "meaning_zh": "猛冲；飞奔",
+    "example_en": "He had to dash across the platform to catch the last evening train.",
+    "example_zh": "他不得不冲过站台，去赶当晚的末班火车。"
+  },
+  "dawn": {
+    "pos": "n.",
+    "meaning_zh": "黎明；拂晓",
+    "example_en": "At dawn, fishermen left the harbour and headed toward the open sea.",
+    "example_zh": "黎明时分，渔民离开港口，驶向大海。"
+  },
+  "deed": {
+    "pos": "n.",
+    "meaning_zh": "行为；事迹",
+    "example_en": "One kind deed can change a stranger's difficult day for the better.",
+    "example_zh": "一件善举就能让陌生人难挨的一天变得好一些。"
+  }
+}

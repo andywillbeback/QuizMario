@@ -1,0 +1,109 @@
+# 课标2022 附录3 单独列表 (cleaned from esph.com.cn PDF text, pp.128-137)
+## ordinals 11-100 + others
+eleventh
+twelfth
+thirteenth
+fourteenth
+fifteenth
+sixteenth
+seventeenth
+eighteenth
+nineteenth
+twentieth
+thirtieth
+fortieth
+fiftieth
+sixtieth
+seventieth
+eightieth
+ninetieth
+hundredth
+## geography
+Africa
+African
+America
+American
+Antarctica
+Asia
+Asian
+Australia
+Australian
+Britain
+British
+Canada
+Canadian
+China
+Chinese
+England
+English
+Europe
+European
+France
+French
+Germany
+German
+India
+Indian
+Italy
+Italian
+Japan
+Japanese
+London
+New York
+New Zealand
+New Zealander
+Paris
+Russia
+Russian
+Singapore
+Singaporean
+South Africa
+South African
+the Atlantic Ocean
+the Indian Ocean
+the Pacific Ocean
+the United Kingdom (UK)
+the United States of America (USA)
+## abbreviations
+CPC
+PLA
+PRC
+UN
+UNESCO
+WHO
+WTO
+## festivals
+Children's Day
+Double Ninth Festival
+Dragon Boat Festival
+Labour Day
+Lantern Festival
+Mid-Autumn Festival
+National Day
+New Year's Day
+PLA Day
+Spring Festival
+Teachers' Day
+Tomb-sweeping Day
+Women's Day
+## places
+Mount Huangshan
+Mount Qomolangma
+Mount Taishan
+the Changjiang River (the Yangtze River)
+the Great Wall
+the Palace Museum
+the Yellow River
+Tian'anmen Square
+## other proper nouns
+Beijing opera (Peking opera)
+Beijing roast duck
+hot pot
+lunar calendar
+mooncake
+paper-cut
+qipao
+Spring Festival couplets
+spring roll
+the Silk Road
+Traditional Chinese Medicine (TCM)

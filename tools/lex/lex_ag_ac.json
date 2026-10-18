@@ -1,0 +1,902 @@
+{
+  "rectangle": {
+    "pos": "n.",
+    "meaning_zh": "长方形；矩形",
+    "example_en": "The architect drew a rectangle around the garden on the plan.",
+    "example_zh": "建筑师在平面图上绕着花园画了一个长方形。"
+  },
+  "referee": {
+    "pos": "n.",
+    "meaning_zh": "裁判员",
+    "example_en": "After a long argument, the referee stopped the match and awarded a free kick.",
+    "example_zh": "一番长时间的争执之后，裁判员中止了比赛并判罚任意球。"
+  },
+  "religion": {
+    "pos": "n.",
+    "meaning_zh": "宗教",
+    "example_en": "Freedom of religion is protected by law in this country.",
+    "example_zh": "在这个国家，宗教自由受法律保护。"
+  },
+  "religious": {
+    "pos": "adj.",
+    "meaning_zh": "宗教的；虔诚的",
+    "example_en": "Many religious festivals bring families together every year.",
+    "example_zh": "许多宗教节日每年都会让家人团聚。"
+  },
+  "resemble": {
+    "pos": "v.",
+    "meaning_zh": "像；与……相似",
+    "example_en": "The twins resemble each other so closely that strangers often mix them up.",
+    "example_zh": "这对双胞胎长得太像了，陌生人常常把他们认错。"
+  },
+  "reservation": {
+    "pos": "n.",
+    "meaning_zh": "预订；保留",
+    "example_en": "Please confirm your reservation at the hotel before six this evening.",
+    "example_zh": "请在今晚六点前确认你的酒店预订。"
+  },
+  "resist": {
+    "pos": "v.",
+    "meaning_zh": "抵抗；忍住",
+    "example_en": "She could not resist the smell of fresh bread from the bakery.",
+    "example_zh": "她无法抗拒面包店里新鲜面包的香味。"
+  },
+  "restriction": {
+    "pos": "n.",
+    "meaning_zh": "限制；约束",
+    "example_en": "A new restriction on parking will take effect next Monday.",
+    "example_zh": "一项新的停车限制将于下周一生效。"
+  },
+  "revolution": {
+    "pos": "n.",
+    "meaning_zh": "革命；巨变",
+    "example_en": "The industrial revolution changed how people worked and lived.",
+    "example_zh": "工业革命改变了人们的工作和生活方式。"
+  },
+  "rid": {
+    "pos": "v.",
+    "meaning_zh": "使摆脱；除去",
+    "example_en": "We must rid the kitchen of mice before the guests arrive.",
+    "example_zh": "我们必须在客人到来之前清除厨房里的老鼠。"
+  },
+  "ridiculous": {
+    "pos": "adj.",
+    "meaning_zh": "荒谬的；可笑的",
+    "example_en": "Wearing sandals in deep snow looks completely ridiculous.",
+    "example_zh": "在深雪里穿凉鞋看起来十分荒唐。"
+  },
+  "ripen": {
+    "pos": "v.",
+    "meaning_zh": "成熟",
+    "example_en": "These tomatoes will ripen faster if you leave them on the sunny windowsill.",
+    "example_zh": "如果把这些番茄放在向阳的窗台上，它们会熟得更快。"
+  },
+  "rooster": {
+    "pos": "n.",
+    "meaning_zh": "公鸡",
+    "example_en": "A rooster crowed loudly behind the barn just at sunrise.",
+    "example_zh": "日出时分，一只公鸡在谷仓后面大声啼叫。"
+  },
+  "rot": {
+    "pos": "v.",
+    "meaning_zh": "腐烂",
+    "example_en": "Fruit left in a damp cellar will soon rot.",
+    "example_zh": "放在潮湿地窖里的水果很快就会腐烂。"
+  },
+  "roundabout": {
+    "pos": "n.",
+    "meaning_zh": "环岛",
+    "example_en": "Drivers must slow down before they enter the roundabout near the station.",
+    "example_zh": "司机驶入车站附近的环岛之前必须减速。"
+  },
+  "sacred": {
+    "pos": "adj.",
+    "meaning_zh": "神圣的",
+    "example_en": "That mountain is sacred to the people who have lived nearby for centuries.",
+    "example_zh": "那座山对世世代代住在附近的人们来说是神圣的。"
+  },
+  "sacrifice": {
+    "pos": "v.",
+    "meaning_zh": "牺牲；献出",
+    "example_en": "Parents often sacrifice their own comfort for their children's future.",
+    "example_zh": "父母常常为了孩子的未来牺牲自己的舒适。"
+  },
+  "salute": {
+    "pos": "v.",
+    "meaning_zh": "敬礼；致敬",
+    "example_en": "Soldiers salute the national flag every morning in the square.",
+    "example_zh": "士兵们每天早晨在广场上向国旗敬礼。"
+  },
+  "scan": {
+    "pos": "v.",
+    "meaning_zh": "扫描；细看",
+    "example_en": "Please scan the barcode on the box before you leave the shop.",
+    "example_zh": "离开商店之前，请先扫描盒子上的条形码。"
+  },
+  "scar": {
+    "pos": "n.",
+    "meaning_zh": "伤疤；疤痕",
+    "example_en": "A thin scar still shows clearly on his left cheek.",
+    "example_zh": "他的左脸颊上仍清晰地留着一道细疤。"
+  },
+  "sceptical": {
+    "pos": "adj.",
+    "meaning_zh": "怀疑的",
+    "example_en": "Scientists remained sceptical until the experiment was repeated successfully.",
+    "example_zh": "在实验被成功重复之前，科学家们一直持怀疑态度。"
+  },
+  "scholar": {
+    "pos": "n.",
+    "meaning_zh": "学者",
+    "example_en": "The young scholar published a paper on ancient Chinese poetry.",
+    "example_zh": "这位年轻学者发表了一篇关于中国古代诗歌的论文。"
+  },
+  "schoolboy": {
+    "pos": "n.",
+    "meaning_zh": "男学生",
+    "example_en": "A schoolboy ran across the playground with a football under his arm.",
+    "example_zh": "一个男生腋下夹着足球跑过操场。"
+  },
+  "schoolgirl": {
+    "pos": "n.",
+    "meaning_zh": "女学生",
+    "example_en": "The schoolgirl practised the piano for an hour after dinner.",
+    "example_zh": "这个女生晚饭后练了一小时钢琴。"
+  },
+  "scold": {
+    "pos": "v.",
+    "meaning_zh": "责骂；训斥",
+    "example_en": "Do not scold the child in front of his friends.",
+    "example_zh": "不要当着孩子朋友的面责骂他。"
+  },
+  "seashell": {
+    "pos": "n.",
+    "meaning_zh": "海贝壳",
+    "example_en": "She picked up a pink seashell and held it gently to her ear.",
+    "example_zh": "她捡起一枚粉色的海贝壳，轻轻贴在耳边。"
+  },
+  "seaweed": {
+    "pos": "n.",
+    "meaning_zh": "海藻；海草",
+    "example_en": "Dark seaweed covered the rocks after the tide went out.",
+    "example_zh": "退潮之后，深色的海藻覆盖在岩石上。"
+  },
+  "selfish": {
+    "pos": "adj.",
+    "meaning_zh": "自私的",
+    "example_en": "Keeping the last piece of cake for himself seemed selfish.",
+    "example_zh": "把最后一块蛋糕留给自己，显得很自私。"
+  },
+  "semicircle": {
+    "pos": "n.",
+    "meaning_zh": "半圆",
+    "example_en": "The children sat in a semicircle and listened to the story.",
+    "example_zh": "孩子们坐成半圆听故事。"
+  },
+  "seminar": {
+    "pos": "n.",
+    "meaning_zh": "研讨会",
+    "example_en": "Next Friday's seminar will focus on climate change and cities.",
+    "example_zh": "下周五的研讨会将聚焦气候变化与城市。"
+  },
+  "separation": {
+    "pos": "n.",
+    "meaning_zh": "分离；分开",
+    "example_en": "A long separation from his family made the sailor deeply lonely.",
+    "example_zh": "与家人的长期分离让这位水手深感孤独。"
+  },
+  "shabby": {
+    "pos": "adj.",
+    "meaning_zh": "破旧的",
+    "example_en": "His shabby coat had worn holes at both elbows.",
+    "example_zh": "他那件破旧外套的两个肘部都磨出了洞。"
+  },
+  "shortcoming": {
+    "pos": "n.",
+    "meaning_zh": "缺点；短处",
+    "example_en": "Impatience is her main shortcoming as a team leader.",
+    "example_zh": "缺乏耐心是她作为团队负责人的主要缺点。"
+  },
+  "shrink": {
+    "pos": "v.",
+    "meaning_zh": "收缩；缩水",
+    "example_en": "Wool sweaters may shrink if you wash them in very hot water.",
+    "example_zh": "羊毛衫如果用很热的水洗，可能会缩水。"
+  },
+  "sideroad": {
+    "pos": "n.",
+    "meaning_zh": "支路；旁路",
+    "example_en": "We turned onto a quiet sideroad to avoid the long traffic jam.",
+    "example_zh": "我们拐上一条安静的支路，以避开长长的堵车。"
+  },
+  "sidewalk": {
+    "pos": "n.",
+    "meaning_zh": "人行道",
+    "example_en": "Ice on the sidewalk made the walk to school dangerous.",
+    "example_zh": "人行道上的冰让步行上学变得危险。"
+  },
+  "sideways": {
+    "pos": "adv.",
+    "meaning_zh": "向一侧；侧着",
+    "example_en": "The truck slid sideways on the icy road and hit the fence.",
+    "example_zh": "卡车在结冰的路上向一侧滑去，撞上了围栏。"
+  },
+  "sigh": {
+    "pos": "v.",
+    "meaning_zh": "叹气",
+    "example_en": "He would sigh whenever the bus arrived late again.",
+    "example_zh": "每当公共汽车又晚点时，他就会叹气。"
+  },
+  "sightseeing": {
+    "pos": "n.",
+    "meaning_zh": "观光；游览",
+    "example_en": "We spent the whole morning sightseeing around the old town.",
+    "example_zh": "我们整个上午都在老城区观光。"
+  },
+  "significance": {
+    "pos": "n.",
+    "meaning_zh": "意义；重要性",
+    "example_en": "Few people understood the significance of that discovery at first.",
+    "example_zh": "起初很少有人理解那项发现的意义。"
+  },
+  "simplify": {
+    "pos": "v.",
+    "meaning_zh": "简化",
+    "example_en": "Can you simplify these instructions so beginners can follow them easily?",
+    "example_zh": "你能把这些说明简化一下，好让初学者容易照做吗？"
+  },
+  "skilful": {
+    "pos": "adj.",
+    "meaning_zh": "熟练的；灵巧的",
+    "example_en": "A skilful cook can turn simple ingredients into a fine meal.",
+    "example_zh": "熟练的厨师能把简单的食材做成一顿美餐。"
+  },
+  "skyscraper": {
+    "pos": "n.",
+    "meaning_zh": "摩天大楼",
+    "example_en": "A glass skyscraper rose high above the older buildings downtown.",
+    "example_zh": "一座玻璃摩天大楼高高耸立在市中心较老的建筑之上。"
+  },
+  "slave": {
+    "pos": "n.",
+    "meaning_zh": "奴隶",
+    "example_en": "The novel describes the hard life of a slave on a cotton farm.",
+    "example_zh": "这部小说描写了一个奴隶在棉花农场的艰苦生活。"
+  },
+  "slavery": {
+    "pos": "n.",
+    "meaning_zh": "奴隶制",
+    "example_en": "Historians say slavery was abolished there during the nineteenth century.",
+    "example_zh": "历史学家说，那里的奴隶制在十九世纪被废除。"
+  },
+  "sleeve": {
+    "pos": "n.",
+    "meaning_zh": "袖子",
+    "example_en": "She rolled up one sleeve before she started washing the dishes.",
+    "example_zh": "她开始洗碗之前先卷起了一只袖子。"
+  },
+  "slight": {
+    "pos": "adj.",
+    "meaning_zh": "轻微的",
+    "example_en": "There is only a slight chance of rain later this afternoon.",
+    "example_zh": "今天下午晚些时候下雨的可能性很小。"
+  },
+  "sneaker": {
+    "pos": "n.",
+    "meaning_zh": "运动鞋",
+    "example_en": "His left sneaker came untied halfway through the long race.",
+    "example_zh": "长跑进行到一半时，他左脚运动鞋的鞋带松了。"
+  },
+  "sob": {
+    "pos": "v.",
+    "meaning_zh": "啜泣；抽泣",
+    "example_en": "The little boy began to sob when his red balloon flew away.",
+    "example_zh": "小男孩的红气球飞走时，他开始抽泣。"
+  },
+  "socket": {
+    "pos": "n.",
+    "meaning_zh": "插座",
+    "example_en": "The lamp will not light unless you plug it into the wall socket.",
+    "example_zh": "除非把插头插进墙上的插座，否则这盏灯不会亮。"
+  },
+  "souvenir": {
+    "pos": "n.",
+    "meaning_zh": "纪念品",
+    "example_en": "I bought a small souvenir for my grandmother at the night market.",
+    "example_zh": "我在夜市给祖母买了一件小纪念品。"
+  },
+  "sparrow": {
+    "pos": "n.",
+    "meaning_zh": "麻雀",
+    "example_en": "A sparrow hopped along the wooden fence, looking for crumbs.",
+    "example_zh": "一只麻雀沿着木篱笆跳着找面包屑。"
+  },
+  "spear": {
+    "pos": "n.",
+    "meaning_zh": "矛；梭镖",
+    "example_en": "Hunters once used a long wooden spear to catch fish in shallow rivers.",
+    "example_zh": "猎人们曾经用长木矛在浅河里捕鱼。"
+  },
+  "spin": {
+    "pos": "v.",
+    "meaning_zh": "旋转",
+    "example_en": "Watch the wooden top spin until it slowly falls onto its side.",
+    "example_zh": "看这个木陀螺旋转，直到它慢慢侧倒。"
+  },
+  "spiritual": {
+    "pos": "adj.",
+    "meaning_zh": "精神的；心灵的",
+    "example_en": "Good music can meet a spiritual need that money never will.",
+    "example_zh": "好的音乐能满足金钱永远无法满足的精神需要。"
+  },
+  "split": {
+    "pos": "v.",
+    "meaning_zh": "分担；使分开",
+    "example_en": "We should split the taxi fare equally among the four of us.",
+    "example_zh": "我们四个人应当均摊出租车费。"
+  },
+  "spokesman": {
+    "pos": "n.",
+    "meaning_zh": "发言人",
+    "example_en": "During the briefing, the spokesman denied any link to the rumor.",
+    "example_zh": "在情况通报会上，发言人否认与该传言有任何关联。"
+  },
+  "spokeswoman": {
+    "pos": "n.",
+    "meaning_zh": "女发言人",
+    "example_en": "A spokeswoman for the hospital said the injured patient was recovering.",
+    "example_zh": "医院的一位女发言人说，受伤的病人正在康复。"
+  },
+  "spray": {
+    "pos": "v.",
+    "meaning_zh": "喷洒",
+    "example_en": "Gardeners spray the roses early in the morning to keep insects away.",
+    "example_zh": "园丁一清早给玫瑰喷药，以防虫害。"
+  },
+  "squeeze": {
+    "pos": "v.",
+    "meaning_zh": "挤压；榨",
+    "example_en": "You should squeeze fresh lemon juice over the fish before serving it.",
+    "example_zh": "上菜之前，你应该把新鲜柠檬汁挤在鱼上。"
+  },
+  "squirrel": {
+    "pos": "n.",
+    "meaning_zh": "松鼠",
+    "example_en": "A squirrel raced up the oak tree with a nut held in its mouth.",
+    "example_zh": "一只松鼠嘴里叼着坚果，飞快地爬上了橡树。"
+  },
+  "stable": {
+    "pos": "adj.",
+    "meaning_zh": "稳定的；稳固的",
+    "example_en": "The ladder is not stable enough on this uneven ground.",
+    "example_zh": "这架梯子在不平的地面上不够稳。"
+  },
+  "stain": {
+    "pos": "n.",
+    "meaning_zh": "污渍",
+    "example_en": "Coffee left a dark stain on the white tablecloth.",
+    "example_zh": "咖啡在白色桌布上留下了一块深色污渍。"
+  },
+  "stainless": {
+    "pos": "adj.",
+    "meaning_zh": "不锈的",
+    "example_en": "This stainless steel knife will not rust in the dishwasher.",
+    "example_zh": "这把不锈钢刀放在洗碗机里也不会生锈。"
+  },
+  "starvation": {
+    "pos": "n.",
+    "meaning_zh": "饥饿；饿死",
+    "example_en": "The charity works hard to prevent starvation after a major flood.",
+    "example_zh": "这家慈善机构在大洪水之后努力防止人们挨饿。"
+  },
+  "statesman": {
+    "pos": "n.",
+    "meaning_zh": "政治家",
+    "example_en": "The respected statesman urged both sides to return to peace talks.",
+    "example_zh": "这位德高望重的政治家敦促双方回到和谈上来。"
+  },
+  "stateswoman": {
+    "pos": "n.",
+    "meaning_zh": "女政治家",
+    "example_en": "As a stateswoman, she argued for fair laws and open public debate.",
+    "example_zh": "作为女政治家，她力争公平的法律和公开的辩论。"
+  },
+  "steward": {
+    "pos": "n.",
+    "meaning_zh": "男乘务员",
+    "example_en": "The train steward showed us to our seats and offered tea.",
+    "example_zh": "火车上的男乘务员把我们领到座位，并送来了茶。"
+  },
+  "stewardess": {
+    "pos": "n.",
+    "meaning_zh": "女乘务员",
+    "example_en": "A stewardess offered warm blankets to passengers on the night flight.",
+    "example_zh": "一位女乘务员给夜航班机上的乘客递上了暖和的毯子。"
+  },
+  "storage": {
+    "pos": "n.",
+    "meaning_zh": "贮藏；存储空间",
+    "example_en": "Extra storage under the stairs holds all our camping gear.",
+    "example_zh": "楼梯下方额外的储物处放着我们全部的露营装备。"
+  },
+  "stout": {
+    "pos": "adj.",
+    "meaning_zh": "结实的；矮胖的",
+    "example_en": "A stout wooden door kept the cold wind out of the cottage.",
+    "example_zh": "一扇结实的木门把寒风挡在了小屋外面。"
+  },
+  "stove": {
+    "pos": "n.",
+    "meaning_zh": "炉子",
+    "example_en": "She set the kettle on the stove and waited for the water to boil.",
+    "example_zh": "她把水壶放在炉子上，等着水烧开。"
+  },
+  "straw": {
+    "pos": "n.",
+    "meaning_zh": "稻草；吸管",
+    "example_en": "The tired horse ate dry straw from a corner of the barn.",
+    "example_zh": "那匹疲惫的马吃着谷仓角落里的干稻草。"
+  },
+  "stubborn": {
+    "pos": "adj.",
+    "meaning_zh": "顽固的；倔强的",
+    "example_en": "The stubborn donkey refused to move until someone offered an apple.",
+    "example_zh": "这头倔驴直到有人给它一只苹果才肯动。"
+  },
+  "substitute": {
+    "pos": "v.",
+    "meaning_zh": "代替",
+    "example_en": "You can substitute honey for sugar in this simple cake recipe.",
+    "example_zh": "在这个简单的蛋糕做法里，你可以用蜂蜜代替糖。"
+  },
+  "suck": {
+    "pos": "v.",
+    "meaning_zh": "吸；吮",
+    "example_en": "Babies often suck their thumbs when they begin to feel sleepy.",
+    "example_zh": "婴儿开始犯困时，常常会吮吸拇指。"
+  },
+  "suitcase": {
+    "pos": "n.",
+    "meaning_zh": "手提箱",
+    "example_en": "His suitcase was so heavy that he needed help on the stairs.",
+    "example_zh": "他的手提箱太重了，上下楼梯都需要人帮忙。"
+  },
+  "suite": {
+    "pos": "n.",
+    "meaning_zh": "套房",
+    "example_en": "Their hotel suite included a bedroom, a sitting room, and a wide balcony.",
+    "example_zh": "他们的酒店套房包括一间卧室、一间起居室和一个宽阳台。"
+  },
+  "sunburnt": {
+    "pos": "adj.",
+    "meaning_zh": "晒伤的",
+    "example_en": "After a whole day at the beach, her shoulders were badly sunburnt.",
+    "example_zh": "在海滩待了整整一天后，她的肩膀严重晒伤。"
+  },
+  "supreme": {
+    "pos": "adj.",
+    "meaning_zh": "最高的；至上的",
+    "example_en": "The supreme court agreed to hear the difficult case next month.",
+    "example_zh": "最高法院同意下个月审理这起棘手的案件。"
+  },
+  "surplus": {
+    "pos": "n.",
+    "meaning_zh": "剩余；过剩",
+    "example_en": "The shop sold its surplus at half price on the final day.",
+    "example_zh": "商店在最后一天以半价出售剩余货物。"
+  },
+  "suspension": {
+    "pos": "n.",
+    "meaning_zh": "暂停；中止",
+    "example_en": "The suspension of local bus service lasted for three whole days.",
+    "example_zh": "当地公共汽车停运持续了整整三天。"
+  },
+  "swap": {
+    "pos": "v.",
+    "meaning_zh": "交换",
+    "example_en": "Let's swap seats so you can see the stage more clearly.",
+    "example_zh": "我们换个座位吧，这样你能把舞台看得更清楚。"
+  },
+  "swear": {
+    "pos": "v.",
+    "meaning_zh": "发誓；咒骂",
+    "example_en": "I swear I locked the front door before we left the house.",
+    "example_zh": "我发誓，我们离开房子之前我锁上了前门。"
+  },
+  "swell": {
+    "pos": "v.",
+    "meaning_zh": "肿胀；膨胀",
+    "example_en": "My ankle began to swell soon after I twisted it on the stairs.",
+    "example_zh": "我在楼梯上扭了脚踝，不久它就开始肿了。"
+  },
+  "swift": {
+    "pos": "adj.",
+    "meaning_zh": "迅速的",
+    "example_en": "A swift reply from the company saved us a great deal of trouble.",
+    "example_zh": "公司的迅速回复为我们省去了不少麻烦。"
+  },
+  "sword": {
+    "pos": "n.",
+    "meaning_zh": "剑",
+    "example_en": "The city museum displays a sword that once belonged to a general.",
+    "example_zh": "市博物馆展出一把曾经属于一位将军的剑。"
+  },
+  "symptom": {
+    "pos": "n.",
+    "meaning_zh": "症状",
+    "example_en": "A high fever is often an early symptom of this illness.",
+    "example_zh": "高烧常常是这种病的早期症状。"
+  },
+  "systematic": {
+    "pos": "adj.",
+    "meaning_zh": "系统的",
+    "example_en": "A systematic review of the data revealed several serious errors.",
+    "example_zh": "对数据进行系统复查后，发现了几处严重错误。"
+  },
+  "taxpayer": {
+    "pos": "n.",
+    "meaning_zh": "纳税人",
+    "example_en": "Every taxpayer expects public money to be spent with great care.",
+    "example_zh": "每位纳税人都希望公共资金得到十分谨慎的使用。"
+  },
+  "technical": {
+    "pos": "adj.",
+    "meaning_zh": "技术的；专业的",
+    "example_en": "The repair manual is too technical for someone without special training.",
+    "example_zh": "这份维修手册对没有受过专门培训的人来说太专业了。"
+  },
+  "tentative": {
+    "pos": "adj.",
+    "meaning_zh": "暂定的；试探性的",
+    "example_en": "They agreed on a tentative plan to meet again in early March.",
+    "example_zh": "他们商定了一个暂定计划，准备在三月初再次见面。"
+  },
+  "terminal": {
+    "pos": "n.",
+    "meaning_zh": "航站楼；终点站",
+    "example_en": "Passengers should reach the terminal at least two hours before departure.",
+    "example_zh": "乘客应至少在出发前两小时到达航站楼。"
+  },
+  "terror": {
+    "pos": "n.",
+    "meaning_zh": "恐怖；惊恐",
+    "example_en": "The sudden loud explosion filled the narrow street with terror.",
+    "example_zh": "突然的巨大爆炸使这条狭窄的街道充满了恐惧。"
+  },
+  "theoretical": {
+    "pos": "adj.",
+    "meaning_zh": "理论的",
+    "example_en": "His theoretical model still needs support from real experiments.",
+    "example_zh": "他的理论模型仍需要真实实验的支持。"
+  },
+  "thermos": {
+    "pos": "n.",
+    "meaning_zh": "保温瓶",
+    "example_en": "She poured hot tea from a thermos during the long mountain hike.",
+    "example_zh": "在漫长的山间徒步中，她从保温瓶里倒出热茶。"
+  },
+  "thrill": {
+    "pos": "n.",
+    "meaning_zh": "兴奋；激动",
+    "example_en": "Winning the final gave every player on the team a huge thrill.",
+    "example_zh": "赢得决赛让队里的每一名队员都兴奋不已。"
+  },
+  "thriller": {
+    "pos": "n.",
+    "meaning_zh": "惊悚小说；惊悚片",
+    "example_en": "This thriller keeps readers guessing until the very last page.",
+    "example_zh": "这部惊悚小说让读者一直猜到最后一页。"
+  },
+  "thunderstorm": {
+    "pos": "n.",
+    "meaning_zh": "雷暴",
+    "example_en": "A heavy thunderstorm broke over the lake just after midnight.",
+    "example_zh": "午夜刚过，一场大雷暴在湖面上爆发。"
+  },
+  "tin": {
+    "pos": "n.",
+    "meaning_zh": "罐头；锡",
+    "example_en": "He opened a tin of sweet peaches and shared them for dessert.",
+    "example_zh": "他打开一罐甜桃，分给大家当甜点。"
+  },
+  "tiresome": {
+    "pos": "adj.",
+    "meaning_zh": "令人厌烦的",
+    "example_en": "Repeating the same safety drill every afternoon soon became tiresome.",
+    "example_zh": "每天下午重复同样的安全演练，很快就令人厌烦。"
+  },
+  "translation": {
+    "pos": "n.",
+    "meaning_zh": "翻译；译文",
+    "example_en": "Her translation of the short poem keeps both its meaning and its rhythm.",
+    "example_zh": "她翻译的这首短诗既保留了原意，也保留了节奏。"
+  },
+  "transparent": {
+    "pos": "adj.",
+    "meaning_zh": "透明的",
+    "example_en": "The plastic box is transparent, so you can see the gift inside.",
+    "example_zh": "这个塑料盒是透明的，所以你能看见里面的礼物。"
+  },
+  "tremble": {
+    "pos": "v.",
+    "meaning_zh": "颤抖；发抖",
+    "example_en": "His hands tremble whenever he has to speak before a large crowd.",
+    "example_zh": "每当必须在一大群人面前讲话时，他的双手就会发抖。"
+  },
+  "trolleybus": {
+    "pos": "n.",
+    "meaning_zh": "无轨电车",
+    "example_en": "An old trolleybus glided quietly along the wide main street.",
+    "example_zh": "一辆旧式无轨电车沿着宽阔的主干道悄悄驶过。"
+  },
+  "troop": {
+    "pos": "n.",
+    "meaning_zh": "军队；一队",
+    "example_en": "A troop of soldiers marched through the small town at dawn.",
+    "example_zh": "黎明时分，一队士兵行军穿过小镇。"
+  },
+  "troublesome": {
+    "pos": "adj.",
+    "meaning_zh": "令人烦恼的",
+    "example_en": "A troublesome cough kept her awake for most of the night.",
+    "example_zh": "一阵烦人的咳嗽让她夜里大部分时间都无法入睡。"
+  },
+  "tutor": {
+    "pos": "n.",
+    "meaning_zh": "导师；家庭教师",
+    "example_en": "My tutor meets me twice a week to practise spoken English.",
+    "example_zh": "我的辅导老师每周见我两次，练习英语口语。"
+  },
+  "typewriter": {
+    "pos": "n.",
+    "meaning_zh": "打字机",
+    "example_en": "Grandfather still prefers to write personal letters on an old typewriter.",
+    "example_zh": "祖父仍然喜欢用一台旧打字机写私人信件。"
+  },
+  "unbearable": {
+    "pos": "adj.",
+    "meaning_zh": "难以忍受的",
+    "example_en": "The heat inside the crowded bus became unbearable by early afternoon.",
+    "example_zh": "到了午后不久，拥挤的公共汽车里热得让人受不了。"
+  },
+  "unbelievable": {
+    "pos": "adj.",
+    "meaning_zh": "难以置信的",
+    "example_en": "It seemed unbelievable that such a small team could win the cup.",
+    "example_zh": "这样一支小球队竟能赢得奖杯，似乎令人难以置信。"
+  },
+  "unconditional": {
+    "pos": "adj.",
+    "meaning_zh": "无条件的",
+    "example_en": "Their support for the child remained unconditional through every setback.",
+    "example_zh": "无论遇到什么挫折，他们对孩子的支持始终是无条件的。"
+  },
+  "unconscious": {
+    "pos": "adj.",
+    "meaning_zh": "失去知觉的",
+    "example_en": "He lay unconscious for several minutes after falling from the wall.",
+    "example_zh": "他从墙上摔下来后，昏迷了好几分钟。"
+  },
+  "undertake": {
+    "pos": "v.",
+    "meaning_zh": "承担；从事",
+    "example_en": "Our company will undertake the full repair of the old stone bridge.",
+    "example_zh": "我们公司将承担这座旧石桥的全部修缮工作。"
+  },
+  "underwear": {
+    "pos": "n.",
+    "meaning_zh": "内衣",
+    "example_en": "Pack enough clean underwear in case the trip lasts longer than planned.",
+    "example_zh": "带上足够的干净内衣，以防行程比计划的更长。"
+  },
+  "unemployment": {
+    "pos": "n.",
+    "meaning_zh": "失业",
+    "example_en": "Local unemployment rose sharply after the main factory closed last winter.",
+    "example_zh": "去年冬天主要工厂关闭后，当地失业率急剧上升。"
+  },
+  "unfortunate": {
+    "pos": "adj.",
+    "meaning_zh": "不幸的",
+    "example_en": "It was unfortunate that the train left before they reached the platform.",
+    "example_zh": "不幸的是，他们赶到站台时火车已经开走了。"
+  },
+  "union": {
+    "pos": "n.",
+    "meaning_zh": "工会；联合",
+    "example_en": "Factory workers formed a union to discuss wages, hours, and safety.",
+    "example_zh": "工厂工人成立了工会，以便讨论工资、工时和安全问题。"
+  },
+  "unite": {
+    "pos": "v.",
+    "meaning_zh": "联合；团结",
+    "example_en": "Neighbors unite every spring to clean rubbish from the riverbank.",
+    "example_zh": "邻居们每年春天都会联合起来，清理河岸上的垃圾。"
+  },
+  "unwilling": {
+    "pos": "adj.",
+    "meaning_zh": "不情愿的",
+    "example_en": "He seemed unwilling to lend his new bicycle to anyone at school.",
+    "example_zh": "他似乎不愿意把新自行车借给学校里的任何人。"
+  },
+  "upward": {
+    "pos": "adj.",
+    "meaning_zh": "向上的",
+    "example_en": "An upward path led from the quiet village straight to the temple.",
+    "example_zh": "一条向上的小路从安静的村庄直通寺庙。"
+  },
+  "upwards": {
+    "pos": "adv.",
+    "meaning_zh": "向上地",
+    "example_en": "Grey smoke drifted upwards from the chimney into the cold sky.",
+    "example_zh": "灰色的烟从烟囱向上飘进寒冷的天空。"
+  },
+  "vacant": {
+    "pos": "adj.",
+    "meaning_zh": "空着的",
+    "example_en": "Only one vacant seat remained beside the window on the bus.",
+    "example_zh": "公共汽车上靠窗的位置只剩一个空座。"
+  },
+  "vague": {
+    "pos": "adj.",
+    "meaning_zh": "含糊的；模糊的",
+    "example_en": "His vague answer left the whole group unsure about the real plan.",
+    "example_zh": "他含糊其词的回答让全组的人都弄不清真正的计划。"
+  },
+  "vain": {
+    "pos": "adj.",
+    "meaning_zh": "徒劳的",
+    "example_en": "All their efforts to save the ancient tree proved to be in vain.",
+    "example_zh": "他们拯救那棵古树的一切努力最终都白费了。"
+  },
+  "valid": {
+    "pos": "adj.",
+    "meaning_zh": "有效的",
+    "example_en": "Your passport must remain valid for at least six more months.",
+    "example_zh": "你的护照剩余有效期必须至少还有六个月。"
+  },
+  "vertical": {
+    "pos": "adj.",
+    "meaning_zh": "垂直的",
+    "example_en": "Please draw a vertical line through the exact center of the circle.",
+    "example_zh": "请画一条穿过圆心的垂直线。"
+  },
+  "via": {
+    "pos": "prep.",
+    "meaning_zh": "经由",
+    "example_en": "We flew from London to Sydney via Dubai and arrived very late.",
+    "example_zh": "我们从伦敦经由迪拜飞往悉尼，到达时已经很晚了。"
+  },
+  "vice": {
+    "pos": "n.",
+    "meaning_zh": "恶习",
+    "example_en": "Smoking slowly became a vice he found difficult to give up.",
+    "example_zh": "吸烟渐渐成了他难以戒掉的恶习。"
+  },
+  "videophone": {
+    "pos": "n.",
+    "meaning_zh": "可视电话",
+    "example_en": "Grandma uses a videophone so she can see our faces while we talk.",
+    "example_zh": "奶奶使用可视电话，这样说话时她能看见我们的脸。"
+  },
+  "vinegar": {
+    "pos": "n.",
+    "meaning_zh": "醋",
+    "example_en": "Add one spoonful of vinegar to the soup if you want a brighter taste.",
+    "example_zh": "如果想让味道更鲜，就往汤里加一勺醋。"
+  },
+  "violate": {
+    "pos": "v.",
+    "meaning_zh": "违反；违背",
+    "example_en": "Cyclists who violate the red light put other road users at risk.",
+    "example_zh": "闯红灯的骑行者会危及其他道路使用者。"
+  },
+  "violent": {
+    "pos": "adj.",
+    "meaning_zh": "猛烈的；暴力的",
+    "example_en": "A violent coastal storm tore several roofs off houses near the harbour.",
+    "example_zh": "一场猛烈的沿海风暴掀掉了港口附近几座房屋的屋顶。"
+  },
+  "visa": {
+    "pos": "n.",
+    "meaning_zh": "签证",
+    "example_en": "She waited nearly three weeks for her student visa before travelling.",
+    "example_zh": "她等了将近三周才拿到学生签证，然后才动身。"
+  },
+  "voyage": {
+    "pos": "n.",
+    "meaning_zh": "航行",
+    "example_en": "Their voyage across the rough Atlantic took nearly two weeks.",
+    "example_zh": "他们横渡波涛汹涌的大西洋，航行了将近两周。"
+  },
+  "wag": {
+    "pos": "v.",
+    "meaning_zh": "摇摆",
+    "example_en": "The little dog began to wag its tail as soon as it saw her.",
+    "example_zh": "那只小狗一看见她就开始摇尾巴。"
+  },
+  "waiting-room": {
+    "pos": "n.",
+    "meaning_zh": "等候室；候诊室",
+    "example_en": "Patients sat quietly in the waiting-room until a nurse called their names.",
+    "example_zh": "病人们安静地坐在候诊室里，直到护士叫到他们的名字。"
+  },
+  "walnut": {
+    "pos": "n.",
+    "meaning_zh": "核桃",
+    "example_en": "She cracked a fresh walnut and scattered the pieces over the salad.",
+    "example_zh": "她敲开一颗新鲜核桃，把碎仁撒在沙拉上。"
+  },
+  "warehouse": {
+    "pos": "n.",
+    "meaning_zh": "仓库",
+    "example_en": "Hundreds of boxed books were stored in a warehouse beside the river.",
+    "example_zh": "数百箱图书存放在河边的一座仓库里。"
+  },
+  "warmth": {
+    "pos": "n.",
+    "meaning_zh": "温暖",
+    "example_en": "The warmth of the kitchen fire soon dried our wet coats.",
+    "example_zh": "厨房炉火的温暖很快烘干了我们的湿外套。"
+  },
+  "wax": {
+    "pos": "n.",
+    "meaning_zh": "蜡",
+    "example_en": "Honeybees use wax to build the tiny cells inside their hive.",
+    "example_zh": "蜜蜂用蜡建造蜂巢里小小的巢室。"
+  },
+  "westward": {
+    "pos": "adv.",
+    "meaning_zh": "向西",
+    "example_en": "The wide river flows westward until it finally reaches the sea.",
+    "example_zh": "这条宽阔的河流向西奔去，直到最终入海。"
+  },
+  "whistle": {
+    "pos": "v.",
+    "meaning_zh": "吹口哨；吹哨",
+    "example_en": "The referee will whistle twice when the second half is about to start.",
+    "example_zh": "下半场即将开始时，裁判会吹两声哨。"
+  },
+  "widow": {
+    "pos": "n.",
+    "meaning_zh": "寡妇",
+    "example_en": "The elderly widow lived alone in a small house beside the church.",
+    "example_zh": "这位年迈的寡妇独自住在教堂旁边的一所小房子里。"
+  },
+  "wipe": {
+    "pos": "v.",
+    "meaning_zh": "擦；拭",
+    "example_en": "Please wipe the muddy shoes before you step onto the clean carpet.",
+    "example_zh": "踏上干净的地毯之前，请先把沾泥的鞋擦一擦。"
+  },
+  "worldwide": {
+    "pos": "adj.",
+    "meaning_zh": "全世界的",
+    "example_en": "A worldwide shortage of grain pushed bread prices much higher.",
+    "example_zh": "全球性的粮食短缺把面包价格推高了许多。"
+  },
+  "yell": {
+    "pos": "v.",
+    "meaning_zh": "大叫；呼喊",
+    "example_en": "Excited fans yell the player's name each time he scores a goal.",
+    "example_zh": "每当那名球员进球，兴奋的球迷就大声喊他的名字。"
+  },
+  "yummy": {
+    "pos": "adj.",
+    "meaning_zh": "美味的",
+    "example_en": "The tomato soup smells yummy, and the children can hardly wait.",
+    "example_zh": "番茄汤闻起来真香，孩子们都快等不及了。"
+  },
+  "zipper": {
+    "pos": "n.",
+    "meaning_zh": "拉链",
+    "example_en": "The zipper on my winter jacket stuck halfway and refused to move.",
+    "example_zh": "我冬季夹克上的拉链卡在半道，怎么也拉不动。"
+  },
+  "zoom": {
+    "pos": "v.",
+    "meaning_zh": "疾驰",
+    "example_en": "Fast cars zoom past our kitchen window every morning at rush hour.",
+    "example_zh": "每天早晨的高峰时段，汽车从我们厨房的窗前疾驰而过。"
+  }
+}
