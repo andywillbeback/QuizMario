@@ -13,7 +13,7 @@
   var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   var reduced = motionQuery.matches;
   var particles = [];
-  var spin = 0.4;
+  var spin = 0.6;
   var raf = 0;
   var running = false;
   var lastTs = 0;
@@ -21,8 +21,7 @@
   var height = 0;
 
   var ARMS = 2;
-  var ARM_STEP = Math.PI;
-  var TURNS = 2.15;
+  var TURNS = 2.35;
 
   function sprite(rgb, size) {
     var c = document.createElement("canvas");
@@ -31,8 +30,8 @@
     var mid = size / 2;
     var grd = g.createRadialGradient(mid, mid, 0, mid, mid, mid);
     grd.addColorStop(0, "rgba(" + rgb + ",1)");
-    grd.addColorStop(0.18, "rgba(" + rgb + ",0.9)");
-    grd.addColorStop(0.42, "rgba(" + rgb + ",0.28)");
+    grd.addColorStop(0.16, "rgba(" + rgb + ",0.95)");
+    grd.addColorStop(0.34, "rgba(" + rgb + ",0.22)");
     grd.addColorStop(1, "rgba(" + rgb + ",0)");
     g.fillStyle = grd;
     g.fillRect(0, 0, size, size);
@@ -40,32 +39,33 @@
   }
 
   var sprites = {
-    white: sprite("238,246,255", 32),
-    blue: sprite("176,210,255", 32),
-    amber: sprite("255,198,112", 32),
+    white: sprite("236,244,255", 24),
+    blue: sprite("170,206,255", 24),
+    amber: sprite("255,186,96", 24),
   };
 
   function particleBudget() {
-    var shortest = Math.min(window.innerWidth || 360, window.innerHeight || 640);
+    var w = window.innerWidth || 360;
+    var h = window.innerHeight || 640;
     var memory = navigator.deviceMemory || 8;
-    var cores = navigator.hardwareConcurrency || 4;
-    if (shortest < 520 || memory <= 2 || cores <= 2) return 320;
-    if (shortest < 820 || memory <= 4) return 520;
-    return 860;
+    var cores = navigator.hardwareConcurrency || 8;
+    if (memory <= 2 || cores <= 2 || Math.min(w, h) < 420) return 360;
+    if (w < 760) return 480;
+    return 880;
   }
 
   function seed(p, atEdge) {
     p.arm = Math.random() < 0.5 ? 0 : 1;
-    var u = Math.random();
-    p.rad = atEdge ? 0.86 + Math.random() * 0.14 : 0.05 + Math.pow(u, 0.72) * 0.95;
-    p.jitter = (Math.random() - 0.5) * 0.42;
-    p.speed = 0.028 + Math.random() * 0.034;
-    p.size = 0.35 + Math.random() * 1.05;
+    p.rad = atEdge ? 0.94 + Math.random() * 0.06 : 0.06 + Math.random() * 0.94;
+    var tight = Math.random() < 0.82;
+    p.jitter = (Math.random() - 0.5) * (tight ? 0.16 : 0.48);
+    p.speed = 0.045 + Math.random() * 0.04;
+    p.size = Math.random() < 0.08 ? 1.7 : 0.4 + Math.random() * 0.75;
     var roll = Math.random();
-    p.kind = roll < 0.065 ? "amber" : roll < 0.46 ? "blue" : "white";
+    p.kind = roll < 0.07 ? "amber" : roll < 0.5 ? "blue" : "white";
     p.tw = Math.random() * Math.PI * 2;
-    p.twSpeed = 0.8 + Math.random() * 1.8;
-    p.bright = Math.random() < 0.14 ? 1.35 : 0.75 + Math.random() * 0.35;
+    p.twSpeed = 0.7 + Math.random() * 1.6;
+    p.bright = tight ? 0.8 + Math.random() * 0.35 : 0.28 + Math.random() * 0.2;
   }
 
   function fillPool() {
@@ -93,51 +93,51 @@
   function draw(dt) {
     ctx.clearRect(0, 0, width, height);
     var cx = width * 0.5;
-    var cy = height * 0.34;
-    var maxR = Math.max(180, Math.min(width, height) * 0.78);
+    var cy = height * 0.4;
+    var maxRx = Math.min(width * 0.48, Math.max(height, width * 0.7) * 0.46);
+    var maxRy = Math.min(height * 0.46, maxRx * 0.92);
     var i;
 
-    if (!reduced) spin += dt * 0.16;
-
-    var halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 0.42);
-    halo.addColorStop(0, "rgba(255,255,255,0.92)");
-    halo.addColorStop(0.035, "rgba(226,238,255,0.55)");
-    halo.addColorStop(0.1, "rgba(150,188,255,0.16)");
-    halo.addColorStop(0.28, "rgba(120,160,230,0.05)");
-    halo.addColorStop(1, "rgba(120,160,230,0)");
-    ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(cx, cy, maxR * 0.42, 0, Math.PI * 2);
-    ctx.fill();
+    if (!reduced) spin += dt * 0.13;
 
     ctx.globalCompositeOperation = "lighter";
     for (i = 0; i < particles.length; i++) {
       var p = particles[i];
       if (!reduced) {
-        p.rad -= p.speed * dt * (0.55 + p.rad);
+        p.rad -= p.speed * dt;
         p.tw += dt * p.twSpeed;
-        if (p.rad < 0.012) seed(p, true);
+        if (p.rad < 0.02) seed(p, true);
       }
-      var ang = p.arm * ARM_STEP + p.rad * TURNS * Math.PI * 2 + spin + p.jitter * (0.18 + p.rad);
-      var r = Math.pow(p.rad, 0.92) * maxR;
-      var x = cx + Math.cos(ang) * r;
-      var y = cy + Math.sin(ang) * r * 0.9;
-      var twinkle = 0.62 + 0.38 * Math.sin(p.tw);
-      var alpha = Math.min(1, twinkle * p.bright * (0.28 + (1 - p.rad) * 0.85));
-      var dim = (p.kind === "amber" ? 11 : 8) * (0.42 + p.size * 0.5) * (0.75 + p.rad * 0.45);
+      var ang = p.arm * Math.PI + p.rad * TURNS * Math.PI * 2 + spin + p.jitter * (0.35 + p.rad);
+      var r = p.rad;
+      var x = cx + Math.cos(ang) * r * maxRx;
+      var y = cy + Math.sin(ang) * r * maxRy;
+      var twinkle = 0.7 + 0.3 * Math.sin(p.tw);
+      var alpha = Math.min(0.92, twinkle * p.bright * (0.55 + (1 - p.rad) * 0.4));
+      var dim = (p.kind === "amber" ? 8.5 : 5.2) * p.size;
       ctx.globalAlpha = alpha;
       ctx.drawImage(sprites[p.kind], x - dim * 0.5, y - dim * 0.5, dim, dim);
     }
 
+    var haloR = Math.max(28, Math.min(width, height) * 0.04);
+    var halo = ctx.createRadialGradient(cx, cy, 0, cx, cy, haloR * 2.4);
+    halo.addColorStop(0, "rgba(255,255,255,0.95)");
+    halo.addColorStop(0.2, "rgba(214,230,255,0.42)");
+    halo.addColorStop(0.55, "rgba(150,188,255,0.08)");
+    halo.addColorStop(1, "rgba(150,188,255,0)");
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(cx, cy, haloR * 2.4, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 0.95;
+    ctx.globalAlpha = 1;
     ctx.fillStyle = "#ffffff";
     ctx.beginPath();
-    ctx.arc(cx, cy, 1.6, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 1;
   }
 
   function tick(ts) {
@@ -193,6 +193,7 @@
   window.__spiralField = {
     count: function () { return particles.length; },
     reduced: function () { return reduced; },
+    running: function () { return running; },
   };
 
   if (document.hidden) draw(0);
