@@ -249,6 +249,7 @@
   }
 
   function showScreen(name) {
+    document.body.classList.toggle("at-gate", name === "gate");
     for (const el of document.querySelectorAll(".screen")) el.classList.remove("active");
     const s = $("screen-" + name);
     if (s) s.classList.add("active");
@@ -1886,6 +1887,14 @@
   if ($("btn-copy-code")) $("btn-copy-code").addEventListener("click", copyBackupCode);
   if ($("btn-paste-code")) $("btn-paste-code").addEventListener("click", importFromBackupCode);
 
+  function enterExam(id) {
+    switchTrack(id);
+    showScreen("home");
+  }
+  if ($("btn-gate-zhongkao")) $("btn-gate-zhongkao").addEventListener("click", () => enterExam("zhongkao"));
+  if ($("btn-gate-gaokao")) $("btn-gate-gaokao").addEventListener("click", () => enterExam("gaokao"));
+  if ($("btn-back-gate")) $("btn-back-gate").addEventListener("click", () => showScreen("gate"));
+
   $("btn-continue").addEventListener("click", () => {
     const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
     startLevel(lvl);
@@ -2040,4 +2049,5 @@
   syncDueOnlyBtn();
   refreshHud();
   initV6Ui();
+  showScreen("gate");
 })();

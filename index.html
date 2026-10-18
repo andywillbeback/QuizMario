@@ -649,9 +649,57 @@
     #hud { gap: 4px; } .stat { font-size: .72rem; padding: 4px 7px; }
     .btn-row button, .btn-row a.btn { flex: 1 1 45%; }
   }
+
+  /* Landing gate: only 中考 / 高考 */
+  body.at-gate #hud,
+  body.at-gate #srs-panel,
+  body.at-gate #clear-panel,
+  body.at-gate footer,
+  body.at-gate .gold-sign,
+  body.at-gate header.brand .subtitle,
+  body.at-gate header.brand .examiner,
+  body.at-gate header.brand .tagline { display: none !important; }
+  body.at-gate #account-bar a#login-link {
+    background: transparent;
+    color: var(--cyan);
+    box-shadow: none;
+    min-height: 0;
+    min-width: 0;
+    padding: 2px 8px;
+    font-size: .85rem;
+    font-weight: 650;
+  }
+  body.at-gate #stage {
+    min-height: 0;
+    margin-top: 8vh;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    padding: 12px 8px 28px;
+  }
+  .gate { display: flex; justify-content: center; }
+  .gate-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    width: min(560px, 100%);
+  }
+  .gate-actions button {
+    font-size: clamp(1.8rem, 5vw, 2.4rem);
+    letter-spacing: 0.28em;
+    padding: 28px 12px 28px 0.28em;
+    border-radius: 18px;
+    min-height: 96px;
+  }
+  @media (max-width: 640px) {
+    .gate-actions { grid-template-columns: 1fr; }
+    body.at-gate #stage { margin-top: 6vh; }
+  }
 </style>
 </head>
-<body>
+<body class="at-gate">
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 <div class="app">
@@ -684,8 +732,18 @@
     <div id="stage-flash" aria-hidden="true"></div>
     <div id="kill-banner" aria-live="polite"></div>
 
-    <!-- HOME -->
-    <section id="screen-home" class="screen active">
+    <!-- LANDING: only the two exam tracks -->
+    <section id="screen-gate" class="screen active" aria-label="选择考试">
+      <div class="gate">
+        <div class="gate-actions">
+          <button id="btn-gate-zhongkao" type="button">中考</button>
+          <button id="btn-gate-gaokao" type="button">高考</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOME (after a track is chosen) -->
+    <section id="screen-home" class="screen">
       <div class="title-card">
         <h2>欢迎上台 Welcome to the stage</h2>
         <div id="track-panel">
@@ -697,6 +755,7 @@
           <button id="btn-continue" type="button">继续闯关</button>
           <button id="btn-levels" class="secondary" type="button">选择关卡</button>
           <a id="login-cta" class="btn secondary" href="login.html">登录 / 注册</a>
+          <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
         </div>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
@@ -831,6 +890,7 @@
   <script src="cloud-client.js"></script>
   <script src="words.js"></script>
   <script src="tracks.js"></script>
+  <script src="exam-tracks.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>
