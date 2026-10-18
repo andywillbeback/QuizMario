@@ -279,19 +279,19 @@
     <p id="config-banner" hidden></p>
     <form id="auth-form">
       <div class="tabs" role="tablist" aria-label="登录或注册">
-        <button type="button" id="mode-login" role="tab" aria-pressed="true" aria-selected="true">登录</button>
-        <button type="button" id="mode-register" role="tab" aria-pressed="false" aria-selected="false">注册</button>
+        <button type="button" id="mode-login" role="tab" aria-pressed="false" aria-selected="false">登录</button>
+        <button type="button" id="mode-register" role="tab" aria-pressed="true" aria-selected="true">注册</button>
       </div>
       <label for="email">邮箱</label>
       <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="you@example.com">
       <label for="password">密码</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="至少 6 位">
-      <div id="confirm-label" hidden>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="至少 6 位">
+      <div id="confirm-label">
         <label for="confirm">确认密码</label>
-        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" placeholder="再输入一次">
+        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="再输入一次">
       </div>
       <div class="actions">
-        <button type="submit" class="primary" id="btn-submit">登录</button>
+        <button type="submit" class="primary" id="btn-submit">注册</button>
         <button type="button" class="texty" id="btn-forgot">忘记密码</button>
       </div>
     </form>
