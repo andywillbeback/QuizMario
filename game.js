@@ -1,6 +1,7 @@
 /* Vocab Spotlight — quiz-show English vocabulary trainer
  * Spaced repetition (Anki-lite / SM-2) + active recall. Offline HTML5.
  * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
+ * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  */
 (function () {
   "use strict";
@@ -28,7 +29,7 @@
   const CLEAR_MIN_INTERVAL_DAYS = 1;
 
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
-  /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, dueOnly?:boolean}} SaveData */
+  /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, dueOnly?:boolean, updatedAt?:string}} SaveData */
 
   /** @type {SaveData} */
   let save = loadSave();
@@ -80,6 +81,7 @@
     sv.trackStars = data.trackStars || {};
     sv.daily = data.daily || {};
     sv.profile = data.profile || { name: "", cls: "" };
+    if (data.updatedAt) sv.updatedAt = data.updatedAt;
     return sv;
   }
 
@@ -146,11 +148,18 @@
     }, {});
   }
 
-  function persist() {
+  function persist(opts) {
+    opts = opts || {};
     save.sortMode = sortMode;
     save.voiceOn = voiceOn;
     save.dueOnly = dueOnly;
+    if (!(opts.keepUpdatedAt && save.updatedAt)) {
+      save.updatedAt = new Date().toISOString();
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+    if (opts.upload !== false && window.QuizMarioCloud && typeof window.QuizMarioCloud.onLocalSave === "function") {
+      try { window.QuizMarioCloud.onLocalSave(save); } catch (_) {}
+    }
     refreshHud();
   }
 
@@ -1460,31 +1469,59 @@
     };
   }
 
-  function applyImportedSave(data) {
-    let payload = data;
-    if (payload && payload.save) payload = payload.save;
-    if (!payload || typeof payload !== "object") throw new Error("Invalid backup");
-    const cards = payload.cards || {};
-    for (const k of Object.keys(cards)) cards[k] = migrateCard(cards[k]);
-    save = extendSave({
+  function snapshotToSave(payload) {
+    const cards = {};
+    const src = payload.cards || {};
+    for (const k of Object.keys(src)) cards[k] = migrateCard(Object.assign({}, src[k]));
+    return extendSave({
       points: payload.points || 0,
       streak: payload.streak || 0,
       bestStreak: payload.bestStreak || 0,
       unlockedLevel: Math.max(1, payload.unlockedLevel || 1),
       cards,
-      levelStars: payload.levelStars || {},
+      levelStars: Object.assign({}, payload.levelStars || {}),
       sortMode: payload.sortMode || "default",
       voiceOn: payload.voiceOn !== false,
       dueOnly: !!payload.dueOnly,
-    }, payload);
-    applyTrack(save.track, true);
+    }, {
+      track: payload.track,
+      trackUnlock: Object.assign({}, payload.trackUnlock || {}),
+      trackStars: Object.assign({}, payload.trackStars || {}),
+      daily: Object.assign({}, payload.daily || {}),
+      profile: Object.assign({ name: "", cls: "" }, payload.profile || {}),
+      updatedAt: payload.updatedAt,
+    });
+  }
+
+  function applySaveObject(next, opts) {
+    opts = opts || {};
+    save = next;
+    applyTrack(save.track || "core", true);
     sortMode = save.sortMode === "root_affix" || save.sortMode === "scene" ? save.sortMode : "default";
     voiceOn = save.voiceOn !== false;
     dueOnly = !!save.dueOnly;
-    persist();
+    const voiceBtn = $("btn-voice-toggle");
+    if (voiceBtn) {
+      voiceBtn.textContent = voiceOn ? "🔊 连杀语音 On" : "🔇 连杀语音 Off";
+      voiceBtn.classList.toggle("sort-active", voiceOn);
+    }
+    persist(opts);
     updateSortButtons();
     syncDueOnlyBtn();
     refreshHud();
+    const nm = $("profile-name");
+    const cl = $("profile-cls");
+    if (nm) nm.value = (save.profile && save.profile.name) || "";
+    if (cl) cl.value = (save.profile && save.profile.cls) || "";
+    renderStats();
+    if ($("screen-levels") && $("screen-levels").classList.contains("active")) renderLevels();
+  }
+
+  function applyImportedSave(data) {
+    let payload = data;
+    if (payload && payload.save && !payload.cards) payload = payload.save;
+    if (!payload || typeof payload !== "object") throw new Error("Invalid backup");
+    applySaveObject(snapshotToSave(payload), { upload: true });
   }
 
   function exportProgressFile() {
@@ -1842,7 +1879,23 @@
   }
 
   // test hook (harmless in production)
-  window.__QM = { switchTrack, computeStats, buildReport, reportCode, get track() { return currentTrack; }, get levels() { return LEVELS; } };
+  window.__QM = {
+    switchTrack, computeStats, buildReport, reportCode,
+    get track() { return currentTrack; },
+    get levels() { return LEVELS; },
+    getSave() { return save; },
+    applyCloudSave(data) {
+      let payload = data;
+      if (payload && payload.save && !payload.cards) payload = payload.save;
+      if (!payload || typeof payload !== "object") throw new Error("Invalid cloud save");
+      applySaveObject(snapshotToSave(payload), { keepUpdatedAt: true, upload: false });
+    },
+    touchUpdatedAt() {
+      save.updatedAt = new Date().toISOString();
+      persist({ keepUpdatedAt: true, upload: false });
+      return save.updatedAt;
+    },
+  };
 
   // --- Wire UI ---
 
@@ -1866,7 +1919,10 @@
   });
   $("btn-back-home").addEventListener("click", () => showScreen("home"));
   $("btn-reset").addEventListener("click", () => {
-    if (confirm("Reset all Vocab Spotlight progress on this browser?")) {
+    const cloudNote = (window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn())
+      ? "\n\n你已登录：这只清空本机。云端进度还在，刷新页面会再同步下来。"
+      : "";
+    if (confirm("Reset all Vocab Spotlight progress on this browser?" + cloudNote)) {
       localStorage.removeItem(STORAGE_KEY);
       save = loadSave();
       sortMode = "default";
