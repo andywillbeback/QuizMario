@@ -21,7 +21,7 @@
     --ok: #b7f7d2;
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
+  html, body { height: 100%; max-width: 100%; overflow-x: hidden; }
   body {
     margin: 0;
     min-height: 100vh;
@@ -68,7 +68,7 @@
     position: absolute;
     left: 50%;
     top: -140px;
-    width: min(520px, 140vw);
+    width: min(520px, 100vw);
     height: 330px;
     transform: translateX(-50%);
     z-index: -1;
