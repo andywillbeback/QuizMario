@@ -3,29 +3,79 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#05070d">
 <title>聚光单词 · 教师看板</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
-  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #0f1024; color: #eee; margin: 0; padding: 16px; }
-  h1 { font-size: 1.3rem; margin: 0 0 4px; } .sub { opacity: .75; font-size: .88rem; margin: 0 0 12px; }
-  textarea { width: 100%; min-height: 120px; box-sizing: border-box; background: #14162b; color: #fff; border: 1px solid #444; border-radius: 10px; padding: 8px; font-size: .78rem; }
-  button, .btn { background: #3de7ff; color: #000; border: 0; border-radius: 10px; padding: 10px 14px; font-size: .95rem; margin: 6px 6px 0 0; cursor: pointer; }
-  button.ghost { background: transparent; color: #3de7ff; border: 1px solid #3de7ff; }
-  select { padding: 8px; border-radius: 8px; background: #14162b; color: #fff; }
+  :root { --gold: #e6c98a; --text: #f4f7ff; --cyan: #bed6ff; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", system-ui, sans-serif;
+    background:
+      radial-gradient(ellipse at 50% 18%, rgba(88, 126, 196, 0.16), transparent 46%),
+      #05070d;
+    color: var(--text);
+    margin: 0;
+    padding: 16px;
+  }
+  #photon-spiral { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  .vignette {
+    position: fixed; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 28%, transparent 0%, transparent 24%, rgba(2, 4, 10, 0.35) 70%, rgba(2, 4, 10, 0.78) 100%);
+  }
+  .page {
+    position: relative; z-index: 2; max-width: 1100px; margin: 12px auto 24px;
+    padding: 8px 18px 12px;
+    background: rgba(9, 14, 28, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 22px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+  .brand { text-align: center; margin: 8px 0 16px; }
+  .brand h1 { margin: 0; font-weight: 600; font-size: clamp(1.6rem, 4vw, 2.1rem); letter-spacing: .16em; padding-left: .16em; color: #f7fbff; text-shadow: 0 0 22px rgba(190,214,255,.35); }
+  .brand .en { margin: 6px 0 0; letter-spacing: .16em; color: rgba(226,234,248,.84); font-size: .82rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 4px; font-weight: 600; }
+  .sub { color: rgba(226,234,248,.72); font-size: .88rem; margin: 0 0 12px; }
+  textarea, select {
+    width: 100%; min-height: 120px; box-sizing: border-box;
+    background: rgba(3, 6, 14, 0.55); color: #fff;
+    border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 8px; font-size: .78rem;
+  }
+  select { width: auto; min-height: 0; padding: 8px; }
+  button, .btn {
+    background: linear-gradient(180deg, #f8fbff, #d5e3f6); color: #121722; border: 0;
+    border-radius: 12px; padding: 10px 14px; font-size: .95rem; font-weight: 700;
+    margin: 6px 6px 0 0; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--cyan); border: 1px solid rgba(255,255,255,.22); font-weight: 600; }
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 14px 0; }
-  .cards div { background: rgba(255,255,255,.06); border-radius: 10px; padding: 10px; text-align: center; font-size: .78rem; }
-  .cards b { display: block; font-size: 1.4rem; color: #ffd84d; }
+  .cards div { background: rgba(9,14,28,.46); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 10px; text-align: center; font-size: .78rem; }
+  .cards b { display: block; font-size: 1.4rem; color: var(--gold); }
   .tbl-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: .82rem; }
-  th, td { border-bottom: 1px solid #333; padding: 6px; text-align: left; white-space: nowrap; }
-  th { color: #3de7ff; cursor: pointer; }
-  .bar { display: inline-block; height: 8px; background: #3de7ff; border-radius: 4px; vertical-align: middle; }
-  #status { font-size: .85rem; margin-top: 6px; color: #ffd84d; }
-  a { color: #3de7ff; }
+  th, td { border-bottom: 1px solid rgba(255,255,255,.12); padding: 6px; text-align: left; white-space: nowrap; }
+  th { color: var(--cyan); cursor: pointer; }
+  .bar { display: inline-block; height: 8px; background: var(--cyan); border-radius: 4px; vertical-align: middle; }
+  #status { font-size: .85rem; margin-top: 6px; color: var(--gold); }
+  a { color: var(--cyan); }
+  .gold-sign {
+    margin: 22px 0 8px; text-align: center; color: var(--gold);
+    font-family: Palatino, "Palatino Linotype", "Songti SC", Georgia, serif;
+    letter-spacing: .045em;
+  }
 </style>
 </head>
 <body>
-  <h1>🧑‍🏫 教师看板 · 班级学习数据</h1>
+<canvas id="photon-spiral" aria-hidden="true"></canvas>
+<div class="vignette" aria-hidden="true"></div>
+<div class="page">
+  <header class="brand">
+    <h1>聚光单词</h1>
+    <p class="en">Vocab Spotlight</p>
+  </header>
+  <h2>教师看板 · 班级学习数据</h2>
   <p class="sub">纯静态页面：数据只在你这台设备的浏览器里处理，不上传任何服务器。把学生发来的「学习报告码」（QMR1. 开头）粘贴到下面，每行一个；也可导入 .json / .txt 文件。<a href="index.html">← 返回游戏</a></p>
   <textarea id="codes" placeholder="QMR1.xxxxx&#10;QMR1.yyyyy"></textarea>
   <div>
@@ -42,6 +92,9 @@
   <div class="tbl-wrap"><table id="tbl"></table></div>
   <h3>全班易错词 Top 20</h3>
   <div class="tbl-wrap"><table id="weak"></table></div>
-  <script src="teacher.js"></script>
+  <p class="gold-sign">Doctoral product powered by Pu Jin</p>
+</div>
+<script src="spiral-field.js"></script>
+<script src="teacher.js"></script>
 </body>
 </html>
