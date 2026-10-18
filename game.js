@@ -239,32 +239,12 @@
     if ($("hud-due")) $("hud-due").textContent = String(c.due);
     if ($("hud-learning")) $("hud-learning").textContent = String(c.learning);
     if ($("hud-new")) $("hud-new").textContent = String(c.neu);
-    const panel = $("srs-panel");
-    if (panel) {
-      panel.textContent =
-        "到期 Due " + c.due + " · 学习中 Learning " + c.learning + " · 新词 New " + c.neu +
-        (dueOnly ? " · 只练到期" : "");
-    }
     const clearEl = $("hud-clear");
-    const clearPanel = $("clear-panel");
     if (currentLevel) {
       const s = levelClearStats(currentLevel);
-      const pct = s.total ? Math.min(100, Math.round((s.solid / s.need) * 100)) : 0;
       if (clearEl) clearEl.textContent = s.ready ? "已通关" : (s.solid + "/" + s.need);
-      if (clearPanel) {
-        clearPanel.textContent =
-          "通关 Clear：新词0 " + (s.neu === 0 ? "✓" : s.neu) +
-          " · 到期0 " + (s.due === 0 ? "✓" : s.due) +
-          " · 学习中0 " + (s.learning === 0 ? "✓" : s.learning) +
-          " · 巩固复习≥80% " + s.solid + "/" + s.need +
-          (s.ready ? " · 已通关 ✓" : " · " + pct + "%");
-      }
-    } else {
-      if (clearEl) clearEl.textContent = "—";
-      if (clearPanel) {
-        clearPanel.textContent =
-          "通关标准：该组 新词=0 · 到期=0 · 学习中=0 · ≥80% 卡片进入复习且间隔≥1天";
-      }
+    } else if (clearEl) {
+      clearEl.textContent = "—";
     }
   }
 

@@ -214,17 +214,22 @@
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
     transition: transform .1s ease, filter .15s, box-shadow .1s ease;
   }
-  button:hover { filter: brightness(1.06); transform: translateY(-1px); }
-  button:active {
+  a.btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    text-decoration: none;
+  }
+  a.btn[hidden] { display: none !important; }
+  button:hover, a.btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  button:active, a.btn:active {
     transform: translateY(1px) scale(.985);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
   }
-  button.secondary {
+  button.secondary, a.btn.secondary {
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
   }
-  button.secondary:active { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+  button.secondary:active, a.btn.secondary:active { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
   button.ghost {
     background: transparent; color: rgba(214, 226, 246, 0.86); box-shadow: none;
     border: 1px solid rgba(255,255,255,.2); font-weight: 600;
@@ -529,11 +534,6 @@
     color: #041820;
     box-shadow: 0 3px 0 #1a5f8a;
   }
-  #clear-panel {
-    text-align: center; font-size: .8rem; opacity: .85;
-    margin: -4px 0 10px; padding: 0 12px; line-height: 1.4;
-    color: var(--gold);
-  }
   #play-clear-label {
     font-size: .78rem; opacity: .8; text-align: center; margin: 2px 0 6px;
   }
@@ -553,7 +553,7 @@
     .title-card h2 { font-size: 1.25rem; }
     .title-card .sub { font-size: .88rem; }
     .btn-row { flex-direction: column; }
-    .btn-row button { width: 100%; }
+    .btn-row button, .btn-row a.btn { width: 100%; }
     #answer-input { font-size: 16px; } /* avoid iOS zoom */
     .sort-bar { gap: 6px; }
     .sort-btn { font-size: .75rem; padding: 6px 8px; }
@@ -641,7 +641,7 @@
   @media (max-width: 520px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
     #hud { gap: 4px; } .stat { font-size: .72rem; padding: 4px 7px; }
-    .btn-row button { flex: 1 1 45%; }
+    .btn-row button, .btn-row a.btn { flex: 1 1 45%; }
   }
 </style>
 </head>
@@ -653,12 +653,12 @@
     <h1>聚光单词</h1>
     <p class="subtitle">Vocab Spotlight</p>
     <p class="examiner">Cambridge Examiner</p>
-    <p class="tagline">剑桥口语考官带你背单词 · 间隔重复 SRS · 核心 3000 词（Part A/B 各 15）· 中考 / KET / PET / 四级</p>
+    <p class="tagline">剑桥口语考官带你背单词</p>
   </header>
 
   <div id="account-bar">
     <span id="sync-status" aria-live="polite">未登录本地</span>
-    <a id="login-link" href="login.html">登录</a>
+    <a id="login-link" href="login.html">登录 / 注册</a>
     <button id="btn-logout" class="ghost" type="button" hidden>退出登录</button>
     <label id="wipe-label" hidden><input id="wipe-local" type="checkbox"> 退出时清除本机</label>
   </div>
@@ -674,9 +674,6 @@
     <div class="stat" id="stat-mastered">Mastered <b id="hud-mastered">0</b></div>
     <div class="stat" id="stat-clear">通关 <b id="hud-clear">—</b></div>
   </div>
-  <div id="srs-panel" style="text-align:center;font-size:.82rem;opacity:.8;margin:-6px 0 4px">到期 Due 0 · 学习中 Learning 0 · 新词 New 0</div>
-  <div id="clear-panel">通关标准：该组 新词=0 · 到期=0 · 学习中=0 · ≥80% 卡片进入复习且间隔≥1天</div>
-
   <main id="stage">
     <div id="stage-flash" aria-hidden="true"></div>
     <div id="kill-banner" aria-live="polite"></div>
@@ -690,13 +687,10 @@
           <select id="track-select" aria-label="选择词库"></select>
           <div id="track-desc"></div>
         </div>
-        <p class="sub">See a Chinese meaning → type the English word.<br>
-          <b>SRS:</b> 答对后选 <b>Good / Easy</b>（间隔不同）；答错约 10 分钟重现。到期优先，可开「只练到期」。<br>
-          <b>通关:</b> 该组 新词=0 · 到期=0 · 学习中=0 · ≥80% 卡片复习间隔≥1天 → 解锁下一组。<br>
-          Wrong = 讲解 + Shut down（连杀≥3被终结）. 核心词库 3000 词，Part A/B 各 15 词；考试词库每组 50 词。</p>
         <div class="btn-row">
           <button id="btn-continue" type="button">继续闯关</button>
           <button id="btn-levels" class="secondary" type="button">选择关卡</button>
+          <a id="login-cta" class="btn secondary" href="login.html">登录 / 注册</a>
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
         </div>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
