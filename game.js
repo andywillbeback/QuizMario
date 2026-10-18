@@ -469,11 +469,13 @@
     if (!dueOnly) {
       q.push(...neu.slice(0, NEW_PER_SESSION));
     }
-    // If nothing due and dueOnly, fall back to earliest later reviews so session isn't empty
+    // If nothing due and dueOnly, fall back to earliest later reviews so session isn't empty.
+    // Still-new cards must be included too: an all-new set would otherwise look "cleared".
     if (!q.length) {
       later.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
       if (dueOnly) q.push(...later.slice(0, 5));
-      else q.push(...later.slice(0, 3), ...neu.slice(0, NEW_PER_SESSION));
+      else q.push(...later.slice(0, 3));
+      if (!q.length) q.push(...neu.slice(0, NEW_PER_SESSION));
     }
     return q;
   }
@@ -1030,8 +1032,15 @@
           .slice(0, 5);
         if (upcoming.length) queue = upcoming;
         else {
-          onLevelClear();
-          return;
+          // Do not call onLevelClear here. 巩固 0/40 is not a pass, and that
+          // screen's Next set / Home loop never deals another question.
+          const pool = words.map((w, idx) => enrichItem(w, currentLevel - 1, idx));
+          const fresh = pool.filter((it) => isNewCard(getProg(it.key))).slice(0, NEW_PER_SESSION);
+          queue = fresh.length ? fresh : pool.slice(0, NEW_PER_SESSION);
+          if (!queue.length) {
+            showScreen("home");
+            return;
+          }
         }
       }
     }
@@ -1259,6 +1268,8 @@
     // Unlock next set only when this set meets the clearance bar
     if (isLevelClear(currentLevel) && currentLevel >= save.unlockedLevel) {
       save.unlockedLevel = Math.min(LEVEL_COUNT, currentLevel + 1);
+      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
+      save.trackUnlock[currentTrack] = save.unlockedLevel;
     }
     persist();
     updateProgress();
@@ -1404,6 +1415,8 @@
     save.levelStars[String(currentLevel)] = Math.max(save.levelStars[String(currentLevel)] || 0, stars);
     if (currentLevel >= save.unlockedLevel) {
       save.unlockedLevel = Math.min(LEVEL_COUNT, currentLevel + 1);
+      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
+      save.trackUnlock[currentTrack] = save.unlockedLevel;
     }
     save.points += 50;
     persist();
@@ -1933,17 +1946,17 @@
     refreshHud();
   });
   $("btn-next-level").addEventListener("click", () => {
-    const next = Math.min(LEVEL_COUNT, currentLevel + 1);
-    // Only unlock if current set is cleared (pass rule)
-    if (isLevelClear(currentLevel) && next > save.unlockedLevel) {
+    const cleared = isLevelClear(currentLevel);
+    let next = cleared ? Math.min(LEVEL_COUNT, currentLevel + 1) : currentLevel;
+    if (cleared && next > save.unlockedLevel) {
       save.unlockedLevel = next;
+      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
+      save.trackUnlock[currentTrack] = save.unlockedLevel;
       persist();
     }
-    if (next <= save.unlockedLevel) startLevel(next);
-    else {
-      alert("先通关当前组：新词=0 · 到期=0 · 学习中=0 · ≥80% 卡片复习间隔≥1天");
-      showScreen("home");
-    }
+    // A false clear (巩固 0/need) used to refuse Next or skip into another
+    // empty clear screen. Resume this set, or open the next one when it really passed.
+    startLevel(next);
   });
 
   // Sort mode buttons
