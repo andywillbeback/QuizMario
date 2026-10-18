@@ -11,6 +11,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
 <title>聚光单词 — Vocab Spotlight</title>
 <style>
   :root {
@@ -415,9 +418,11 @@
     margin: 4px 16px 22px;
     text-align: center;
     color: var(--gold);
-    font-family: Palatino, "Palatino Linotype", "Iowan Old Style", "Songti SC", "STSong", Georgia, serif;
+    font-family: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500;
     font-size: 0.95rem;
-    letter-spacing: 0.045em;
+    letter-spacing: 0.22em;
+    padding-left: 0.22em;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
   }
   kbd {
@@ -564,6 +569,38 @@
     .sort-bar { gap: 6px; }
     .sort-btn { font-size: .75rem; padding: 6px 8px; }
     #prompt-main { font-size: 1.35rem; }
+  }
+  @media (max-width: 420px) {
+    .gold-sign { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
+  }
+  /* Training: Multiple choice / Exit stay one compact row on a phone */
+  .play-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0 0 0 auto;
+    width: auto;
+  }
+  .play-actions button {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  @media (max-width: 640px) {
+    .play-actions { gap: 6px; }
+    .play-actions button {
+      width: auto;
+      flex: 0 0 auto;
+      padding: 5px 10px;
+      font-size: 0.75rem;
+      border-radius: 999px;
+      letter-spacing: 0;
+    }
   }
   #backup-panel {
     margin-top: 14px; padding: 12px; border-radius: 14px;
@@ -866,9 +903,9 @@
     <section id="screen-play" class="screen">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
         <div style="font-size:.9rem;opacity:.85">Set <b id="play-level">1</b> · Queue <b id="play-queue">0</b> · 排序 <b id="sort-mode-label">默认（到期优先 SRS）</b></div>
-        <div class="btn-row" style="margin:0">
-          <button id="btn-mc-toggle" class="ghost" type="button" style="padding:8px 12px;font-size:.85rem">Multiple choice</button>
-          <button id="btn-quit" class="ghost" type="button" style="padding:8px 12px;font-size:.85rem">Exit</button>
+        <div class="play-actions">
+          <button id="btn-mc-toggle" class="ghost" type="button">Multiple choice</button>
+          <button id="btn-quit" class="ghost" type="button">Exit</button>
         </div>
       </div>
       <div class="set-progress">

@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#03060f">
 <title>聚光单词 · 教师看板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
   :root { --gold: #e6c98a; --text: #f4f7ff; --cyan: #bed6ff; }
@@ -63,8 +66,15 @@
   a { color: var(--cyan); }
   .gold-sign {
     margin: 22px 0 8px; text-align: center; color: var(--gold);
-    font-family: Palatino, "Palatino Linotype", "Songti SC", Georgia, serif;
-    letter-spacing: .045em;
+    font-family: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    letter-spacing: 0.22em;
+    padding-left: 0.22em;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+  }
+  @media (max-width: 420px) {
+    .gold-sign { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
   }
 </style>
 </head>
