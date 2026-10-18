@@ -42,8 +42,12 @@
   let sessionSeen = 0;
   let sessionTarget = 0;
   let firstCardOfSession = true;
-  /** @type {"default"|"root_affix"|"scene"} */
-  let sortMode = save.sortMode === "root_affix" || save.sortMode === "scene" ? save.sortMode : "default";
+  /** Root-affix browse stays in the word bank, but the control is hidden for now. */
+  function publicSortMode(mode) {
+    return mode === "scene" ? "scene" : "default";
+  }
+  /** @type {"default"|"scene"} */
+  let sortMode = publicSortMode(save.sortMode);
   let voiceOn = save.voiceOn !== false; // default on
   let dueOnly = !!save.dueOnly;
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
@@ -501,14 +505,12 @@
     }
     const label = $("sort-mode-label");
     if (label) {
-      label.textContent =
-        sortMode === "root_affix" ? "词根词缀" :
-        sortMode === "scene" ? "场景" : "默认（到期优先 SRS）";
+      label.textContent = sortMode === "scene" ? "场景" : "默认（到期优先 SRS）";
     }
   }
 
   function setSortMode(mode) {
-    sortMode = mode;
+    sortMode = publicSortMode(mode);
     persist();
     updateSortButtons();
     // If playing, rebuild remaining queue preserving progress style
@@ -1222,13 +1224,8 @@
         "<div class=\"fb-explain\"><b>答案</b> " + escapeHtml(currentCard.word) +
         " — " + escapeHtml(currentCard.meaning_zh) + "</div>" +
         "<div class=\"fb-explain\">" + escapeHtml(explain) + "</div>";
-      if (currentCard.root_group || currentCard.scene) {
-        why +=
-          '<div class="fb-meta">' +
-          (currentCard.root_group ? "词根词缀：" + escapeHtml(currentCard.root_group) : "") +
-          (currentCard.root_group && currentCard.scene ? " · " : "") +
-          (currentCard.scene ? "场景：" + escapeHtml(currentCard.scene) : "") +
-          "</div>";
+      if (currentCard.scene) {
+        why += '<div class="fb-meta">场景：' + escapeHtml(currentCard.scene) + "</div>";
       }
       why +=
         '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
@@ -1497,7 +1494,7 @@
     opts = opts || {};
     save = next;
     applyTrack(save.track || "core", true);
-    sortMode = save.sortMode === "root_affix" || save.sortMode === "scene" ? save.sortMode : "default";
+    sortMode = publicSortMode(save.sortMode);
     voiceOn = save.voiceOn !== false;
     dueOnly = !!save.dueOnly;
     const voiceBtn = $("btn-voice-toggle");
