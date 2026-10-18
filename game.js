@@ -230,10 +230,14 @@
   }
 
   function refreshHud() {
-    $("hud-points").textContent = String(save.points);
-    $("hud-streak").textContent = String(save.streak);
-    $("hud-best").textContent = String(save.bestStreak);
-    $("hud-level").textContent = currentLevel ? String(currentLevel) : "—";
+    const setHud = (id, value) => {
+      const el = $(id);
+      if (el) el.textContent = value;
+    };
+    setHud("hud-points", String(save.points));
+    setHud("hud-streak", String(save.streak));
+    setHud("hud-best", String(save.bestStreak));
+    setHud("hud-level", currentLevel ? String(currentLevel) : "—");
     const c = countSrs(currentLevel || 0);
     if ($("hud-mastered")) $("hud-mastered").textContent = String(c.mastered);
     if ($("hud-due")) $("hud-due").textContent = String(c.due);
@@ -250,6 +254,7 @@
 
   function showScreen(name) {
     document.body.classList.toggle("at-gate", name === "gate");
+    document.body.classList.toggle("at-play", name === "play");
     for (const el of document.querySelectorAll(".screen")) el.classList.remove("active");
     const s = $("screen-" + name);
     if (s) s.classList.add("active");
@@ -944,7 +949,8 @@
   }
 
   function fillCardContent() {
-    $("prompt-label").textContent = "Chinese meaning → English word";
+    const promptLabel = $("prompt-label");
+    if (promptLabel) promptLabel.textContent = "Chinese meaning → English word";
     $("prompt-main").textContent = currentCard.meaning_zh;
     const prog = getProg(currentCard.key);
     const filled = Math.floor(prog.mastery || 0);

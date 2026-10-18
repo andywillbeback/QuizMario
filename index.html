@@ -650,64 +650,114 @@
     .btn-row button, .btn-row a.btn { flex: 1 1 45%; }
   }
 
-  /* Landing gate: only 中考 / 高考 */
+  /* Landing gate: only the two yellow exam buttons */
+  body.at-gate header.brand,
+  body.at-gate #account-bar,
   body.at-gate #hud,
   body.at-gate #srs-panel,
   body.at-gate #clear-panel,
   body.at-gate footer,
-  body.at-gate .gold-sign,
-  body.at-gate header.brand .subtitle,
-  body.at-gate header.brand .examiner,
-  body.at-gate header.brand .tagline { display: none !important; }
-  body.at-gate #account-bar a#login-link {
-    background: transparent;
-    color: var(--cyan);
-    box-shadow: none;
-    min-height: 0;
-    min-width: 0;
-    padding: 2px 8px;
-    font-size: .85rem;
-    font-weight: 650;
-  }
+  body.at-gate .gold-sign { display: none !important; }
   body.at-gate #stage {
     min-height: 0;
-    margin-top: 8vh;
+    margin-top: 28vh;
+    width: min(920px, 96vw);
+    max-width: 96vw;
     background: transparent;
     border: none;
     box-shadow: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     padding: 12px 8px 28px;
+    overflow: visible;
   }
   .gate { display: flex; justify-content: center; }
   .gate-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 16px;
-    width: min(560px, 100%);
+    gap: clamp(28px, 8vw, 72px);
+    width: min(800px, 92vw);
   }
   .gate-actions button {
-    font-size: clamp(1.8rem, 5vw, 2.4rem);
-    letter-spacing: 0.28em;
-    padding: 28px 12px 28px 0.28em;
-    border-radius: 18px;
-    min-height: 96px;
+    background: linear-gradient(180deg, #ffe066, #f5b800);
+    color: #1a1300;
+    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+    font-size: clamp(2.6rem, 9vw, 4.2rem);
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    padding: 28px 12px 28px 0.2em;
+    border-radius: 24px;
+    min-height: clamp(150px, 30vw, 220px);
+    box-shadow: 0 14px 40px rgba(245, 184, 0, 0.35);
+  }
+
+  /* Training page: streak only, sort controls pinned to the viewport */
+  header.brand .subtitle,
+  header.brand .examiner,
+  header.brand .tagline,
+  #browse-strip,
+  #hud .stat:not(#stat-streak),
+  #prompt-label,
+  footer,
+  #play-clear-label,
+  #sort-bar .sort-label { display: none !important; }
+
+  #sort-bar { display: none; }
+  body.at-play #sort-bar {
+    display: flex;
+    position: fixed;
+    top: 12px;
+    right: 14px;
+    z-index: 30;
+    margin: 0;
+    justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-width: calc(100vw - 28px);
+    pointer-events: auto;
   }
   @media (max-width: 640px) {
-    .gate-actions { grid-template-columns: 1fr; }
-    body.at-gate #stage { margin-top: 6vh; }
+    body.at-play #sort-bar {
+      top: max(6px, env(safe-area-inset-top));
+      right: 8px;
+      left: auto;
+      width: max-content;
+      max-width: calc(100vw - 16px);
+      gap: 4px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    body.at-play #sort-bar .sort-btn {
+      font-size: 11px;
+      padding: 4px 6px;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+    body.at-play header.brand {
+      padding-top: calc(max(6px, env(safe-area-inset-top)) + 78px);
+    }
+    body.at-play header.brand h1 {
+      font-size: 1.55rem;
+      letter-spacing: 0.1em;
+      padding-left: 0.1em;
+    }
   }
 </style>
 </head>
 <body class="at-gate">
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
+<div id="sort-bar" class="sort-bar" role="group" aria-label="词汇排序">
+  <span class="sort-label">排列</span>
+  <button type="button" class="sort-btn" id="btn-sort-default">默认</button>
+  <button type="button" class="sort-btn" id="btn-sort-scene">场景</button>
+  <button type="button" class="sort-btn" id="btn-due-only">📌 只练到期 Off</button>
+  <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
+</div>
 <div class="app">
   <header class="brand">
     <h1>聚光单词</h1>
-    <p class="subtitle">Vocab Spotlight</p>
-    <p class="examiner">Cambridge Examiner</p>
-    <p class="tagline">剑桥口语考官带你背单词</p>
   </header>
 
   <div id="account-bar">
@@ -718,15 +768,7 @@
   </div>
 
   <div id="hud">
-    <div class="stat" id="stat-points">Points <b id="hud-points">0</b></div>
     <div class="stat" id="stat-streak">Streak <b id="hud-streak">0</b></div>
-    <div class="stat">Best <b id="hud-best">0</b></div>
-    <div class="stat">Level <b id="hud-level">—</b></div>
-    <div class="stat" id="stat-due">Due <b id="hud-due">0</b></div>
-    <div class="stat" id="stat-learning">Learning <b id="hud-learning">0</b></div>
-    <div class="stat" id="stat-new">New <b id="hud-new">0</b></div>
-    <div class="stat" id="stat-mastered">Mastered <b id="hud-mastered">0</b></div>
-    <div class="stat" id="stat-clear">通关 <b id="hud-clear">—</b></div>
   </div>
   <main id="stage">
     <div id="stage-flash" aria-hidden="true"></div>
@@ -829,14 +871,6 @@
           <button id="btn-quit" class="ghost" type="button" style="padding:8px 12px;font-size:.85rem">Exit</button>
         </div>
       </div>
-      <div class="sort-bar" role="group" aria-label="词汇排序">
-        <span class="sort-label">排列</span>
-        <button type="button" class="sort-btn" id="btn-sort-default">默认</button>
-        <button type="button" class="sort-btn" id="btn-sort-scene">场景</button>
-        <button type="button" class="sort-btn" id="btn-due-only">📌 只练到期 Off</button>
-        <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
-      </div>
-      <div id="browse-strip" hidden></div>
       <div class="set-progress">
         <div class="set-progress-top">
           <span id="set-progress-label">本组进度</span>
@@ -846,9 +880,7 @@
           <i id="play-progress"></i>
         </div>
       </div>
-      <div id="play-clear-label">本组进度 —</div>
       <div id="prompt-box">
-        <div id="prompt-label">Chinese meaning</div>
         <div id="prompt-main">—</div>
         <div id="prompt-hint"></div>
       </div>
@@ -876,14 +908,10 @@
     </section>
   </main>
 
-  <footer>
-    Offline HTML5 · Anki-lite SRS · Good/Easy · 3000-word core · Part A/B · clearance bar · custom streak VO<br>
-    不登录时进度在本机 (localStorage)。换设备可 <a href="login.html">登录 / 同步进度</a>，或先导出 JSON / 备份码。
-  </footer>
   <p class="gold-sign">Doctoral product powered by Pu Jin</p>
 </div>
 
-  <script src="spiral-field.js"></script>
+  <script src="meteor.js"></script>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
   <script src="sync-merge.js"></script>
