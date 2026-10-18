@@ -365,6 +365,7 @@
   }
   #answer-input:focus { border-color: rgba(190, 214, 255, 0.9); box-shadow: 0 0 0 3px rgba(150, 186, 255, 0.18); }
   #choices { display: grid; gap: 8px; margin-top: 10px; }
+  #choices[hidden] { display: none !important; }
   .choice {
     text-align: left; width: 100%;
     white-space: normal; line-height: 1.35; height: auto;
@@ -599,7 +600,7 @@
   @media (max-width: 420px) {
     .gold-sign { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
   }
-  /* Training: Multiple choice / Exit stay one compact row on a phone */
+  /* Training: Exit stays a compact pill on a phone */
   .play-actions {
     display: flex;
     flex-direction: row;
@@ -876,7 +877,7 @@
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
         </div>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
-          Tip: <kbd>Enter</kbd> 提交 · 答对后 <kbd>1</kbd>/<kbd>G</kbd>=Good · <kbd>2</kbd>/<kbd>E</kbd>=Easy
+          Tip: 点选英文单词 · 答对后 <kbd>1</kbd>/<kbd>G</kbd>=Good · <kbd>2</kbd>/<kbd>E</kbd>=Easy · 选项 <kbd>1</kbd>–<kbd>4</kbd>
         </p>
 
         <div id="stats-panel" class="panel">
@@ -942,7 +943,6 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
         <div style="font-size:.9rem;opacity:.85">Set <b id="play-level">1</b> · Queue <b id="play-queue">0</b> · 排序 <b id="sort-mode-label">默认（到期优先 SRS）</b></div>
         <div class="play-actions">
-          <button id="btn-mc-toggle" class="ghost" type="button">Multiple choice</button>
           <button id="btn-quit" class="ghost" type="button">Exit</button>
         </div>
       </div>
@@ -960,11 +960,7 @@
         <div id="prompt-hint"></div>
       </div>
       <div id="answer-area">
-        <div id="type-row">
-          <input id="answer-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the English word / phrase…">
-          <button id="btn-submit" type="button">Submit</button>
-        </div>
-        <div id="choices" hidden></div>
+        <div id="choices" role="group" aria-label="选择英文单词" hidden></div>
       </div>
       <div id="feedback"></div>
     </section>
