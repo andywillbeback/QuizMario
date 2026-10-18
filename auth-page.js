@@ -49,8 +49,18 @@
     if (submit) submit.textContent = mode === "register" ? "注册" : "登录";
     var loginBtn = $("mode-login");
     var regBtn = $("mode-register");
-    if (loginBtn) loginBtn.setAttribute("aria-pressed", mode === "login" ? "true" : "false");
-    if (regBtn) regBtn.setAttribute("aria-pressed", mode === "register" ? "true" : "false");
+    if (loginBtn) {
+      loginBtn.setAttribute("aria-pressed", mode === "login" ? "true" : "false");
+      if (loginBtn.hasAttribute("aria-selected")) {
+        loginBtn.setAttribute("aria-selected", mode === "login" ? "true" : "false");
+      }
+    }
+    if (regBtn) {
+      regBtn.setAttribute("aria-pressed", mode === "register" ? "true" : "false");
+      if (regBtn.hasAttribute("aria-selected")) {
+        regBtn.setAttribute("aria-selected", mode === "register" ? "true" : "false");
+      }
+    }
     msg("");
   }
 

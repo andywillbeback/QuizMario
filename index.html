@@ -558,6 +558,17 @@
   }
   #sync-status.is-error { border-color: rgba(255,92,108,.7); color: #ffb4c0; }
   #account-bar a { color: var(--cyan); }
+  #account-bar a#login-link {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 36px; padding: 6px 16px; border-radius: 999px;
+    background: linear-gradient(180deg, #ffe9a8, #e0b44a);
+    color: #2a1a00; font-weight: 800; font-size: .95rem;
+    text-decoration: none; letter-spacing: .02em;
+    box-shadow: 0 0 0 1px rgba(255, 220, 120, .55), 0 8px 20px rgba(0,0,0,.28);
+  }
+  #account-bar a#login-link:focus-visible {
+    outline: 2px solid #fff; outline-offset: 3px;
+  }
   #account-bar button {
     padding: 4px 10px; font-size: .78rem; font-weight: 600;
   }
@@ -610,7 +621,7 @@
 
   <div id="account-bar">
     <span id="sync-status" aria-live="polite">未登录本地</span>
-    <a id="login-link" href="login.html">登录 / 同步进度</a>
+    <a id="login-link" href="login.html">登录</a>
     <button id="btn-logout" class="ghost" type="button" hidden>退出登录</button>
     <label id="wipe-label" hidden><input id="wipe-local" type="checkbox"> 退出时清除本机</label>
   </div>
