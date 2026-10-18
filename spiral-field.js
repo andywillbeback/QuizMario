@@ -1,12 +1,16 @@
-/* Converging light field shared by login, home, and teacher chrome.
- * Canvas 2D only. No audio. GitHub Pages safe (no build, no extra libraries).
+/* Lean converging-light field for login, home, and teacher.
+ * Canvas 2D, no libraries, no audio.
  *
- * Filaments are continuous strokes into a soft core — not dotted sprites.
- * Draw budget stays inside the emergency caps:
- *   phone ≤120, tablet ≤180, desktop ≤280 filaments.
- * DPR is capped at 1.25. The loop paces at ~60fps and skips a frame only
- * when that callback is already behind (never two skips in a row).
+ * Premium read comes from thin additive strokes stacked into a soft core.
+ * There is no shadowBlur, no canvas filter, and no wide bloom stroke.
+ *
+ * Caps (live spiral was up to 880 sprites):
+ *   phone 84, tablet 126, desktop 168 filaments.
+ * DPR clamp: 1.5 (inside the 1.5–2 band, on the fast side).
+ * Strokes are flat colors on a half-resolution buffer (full resolution on phones),
+ * then one smoothed blit. Only the core uses a gradient.
  * Hidden tabs pause. Reduced motion draws one still frame.
+ * If a draw itself exceeds 10ms, the pool sheds until it fits, then refills slowly.
  */
 (function () {
   "use strict";
@@ -15,6 +19,9 @@
   if (!canvas || !canvas.getContext) return;
   var ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
   if (!ctx) return;
+  var buffer = document.createElement("canvas");
+  var bctx = buffer.getContext("2d", { alpha: true });
+  if (!bctx) return;
 
   var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
   var reduced = motionQuery.matches;
@@ -25,25 +32,33 @@
   var skipped = false;
   var width = 0;
   var height = 0;
+  var dpr = 1;
+  var renderScale = 0.5;
   var spin = 0.4;
   var clock = 0;
   var tier = "desktop";
-  var budget = 280;
-  var sampleCap = 22;
-  var slowFrames = 0;
-  var floor = 110;
+  var budget = 168;
+  var sampleCap = 12;
+  var floor = 72;
+  var slowStreak = 0;
+  var goodFrames = 0;
+  var fpsEma = 60;
+  var drawEma = 0;
 
   var pointerX = 0;
   var pointerY = 0;
   var panX = 0;
   var panY = 0;
+  var px = 0;
+  var py = 0;
+
+  var haloGlow = null;
+  var coreGlow = null;
+  var glowKey = "";
 
   var ARMS = 5;
-  var TURNS = 1.9;
+  var TURNS = 1.85;
   var TAU = Math.PI * 2;
-
-  var scratchX = new Float32Array(40);
-  var scratchY = new Float32Array(40);
 
   function classify() {
     var w = window.innerWidth || 360;
@@ -53,45 +68,45 @@
     var shortSide = Math.min(w, h);
     if (memory <= 2 || cores <= 2 || shortSide < 520 || w < 700) {
       tier = "phone";
-      budget = 120;
-      sampleCap = 12;
-      floor = 64;
+      budget = 84;
+      sampleCap = 8;
+      floor = 42;
       return;
     }
     if (shortSide < 900 || w < 1200) {
       tier = "tablet";
-      budget = 180;
-      sampleCap = 16;
-      floor = 90;
+      budget = 126;
+      sampleCap = 10;
+      floor = 64;
       return;
     }
     tier = "desktop";
-    budget = 280;
-    sampleCap = 28;
-    floor = 140;
+    budget = 168;
+    sampleCap = 12;
+    floor = 84;
   }
 
   function respawn(f, atEdge) {
     var roll = Math.random();
-    f.kind = roll < 0.07 ? 2 : roll < 0.24 ? 1 : 0;
+    f.kind = roll < 0.06 ? 2 : roll < 0.22 ? 1 : 0;
     f.arm = Math.floor(Math.random() * ARMS);
-    f.clustered = Math.random() < 0.62;
+    f.clustered = Math.random() < 0.64;
     f.base = f.clustered
-      ? (f.arm / ARMS) * TAU + (Math.random() - 0.5) * 0.22
+      ? (f.arm / ARMS) * TAU + (Math.random() - 0.5) * 0.2
       : Math.random() * TAU;
-    f.jitter = (Math.random() - 0.5) * (f.clustered ? 0.08 : 0.22);
+    f.jitter = (Math.random() - 0.5) * (f.clustered ? 0.07 : 0.2);
     f.depth = Math.random();
     if (f.kind === 1) {
-      f.len = 0.28 + Math.random() * 0.24;
-      f.speed = 0.05 + Math.random() * 0.035;
+      f.len = 0.32 + Math.random() * 0.22;
+      f.speed = 0.048 + Math.random() * 0.03;
     } else if (f.kind === 2) {
-      f.len = 0.34 + Math.random() * 0.28;
-      f.speed = 0.036 + Math.random() * 0.028;
+      f.len = 0.36 + Math.random() * 0.24;
+      f.speed = 0.034 + Math.random() * 0.024;
     } else {
-      f.len = 0.46 + Math.random() * 0.42;
-      f.speed = 0.022 + Math.random() * 0.02;
+      f.len = 0.5 + Math.random() * 0.36;
+      f.speed = 0.02 + Math.random() * 0.018;
     }
-    f.u = atEdge ? 0.96 + Math.random() * 0.12 : Math.pow(Math.random(), 0.72);
+    f.u = atEdge ? 0.98 + Math.random() * 0.1 : Math.pow(Math.random(), 0.7);
   }
 
   function fillPool() {
@@ -105,89 +120,60 @@
   }
 
   function resize() {
-    var dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    classify();
+    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     width = window.innerWidth || canvas.clientWidth || 360;
     height = window.innerHeight || canvas.clientHeight || 640;
+    renderScale = tier === "phone" ? 1 : tier === "tablet" ? 0.7 : 0.5;
     canvas.width = Math.max(1, Math.floor(width * dpr));
     canvas.height = Math.max(1, Math.floor(height * dpr));
     canvas.style.width = width + "px";
     canvas.style.height = height + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function origin() {
-    var driftX = Math.sin(clock * 0.17) * 18;
-    var driftY = Math.cos(clock * 0.13) * 12;
-    var goalX = driftX + pointerX * 26;
-    var goalY = driftY + pointerY * 18;
-    if (reduced) {
-      panX = 0;
-      panY = 0;
-    } else {
-      panX += (goalX - panX) * 0.045;
-      panY += (goalY - panY) * 0.045;
-    }
-    return {
-      x: width * 0.5 + panX * 0.35,
-      y: height * 0.34 + panY * 0.35,
-    };
+    buffer.width = Math.max(1, Math.floor(width * renderScale));
+    buffer.height = Math.max(1, Math.floor(height * renderScale));
+    bctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    glowKey = "";
   }
 
   function place(f, u, ox, oy, maxRx, maxRy) {
-    var clamped = u < 0 ? 0 : u > 1.25 ? 1.25 : u;
-    var fall = Math.pow(clamped, 0.78);
+    var clamped = u < 0 ? 0 : u > 1.2 ? 1.2 : u;
+    var fall = Math.pow(clamped, 0.8);
     var ang = f.base + spin * (0.65 + f.depth * 0.7) + clamped * TURNS * TAU + f.jitter * clamped;
-    var depthScale = 0.7 + f.depth * 0.42;
+    var depthScale = 0.72 + f.depth * 0.38;
     var parallax = 0.25 + f.depth;
-    return {
-      x: ox + panX * parallax + Math.cos(ang) * fall * maxRx * depthScale,
-      y: oy + panY * parallax + Math.sin(ang) * fall * maxRy * depthScale,
-    };
-  }
-
-  function onScreen(x, y, margin) {
-    return x >= -margin && y >= -margin && x <= width + margin && y <= height + margin;
+    px = ox + panX * parallax + Math.cos(ang) * fall * maxRx * depthScale;
+    py = oy + panY * parallax + Math.sin(ang) * fall * maxRy * depthScale;
   }
 
   function appendCurve(f, ox, oy, maxRx, maxRy) {
-    var steps = Math.round(f.len * (tier === "phone" ? 32 : 46));
-    if (steps < 8) steps = 8;
-    if (steps > sampleCap) steps = sampleCap;
+    var steps = sampleCap;
     var uTail = f.u + f.len;
     var i;
-    var n = 0;
-    var vis = 0;
-    for (i = 0; i <= steps; i++) {
-      var u = uTail + (f.u - uTail) * (i / steps);
-      var p = place(f, u, ox, oy, maxRx, maxRy);
-      scratchX[n] = p.x;
-      scratchY[n] = p.y;
-      if (onScreen(p.x, p.y, 64)) vis++;
-      n++;
-    }
-    if (vis === 0) return false;
     var started = false;
     var drew = false;
-    for (i = 0; i < n; i++) {
-      var x = scratchX[i];
-      var y = scratchY[i];
-      if (!onScreen(x, y, 96)) {
+    var limitX = width + 72;
+    var limitY = height + 72;
+    for (i = 0; i <= steps; i++) {
+      var u = uTail + (f.u - uTail) * (i / steps);
+      place(f, u, ox, oy, maxRx, maxRy);
+      if (px < -72 || py < -72 || px > limitX || py > limitY) {
         started = false;
         continue;
       }
       if (!started) {
-        ctx.moveTo(x, y);
+        bctx.moveTo(px, py);
         started = true;
       } else {
-        ctx.lineTo(x, y);
+        bctx.lineTo(px, py);
         drew = true;
       }
     }
     return drew;
   }
 
-  function strokePass(kind, ox, oy, maxRx, maxRy) {
-    ctx.beginPath();
+  function strokeKind(kind, ox, oy, maxRx, maxRy) {
+    bctx.beginPath();
     var i;
     var any = false;
     for (i = 0; i < filaments.length; i++) {
@@ -197,136 +183,141 @@
     return any;
   }
 
-  function radial(ox, oy, radius, stops) {
-    var g = ctx.createRadialGradient(ox, oy, 0, ox, oy, radius);
+  function ensureGlow(ox, oy, haloR, coreR) {
+    var qx = Math.round(ox / 8) * 8;
+    var qy = Math.round(oy / 8) * 8;
+    var key = width + "x" + height + ":" + qx + ":" + qy + ":" + (haloR | 0);
+    if (key === glowKey && haloGlow) return;
+    glowKey = key;
+    haloGlow = bctx.createRadialGradient(qx, qy, 0, qx, qy, haloR);
+    haloGlow.addColorStop(0, "rgba(255,255,255,0.85)");
+    haloGlow.addColorStop(0.16, "rgba(220,234,255,0.4)");
+    haloGlow.addColorStop(0.42, "rgba(140,180,245,0.12)");
+    haloGlow.addColorStop(1, "rgba(140,180,245,0)");
+    coreGlow = bctx.createRadialGradient(qx, qy, 0, qx, qy, coreR);
+    coreGlow.addColorStop(0, "rgba(255,255,255,0.95)");
+    coreGlow.addColorStop(0.35, "rgba(236,244,255,0.45)");
+    coreGlow.addColorStop(1, "rgba(190,214,255,0)");
+  }
+
+  function origin() {
+    var driftX = Math.sin(clock * 0.17) * 16;
+    var driftY = Math.cos(clock * 0.13) * 10;
+    if (reduced) {
+      panX = 0;
+      panY = 0;
+    } else {
+      panX += (driftX + pointerX * 22 - panX) * 0.045;
+      panY += (driftY + pointerY * 14 - panY) * 0.045;
+    }
+    return {
+      x: width * 0.5 + panX * 0.35,
+      y: height * 0.34 + panY * 0.35,
+    };
+  }
+
+  function shed() {
+    if (filaments.length <= floor) return;
+    filaments.length = Math.max(floor, Math.floor(filaments.length * 0.8));
+  }
+
+  function refill() {
+    var room = budget - filaments.length;
+    var n = room > 4 ? 4 : room;
     var i;
-    for (i = 0; i < stops.length; i++) g.addColorStop(stops[i][0], stops[i][1]);
-    return g;
+    for (i = 0; i < n; i++) {
+      var f = {};
+      respawn(f, false);
+      filaments.push(f);
+    }
   }
 
   function draw(dt) {
-    ctx.clearRect(0, 0, width, height);
-    var maxRx = Math.min(width * 0.72, Math.max(height, width) * 0.7);
-    var maxRy = Math.min(height * 0.7, maxRx * 0.86);
+    bctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    bctx.clearRect(0, 0, width, height);
+    var maxRx = Math.min(width * 0.7, Math.max(height, width) * 0.66);
+    var maxRy = Math.min(height * 0.68, maxRx * 0.86);
     var o = origin();
-    var reach = Math.max(maxRx, maxRy);
+    var coreR = Math.max(42, Math.min(width, height) * 0.1);
+    var haloR = coreR * 3.1;
     var i;
 
     if (!reduced && dt > 0) {
       clock += dt;
-      spin += dt * 0.085;
+      spin += dt * 0.08;
       for (i = 0; i < filaments.length; i++) {
         var f = filaments[i];
-        f.u -= f.speed * dt * (0.82 + f.depth * 0.45);
+        f.u -= f.speed * dt * (0.82 + f.depth * 0.4);
         if (f.u < -0.03) respawn(f, true);
       }
     }
 
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.globalCompositeOperation = "lighter";
+    ensureGlow(o.x, o.y, haloR, coreR);
+    bctx.lineCap = "round";
+    bctx.lineJoin = "round";
+    bctx.globalCompositeOperation = "lighter";
 
-    var washR = Math.max(width, height) * 0.62;
-    var wash = radial(o.x, o.y, washR, [
-      [0, "rgba(255,255,255,0.55)"],
-      [0.08, "rgba(214,228,255,0.32)"],
-      [0.2, "rgba(150,186,245,0.16)"],
-      [0.42, "rgba(70,110,190,0.07)"],
-      [1, "rgba(40,70,140,0)"],
-    ]);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = wash;
-    ctx.beginPath();
-    ctx.arc(o.x, o.y, washR, 0, TAU);
-    ctx.fill();
+    var unit = Math.max(0.85, Math.min(width, height) / 900);
+    var widthBoost = renderScale < 1 ? 1.35 : 1;
 
-    var unit = Math.max(0.9, Math.min(width, height) / 860);
-    var ice = radial(o.x, o.y, reach, [
-      [0, "rgba(255,255,255,1)"],
-      [0.1, "rgba(236,244,255,0.98)"],
-      [0.24, "rgba(186,214,255,0.9)"],
-      [0.48, "rgba(150,188,255,0.62)"],
-      [0.74, "rgba(128,170,235,0.28)"],
-      [1, "rgba(120,160,220,0)"],
-    ]);
-    var warm = radial(o.x, o.y, reach * 0.92, [
-      [0, "rgba(255,248,236,0.95)"],
-      [0.16, "rgba(240,214,170,0.7)"],
-      [0.46, "rgba(220,180,120,0.22)"],
-      [1, "rgba(210,170,110,0)"],
-    ]);
-
-    ctx.strokeStyle = ice;
-    if (strokePass(0, o.x, o.y, maxRx, maxRy)) {
-      ctx.lineWidth = 12 * unit;
-      ctx.globalAlpha = 0.09;
-      ctx.stroke();
-      ctx.lineWidth = 2.6 * unit;
-      ctx.globalAlpha = 0.28;
-      ctx.stroke();
-      ctx.lineWidth = 1.15 * unit;
-      ctx.globalAlpha = 0.78;
-      ctx.stroke();
+    bctx.strokeStyle = "rgb(186,214,255)";
+    if (strokeKind(0, o.x, o.y, maxRx, maxRy)) {
+      bctx.lineWidth = 1.15 * unit * widthBoost;
+      bctx.globalAlpha = 0.62;
+      bctx.stroke();
     }
 
-    ctx.strokeStyle = ice;
-    if (strokePass(1, o.x, o.y, maxRx, maxRy)) {
-      ctx.lineWidth = 18 * unit;
-      ctx.globalAlpha = 0.12;
-      ctx.stroke();
-      ctx.lineWidth = 2.1 * unit;
-      ctx.globalAlpha = 0.95;
-      ctx.stroke();
+    bctx.strokeStyle = "rgb(248,252,255)";
+    if (strokeKind(1, o.x, o.y, maxRx, maxRy)) {
+      bctx.lineWidth = 1.45 * unit * widthBoost;
+      bctx.globalAlpha = 0.9;
+      bctx.stroke();
     }
 
-    ctx.strokeStyle = warm;
-    if (strokePass(2, o.x, o.y, maxRx, maxRy)) {
-      ctx.lineWidth = 7 * unit;
-      ctx.globalAlpha = 0.08;
-      ctx.stroke();
-      ctx.lineWidth = 1.25 * unit;
-      ctx.globalAlpha = 0.42;
-      ctx.stroke();
+    bctx.strokeStyle = "rgb(236,206,150)";
+    if (strokeKind(2, o.x, o.y, maxRx, maxRy)) {
+      bctx.lineWidth = 1.15 * unit * widthBoost;
+      bctx.globalAlpha = 0.45;
+      bctx.stroke();
     }
 
-    var pulse = reduced ? 1 : 0.94 + 0.06 * Math.sin(clock * 0.9);
-    var coreR = Math.max(48, Math.min(width, height) * 0.11) * pulse;
-    var halo = radial(o.x, o.y, coreR * 3.3, [
-      [0, "rgba(255,255,255,0.9)"],
-      [0.12, "rgba(226,238,255,0.48)"],
-      [0.34, "rgba(150,186,255,0.16)"],
-      [0.68, "rgba(120,160,230,0.05)"],
-      [1, "rgba(120,160,230,0)"],
-    ]);
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = halo;
-    ctx.beginPath();
-    ctx.arc(o.x, o.y, coreR * 3.3, 0, TAU);
-    ctx.fill();
+    var pulse = reduced ? 0.9 : 0.84 + 0.08 * Math.sin(clock * 0.9);
+    bctx.globalAlpha = pulse;
+    bctx.fillStyle = haloGlow;
+    bctx.beginPath();
+    bctx.arc(o.x, o.y, haloR, 0, TAU);
+    bctx.fill();
+    bctx.globalAlpha = 1;
+    bctx.fillStyle = coreGlow;
+    bctx.beginPath();
+    bctx.arc(o.x, o.y, coreR, 0, TAU);
+    bctx.fill();
 
-    var core = radial(o.x, o.y, coreR, [
-      [0, "rgba(255,255,255,0.95)"],
-      [0.28, "rgba(244,248,255,0.55)"],
-      [0.62, "rgba(190,214,255,0.12)"],
-      [1, "rgba(190,214,255,0)"],
-    ]);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = core;
-    ctx.beginPath();
-    ctx.arc(o.x, o.y, coreR, 0, TAU);
-    ctx.fill();
+    bctx.globalCompositeOperation = "source-over";
+    bctx.globalAlpha = 1;
 
-    ctx.globalCompositeOperation = "source-over";
-    ctx.globalAlpha = 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(buffer, 0, 0, width, height);
+  }
 
-    if (!reduced && dt > 0) {
-      var drawMs = 0;
-      if (draw._t0) drawMs = performance.now() - draw._t0;
-      if (drawMs > 12) slowFrames++;
-      else slowFrames = slowFrames > 0 ? slowFrames - 1 : 0;
-      if (slowFrames >= 8 && filaments.length > floor) {
-        filaments.length = Math.max(floor, Math.floor(filaments.length * 0.82));
-        slowFrames = 0;
+  function notePressure(drawMs) {
+    if (drawMs > 10) {
+      slowStreak++;
+      goodFrames = 0;
+      if (slowStreak >= 2) {
+        shed();
+        slowStreak = 0;
+      }
+      return;
+    }
+    slowStreak = 0;
+    if (drawMs < 6) {
+      goodFrames++;
+      if (goodFrames >= 90 && filaments.length < budget) {
+        refill();
+        goodFrames = 0;
       }
     }
   }
@@ -336,19 +327,21 @@
     raf = window.requestAnimationFrame(tick);
     if (!lastTs) lastTs = ts;
     var elapsed = ts - lastTs;
-    if (elapsed < 15) return;
-    if (elapsed > 48) {
-      if (!skipped) {
-        skipped = true;
-        lastTs = ts;
-        return;
-      }
+    if (elapsed < 14) return;
+    if (elapsed > 32 && drawEma > 10 && !skipped) {
+      skipped = true;
+      lastTs = ts;
+      return;
     }
     skipped = false;
-    var dt = Math.min(0.032, elapsed / 1000);
+    var dt = elapsed > 34 ? 0.034 : elapsed / 1000;
     lastTs = ts;
-    draw._t0 = performance.now();
+    var t0 = performance.now();
     draw(dt);
+    var drawMs = performance.now() - t0;
+    fpsEma += (1000 / elapsed - fpsEma) * 0.08;
+    drawEma += (drawMs - drawEma) * 0.12;
+    notePressure(drawMs);
   }
 
   function start() {
@@ -400,6 +393,9 @@
     count: function () { return filaments.length; },
     budget: function () { return budget; },
     tier: function () { return tier; },
+    dpr: function () { return dpr; },
+    fps: function () { return Math.round(fpsEma); },
+    drawMs: function () { return Math.round(drawEma * 10) / 10; },
     reduced: function () { return reduced; },
     running: function () { return running; },
   };
