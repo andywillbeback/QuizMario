@@ -8,7 +8,7 @@
  * SITE_URL          Auth Site URL. Keep the trailing slash.
  */
 window.QUIZMARIO_CONFIG = {
-  SUPABASE_URL: "https://YOUR_PROJECT_REF.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_KEY",
+  SUPABASE_URL: "https://cmainasvlfdynidabunp.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_wXq1t1Ynsj9o1qGpU5T3IQ_7M5EC1ZK",
   SITE_URL: "https://andywillbeback.github.io/QuizMario/",
 };

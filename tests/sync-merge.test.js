@@ -1,4 +1,6 @@
 const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
 const m = require("../sync-merge.js");
 
 function card(extra) {
@@ -33,9 +35,24 @@ assert.strictEqual(m.isCloudConfigured({
   SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
 }), true);
 assert.strictEqual(m.isCloudConfigured({
+  SUPABASE_URL: "https://abcdxyz.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_example_key_value",
+}), true);
+assert.strictEqual(m.isCloudConfigured({
   SUPABASE_URL: "http://abcdxyz.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_example_key_value",
 }), false);
+
+const configSrc = fs.readFileSync(path.join(__dirname, "../config.js"), "utf8");
+const configUrl = configSrc.match(/SUPABASE_URL:\s*"([^"]+)"/)[1];
+const configKey = configSrc.match(/SUPABASE_ANON_KEY:\s*"([^"]+)"/)[1];
+const configSite = configSrc.match(/SITE_URL:\s*"([^"]+)"/)[1];
+assert.strictEqual(configUrl, "https://cmainasvlfdynidabunp.supabase.co");
+assert.strictEqual(configKey, "sb_publishable_wXq1t1Ynsj9o1qGpU5T3IQ_7M5EC1ZK");
+assert.strictEqual(configSite, "https://andywillbeback.github.io/QuizMario/");
+assert.strictEqual(m.isCloudConfigured({ SUPABASE_URL: configUrl, SUPABASE_ANON_KEY: configKey }), true);
+assert.ok(configKey.startsWith("sb_publishable_"));
+assert.ok(!/service_role["']?\s*[:=]/i.test(configSrc));
 
 assert.deepStrictEqual(m.planSync(studied(2), null), { source: "local", reason: "no-cloud", upload: true });
 assert.deepStrictEqual(
