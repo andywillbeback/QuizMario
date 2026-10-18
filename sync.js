@@ -30,6 +30,15 @@
     el.classList.toggle("is-error", text.indexOf("失败") !== -1);
   }
 
+  function revealApp() {
+    document.documentElement.classList.add("session-ok");
+  }
+
+  function sendToLogin() {
+    var tail = window.__QM_AUTH_PENDING ? ((location.search || "") + (location.hash || "")) : "";
+    location.replace("login.html" + tail);
+  }
+
   function renderAccount() {
     var logged = !!user;
     var link = $("login-link");
@@ -127,12 +136,11 @@
       try { await client.auth.signOut(); } catch (_) {}
     }
     user = null;
+    try { localStorage.removeItem("quizmario-auth"); } catch (_) {}
     if (opts.wipe) {
       try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-      window.location.reload();
-      return;
     }
-    renderAccount();
+    location.replace("login.html");
   }
 
   async function boot() {
@@ -144,6 +152,8 @@
     if (!MERGE || !CLIENT || !CLIENT.isConfigured() || !CLIENT.client() || !qm) {
       holdUploads = false;
       renderAccount();
+      if (window.__QM_EXPECT_SESSION) revealApp();
+      else sendToLogin();
       return;
     }
     var client = CLIENT.client();
@@ -154,8 +164,10 @@
       if (!user) {
         pendingDuringBoot = false;
         renderAccount();
+        sendToLogin();
         return;
       }
+      revealApp();
       setStatus("已登录 · 同步中", user.email || "");
       renderAccount();
       var fetched = await client.from("user_progress").select("save,updated_at").eq("user_id", user.id).maybeSingle();
@@ -179,6 +191,8 @@
     } catch (e) {
       setStatus(user ? "已登录 · 同步失败" : "未登录本地", friendlySyncError(e));
       if (window.console && console.warn) console.warn("QuizMario sync", e);
+      if (user || window.__QM_EXPECT_SESSION) revealApp();
+      else sendToLogin();
     } finally {
       holdUploads = false;
       if (pendingDuringBoot && user) {

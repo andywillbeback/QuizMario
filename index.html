@@ -3,6 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html:not(.session-ok),html:not(.session-ok) body{background:#03060f}html:not(.session-ok) body{visibility:hidden}</style>
+<script>
+(function () {
+  var blob = (location.search || "") + (location.hash || "");
+  if (/type=recovery/.test(blob)) {
+    location.replace("login.html" + blob);
+    return;
+  }
+  var pending = /[?&#](code|access_token|error|error_description)=/.test(blob)
+    || /type=(signup|magiclink|invite)/.test(blob);
+  window.__QM_AUTH_PENDING = pending;
+  if (pending) return;
+  var signed = false;
+  try {
+    var raw = localStorage.getItem("quizmario-auth");
+    var s = raw && JSON.parse(raw);
+    signed = !!(s && s.user && (s.access_token || s.refresh_token));
+  } catch (e) {}
+  if (signed) {
+    window.__QM_EXPECT_SESSION = true;
+    document.documentElement.classList.add("session-ok");
+  } else {
+    location.replace("login.html");
+  }
+})();
+</script>
 <meta name="theme-color" content="#03060f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -726,6 +752,18 @@
     border-radius: 24px;
     min-height: clamp(150px, 30vw, 220px);
     box-shadow: 0 14px 40px rgba(245, 184, 0, 0.35);
+  }
+  @media (max-width: 640px) {
+    body.at-gate .app {
+      min-height: 100vh;
+      min-height: 100dvh;
+      justify-content: center;
+    }
+    body.at-gate #stage {
+      margin: 0 auto;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
   }
 
   /* Training page: streak only, sort controls pinned to the viewport */
