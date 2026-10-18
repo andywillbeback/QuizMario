@@ -1,0 +1,1136 @@
+{
+  "storybook": {
+    "pos": "n.",
+    "meaning_zh": "故事书",
+    "example_en": "My little sister asked me to read her favourite storybook before bedtime.",
+    "example_zh": "我妹妹让我在睡前给她读她最喜欢的故事书。"
+  },
+  "stunning": {
+    "pos": "adj.",
+    "meaning_zh": "极美的",
+    "example_en": "After the rain stopped, the view from the hotel window was stunning.",
+    "example_zh": "雨停之后，酒店窗外的景色美极了。"
+  },
+  "stylish": {
+    "pos": "adj.",
+    "meaning_zh": "时髦的",
+    "example_en": "She wore a stylish coat to the city concert last Friday.",
+    "example_zh": "上周五她穿着一件时髦的外套去听了城里的音乐会。"
+  },
+  "subtitle": {
+    "pos": "n.",
+    "meaning_zh": "字幕",
+    "example_en": "We followed the subtitle at the bottom to understand the French film.",
+    "example_zh": "我们靠底部的字幕看懂了这部法国电影。"
+  },
+  "subtract": {
+    "pos": "v.",
+    "meaning_zh": "减去",
+    "example_en": "Can you subtract fifteen from forty without using a calculator?",
+    "example_zh": "你能不用计算器从四十里面减去十五吗？"
+  },
+  "sue": {
+    "pos": "v.",
+    "meaning_zh": "起诉",
+    "example_en": "After the broken oven caused a fire, the shop owner decided to sue the company.",
+    "example_zh": "坏烤箱引起火灾后，店主决定起诉那家公司。"
+  },
+  "superman": {
+    "pos": "n.",
+    "meaning_zh": "超人",
+    "example_en": "My cousin dressed as superman for the school play and made everyone laugh.",
+    "example_zh": "我表弟在学校话剧里扮成超人，把大家都逗笑了。"
+  },
+  "supper": {
+    "pos": "n.",
+    "meaning_zh": "晚饭",
+    "example_en": "Grandma cooked fish and rice for supper after we got home.",
+    "example_zh": "我们到家后，奶奶做了鱼和米饭当晚饭。"
+  },
+  "swallow": {
+    "pos": "n.",
+    "meaning_zh": "燕子",
+    "example_en": "Under the roof of our old house, a swallow built its nest.",
+    "example_zh": "在我们老房子的屋顶下，一只燕子筑了巢。"
+  },
+  "swan": {
+    "pos": "n.",
+    "meaning_zh": "天鹅",
+    "example_en": "We saw a white swan swimming on the lake during our trip.",
+    "example_zh": "旅行时我们看见一只白天鹅在湖面上游。"
+  },
+  "syrup": {
+    "pos": "n.",
+    "meaning_zh": "糖浆",
+    "example_en": "Mum poured maple syrup over the hot pancakes at breakfast.",
+    "example_zh": "早餐时妈妈把枫糖浆浇在热煎饼上。"
+  },
+  "tag": {
+    "pos": "n.",
+    "meaning_zh": "标签",
+    "example_en": "Look at the price tag on this jacket; it says eighty yuan.",
+    "example_zh": "看看这件夹克上的价格标签，上面写着八十元。"
+  },
+  "taxi-driver": {
+    "pos": "n.",
+    "meaning_zh": "出租车司机",
+    "example_en": "Outside the hotel, the taxi-driver helped us carry our heavy bags.",
+    "example_zh": "在酒店外面，出租车司机帮我们拿了沉重的行李。"
+  },
+  "tease": {
+    "pos": "v.",
+    "meaning_zh": "取笑",
+    "example_en": "Older students should not tease younger ones in the playground.",
+    "example_zh": "大同学不应该在操场上取笑年幼的同学。"
+  },
+  "teaspoon": {
+    "pos": "n.",
+    "meaning_zh": "茶匙",
+    "example_en": "Add one teaspoon of sugar if the coffee tastes too bitter.",
+    "example_zh": "如果咖啡太苦，就加一茶匙糖。"
+  },
+  "teen": {
+    "pos": "n.",
+    "meaning_zh": "青少年",
+    "example_en": "Every teen in our class wants to visit the science museum.",
+    "example_zh": "我们班每个青少年都想去参观科学博物馆。"
+  },
+  "temper": {
+    "pos": "n.",
+    "meaning_zh": "脾气",
+    "example_en": "Dad lost his temper when the dog chewed his new shoes.",
+    "example_zh": "狗咬坏了爸爸的新鞋，他发了脾气。"
+  },
+  "tense": {
+    "pos": "adj.",
+    "meaning_zh": "紧张的",
+    "example_en": "Students felt tense before the final maths test on Monday.",
+    "example_zh": "周一期末数学考试前，学生们感到紧张。"
+  },
+  "terrific": {
+    "pos": "adj.",
+    "meaning_zh": "极好的",
+    "example_en": "Everyone agreed the seafood dinner at the harbour was terrific.",
+    "example_zh": "大家都觉得港口的海鲜晚餐好极了。"
+  },
+  "thief": {
+    "pos": "n.",
+    "meaning_zh": "小偷",
+    "example_en": "Someone saw a thief steal a bicycle outside the school gate.",
+    "example_zh": "有人看见一个小偷在校门外偷走了自行车。"
+  },
+  "thread": {
+    "pos": "n.",
+    "meaning_zh": "线",
+    "example_en": "To mend this torn shirt, I need a needle and some thread.",
+    "example_zh": "要补这件破衬衫，我需要一根针和一些线。"
+  },
+  "thumb": {
+    "pos": "n.",
+    "meaning_zh": "拇指",
+    "example_en": "He hurt his thumb while cutting vegetables for dinner.",
+    "example_zh": "他晚饭切菜时伤到了拇指。"
+  },
+  "tick": {
+    "pos": "v.",
+    "meaning_zh": "打勾",
+    "example_en": "Remember to tick the correct answer on your test paper.",
+    "example_zh": "记得在试卷上给正确答案打勾。"
+  },
+  "tide": {
+    "pos": "n.",
+    "meaning_zh": "潮水",
+    "example_en": "While we walked along the beach, the tide came in quickly.",
+    "example_zh": "我们沿海滩走的时候，潮水很快涨了上来。"
+  },
+  "timetable": {
+    "pos": "n.",
+    "meaning_zh": "时刻表",
+    "example_en": "Check the train timetable before you leave for the station.",
+    "example_zh": "去车站之前先查看火车时刻表。"
+  },
+  "tyre": {
+    "pos": "n.",
+    "meaning_zh": "轮胎",
+    "example_en": "On the way to my uncle's farm, the front tyre went flat.",
+    "example_zh": "去叔叔农场的路上，前轮胎瘪了。"
+  },
+  "toe": {
+    "pos": "n.",
+    "meaning_zh": "脚趾",
+    "example_en": "She stubbed her toe on the chair while walking to the kitchen.",
+    "example_zh": "她走向厨房时，脚趾撞到了椅子。"
+  },
+  "toll": {
+    "pos": "n.",
+    "meaning_zh": "通行费",
+    "example_en": "Drivers must pay a toll before they enter this long highway.",
+    "example_zh": "司机进入这条长公路之前必须缴纳通行费。"
+  },
+  "tongue": {
+    "pos": "n.",
+    "meaning_zh": "舌头",
+    "example_en": "At lunch today, the hot soup burned my tongue.",
+    "example_zh": "今天午饭时，热汤烫到了我的舌头。"
+  },
+  "toothbrush": {
+    "pos": "n.",
+    "meaning_zh": "牙刷",
+    "example_en": "I packed a toothbrush and a towel for the weekend trip.",
+    "example_zh": "我为周末旅行装了一把牙刷和一条毛巾。"
+  },
+  "toothpaste": {
+    "pos": "n.",
+    "meaning_zh": "牙膏",
+    "example_en": "We are almost out of toothpaste, so please buy a new tube.",
+    "example_zh": "牙膏快用完了，请再买一支。"
+  },
+  "tortoise": {
+    "pos": "n.",
+    "meaning_zh": "乌龟",
+    "example_en": "After the rain, the tortoise moved slowly across the garden.",
+    "example_zh": "雨后，乌龟慢慢地爬过了花园。"
+  },
+  "trace": {
+    "pos": "n.",
+    "meaning_zh": "痕迹",
+    "example_en": "There was no trace of the cake after the children finished lunch.",
+    "example_zh": "孩子们吃完午饭后，蛋糕一点痕迹都没有了。"
+  },
+  "tram": {
+    "pos": "n.",
+    "meaning_zh": "有轨电车",
+    "example_en": "We took a tram across the old city to reach the museum.",
+    "example_zh": "我们坐有轨电车穿过老城区，去了博物馆。"
+  },
+  "tray": {
+    "pos": "n.",
+    "meaning_zh": "托盘",
+    "example_en": "Carry this tray of cups into the dining room before dinner.",
+    "example_zh": "晚饭前把这托盘上的杯子端进餐厅。"
+  },
+  "triangle": {
+    "pos": "n.",
+    "meaning_zh": "三角形",
+    "example_en": "Draw a triangle with three equal sides in your maths book.",
+    "example_zh": "在数学书上画一个三边相等的三角形。"
+  },
+  "tuna": {
+    "pos": "n.",
+    "meaning_zh": "金枪鱼",
+    "example_en": "She made a tuna sandwich for the picnic by the river.",
+    "example_zh": "她为河边野餐做了一个金枪鱼三明治。"
+  },
+  "turtle": {
+    "pos": "n.",
+    "meaning_zh": "海龟",
+    "example_en": "Near the school pond, a small turtle rested on a rock.",
+    "example_zh": "在学校池塘边，一只小海龟趴在石头上。"
+  },
+  "twist": {
+    "pos": "v.",
+    "meaning_zh": "拧",
+    "example_en": "You should twist the bottle cap so the juice does not leak.",
+    "example_zh": "你应该把瓶盖拧紧，这样果汁才不会漏出来。"
+  },
+  "tyrannosaurus": {
+    "pos": "n.",
+    "meaning_zh": "霸王龙",
+    "example_en": "Children love the huge tyrannosaurus model in the city museum.",
+    "example_zh": "孩子们喜欢城市博物馆里那个巨大的霸王龙模型。"
+  },
+  "underline": {
+    "pos": "v.",
+    "meaning_zh": "在下面画线",
+    "example_en": "Students should underline new words and copy them into notebooks.",
+    "example_zh": "学生应该在生词下面画线，并抄进笔记本。"
+  },
+  "underneath": {
+    "pos": "prep.",
+    "meaning_zh": "在……下面",
+    "example_en": "Our cat is sleeping underneath the warm blanket on the sofa.",
+    "example_zh": "我们的猫正在沙发上的暖和毯子下面睡觉。"
+  },
+  "unforgettable": {
+    "pos": "adj.",
+    "meaning_zh": "难忘的",
+    "example_en": "Climbing the city wall at night became an unforgettable memory for us.",
+    "example_zh": "夜里爬城墙成了我们一段难忘的回忆。"
+  },
+  "upstairs": {
+    "pos": "adv.",
+    "meaning_zh": "在楼上",
+    "example_en": "Your school bag is upstairs beside the bed in your room.",
+    "example_zh": "你的书包在楼上，就在你房间的床边。"
+  },
+  "vacancy": {
+    "pos": "n.",
+    "meaning_zh": "空房",
+    "example_en": "Tonight the hotel near the station still has a vacancy.",
+    "example_zh": "今晚车站附近的酒店还有一间空房。"
+  },
+  "vacuum": {
+    "pos": "n.",
+    "meaning_zh": "真空",
+    "example_en": "Nothing can live for long in a vacuum without air or water.",
+    "example_zh": "没有空气和水，没有生物能在真空中活很久。"
+  },
+  "van": {
+    "pos": "n.",
+    "meaning_zh": "厢式货车",
+    "example_en": "Every morning a white van delivered fresh bread to the shop.",
+    "example_zh": "每天早晨，一辆白色厢式货车给商店送来新鲜面包。"
+  },
+  "vanish": {
+    "pos": "v.",
+    "meaning_zh": "消失",
+    "example_en": "After the sun rises over the hills, the fog will vanish.",
+    "example_zh": "太阳从山上出来以后，雾就会散去。"
+  },
+  "vegetarian": {
+    "pos": "n.",
+    "meaning_zh": "素食者",
+    "example_en": "My aunt is a vegetarian, so she never eats meat or fish.",
+    "example_zh": "我阿姨是素食者，所以她从不吃肉或鱼。"
+  },
+  "vegetarianism": {
+    "pos": "n.",
+    "meaning_zh": "素食主义",
+    "example_en": "He chose vegetarianism because he cares about animals and health.",
+    "example_zh": "他选择素食主义，是因为他关心动物和健康。"
+  },
+  "verb": {
+    "pos": "n.",
+    "meaning_zh": "动词",
+    "example_en": "Circle the verb in each sentence and say what it means.",
+    "example_zh": "圈出每个句子里的动词，并说出它的意思。"
+  },
+  "vest": {
+    "pos": "n.",
+    "meaning_zh": "背心",
+    "example_en": "He wore a warm vest under his coat on the cold morning.",
+    "example_zh": "寒冷的早晨，他在外套里面穿了一件暖和的背心。"
+  },
+  "villa": {
+    "pos": "n.",
+    "meaning_zh": "别墅",
+    "example_en": "They rented a quiet villa near the sea for the summer holiday.",
+    "example_zh": "他们为暑假在海边租了一栋安静的别墅。"
+  },
+  "vitamin": {
+    "pos": "n.",
+    "meaning_zh": "维生素",
+    "example_en": "Oranges give you vitamin C, so eat one after lunch.",
+    "example_zh": "橙子能给你维生素C，所以午饭后吃一个吧。"
+  },
+  "waitress": {
+    "pos": "n.",
+    "meaning_zh": "女服务员",
+    "example_en": "In the busy restaurant, the waitress brought us noodles and tea.",
+    "example_zh": "在热闹的餐馆里，女服务员给我们端来了面条和茶。"
+  },
+  "wardrobe": {
+    "pos": "n.",
+    "meaning_zh": "衣柜",
+    "example_en": "Hang your clean shirts in the wardrobe before you go out.",
+    "example_zh": "出门前把干净的衬衫挂进衣柜。"
+  },
+  "watchdog": {
+    "pos": "n.",
+    "meaning_zh": "看门狗",
+    "example_en": "When a stranger walked past our gate, the watchdog barked loudly.",
+    "example_zh": "陌生人走过我家大门时，看门狗大声叫了起来。"
+  },
+  "web": {
+    "pos": "n.",
+    "meaning_zh": "网",
+    "example_en": "In the corner of the classroom window, a spider made a web.",
+    "example_zh": "在教室窗户的角落里，一只蜘蛛结了一张网。"
+  },
+  "webpage": {
+    "pos": "n.",
+    "meaning_zh": "网页",
+    "example_en": "Open the school webpage to see the date of the sports meeting.",
+    "example_zh": "打开学校网页，查看运动会的日期。"
+  },
+  "weird": {
+    "pos": "adj.",
+    "meaning_zh": "奇怪的",
+    "example_en": "It felt weird to eat ice cream outside in such cold weather.",
+    "example_zh": "这么冷的天在外面吃冰淇淋，感觉怪怪的。"
+  },
+  "well-dressed": {
+    "pos": "adj.",
+    "meaning_zh": "穿着讲究的",
+    "example_en": "Near the city library, a well-dressed man stopped to ask the way.",
+    "example_zh": "在市图书馆附近，一位穿着讲究的男士停下来问路。"
+  },
+  "wherever": {
+    "pos": "conj.",
+    "meaning_zh": "无论哪里",
+    "example_en": "Mum packs fruit and bread wherever we go on a family trip.",
+    "example_zh": "无论我们全家去哪里旅行，妈妈都会带上水果和面包。"
+  },
+  "whiz-kid": {
+    "pos": "n.",
+    "meaning_zh": "神童",
+    "example_en": "Our class whiz-kid solved the hard puzzle before anyone else.",
+    "example_zh": "我们班的神童比谁都先解开了那道难题。"
+  },
+  "wildlife": {
+    "pos": "n.",
+    "meaning_zh": "野生动物",
+    "example_en": "Birds, deer, and foxes are wildlife that this park protects.",
+    "example_zh": "鸟、鹿和狐狸是这座公园保护的野生动物。"
+  },
+  "wow": {
+    "pos": "int.",
+    "meaning_zh": "哇",
+    "example_en": "At the night market, the children shouted wow at the bright lights.",
+    "example_zh": "在夜市里，孩子们对着明亮的灯喊了声哇。"
+  },
+  "yawn": {
+    "pos": "v.",
+    "meaning_zh": "打哈欠",
+    "example_en": "I began to yawn during the long bus ride back home.",
+    "example_zh": "坐长途汽车回家时，我开始打哈欠。"
+  },
+  "yeah": {
+    "pos": "int.",
+    "meaning_zh": "是的",
+    "example_en": "She answered yeah and agreed to meet me at the bookstore after school.",
+    "example_zh": "她回答说是的，并同意放学后在书店跟我见面。"
+  },
+  "yum": {
+    "pos": "int.",
+    "meaning_zh": "好吃",
+    "example_en": "When they tasted the tomato soup, the children all said yum.",
+    "example_zh": "他们尝到番茄汤时，孩子们都说好吃。"
+  },
+  "zebra": {
+    "pos": "n.",
+    "meaning_zh": "斑马",
+    "example_en": "Near the fence, the zoo keeper fed the zebra some fresh grass.",
+    "example_zh": "在围栏边，动物园饲养员给斑马喂了些新鲜的草。"
+  },
+  "zip": {
+    "pos": "n.",
+    "meaning_zh": "拉链",
+    "example_en": "When I tried to close my backpack, the zip stuck badly.",
+    "example_zh": "我试图拉上背包时，拉链严重卡住了。"
+  },
+  "aircraft": {
+    "pos": "n.",
+    "meaning_zh": "飞机",
+    "example_en": "Just after noon, a large aircraft landed at the airport.",
+    "example_zh": "中午刚过，一架大型飞机在机场降落了。"
+  },
+  "alike": {
+    "pos": "adj.",
+    "meaning_zh": "相像的",
+    "example_en": "Because the twin sisters look alike, teachers often mix up their names.",
+    "example_zh": "因为这对双胞胎姐妹长得很像，老师经常把她们的名字搞混。"
+  },
+  "angel": {
+    "pos": "n.",
+    "meaning_zh": "天使",
+    "example_en": "In her white dress, the little girl looked like an angel.",
+    "example_zh": "她穿着白裙子，看上去像个天使。"
+  },
+  "bake": {
+    "pos": "v.",
+    "meaning_zh": "烘烤",
+    "example_en": "Let's bake apple pies at home this Saturday afternoon.",
+    "example_zh": "咱们这周六下午在家烤苹果派吧。"
+  },
+  "bang": {
+    "pos": "n.",
+    "meaning_zh": "巨响",
+    "example_en": "From the kitchen, a loud bang made the baby start crying.",
+    "example_zh": "从厨房传来一声巨响，把宝宝吓哭了。"
+  },
+  "best-seller": {
+    "pos": "n.",
+    "meaning_zh": "畅销书",
+    "example_en": "This travel guide became a best-seller after the holiday season began.",
+    "example_zh": "假期一开始，这本旅行指南就成了畅销书。"
+  },
+  "bookmark": {
+    "pos": "n.",
+    "meaning_zh": "书签",
+    "example_en": "I left a bookmark on the page about the Great Wall.",
+    "example_zh": "我在讲长城的那一页夹了一枚书签。"
+  },
+  "bookstore": {
+    "pos": "n.",
+    "meaning_zh": "书店",
+    "example_en": "Meet me outside the bookstore on Main Street at four o'clock.",
+    "example_zh": "四点在主街的书店外面跟我见面。"
+  },
+  "broom": {
+    "pos": "n.",
+    "meaning_zh": "扫帚",
+    "example_en": "Take the broom and sweep the dry leaves off the front steps.",
+    "example_zh": "拿扫帚把前门台阶上的干叶子扫掉。"
+  },
+  "brotherhood": {
+    "pos": "n.",
+    "meaning_zh": "兄弟情谊",
+    "example_en": "When one player got hurt, the team showed real brotherhood.",
+    "example_zh": "一名队员受伤时，队伍展现出了真正的兄弟情谊。"
+  },
+  "businessman": {
+    "pos": "n.",
+    "meaning_zh": "商人",
+    "example_en": "Last month a local businessman donated books to our school library.",
+    "example_zh": "上个月，一位本地商人给学校图书馆捐了书。"
+  },
+  "cannon": {
+    "pos": "n.",
+    "meaning_zh": "大炮",
+    "example_en": "An old cannon stands in the square beside the city museum.",
+    "example_zh": "一门古老的大炮立在城市博物馆旁边的广场上。"
+  },
+  "canoe": {
+    "pos": "n.",
+    "meaning_zh": "独木舟",
+    "example_en": "We paddled a canoe down the quiet river on Sunday morning.",
+    "example_zh": "星期天上午，我们划着独木舟顺安静的河而下。"
+  },
+  "chick": {
+    "pos": "n.",
+    "meaning_zh": "小鸡",
+    "example_en": "Around the farmyard, a yellow chick followed its mother.",
+    "example_zh": "在农家院子里，一只黄色的小鸡跟着妈妈。"
+  },
+  "chimney": {
+    "pos": "n.",
+    "meaning_zh": "烟囱",
+    "example_en": "Smoke rose from the chimney of the small house by the road.",
+    "example_zh": "路边那座小屋的烟囱冒出了烟。"
+  },
+  "cock": {
+    "pos": "n.",
+    "meaning_zh": "公鸡",
+    "example_en": "Early in the morning, the cock crowed and woke the village.",
+    "example_zh": "一大早，公鸡啼叫，把村子叫醒了。"
+  },
+  "code": {
+    "pos": "n.",
+    "meaning_zh": "密码",
+    "example_en": "Enter the door code before you can get into the building.",
+    "example_zh": "进楼之前，你得先输入门禁密码。"
+  },
+  "cocoa": {
+    "pos": "n.",
+    "meaning_zh": "可可",
+    "example_en": "On cold nights I drink hot cocoa before I go to bed.",
+    "example_zh": "寒冷的夜晚，我睡觉前会喝一杯热可可。"
+  },
+  "computer game": {
+    "pos": "n.",
+    "meaning_zh": "电脑游戏",
+    "example_en": "He played a computer game for an hour after finishing his homework.",
+    "example_zh": "他做完作业后玩了一个小时电脑游戏。"
+  },
+  "comrade": {
+    "pos": "n.",
+    "meaning_zh": "同志",
+    "example_en": "Each comrade on the hiking team carried water and a map.",
+    "example_zh": "徒步队里的每位同志都带了水和一张地图。"
+  },
+  "congratulate": {
+    "pos": "v.",
+    "meaning_zh": "祝贺",
+    "example_en": "We will congratulate her when she wins the singing contest.",
+    "example_zh": "等她赢得歌唱比赛时，我们会祝贺她。"
+  },
+  "cushion": {
+    "pos": "n.",
+    "meaning_zh": "垫子",
+    "example_en": "Put a cushion on the chair so Grandma can sit comfortably.",
+    "example_zh": "在椅子上放个垫子，奶奶坐着才舒服。"
+  },
+  "dad": {
+    "pos": "n.",
+    "meaning_zh": "爸爸",
+    "example_en": "My dad packed sandwiches and apples for our picnic in the park.",
+    "example_zh": "我爸爸为我们的公园野餐装了三明治和苹果。"
+  },
+  "delight": {
+    "pos": "n.",
+    "meaning_zh": "高兴",
+    "example_en": "When the birthday cake arrived, the children shouted with delight.",
+    "example_zh": "生日蛋糕端上来时，孩子们高兴地叫了起来。"
+  },
+  "dictation": {
+    "pos": "n.",
+    "meaning_zh": "听写",
+    "example_en": "We have an English dictation every Tuesday morning at school.",
+    "example_zh": "我们每周二上午在学校做英语听写。"
+  },
+  "dim": {
+    "pos": "adj.",
+    "meaning_zh": "昏暗的",
+    "example_en": "Because the street lights were dim, we walked home very carefully.",
+    "example_zh": "因为路灯很昏暗，我们回家时走得很小心。"
+  },
+  "dining-room": {
+    "pos": "n.",
+    "meaning_zh": "餐厅",
+    "example_en": "Set the bowls on the dining-room table before six o'clock.",
+    "example_zh": "六点之前把碗摆到餐厅的桌子上。"
+  },
+  "dusk": {
+    "pos": "n.",
+    "meaning_zh": "黄昏",
+    "example_en": "Before dark we should leave, since the park closes at dusk.",
+    "example_zh": "天黑前我们应该离开，因为公园在黄昏关门。"
+  },
+  "dustbin": {
+    "pos": "n.",
+    "meaning_zh": "垃圾箱",
+    "example_en": "Throw the empty bottles into the dustbin beside the gate.",
+    "example_zh": "把空瓶子扔进大门旁边的垃圾箱。"
+  },
+  "elevator": {
+    "pos": "n.",
+    "meaning_zh": "电梯",
+    "example_en": "Take the elevator to the fifth floor if your bags are heavy.",
+    "example_zh": "如果行李很重，就乘电梯上五楼。"
+  },
+  "equality": {
+    "pos": "n.",
+    "meaning_zh": "平等",
+    "example_en": "Our school teaches equality so every student is treated fairly.",
+    "example_zh": "我们学校教导平等，所以每个学生都得到公平对待。"
+  },
+  "equip": {
+    "pos": "v.",
+    "meaning_zh": "配备",
+    "example_en": "Staff will equip each lab group with gloves and safety glasses.",
+    "example_zh": "工作人员会给每个实验小组配备手套和护目镜。"
+  },
+  "exact": {
+    "pos": "adj.",
+    "meaning_zh": "确切的",
+    "example_en": "Tell me the exact time the train leaves the city station.",
+    "example_zh": "告诉我火车离开城市车站的确切时间。"
+  },
+  "fame": {
+    "pos": "n.",
+    "meaning_zh": "名声",
+    "example_en": "After one song played everywhere, the young singer rose to fame.",
+    "example_zh": "一首歌到处播放之后，这位年轻歌手出了名。"
+  },
+  "farmland": {
+    "pos": "n.",
+    "meaning_zh": "农田",
+    "example_en": "Golden wheat covered the farmland all the way to the hills.",
+    "example_zh": "金黄的麦子覆盖着农田，一直延伸到山边。"
+  },
+  "fasten": {
+    "pos": "v.",
+    "meaning_zh": "系牢",
+    "example_en": "Always fasten your seat belt before the bus leaves the stop.",
+    "example_zh": "公交车离开车站前，一定要系好安全带。"
+  },
+  "fax": {
+    "pos": "n.",
+    "meaning_zh": "传真",
+    "example_en": "On Friday the office sent a fax to confirm our hotel rooms.",
+    "example_zh": "星期五，办公室发了传真来确认我们的酒店房间。"
+  },
+  "federal": {
+    "pos": "adj.",
+    "meaning_zh": "联邦的",
+    "example_en": "On Sundays, students can enter the federal museum in the capital free.",
+    "example_zh": "周日，学生可以免费进入首都的联邦博物馆。"
+  },
+  "fireplace": {
+    "pos": "n.",
+    "meaning_zh": "壁炉",
+    "example_en": "We sat by the fireplace and drank tea on the snowy evening.",
+    "example_zh": "下雪的晚上，我们坐在壁炉边喝茶。"
+  },
+  "fruit juice": {
+    "pos": "n.",
+    "meaning_zh": "果汁",
+    "example_en": "Would you like some fruit juice with your sandwich at lunch?",
+    "example_zh": "午饭时，你想就着三明治喝点果汁吗？"
+  },
+  "growth": {
+    "pos": "n.",
+    "meaning_zh": "成长",
+    "example_en": "Good food and sleep help the growth of children at school.",
+    "example_zh": "良好的饮食和睡眠有助于在校儿童的成长。"
+  },
+  "haircut": {
+    "pos": "n.",
+    "meaning_zh": "理发",
+    "example_en": "Before the class photo next Wednesday, I need a haircut.",
+    "example_zh": "下周三拍班级合影之前，我需要理个发。"
+  },
+  "hardworking": {
+    "pos": "adj.",
+    "meaning_zh": "勤劳的",
+    "example_en": "After class, hardworking students stayed to finish the group project.",
+    "example_zh": "下课后，勤劳的学生留下来完成小组项目。"
+  },
+  "headmaster": {
+    "pos": "n.",
+    "meaning_zh": "校长",
+    "example_en": "On Friday evening, our headmaster spoke to parents in the hall.",
+    "example_zh": "周五晚上，我们的校长在礼堂里对家长讲话。"
+  },
+  "headmistress": {
+    "pos": "n.",
+    "meaning_zh": "女校长",
+    "example_en": "After the spring concert, our headmistress praised the school choir.",
+    "example_zh": "春季音乐会结束后，我们的女校长表扬了学校合唱队。"
+  },
+  "headteacher": {
+    "pos": "n.",
+    "meaning_zh": "校长",
+    "example_en": "Our headteacher greeted every student at the school gate.",
+    "example_zh": "我们的校长在校门口迎接每一位学生。"
+  },
+  "hey": {
+    "pos": "int.",
+    "meaning_zh": "嘿",
+    "example_en": "My friend shouted hey when he saw me across the dining hall.",
+    "example_zh": "朋友在食堂对面看见我时，喊了一声嘿。"
+  },
+  "highway": {
+    "pos": "n.",
+    "meaning_zh": "公路",
+    "example_en": "From our town to the city, the new highway shortens the trip.",
+    "example_zh": "从我们镇上到城里，新公路缩短了路程。"
+  },
+  "homeland": {
+    "pos": "n.",
+    "meaning_zh": "祖国；家乡",
+    "example_en": "Many people return to their homeland during the Spring Festival.",
+    "example_zh": "许多人在春节期间回到自己的家乡。"
+  },
+  "housewife": {
+    "pos": "n.",
+    "meaning_zh": "家庭主妇",
+    "example_en": "My neighbour is a housewife who cooks lunch for her family every day.",
+    "example_zh": "我的邻居是家庭主妇，每天给家人做午饭。"
+  },
+  "hunger": {
+    "pos": "n.",
+    "meaning_zh": "饥饿",
+    "example_en": "After the long hike, hunger made us look for a small restaurant.",
+    "example_zh": "长途徒步之后，饥饿让我们去找一家小餐馆。"
+  },
+  "inspect": {
+    "pos": "v.",
+    "meaning_zh": "检查",
+    "example_en": "Teachers will inspect our classrooms before the visitors arrive tomorrow.",
+    "example_zh": "明天来宾到达之前，老师会检查我们的教室。"
+  },
+  "jeep": {
+    "pos": "n.",
+    "meaning_zh": "吉普车",
+    "example_en": "Uncle drove his jeep along the muddy road to the village.",
+    "example_zh": "叔叔开着吉普车，沿着泥泞的路驶向村子。"
+  },
+  "kilogram": {
+    "pos": "n.",
+    "meaning_zh": "千克",
+    "example_en": "Buy one kilogram of apples on your way home from school today.",
+    "example_zh": "今天放学回家的路上，买一千克苹果。"
+  },
+  "kind-hearted": {
+    "pos": "adj.",
+    "meaning_zh": "好心的",
+    "example_en": "When we were ill, our kind-hearted neighbour shared her soup.",
+    "example_zh": "我们生病时，好心的邻居把汤分给了我们。"
+  },
+  "ladder": {
+    "pos": "n.",
+    "meaning_zh": "梯子",
+    "example_en": "Dad climbed a ladder to fix the light above the stairs.",
+    "example_zh": "爸爸爬上梯子，去修楼梯上方的灯。"
+  },
+  "lip": {
+    "pos": "n.",
+    "meaning_zh": "嘴唇",
+    "example_en": "She bit her lip when the lemon juice tasted too sour.",
+    "example_zh": "柠檬汁太酸时，她咬了咬嘴唇。"
+  },
+  "loudspeaker": {
+    "pos": "n.",
+    "meaning_zh": "扬声器",
+    "example_en": "Passengers heard a loudspeaker announce the next train at the station.",
+    "example_zh": "乘客们听见扬声器在车站播报下一趟火车。"
+  },
+  "mainland": {
+    "pos": "n.",
+    "meaning_zh": "大陆",
+    "example_en": "Every hour a ferry takes visitors from the island to the mainland.",
+    "example_zh": "每小时都有一班渡轮把游客从岛上送到大陆。"
+  },
+  "mathematics": {
+    "pos": "n.",
+    "meaning_zh": "数学",
+    "example_en": "She enjoys mathematics and often helps friends with difficult problems.",
+    "example_zh": "她喜欢数学，经常帮朋友解答难题。"
+  },
+  "minus": {
+    "pos": "prep.",
+    "meaning_zh": "减去",
+    "example_en": "Twenty minus six equals fourteen, so check your answer again.",
+    "example_zh": "二十减去六等于十四，所以再核对一下你的答案。"
+  },
+  "monument": {
+    "pos": "n.",
+    "meaning_zh": "纪念碑",
+    "example_en": "We took photos by the monument in the centre of the square.",
+    "example_zh": "我们在广场中央的纪念碑旁拍了照。"
+  },
+  "motorbike": {
+    "pos": "n.",
+    "meaning_zh": "摩托车",
+    "example_en": "My brother rides his motorbike to work when the weather is fine.",
+    "example_zh": "天气好的时候，我哥哥骑摩托车去上班。"
+  },
+  "necklace": {
+    "pos": "n.",
+    "meaning_zh": "项链",
+    "example_en": "Grandma wore a silver necklace to the family dinner on Sunday.",
+    "example_zh": "星期天家庭聚餐时，奶奶戴了一条银项链。"
+  },
+  "necktie": {
+    "pos": "n.",
+    "meaning_zh": "领带",
+    "example_en": "Dad chose a blue necktie to wear with his white shirt.",
+    "example_zh": "爸爸挑了一条蓝色领带来配他的白衬衫。"
+  },
+  "night-club": {
+    "pos": "n.",
+    "meaning_zh": "夜总会",
+    "example_en": "At weekends the night-club on this street stays open very late.",
+    "example_zh": "周末，这条街上的夜总会营业到很晚。"
+  },
+  "northeast": {
+    "pos": "n.",
+    "meaning_zh": "东北",
+    "example_en": "Harbin lies in the northeast of China and has cold winters.",
+    "example_zh": "哈尔滨位于中国东北，冬天很冷。"
+  },
+  "northwest": {
+    "pos": "n.",
+    "meaning_zh": "西北",
+    "example_en": "Today the wind from the northwest made the lake very cold.",
+    "example_zh": "今天，从西北吹来的风让湖水变得很冷。"
+  },
+  "oh": {
+    "pos": "int.",
+    "meaning_zh": "哦",
+    "example_en": "She said oh and ran back for the lunch box on the kitchen table.",
+    "example_zh": "她说了声哦，又跑回去拿厨房桌上的饭盒。"
+  },
+  "outdoors": {
+    "pos": "adv.",
+    "meaning_zh": "在户外",
+    "example_en": "We ate lunch outdoors because the classroom was too warm.",
+    "example_zh": "教室太热了，所以我们在户外吃了午饭。"
+  },
+  "parrot": {
+    "pos": "n.",
+    "meaning_zh": "鹦鹉",
+    "example_en": "In the pet shop, that parrot can say hello and goodbye.",
+    "example_zh": "在宠物店里，那只鹦鹉会说你好和再见。"
+  },
+  "pea": {
+    "pos": "n.",
+    "meaning_zh": "豌豆",
+    "example_en": "This soup needs one more pea if you want a greener colour.",
+    "example_zh": "如果想让汤的颜色更绿，还需要再加一颗豌豆。"
+  },
+  "pencil-box": {
+    "pos": "n.",
+    "meaning_zh": "铅笔盒",
+    "example_en": "Her red pencil-box holds pens, a ruler, and two erasers.",
+    "example_zh": "她的红色铅笔盒里装着钢笔、一把尺子和两块橡皮。"
+  },
+  "physicist": {
+    "pos": "n.",
+    "meaning_zh": "物理学家",
+    "example_en": "During our science week, a physicist answered questions about light.",
+    "example_zh": "科学周里，一位物理学家回答了关于光的问题。"
+  },
+  "pianist": {
+    "pos": "n.",
+    "meaning_zh": "钢琴家",
+    "example_en": "During dinner, a young pianist played softly at the hotel.",
+    "example_zh": "晚餐时，一位年轻的钢琴家在酒店里轻轻地演奏。"
+  },
+  "pile": {
+    "pos": "n.",
+    "meaning_zh": "一堆",
+    "example_en": "Dirty plates sit in a pile beside the kitchen sink.",
+    "example_zh": "脏盘子在厨房水槽旁堆成一堆。"
+  },
+  "postage": {
+    "pos": "n.",
+    "meaning_zh": "邮资",
+    "example_en": "For this letter to Shanghai, the postage is only three yuan.",
+    "example_zh": "这封寄往上海的信，邮资只要三元。"
+  },
+  "postbox": {
+    "pos": "n.",
+    "meaning_zh": "邮筒",
+    "example_en": "I dropped the postcard into the red postbox near our school.",
+    "example_zh": "我把明信片投进了学校附近的红色邮筒。"
+  },
+  "postcode": {
+    "pos": "n.",
+    "meaning_zh": "邮政编码",
+    "example_en": "Write the postcode clearly so the parcel reaches the right street.",
+    "example_zh": "把邮政编码写清楚，包裹才能送到正确的街道。"
+  },
+  "probable": {
+    "pos": "adj.",
+    "meaning_zh": "很可能的",
+    "example_en": "It is probable that the match will move indoors if it rains.",
+    "example_zh": "如果下雨，比赛很可能会改到室内进行。"
+  },
+  "quilt": {
+    "pos": "n.",
+    "meaning_zh": "被子",
+    "example_en": "Pull the quilt up if you feel cold during the night.",
+    "example_zh": "夜里觉得冷的话，就把被子拉上来。"
+  },
+  "rail": {
+    "pos": "n.",
+    "meaning_zh": "栏杆",
+    "example_en": "Hold the rail when you walk down the wet station steps.",
+    "example_zh": "走下湿滑的车站台阶时，请扶住栏杆。"
+  },
+  "regulation": {
+    "pos": "n.",
+    "meaning_zh": "规定",
+    "example_en": "Students must wear uniforms on weekdays under a school regulation.",
+    "example_zh": "按照校规，学生在工作日必须穿校服。"
+  },
+  "rob": {
+    "pos": "v.",
+    "meaning_zh": "抢劫",
+    "example_en": "Two men tried to rob the small shop late on Saturday night.",
+    "example_zh": "周六深夜，两名男子企图抢劫那家小店。"
+  },
+  "salesgirl": {
+    "pos": "n.",
+    "meaning_zh": "女售货员",
+    "example_en": "At the back of the shop, the salesgirl showed me a cheaper bag.",
+    "example_zh": "在商店后面，女售货员给我看了一个更便宜的包。"
+  },
+  "schoolmate": {
+    "pos": "n.",
+    "meaning_zh": "同学",
+    "example_en": "When my pen ran out of ink, a schoolmate lent me another.",
+    "example_zh": "我的笔没墨水时，一位同学借给了我另一支。"
+  },
+  "seagull": {
+    "pos": "n.",
+    "meaning_zh": "海鸥",
+    "example_en": "Over the beach, a seagull stole a chip from our table.",
+    "example_zh": "在海滩上空，一只海鸥从我们桌上叼走了一根薯条。"
+  },
+  "secondhand": {
+    "pos": "adj.",
+    "meaning_zh": "二手的",
+    "example_en": "I bought a secondhand bike from a neighbour for a low price.",
+    "example_zh": "我以低价从邻居那里买了一辆二手自行车。"
+  },
+  "sharpen": {
+    "pos": "v.",
+    "meaning_zh": "削尖",
+    "example_en": "You should sharpen your pencil before the drawing class at two.",
+    "example_zh": "两点的绘画课之前，你应该把铅笔削尖。"
+  },
+  "sharpener": {
+    "pos": "n.",
+    "meaning_zh": "卷笔刀",
+    "example_en": "May I borrow your sharpener because mine is missing from my desk?",
+    "example_zh": "我可以借你的卷笔刀吗？我的从桌上不见了。"
+  },
+  "so-so": {
+    "pos": "adj.",
+    "meaning_zh": "一般的",
+    "example_en": "At that new stall the noodles were so-so, but the soup was good.",
+    "example_zh": "在那家新摊，面条一般，不过汤很好喝。"
+  },
+  "southeast": {
+    "pos": "n.",
+    "meaning_zh": "东南",
+    "example_en": "Guangzhou is in the southeast of China and is warm in winter.",
+    "example_zh": "广州位于中国东南，冬天很暖和。"
+  },
+  "southwest": {
+    "pos": "n.",
+    "meaning_zh": "西南",
+    "example_en": "Yunnan lies in the southwest and is famous for its mountains.",
+    "example_zh": "云南位于西南，并以山脉闻名。"
+  },
+  "spit": {
+    "pos": "v.",
+    "meaning_zh": "吐痰",
+    "example_en": "Do not spit on the ground when you walk in the city.",
+    "example_zh": "在城里走路时，不要随地吐痰。"
+  },
+  "steep": {
+    "pos": "adj.",
+    "meaning_zh": "陡峭的",
+    "example_en": "Wear strong shoes because the path up the hill is steep.",
+    "example_zh": "要穿结实的鞋，因为上山的小路很陡。"
+  },
+  "stocking": {
+    "pos": "n.",
+    "meaning_zh": "长袜",
+    "example_en": "Her stocking had a hole after the long walk back home.",
+    "example_zh": "走了很长的路回家后，她的长袜上有一个洞。"
+  },
+  "sunglasses": {
+    "pos": "n.",
+    "meaning_zh": "太阳镜",
+    "example_en": "Put on your sunglasses before we walk across the bright square.",
+    "example_zh": "穿过明亮的广场之前，先戴上太阳镜。"
+  },
+  "sunlight": {
+    "pos": "n.",
+    "meaning_zh": "日光",
+    "example_en": "Morning sunlight filled the kitchen while we ate breakfast.",
+    "example_zh": "我们吃早餐时，早晨的日光照进了厨房。"
+  },
+  "sunrise": {
+    "pos": "n.",
+    "meaning_zh": "日出",
+    "example_en": "We got up early to watch the sunrise from the hotel roof.",
+    "example_zh": "我们早起，从酒店楼顶观看日出。"
+  },
+  "sunset": {
+    "pos": "n.",
+    "meaning_zh": "日落",
+    "example_en": "Over the sea, the sunset turned the clouds orange and gold.",
+    "example_zh": "在海上，日落把云朵染成了橙色和金色。"
+  },
+  "sunshine": {
+    "pos": "n.",
+    "meaning_zh": "阳光",
+    "example_en": "Let's have lunch in the sunshine behind the school garden.",
+    "example_zh": "咱们在学校花园后面的阳光下吃午饭吧。"
+  },
+  "swimming pool": {
+    "pos": "n.",
+    "meaning_zh": "游泳池",
+    "example_en": "At the hotel, the swimming pool opens at eight and closes at nine.",
+    "example_zh": "在酒店里，游泳池八点开放，九点关闭。"
+  },
+  "telegram": {
+    "pos": "n.",
+    "meaning_zh": "电报",
+    "example_en": "Grandpa sent a telegram to say he would arrive on Friday.",
+    "example_zh": "爷爷发来电报，说他将在星期五到达。"
+  },
+  "telegraph": {
+    "pos": "n.",
+    "meaning_zh": "电报",
+    "example_en": "Near the port, the old telegraph office is now a small museum.",
+    "example_zh": "在港口附近，旧电报局现在是一座小博物馆。"
+  },
+  "terrify": {
+    "pos": "v.",
+    "meaning_zh": "使害怕",
+    "example_en": "Loud thunder can terrify small children during a summer storm.",
+    "example_zh": "夏日暴风雨中，响雷会把小孩子吓坏。"
+  },
+  "textbook": {
+    "pos": "n.",
+    "meaning_zh": "课本",
+    "example_en": "Leave your textbook on the desk if you need it after lunch.",
+    "example_zh": "如果午饭后还要用课本，就把它留在桌上。"
+  },
+  "thirst": {
+    "pos": "n.",
+    "meaning_zh": "口渴",
+    "example_en": "Heat and a long run left me with a terrible thirst.",
+    "example_zh": "炎热加上长跑，让我渴得厉害。"
+  },
+  "till": {
+    "pos": "prep.",
+    "meaning_zh": "直到",
+    "example_en": "After class we can study in the library, which stays open till six.",
+    "example_zh": "下课后我们可以在图书馆学习，那里一直开到六点。"
+  },
+  "tomb": {
+    "pos": "n.",
+    "meaning_zh": "坟墓",
+    "example_en": "Visitors walked quietly around the ancient tomb on the hillside.",
+    "example_zh": "游客在山坡上的古墓周围安静地走动。"
+  },
+  "tourism": {
+    "pos": "n.",
+    "meaning_zh": "旅游业",
+    "example_en": "Local tourism brings jobs to this small town beside the lake.",
+    "example_zh": "本地的旅游业给这个湖边小镇带来了工作。"
+  },
+  "tractor": {
+    "pos": "n.",
+    "meaning_zh": "拖拉机",
+    "example_en": "After breakfast the farmer drove a tractor across the wide field.",
+    "example_zh": "早饭后，农夫开着拖拉机穿过宽阔的田地。"
+  },
+  "unknown": {
+    "pos": "adj.",
+    "meaning_zh": "未知的",
+    "example_en": "Most visitors find the name of that small street unknown.",
+    "example_zh": "大多数游客都不知道那条小街的名字。"
+  },
+  "well-known": {
+    "pos": "adj.",
+    "meaning_zh": "著名的",
+    "example_en": "This well-known noodle shop always has a long queue at noon.",
+    "example_zh": "这家著名的面馆中午总是排着长队。"
+  },
+  "westerner": {
+    "pos": "n.",
+    "meaning_zh": "西方人",
+    "example_en": "In the small restaurant, a westerner asked how to use chopsticks.",
+    "example_zh": "在小餐馆里，一位西方人询问怎样使用筷子。"
+  },
+  "westwards": {
+    "pos": "adv.",
+    "meaning_zh": "向西",
+    "example_en": "From Beijing, the train travels westwards toward the high mountains.",
+    "example_zh": "从北京出发，火车向西驶向高山。"
+  },
+  "whichever": {
+    "pos": "pron.",
+    "meaning_zh": "无论哪个",
+    "example_en": "Take whichever seat you like near the window on the bus.",
+    "example_zh": "公交车上靠窗的座位，你喜欢哪个就坐哪个。"
+  },
+  "woollen": {
+    "pos": "adj.",
+    "meaning_zh": "羊毛的",
+    "example_en": "She bought a woollen scarf to wear on the cold school trip.",
+    "example_zh": "她买了一条羊毛围巾，准备在寒冷的学校旅行时戴。"
+  },
+  "workplace": {
+    "pos": "n.",
+    "meaning_zh": "工作场所",
+    "example_en": "My father keeps a photo of our family at his workplace.",
+    "example_zh": "我父亲在工作场所放着一张我们的全家福。"
+  },
+  "worm": {
+    "pos": "n.",
+    "meaning_zh": "虫子",
+    "example_en": "Across the wet path, a worm crawled after the heavy rain.",
+    "example_zh": "大雨过后，一条虫子爬过了湿漉漉的小路。"
+  }
+}

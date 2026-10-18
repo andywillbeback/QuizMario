@@ -1,6 +1,6 @@
 /* Build 中考 / 高考 tracks from the national curriculum headword lists.
- * Reuses bank glosses and examples when a lemma is already present.
- * Gap lemmas come from tools/lexicon_*.py (original sentences).
+ * Official gaps (2022 附录3, senior country table) stay in the main sets.
+ * Circulating textbook / 3500 words are appended afterwards as 拓展 sets.
  * Run: node tools/build-exam-tracks.js
  */
 "use strict";
@@ -37,7 +37,12 @@ const ALIAS_PAIRS = [
   ["e-mail", "email"], ["okay", "ok"], ["wi-fi", "wifi"],
   ["practise", "practice"], ["kilometre", "kilometer"],
   ["centimetre", "centimeter"], ["millimetre", "millimeter"],
-  ["gramme", "gram"],
+  ["gramme", "gram"], ["apologise", "apologize"], ["recognise", "recognize"],
+  ["yoghurt", "yogurt"], ["woollen", "woolen"], ["jewellery", "jewelry"],
+  ["tyre", "tire"], ["storey", "story"], ["goodbye", "good-bye"],
+  ["cooperation", "co-operation"], ["café", "cafe"],
+  ["organisation", "organization"], ["fibre", "fiber"], ["cosy", "cozy"],
+  ["checkout", "check-out"], ["mum", "mommy"],
 ];
 
 const ALIAS = new Map();
@@ -45,6 +50,8 @@ for (const [a, b] of ALIAS_PAIRS) {
   const key = norm(a);
   ALIAS.set(norm(a), key);
   ALIAS.set(norm(b), key);
+  ALIAS.set(fold(a), key);
+  ALIAS.set(fold(b), key);
 }
 
 function norm(w) {
@@ -55,14 +62,25 @@ function norm(w) {
     .replace(/\s+/g, " ");
 }
 
-/** Sense key so China/china, US/us and Miss/miss stay distinct. */
+function fold(w) {
+  return norm(w).normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/** Sense key so China/china, US/us, WHO/who, May/may and Miss/miss stay distinct. */
 function senseKey(surface) {
-  const n = norm(surface);
-  if (n === "china") return surface === "china" ? "china:ware" : "china:country";
-  if (n === "us") return surface === "US" ? "us:abbr" : "us:pron";
-  if (n === "miss") return surface === "Miss" ? "miss:title" : "miss:verb";
-  if (n === "march" || n === "may") return n + ":month";
-  return ALIAS.get(n) || n;
+  const raw = String(surface || "").trim();
+  const n = norm(raw);
+  if (n === "china") return raw === "china" ? "china:ware" : "china:country";
+  if (n === "us" || n === "u.s." || n === "usa" || n === "u.s.a.") {
+    if (raw === "us") return "us:pron";
+    return "us:abbr";
+  }
+  if (n === "uk" || n === "u.k.") return "uk";
+  if (n === "who") return raw === "WHO" ? "who:abbr" : "who";
+  if (n === "miss") return raw === "Miss" ? "miss:title" : "miss:verb";
+  if (n === "march") return raw === "March" ? "march:month" : "march";
+  if (n === "may") return raw === "May" ? "may:month" : "may";
+  return ALIAS.get(n) || ALIAS.get(fold(raw)) || n;
 }
 
 function expandEntry(entry) {
@@ -83,13 +101,32 @@ function loadLexicon() {
     "B=load('tools/lexicon_b.py').B",
     "C=load('tools/lexicon_c.py').C",
     "D=load('tools/lexicon_d.py').D",
-    "out={}",
+    "O=load('tools/official_lexicon.py').OFFICIAL",
+    "base={}; overlay={}",
     "for d in (A,B,C,D):",
     "    for k,v in d.items():",
-    "        out[k]={'pos':v[0],'meaning_zh':v[1],'example_en':v[2],'example_zh':v[3]}",
-    "print(json.dumps(out, ensure_ascii=False))",
+    "        base[k]={'pos':v[0],'meaning_zh':v[1],'example_en':v[2],'example_zh':v[3]}",
+    "for k,v in O.items():",
+    "    overlay[k]={'pos':v[0],'meaning_zh':v[1],'example_en':v[2],'example_zh':v[3]}",
+    "print(json.dumps({'base':base,'overlay':overlay}, ensure_ascii=False))",
   ].join("\n");
   const raw = execFileSync("python3", ["-c", py], { cwd: root, encoding: "utf8", maxBuffer: 20 * 1024 * 1024 });
+  const parsed = JSON.parse(raw);
+  const overlay = parsed.overlay;
+  const dir = path.join(root, "tools", "lex");
+  for (const name of fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
+    const extra = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8"));
+    for (const [k, v] of Object.entries(extra)) overlay[k] = v;
+  }
+  return { base: parsed.base, overlay };
+}
+
+function loadExtensionPlan() {
+  const raw = execFileSync("python3", ["tools/clean-extension.py"], {
+    cwd: root,
+    encoding: "utf8",
+    maxBuffer: 20 * 1024 * 1024,
+  });
   return JSON.parse(raw);
 }
 
@@ -147,12 +184,33 @@ function cardFromLex(surface, lex, scene) {
   };
 }
 
-function makeCard(surface, bank, lex, scene, gaps) {
+function makeCard(surface, bank, lex, scene, gaps, zhPatch) {
+  // Authored overlay wins so new official and 拓展 cards keep their own sentences.
+  if (lex.overlay[surface]) {
+    gaps.push(surface);
+    const card = cardFromLex(surface, lex.overlay, scene);
+    if (!card.example_zh || !card.example_en || !card.meaning_zh || !card.pos) {
+      throw new Error("Incomplete lexicon card: " + surface);
+    }
+    return card;
+  }
   const key = senseKey(surface);
-  if (bank.has(key)) return cardFromBank(bank.get(key), surface, scene);
-  const created = cardFromLex(surface, lex, scene);
+  if (bank.has(key)) {
+    const card = cardFromBank(bank.get(key), surface, scene);
+    if (!card.example_zh) {
+      card.example_zh = zhPatch[card.word] || zhPatch[surface] || zhPatch[norm(surface)] || zhPatch[norm(card.word)] || "";
+    }
+    if (!card.example_zh || !card.example_en || !card.meaning_zh || !card.pos) {
+      throw new Error("Incomplete card: " + surface);
+    }
+    return card;
+  }
+  const created = cardFromLex(surface, lex.base, scene);
   if (created) {
     gaps.push(surface);
+    if (!created.example_zh || !created.example_en || !created.meaning_zh || !created.pos) {
+      throw new Error("Incomplete base lexicon card: " + surface);
+    }
     return created;
   }
   throw new Error("No gloss for lemma: " + surface + " (" + key + ")");
@@ -196,20 +254,40 @@ function titlesFor(label, n) {
   return titles;
 }
 
-function trackObject(id, name, desc, cards, sceneLabel) {
-  const sets = pack(cards, 50);
+function assemble(id, name, desc, officialCards, extCards, offLabel, extLabel) {
+  const offSets = pack(officialCards, 50);
+  const extSets = pack(extCards, 50);
   return {
     id,
     name,
-    sets,
-    titles: titlesFor(sceneLabel, sets.length),
+    sets: offSets.concat(extSets),
+    titles: titlesFor(offLabel, offSets.length).concat(titlesFor(extLabel, extSets.length)),
     desc,
+    officialSets: offSets.length,
+    extensionSets: extSets.length,
   };
 }
+
+function readList(rel) {
+  return fs.readFileSync(path.join(root, rel), "utf8")
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith("#"));
+}
+
+const SURFACE_OVERRIDE = {
+  "the United Kingdom (UK)": "UK",
+  "the United States of America (USA)": "USA",
+  "Beijing opera (Peking opera)": "Beijing opera",
+  "the Changjiang River (the Yangtze River)": "the Changjiang River",
+  "Traditional Chinese Medicine (TCM)": "Traditional Chinese Medicine",
+};
 
 function main() {
   const kebiao = JSON.parse(fs.readFileSync(path.join(root, "data/kebiao-lemmas.json"), "utf8"));
   const lex = loadLexicon();
+  const zhPatch = JSON.parse(fs.readFileSync(path.join(root, "data/example-zh-patch.json"), "utf8"));
+  const plan = loadExtensionPlan();
   const levels = readJsAssign("words.js", "VOCAB_LEVELS");
   const tracks = readJsAssign("tracks.js", "VOCAB_TRACKS");
   let previousExam = [];
@@ -217,6 +295,12 @@ function main() {
   if (fs.existsSync(examPath)) {
     try { previousExam = readJsAssign("exam-tracks.js", "VOCAB_EXAM_TRACKS") || []; } catch (_) { previousExam = []; }
   }
+
+  // Size of the tracks before the 2022 appendix-3 and 拓展 addition.
+  const before = {
+    zhongkao: { cards: 1667, sets: 34, officialSets: 34, extensionSets: 0, officialCards: 1667, extensionCards: 0 },
+    gaokao: { cards: 3058, sets: 62, officialSets: 62, extensionSets: 0, officialCards: 3058, extensionCards: 0 },
+  };
 
   const coreList = [];
   for (const set of levels) coreList.push(...set);
@@ -234,7 +318,9 @@ function main() {
   ]);
 
   const juniorSurfaces = dedupeSurfaces(kebiao.juniorEntries.flatMap(expandEntry));
-  const seniorSurfaces = dedupeSurfaces(kebiao.seniorEntries.flatMap(expandEntry));
+  const seniorSurfaces = dedupeSurfaces(
+    kebiao.seniorEntries.flatMap(expandEntry).concat(readList("data/audit/missing_HScountry_vs_QMgaokao.txt"))
+  );
 
   const appendix = [
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
@@ -254,74 +340,132 @@ function main() {
     }
   }
 
+  const separateAdded = [];
+  for (const item of readList("data/audit/kebiao2022_separate_lists.txt")) {
+    const surface = SURFACE_OVERRIDE[item] || item;
+    if (!juniorKeys.has(senseKey(surface))) {
+      juniorSurfaces.push(surface);
+      juniorKeys.add(senseKey(surface));
+      separateAdded.push(surface);
+    }
+  }
+
   const gaps = [];
-  const zhongkaoCards = juniorSurfaces.map((s) => makeCard(s, bank, lex, "中考", gaps));
-  const zhongkaoKeySet = new Set(zhongkaoCards.map((c) => senseKey(c.word)));
+  const zhongkaoOfficial = juniorSurfaces.map((s) => makeCard(s, bank, lex, "中考", gaps, zhPatch));
+  const zhongkaoOfficialKeys = new Set(zhongkaoOfficial.map((c) => senseKey(c.word)));
+  const zhongkaoExt = plan.zhongkao.map((s) => makeCard(s, bank, lex, "中考", gaps, zhPatch));
 
   const gaokaoExtraSurfaces = [];
   for (const s of seniorSurfaces) {
-    if (!zhongkaoKeySet.has(senseKey(s))) gaokaoExtraSurfaces.push(s);
+    if (!zhongkaoOfficialKeys.has(senseKey(s))) gaokaoExtraSurfaces.push(s);
   }
-  const gaokaoExtraCards = gaokaoExtraSurfaces.map((s) => makeCard(s, bank, lex, "高考", gaps));
-  const gaokaoCards = zhongkaoCards.map((c) => Object.assign({}, c, { scene: "高考" })).concat(gaokaoExtraCards);
+  const gaokaoOfficialExtra = gaokaoExtraSurfaces.map((s) => makeCard(s, bank, lex, "高考", gaps, zhPatch));
+  const gaokaoOfficialKeys = new Set(
+    zhongkaoOfficial.map((c) => senseKey(c.word)).concat(gaokaoOfficialExtra.map((c) => senseKey(c.word)))
+  );
+  const gaokaoExtFromJunior = zhongkaoExt
+    .filter((c) => !gaokaoOfficialKeys.has(senseKey(c.word)))
+    .map((c) => Object.assign({}, c, { scene: "高考" }));
+  const gaokaoExtOwn = plan.gaokaoExtra.map((s) => makeCard(s, bank, lex, "高考", gaps, zhPatch));
+  const gaokaoExt = gaokaoExtFromJunior.concat(gaokaoExtOwn);
 
-  const zhongkao = trackObject(
+  const gaokaoOfficial = zhongkaoOfficial.map((c) => Object.assign({}, c, { scene: "高考" })).concat(gaokaoOfficialExtra);
+
+  const zhongkao = assemble(
     "zhongkao",
     "中考",
-    "广东初中学业水平考试英语：义务教育英语课程标准（2022年版）三级词汇全覆盖，并含课标单独列出的月份、星期和基础数词",
-    zhongkaoCards,
-    "中考"
+    "广东初中学业水平考试英语：义务教育英语课程标准（2022年版）三级词汇，含附录单独列出的序数词、地名国籍、节日与文化词。教辅常见词收在后面的「中考拓展」组，不混进课标组。",
+    zhongkaoOfficial,
+    zhongkaoExt,
+    "中考",
+    "中考拓展"
   );
-  const gaokao = trackObject(
+  const gaokao = assemble(
     "gaokao",
     "高考",
-    "广东新高考英语：中考词全包含，并覆盖普通高中英语课程标准（2017年版2020年修订）词汇表",
-    gaokaoCards,
-    "高考"
+    "广东新高考英语：中考课标词全包含，并覆盖普通高中英语课程标准（2017年版2020年修订）词汇表和国家名称表。中考拓展里尚未进入课标的词，以及流通高考3500词，收在后面的「高考拓展」组。",
+    gaokaoOfficial,
+    gaokaoExt,
+    "高考",
+    "高考拓展"
   );
 
-  // Old 中考核心 extras (not on the 2022 三级 list).
   const oldZk = (tracks.find((t) => t.id === "zhongkao") || { sets: [] });
   const oldWords = flattenSets(oldZk).map((c) => c.word);
-  const extraOnly = oldWords.filter((w) => !zhongkaoKeySet.has(senseKey(w)));
-
+  const extraOnly = oldWords.filter((w) => !zhongkaoOfficialKeys.has(senseKey(w)) && !zhongkaoExt.some((c) => senseKey(c.word) === senseKey(w)));
   const juniorOnly = juniorSurfaces.filter((s) => !new Set(seniorSurfaces.map(senseKey)).has(senseKey(s)));
 
   const summary = {
     juniorSource: kebiao.juniorSource,
     seniorSource: kebiao.seniorSource,
     juniorEntries: kebiao.juniorEntries.length,
-    juniorLemmas: juniorSurfaces.length - appendixAdded.length,
+    juniorLemmas: juniorSurfaces.length - appendixAdded.length - separateAdded.length,
     appendixAdded,
-    zhongkaoCards: zhongkaoCards.length,
+    separateAdded,
+    zhongkaoOfficial: zhongkaoOfficial.length,
+    zhongkaoExt: zhongkaoExt.length,
+    zhongkaoCards: zhongkaoOfficial.length + zhongkaoExt.length,
+    zhongkaoOfficialSets: zhongkao.officialSets,
+    zhongkaoExtSets: zhongkao.extensionSets,
     zhongkaoSets: zhongkao.sets.length,
     seniorEntries: kebiao.seniorEntries.length,
-    seniorLemmas: seniorSurfaces.length,
-    gaokaoExtraLemmas: gaokaoExtraCards.length,
-    gaokaoCards: gaokaoCards.length,
+    seniorLemmas: kebiao.seniorEntries.flatMap(expandEntry).length,
+    gaokaoOfficial: gaokaoOfficial.length,
+    gaokaoExt: gaokaoExt.length,
+    gaokaoExtraLemmas: gaokaoOfficialExtra.length,
+    gaokaoCards: gaokaoOfficial.length + gaokaoExt.length,
+    gaokaoOfficialSets: gaokao.officialSets,
+    gaokaoExtSets: gaokao.extensionSets,
     gaokaoSets: gaokao.sets.length,
     newGlosses: gaps.length,
-    reusedFromBank: zhongkaoCards.length + gaokaoExtraCards.length - gaps.length,
+    reusedFromBank: zhongkaoOfficial.length + zhongkaoExt.length + gaokaoOfficialExtra.length + gaokaoExtOwn.length - gaps.length,
+    before,
+    extensionDrops: plan.drops.length,
+    hskebiaoArtifacts: {
+      curd: "fragment of the headword bean curd; not added",
+      caf: "truncated café, already on the senior list",
+      due: "the token is a column fragment of due to; the real adjective due is kept only because the 3500 list teaches it, in 高考拓展",
+      "ice-cream": "spelling of ice cream, already covered",
+      "kilo (kilogramme, kilogram)": "two-column PDF collision with joke; kilo and joke are already headwords",
+      ought: "fragment of ought to on the senior list; bare ought is kept in 中考拓展 because textbook lists teach it",
+      percent: "spelling of per cent, already covered",
+    },
     extraOnlyOldZhongkao: extraOnly,
     juniorLemmasOutsideSeniorList: juniorOnly,
-    subset: zhongkaoCards.every((c) => gaokaoCards.some((g) => norm(g.word) === norm(c.word) && g.meaning_zh === c.meaning_zh)),
+    subset: zhongkaoOfficial.concat(zhongkaoExt).every((c) =>
+      gaokaoOfficial.concat(gaokaoExt).some((g) => senseKey(g.word) === senseKey(c.word))
+    ),
   };
 
-  const header = "/* QuizMario 中考 / 高考 tracks. Generated by tools/build-exam-tracks.js. Original examples; curriculum headwords only. */\n";
-  const body = "window.VOCAB_EXAM_TRACKS = " + JSON.stringify([zhongkao, gaokao]) + ";\n" +
+  function publish(track) {
+    return { id: track.id, name: track.name, sets: track.sets, titles: track.titles, desc: track.desc };
+  }
+
+  const header = "/* QuizMario 中考 / 高考 tracks. Generated by tools/build-exam-tracks.js. Official sets first; 拓展 sets follow. */\n";
+  const body = "window.VOCAB_EXAM_TRACKS = " + JSON.stringify([publish(zhongkao), publish(gaokao)]) + ";\n" +
     "(function () {\n" +
     "  var extra = window.VOCAB_EXAM_TRACKS || [];\n" +
     "  var base = (window.VOCAB_TRACKS || []).filter(function (t) { return t.id !== \"zhongkao\" && t.id !== \"gaokao\"; });\n" +
     "  window.VOCAB_TRACKS = extra.concat(base);\n" +
     "})();\n";
-  fs.writeFileSync(path.join(root, "exam-tracks.js"), header + body);
-
-  const kept = tracks.filter((t) => t.id !== "zhongkao" && t.id !== "gaokao");
-  const tracksHeader = "/* QuizMario exam-aligned tracks. 中考/高考 live in exam-tracks.js. */\n";
-  fs.writeFileSync(path.join(root, "tracks.js"), tracksHeader + "window.VOCAB_TRACKS = " + JSON.stringify(kept) + ";\n");
-
+  fs.writeFileSync(examPath, header + body);
+  fs.writeFileSync(path.join(root, "data/extension-drops.json"), JSON.stringify(plan.drops, null, 2) + "\n");
   fs.writeFileSync(path.join(root, "data/coverage-summary.json"), JSON.stringify(summary, null, 2) + "\n");
-  console.log(JSON.stringify(summary, null, 2));
+  console.log(JSON.stringify({
+    before,
+    zhongkaoOfficial: summary.zhongkaoOfficial,
+    zhongkaoExt: summary.zhongkaoExt,
+    zhongkaoCards: summary.zhongkaoCards,
+    zhongkaoSets: [summary.zhongkaoOfficialSets, summary.zhongkaoExtSets],
+    gaokaoOfficial: summary.gaokaoOfficial,
+    gaokaoExt: summary.gaokaoExt,
+    gaokaoCards: summary.gaokaoCards,
+    gaokaoSets: [summary.gaokaoOfficialSets, summary.gaokaoExtSets],
+    separateAdded: separateAdded.length,
+    newGlosses: summary.newGlosses,
+    drops: summary.extensionDrops,
+    subset: summary.subset,
+  }, null, 2));
 }
 
 main();
