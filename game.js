@@ -29,7 +29,7 @@
   const CLEAR_MIN_INTERVAL_DAYS = 1;
 
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
-  /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, dueOnly?:boolean, updatedAt?:string}} SaveData */
+  /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, updatedAt?:string}} SaveData */
 
   /** @type {SaveData} */
   let save = loadSave();
@@ -48,7 +48,6 @@
   /** @type {"default"|"scene"} */
   let sortMode = publicSortMode(save.sortMode);
   let voiceOn = save.voiceOn !== false; // default on
-  let dueOnly = !!save.dueOnly;
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
   /** When true, waiting for Good/Easy after a correct answer */
   let pendingRate = false;
@@ -134,7 +133,6 @@
           levelStars: data.levelStars || {},
           sortMode: data.sortMode || "default",
           voiceOn: data.voiceOn !== false,
-          dueOnly: !!data.dueOnly,
         }, data);
       }
     } catch (_) {}
@@ -147,7 +145,6 @@
       levelStars: {},
       sortMode: "default",
       voiceOn: true,
-      dueOnly: false,
     }, {});
   }
 
@@ -155,7 +152,7 @@
     opts = opts || {};
     save.sortMode = sortMode;
     save.voiceOn = voiceOn;
-    save.dueOnly = dueOnly;
+    delete save.dueOnly;
     if (!(opts.keepUpdatedAt && save.updatedAt)) {
       save.updatedAt = new Date().toISOString();
     }
@@ -466,16 +463,11 @@
     }
 
     const q = [...due, ...learning.filter((it) => !due.some((d) => d.key === it.key))];
-    if (!dueOnly) {
-      q.push(...neu.slice(0, NEW_PER_SESSION));
-    }
-    // If nothing due and dueOnly, fall back to earliest later reviews so session isn't empty.
-    // Still-new cards must be included too: an all-new set would otherwise look "cleared".
+    q.push(...neu.slice(0, NEW_PER_SESSION));
+    // Nothing due, learning, or new: a short early review so a finished set can still be opened.
     if (!q.length) {
       later.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
-      if (dueOnly) q.push(...later.slice(0, 5));
-      else q.push(...later.slice(0, 3));
-      if (!q.length) q.push(...neu.slice(0, NEW_PER_SESSION));
+      q.push(...later.slice(0, 3));
     }
     return q;
   }
@@ -566,7 +558,6 @@
     const playLevel = $("play-level");
     if (playLevel) playLevel.textContent = setTitle(levelNum);
     updateSortButtons();
-    syncDueOnlyBtn();
     renderBrowseStrip();
     refreshHud();
     nextCard();
@@ -1468,7 +1459,6 @@
       levelStars: Object.assign({}, payload.levelStars || {}),
       sortMode: payload.sortMode || "default",
       voiceOn: payload.voiceOn !== false,
-      dueOnly: !!payload.dueOnly,
     }, {
       track: payload.track,
       trackUnlock: Object.assign({}, payload.trackUnlock || {}),
@@ -1485,7 +1475,7 @@
     applyTrack(save.track || "core", true);
     sortMode = publicSortMode(save.sortMode);
     voiceOn = save.voiceOn !== false;
-    dueOnly = !!save.dueOnly;
+    delete save.dueOnly;
     const voiceBtn = $("btn-voice-toggle");
     if (voiceBtn) {
       voiceBtn.textContent = voiceOn ? "🔊 连杀语音 On" : "🔇 连杀语音 Off";
@@ -1493,7 +1483,6 @@
     }
     persist(opts);
     updateSortButtons();
-    syncDueOnlyBtn();
     refreshHud();
     const nm = $("profile-name");
     const cl = $("profile-cls");
@@ -1924,14 +1913,12 @@
       save = loadSave();
       sortMode = "default";
       voiceOn = true;
-      dueOnly = false;
       currentLevel = 1;
       applyTrack("core", true);
       killStreak = 0;
       pendingRate = false;
       refreshHud();
       updateSortButtons();
-      syncDueOnlyBtn();
       alert("Progress cleared.");
     }
   });
@@ -1968,29 +1955,6 @@
   bindSort("btn-sort-default", "default");
   bindSort("btn-sort-root", "root_affix");
   bindSort("btn-sort-scene", "scene");
-
-  function syncDueOnlyBtn() {
-    const btn = $("btn-due-only");
-    if (!btn) return;
-    btn.textContent = dueOnly ? "📌 只练到期 On" : "📌 只练到期 Off";
-    btn.classList.toggle("sort-active", dueOnly);
-  }
-
-  const dueOnlyBtn = $("btn-due-only");
-  if (dueOnlyBtn) {
-    syncDueOnlyBtn();
-    dueOnlyBtn.addEventListener("click", () => {
-      dueOnly = !dueOnly;
-      persist();
-      syncDueOnlyBtn();
-      if ($("screen-play").classList.contains("active") && currentLevel) {
-        queue = buildQueue(currentLevel);
-        requeueSoon.length = 0;
-        firstCardOfSession = true;
-        nextCard();
-      }
-    });
-  }
 
   // Voice toggle
   const voiceBtn = $("btn-voice-toggle");
@@ -2040,8 +2004,15 @@
   }
   applyTrack(save.track, true);
   updateSortButtons();
-  syncDueOnlyBtn();
   refreshHud();
+  // Drop a leftover 只练到期 flag without touching updatedAt, so sync order stays intact.
+  try {
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (stored && Object.prototype.hasOwnProperty.call(stored, "dueOnly")) {
+      delete stored.dueOnly;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+    }
+  } catch (_) {}
   initV6Ui();
   showScreen("gate");
 })();
