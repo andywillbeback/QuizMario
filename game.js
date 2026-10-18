@@ -38,7 +38,6 @@
   let queue = [];
   let currentCard = null;
   let awaiting = false;
-  let mcMode = false;
   let sessionSeen = 0;
   let sessionTarget = 0;
   let firstCardOfSession = true;
@@ -258,6 +257,9 @@
     for (const el of document.querySelectorAll(".screen")) el.classList.remove("active");
     const s = $("screen-" + name);
     if (s) s.classList.add("active");
+    // Level select is much taller than play. Leaving the old scroll offset
+    // (especially with overflow-x:hidden on iOS) shows empty space instead of the word.
+    try { window.scrollTo(0, 0); } catch (_) {}
   }
 
   function levelStars(levelNum) {
@@ -286,9 +288,10 @@
 
   function renderLevels() {
     const grid = $("level-grid");
+    if (!grid) return;
     grid.innerHTML = "";
     for (let i = 1; i <= LEVEL_COUNT; i++) {
-      const words = LEVELS[i - 1];
+      const words = LEVELS[i - 1] || [];
       const locked = i > save.unlockedLevel;
       const stars = levelStars(i);
       const mastered = levelMasteredCount(i);
@@ -548,16 +551,18 @@
     stepCounter = 0;
     sessionSeen = 0;
     sessionTarget = Math.max(queue.length, 1);
-    mcMode = false;
     firstCardOfSession = true;
     killStreak = 0;
     pendingRate = false;
     hideKillBanner();
-    $("btn-mc-toggle").textContent = "Multiple choice";
-    $("choices").hidden = true;
-    $("type-row").style.display = "flex";
+    const choices = $("choices");
+    if (choices) {
+      choices.hidden = true;
+      choices.innerHTML = "";
+    }
     showScreen("play");
-    $("play-level").textContent = setTitle(levelNum);
+    const playLevel = $("play-level");
+    if (playLevel) playLevel.textContent = setTitle(levelNum);
     updateSortButtons();
     syncDueOnlyBtn();
     renderBrowseStrip();
@@ -951,7 +956,8 @@
   function fillCardContent() {
     const promptLabel = $("prompt-label");
     if (promptLabel) promptLabel.textContent = "Chinese meaning → English word";
-    $("prompt-main").textContent = currentCard.meaning_zh;
+    const promptMain = $("prompt-main");
+    if (promptMain) promptMain.textContent = currentCard.meaning_zh || "";
     const prog = getProg(currentCard.key);
     const filled = Math.floor(prog.mastery || 0);
     const starsHtml =
@@ -972,22 +978,18 @@
     metaBits.unshift(srsTag);
     const hint = hintForCard(currentCard);
     const exampleZh = currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
-    $("prompt-hint").innerHTML =
-      starsHtml +
-      (metaBits.length ? "  ·  " + escapeHtml(metaBits.join(" · ")) : "") +
-      (hint ? "  ·  hint: " + escapeHtml(hint) : "") +
-      exampleZh;
-    $("play-queue").textContent = String(queue.length + requeueSoon.length);
-    updateProgress();
-
-    if (mcMode) {
-      renderChoices();
-    } else {
-      $("choices").hidden = true;
-      $("choices").innerHTML = "";
-      $("type-row").style.display = "flex";
-      setTimeout(() => $("answer-input").focus(), 30);
+    const hintEl = $("prompt-hint");
+    if (hintEl) {
+      hintEl.innerHTML =
+        starsHtml +
+        (metaBits.length ? "  ·  " + escapeHtml(metaBits.join(" · ")) : "") +
+        (hint ? "  ·  hint: " + escapeHtml(hint) : "") +
+        exampleZh;
     }
+    const queueEl = $("play-queue");
+    if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
+    updateProgress();
+    renderChoices();
   }
 
   function nextCard() {
@@ -997,11 +999,10 @@
     // answers the next word against the previous Chinese prompt.
     awaiting = true;
     const fb = $("feedback");
-    fb.innerHTML = "";
-    fb.className = "";
-    $("answer-input").value = "";
-    $("answer-input").disabled = true;
-    $("btn-submit").disabled = true;
+    if (fb) {
+      fb.innerHTML = "";
+      fb.className = "";
+    }
 
     if (isLevelClear(currentLevel) && queue.length === 0 && requeueSoon.length === 0) {
       onLevelClear();
@@ -1043,8 +1044,6 @@
     const doEnter = () => {
       currentCard = card;
       awaiting = false;
-      $("answer-input").disabled = false;
-      $("btn-submit").disabled = false;
       fillCardContent();
       animRestart(box, "card-enter");
       clearAnim(box, "card-enter", 420);
@@ -1183,8 +1182,6 @@
       announceKillStreak();
       persist();
 
-      $("answer-input").disabled = true;
-      $("btn-submit").disabled = true;
       const bindRate = (id, q) => {
         const el = $(id);
         if (!el) return;
@@ -1229,8 +1226,6 @@
         queue.splice(Math.min(2, queue.length), 0, { ...currentCard, _repeat: true });
       }
       persist();
-      $("answer-input").disabled = true;
-      $("btn-submit").disabled = true;
       setTimeout(nextCard, 2600);
     }
     $("play-queue").textContent = String(queue.length + requeueSoon.length);
@@ -1268,13 +1263,6 @@
     persist();
     updateProgress();
     setTimeout(nextCard, 700);
-  }
-
-  function submitTyped() {
-    if (!currentCard || awaiting) return;
-    const val = $("answer-input").value;
-    if (!val.trim()) return;
-    grade(answersMatch(val, currentCard.word), false);
   }
 
   /** Hard MC distractors: same POS / scene / root_group / similar length·spelling */
@@ -1368,14 +1356,15 @@
   }
 
   function renderChoices() {
+    if (!currentCard) return;
     const correct = currentCard.word;
     const distractors = pickHardDistractors(currentCard, 3);
-    const opts = [correct, ...distractors];
+    const opts = [correct, ...distractors].filter((opt) => opt);
     shuffle(opts);
     const box = $("choices");
+    if (!box) return;
     box.hidden = false;
     box.innerHTML = "";
-    $("type-row").style.display = "none";
     opts.forEach((opt, i) => {
       const b = document.createElement("button");
       b.type = "button";
@@ -1894,8 +1883,11 @@
   if ($("btn-paste-code")) $("btn-paste-code").addEventListener("click", importFromBackupCode);
 
   function enterExam(id) {
-    switchTrack(id);
-    showScreen("home");
+    try {
+      switchTrack(id);
+    } finally {
+      showScreen("home");
+    }
   }
   if ($("btn-gate-zhongkao")) $("btn-gate-zhongkao").addEventListener("click", () => enterExam("zhongkao"));
   if ($("btn-gate-gaokao")) $("btn-gate-gaokao").addEventListener("click", () => enterExam("gaokao"));
@@ -1928,25 +1920,6 @@
       updateSortButtons();
       syncDueOnlyBtn();
       alert("Progress cleared.");
-    }
-  });
-  $("btn-submit").addEventListener("click", submitTyped);
-  $("answer-input").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      submitTyped();
-    }
-  });
-  $("btn-mc-toggle").addEventListener("click", () => {
-    if (!currentCard || awaiting) return;
-    mcMode = !mcMode;
-    $("btn-mc-toggle").textContent = mcMode ? "Type answer" : "Multiple choice";
-    if (mcMode) renderChoices();
-    else {
-      $("choices").hidden = true;
-      $("choices").innerHTML = "";
-      $("type-row").style.display = "flex";
-      $("answer-input").focus();
     }
   });
   $("btn-quit").addEventListener("click", () => {
@@ -2024,7 +1997,8 @@
 
   // Number keys: Good/Easy while rating; else MC 1–4
   document.addEventListener("keydown", (e) => {
-    if (!$("screen-play").classList.contains("active")) return;
+    const play = $("screen-play");
+    if (!play || !play.classList.contains("active")) return;
     if (pendingRate) {
       if (e.key === "1" || e.key.toLowerCase() === "g") {
         e.preventDefault();
@@ -2037,10 +2011,11 @@
       }
       return;
     }
-    if (mcMode && !awaiting) {
+    if (!awaiting) {
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= 4) {
-        const btn = $("choices").querySelectorAll(".choice")[n - 1];
+        const box = $("choices");
+        const btn = box && box.querySelectorAll(".choice")[n - 1];
         if (btn) btn.click();
       }
     }

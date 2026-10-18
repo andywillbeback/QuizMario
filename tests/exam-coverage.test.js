@@ -226,6 +226,15 @@ assert.ok(html.includes('id="btn-gate-gaokao"'), "高考 button");
 assert.ok(!html.includes('id="screen-home" class="screen active"'), "old home is not the landing screen");
 const gate = html.split('id="screen-gate"')[1].split('id="screen-home"')[0];
 assert.ok(!/报告码|备份|学习数据|KET|PET|四级/.test(gate), "gate has no extra panels or tracks");
+assert.ok(html.includes('id="btn-continue"'), "home still has continue");
+assert.ok(html.includes('id="choices"'), "practice has a choice list");
+assert.ok(!html.includes('id="btn-mc-toggle"'), "typed/MC toggle is gone");
+assert.ok(!html.includes('id="answer-input"'), "typed answer field is gone");
+assert.ok(!html.includes("Type the English"), "no type-the-word prompt");
+const gameSrc = fs.readFileSync(path.join(root, "game.js"), "utf8");
+assert.ok(!gameSrc.includes("answer-input"), "game does not focus a text answer");
+assert.ok(!gameSrc.includes("btn-mc-toggle"), "game does not bind the MC toggle");
+assert.ok(gameSrc.includes("window.scrollTo(0, 0)"), "screen changes reset scroll");
 
 console.log("exam-coverage ok", {
   zhongkao: zkCards.length,
