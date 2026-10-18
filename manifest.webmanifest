@@ -1,7 +1,7 @@
 {
-  "name": "QuizMario — Vocab Spotlight",
-  "short_name": "QuizMario",
-  "description": "Anki-lite English vocab trainer with streak VO",
+  "name": "聚光单词 — Vocab Spotlight",
+  "short_name": "聚光单词",
+  "description": "聚光单词 Vocab Spotlight · Cambridge Examiner",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
