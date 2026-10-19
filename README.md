@@ -5,7 +5,8 @@
 线上：https://andywillbeback.github.io/QuizMario/ · 教师看板：teacher.html
 
 - 词库：原版核心 8 组 400 词 · 中考核心 100 · KET(A2) 100 · PET(B1) 100 · 四级基础 100（每组 50 词，新词库均含例句）
-- Anki-lite SRS（Good / Easy），通关：新词=0 · 到期=0 · 学习中=0 · ≥80% 间隔≥1天
+- Anki-lite SRS（Good / Easy）。通关：本组至少 80% 的词条进入复习且间隔 ≥1 天。答错会把那一张退回学习、稍后重问，但不再要求新词 / 到期 / 学习中全部为 0。
+- 还没通关的一组是 12 分钟挑战（`srs-rules.js` 里的 `CHALLENGE_MS`）。时限内通关：奖杯 + `audio/13_challenge_cheer.m4a`。超时：屏幕显示「遗憾失败」+ `audio/14_challenge_regret.m4a`。文件还没放进来时，用提示音和中文语音顶上。
 - 作者本人连杀 / 终结语音；🔈 英式发音（speechSynthesis en-GB）
 - 学习数据面板（打卡、已学会、正确率、复习保持率、14 天图表）
 - 学生报告码 → 教师看板导入 → 班级进度 / 易错词 / CSV

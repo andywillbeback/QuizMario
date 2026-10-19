@@ -1,6 +1,8 @@
 /* Vocab Spotlight — quiz-show English vocabulary trainer
  * Spaced repetition (Anki-lite / SM-2) + active recall. Offline HTML5.
  * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
+ * Clearance: ≥80% of the set in review with interval ≥1 day (srs-rules.js).
+ * Uncleared sets run a 12-minute challenge (CHALLENGE_MS).
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  */
 (function () {
@@ -18,15 +20,12 @@
   let currentTrack = "core";
   let LEVELS = TRACKS[0].sets || [];
   let LEVEL_COUNT = LEVELS.length;
-  const MIN_MS = 60 * 1000;
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  /** Learning step: 10 minutes */
-  const LEARN_MS = 10 * MIN_MS;
+  const SRS = window.QuizMarioSRS;
+  if (!SRS) throw new Error("srs-rules.js must load before game.js");
+  const MIN_MS = SRS.MIN_MS;
+  const DAY_MS = SRS.DAY_MS;
   /** Max new cards introduced per level session (Anki-like) */
   const NEW_PER_SESSION = 12;
-  /** Clearance: due==0, no new, no learning, ≥80% cards in review with interval≥1 day */
-  const CLEAR_SOLID_PCT = 0.8;
-  const CLEAR_MIN_INTERVAL_DAYS = 1;
 
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
   /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, updatedAt?:string}} SaveData */
@@ -41,6 +40,15 @@
   let sessionSeen = 0;
   let sessionTarget = 0;
   let firstCardOfSession = true;
+  /** Bumps when a session is left, so a late card animation cannot paint over fail/home. */
+  let playGen = 0;
+  /** True when this visit opened a set that had already cleared. Review, not a challenge. */
+  let sessionStartedClear = false;
+  let levelClearing = false;
+  let challengeActive = false;
+  let challengeFailed = false;
+  let challengeDeadline = 0;
+  let challengeTimer = null;
   /** Root-affix browse stays in the word bank, but the control is hidden for now. */
   function publicSortMode(mode) {
     return mode === "scene" ? "scene" : "default";
@@ -88,17 +96,7 @@
   }
 
   function defaultCardProg() {
-    return {
-      ef: 2.5,
-      interval: 0,
-      reps: 0,
-      lapses: 0,
-      due: 0,
-      correct: 0,
-      wrong: 0,
-      mastery: 0,
-      state: "new",
-    };
+    return SRS.defaultCardProg();
   }
 
   /** Migrate old step-counter due (< 1e12) → immediately due in real time. */
@@ -170,16 +168,15 @@
   }
 
   function isNewCard(p) {
-    return (p.state === "new") || ((p.reps || 0) === 0 && (p.correct || 0) === 0 && (p.wrong || 0) === 0);
+    return SRS.isNewCard(p);
   }
 
   function isLearning(p) {
-    return p.state === "learning" || (!isNewCard(p) && (p.interval || 0) < 1 && (p.reps || 0) > 0);
+    return SRS.isLearning(p);
   }
 
   function isDue(p, now) {
-    if (isNewCard(p)) return false;
-    return !p.due || p.due <= now;
+    return SRS.isDue(p, now);
   }
 
   /** Count Due / Learning / New for a level (0 = all levels). */
@@ -203,26 +200,13 @@
     return { due, learning, neu, mastered };
   }
 
-  /** Per-set clearance stats for pass rule. */
+  /** Per-set clearance stats. Pass is solid >= 80%; see srs-rules.js. */
   function levelClearStats(levelNum) {
     const words = LEVELS[levelNum - 1] || [];
     const now = Date.now();
-    let neu = 0, due = 0, learning = 0, solid = 0;
-    const total = words.length;
-    for (const w of words) {
-      const p = getProg(cardKey(levelNum - 1, w.word));
-      if (isNewCard(p)) {
-        neu++;
-        continue;
-      }
-      if (isDue(p, now)) due++;
-      const interval = p.interval || 0;
-      const isSolid = p.state === "review" && interval >= CLEAR_MIN_INTERVAL_DAYS;
-      if (isSolid) solid++;
-      else learning++; // not yet graduated to interval≥1d review
-    }
-    const need = Math.ceil(total * CLEAR_SOLID_PCT);
-    return { total, neu, due, learning, solid, need, ready: neu === 0 && due === 0 && learning === 0 && solid >= need };
+    const progs = [];
+    for (const w of words) progs.push(getProg(cardKey(levelNum - 1, w.word)));
+    return SRS.summarizeSet(progs, now);
   }
 
   function refreshHud() {
@@ -309,55 +293,9 @@
     }
   }
 
-  /**
-   * Anki-lite / SM-2 schedule.
-   * quality: 0 Again, 1 Good, 2 Easy
-   * interval stored in days; due is Date.now()-based ms.
-   */
+  /** Anki-lite / SM-2. quality: 0 Again, 1 Good, 2 Easy. */
   function schedule(prog, quality, nowMs) {
-    const now = nowMs || Date.now();
-    if (quality === 0) {
-      prog.wrong = (prog.wrong || 0) + 1;
-      prog.lapses = (prog.lapses || 0) + 1;
-      prog.reps = 0;
-      prog.interval = 0;
-      prog.state = "learning";
-      prog.due = now + LEARN_MS; // back in ~10 minutes
-      prog.ef = Math.max(1.3, (prog.ef || 2.5) - 0.2);
-      prog.mastery = Math.max(0, (prog.mastery || 0) - 1);
-      return;
-    }
-    prog.correct = (prog.correct || 0) + 1;
-    prog.reps = (prog.reps || 0) + 1;
-    const ef = prog.ef || 2.5;
-
-    if (prog.reps === 1) {
-      // first success → short learning step
-      prog.interval = LEARN_MS / DAY_MS; // ~10 minutes as fraction of a day
-      prog.state = "learning";
-      prog.due = now + LEARN_MS;
-    } else if (prog.reps === 2) {
-      prog.interval = 1;
-      prog.state = "review";
-      prog.due = now + 1 * DAY_MS;
-    } else if (prog.reps === 3) {
-      prog.interval = quality === 2 ? 4 : 3;
-      prog.state = "review";
-      prog.due = now + prog.interval * DAY_MS;
-    } else {
-      let next = Math.max(1, Math.round((prog.interval || 1) * ef));
-      if (quality === 2) next = Math.max(next + 1, Math.round(next * 1.3));
-      prog.interval = next;
-      prog.state = "review";
-      prog.due = now + prog.interval * DAY_MS;
-    }
-
-    if (quality === 2) prog.ef = Math.min(2.8, ef + 0.15);
-    else prog.ef = Math.min(2.8, ef + 0.05);
-
-    prog.mastery = Math.min(3, (prog.mastery || 0) + (quality === 2 ? 1 : 0.5));
-    if (prog.mastery > 2.9) prog.mastery = 3;
-    else if (prog.mastery > 1.9) prog.mastery = Math.max(prog.mastery, 2);
+    return SRS.schedule(prog, quality, nowMs);
   }
 
   function formatDue(p) {
@@ -537,7 +475,10 @@
   }
 
   function startLevel(levelNum) {
+    playGen += 1;
+    levelClearing = false;
     currentLevel = levelNum;
+    sessionStartedClear = isLevelClear(levelNum);
     queue = buildQueue(levelNum);
     requeueSoon.length = 0;
     stepCounter = 0;
@@ -558,6 +499,7 @@
     updateSortButtons();
     renderBrowseStrip();
     refreshHud();
+    beginChallenge();
     nextCard();
   }
 
@@ -858,8 +800,9 @@
   }
 
   /** Short original oscillator sting — no sampled / copyrighted audio. */
-  function playSting(kind) {
-    if (!voiceOn) return;
+  function playSting(kind, opts) {
+    opts = opts || {};
+    if (!voiceOn && !opts.force) return;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
@@ -900,14 +843,94 @@
         g.connect(master);
         o.start(t0);
         o.stop(t0 + 0.48);
+      } else if (kind === "cheer") {
+        master.gain.setValueAtTime(0.0001, t0);
+        master.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+        master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = "triangle";
+          o.frequency.setValueAtTime(freq, t0);
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(0.4, t0 + 0.02 + i * 0.07);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.34 + i * 0.06);
+          o.connect(g);
+          g.connect(master);
+          o.start(t0 + i * 0.07);
+          o.stop(t0 + 0.58);
+        });
+      } else if (kind === "regret") {
+        master.gain.setValueAtTime(0.0001, t0);
+        master.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
+        master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(392, t0);
+        o.frequency.exponentialRampToValueAtTime(98, t0 + 0.62);
+        g.gain.setValueAtTime(0.45, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.68);
+        o.connect(g);
+        g.connect(master);
+        o.start(t0);
+        o.stop(t0 + 0.72);
       }
     } catch (_) {}
+  }
+
+  /**
+   * Challenge voices. Drop Andy's recordings on these exact paths
+   * (same folder as the kill clips) and they replace the fallback:
+   *   audio/13_challenge_cheer.m4a
+   *   audio/14_challenge_regret.m4a
+   * A missing file plays the cheer/regret sting and speaks the Chinese line.
+   */
+  function speakZh(text, pitch) {
+    if (!text || !window.speechSynthesis) return;
+    try {
+      stopCustomVo();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "zh-CN";
+      u.rate = 1;
+      u.pitch = pitch == null ? 1 : pitch;
+      speakUtterance(u);
+    } catch (_) {}
+  }
+
+  function playChallengeCue(kind) {
+    const src = SRS.CHALLENGE_VO[kind];
+    const spoken = kind === "success" ? "挑战成功" : "遗憾失败";
+    const sting = kind === "success" ? "cheer" : "regret";
+    const pitch = kind === "success" ? 1.12 : 0.82;
+    let settled = false;
+    const fallback = () => {
+      if (settled) return;
+      settled = true;
+      playSting(sting, { force: true });
+      speakZh(spoken, pitch);
+    };
+    if (!src) {
+      fallback();
+      return;
+    }
+    try {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.addEventListener("error", fallback, { once: true });
+      const started = audio.play();
+      if (started && typeof started.then === "function") {
+        started.then(() => { settled = true; }).catch(fallback);
+      }
+    } catch (_) {
+      fallback();
+    }
   }
 
   function hideKillBanner() {
     const b = $("kill-banner");
     if (!b) return;
-    b.classList.remove("show", "shutdown");
+    b.classList.remove("show", "shutdown", "cheer");
     b.textContent = "";
   }
 
@@ -915,13 +938,14 @@
     const b = $("kill-banner");
     if (!b || !text) return;
     b.textContent = text;
-    b.classList.remove("show", "shutdown");
-    if (kind === "shutdown") b.classList.add("shutdown");
+    b.classList.remove("show", "shutdown", "cheer");
+    if (kind === "shutdown" || kind === "regret") b.classList.add("shutdown");
+    if (kind === "cheer") b.classList.add("cheer");
     void b.offsetWidth;
     b.classList.add("show");
     setTimeout(() => {
-      b.classList.remove("show", "shutdown");
-    }, kind === "shutdown" ? 2000 : 1600);
+      b.classList.remove("show", "shutdown", "cheer");
+    }, (kind === "shutdown" || kind === "regret") ? 2200 : 1600);
   }
 
   function announceKillStreak() {
@@ -986,7 +1010,84 @@
     renderChoices();
   }
 
+  function stopChallenge() {
+    challengeActive = false;
+    if (challengeTimer) {
+      clearInterval(challengeTimer);
+      challengeTimer = null;
+    }
+    renderChallengeTimer();
+  }
+
+  function renderChallengeTimer() {
+    const wrap = $("challenge-clock");
+    const el = $("challenge-timer");
+    if (!wrap || !el) return;
+    if (!challengeActive || challengeFailed) {
+      wrap.hidden = true;
+      el.textContent = "";
+      el.classList.remove("warn");
+      return;
+    }
+    const left = challengeDeadline - Date.now();
+    wrap.hidden = false;
+    el.textContent = SRS.formatChallengeClock(left);
+    el.classList.toggle("warn", left > 0 && left <= MIN_MS);
+    wrap.setAttribute("aria-label", "挑战剩余 " + el.textContent);
+  }
+
+  function beginChallenge() {
+    challengeFailed = false;
+    stopChallenge();
+    if (sessionStartedClear) {
+      renderChallengeTimer();
+      return;
+    }
+    challengeActive = true;
+    challengeDeadline = Date.now() + SRS.CHALLENGE_MS;
+    renderChallengeTimer();
+    challengeTimer = setInterval(tickChallenge, 250);
+  }
+
+  function tickChallenge() {
+    if (!challengeActive || challengeFailed) return;
+    renderChallengeTimer();
+    const outcome = SRS.evaluateChallenge({
+      active: true,
+      startedClear: sessionStartedClear,
+      deadline: challengeDeadline,
+      cleared: isLevelClear(currentLevel),
+    }, Date.now());
+    if (outcome === "success") onLevelClear();
+    else if (outcome === "fail") failChallenge();
+  }
+
+  function failChallenge() {
+    if (challengeFailed || !challengeActive) return;
+    if (isLevelClear(currentLevel)) {
+      onLevelClear();
+      return;
+    }
+    challengeFailed = true;
+    playGen += 1;
+    stopChallenge();
+    queue = [];
+    requeueSoon.length = 0;
+    pendingRate = false;
+    awaiting = true;
+    const mins = Math.round(SRS.CHALLENGE_MS / MIN_MS);
+    const msg = $("fail-msg");
+    if (msg) msg.textContent = mins + " 分钟到了。这组还没通关。错词会再出现，再试一次即可。";
+    showScreen("fail");
+    showKillBanner("遗憾失败", "regret");
+    playChallengeCue("fail");
+  }
+
   function nextCard() {
+    if (challengeFailed) return;
+    const play = $("screen-play");
+    if (!play || !play.classList.contains("active")) return;
+    const gen = playGen;
     injectRequeues();
     // Keep the previous prompt on screen during the exit animation. Do not
     // grade or swap currentCard until the new card is painted, or a fast tap
@@ -998,7 +1099,28 @@
       fb.className = "";
     }
 
-    if (isLevelClear(currentLevel) && queue.length === 0 && requeueSoon.length === 0) {
+    if (challengeActive) {
+      const outcome = SRS.evaluateChallenge({
+        active: true,
+        startedClear: sessionStartedClear,
+        deadline: challengeDeadline,
+        cleared: isLevelClear(currentLevel),
+      }, Date.now());
+      if (outcome === "fail") {
+        failChallenge();
+        return;
+      }
+    }
+
+    const endSet = SRS.shouldEndSet({
+      ready: isLevelClear(currentLevel),
+      startedClear: sessionStartedClear,
+      queueEmpty: queue.length === 0,
+      requeueEmpty: requeueSoon.length === 0,
+    });
+    if (endSet) {
+      queue = [];
+      requeueSoon.length = 0;
       onLevelClear();
       return;
     }
@@ -1043,6 +1165,7 @@
 
     const box = $("prompt-box");
     const doEnter = () => {
+      if (gen !== playGen || challengeFailed) return;
       currentCard = card;
       awaiting = false;
       fillCardContent();
@@ -1092,16 +1215,15 @@
   }
 
   /**
-   * 进度百分比 for the current word set (how far through this set, not 进步).
-   * A card counts once it meets the existing clearance "solid" review-state:
-   * state === "review" and interval >= CLEAR_MIN_INTERVAL_DAYS.
-   * pct = round(solid / total * 100). 100% means every card in the set is solid.
-   * The pass bar is still 80% of the set (stats.need), tracked separately.
+   * 本组进度. A graduated card (review, interval >= 1 day) counts 1.
+   * A card recalled once since its last miss counts 0.5, so the bar moves
+   * before the second correct. The pass line is still stats.need (80% graduated).
    */
   function setCompletionPercent(stats) {
     const total = stats && stats.total ? stats.total : 0;
     if (!total) return 0;
-    return Math.max(0, Math.min(100, Math.round((stats.solid / total) * 100)));
+    const credit = stats && stats.credit != null ? stats.credit : (stats.solid || 0);
+    return Math.max(0, Math.min(100, Math.round((credit / total) * 100)));
   }
 
   function updateProgress() {
@@ -1120,9 +1242,7 @@
     if (label) {
       label.textContent = s.ready
         ? "通关完成 · 本组进度 " + pct + "%"
-        : ("本组进度 " + pct + "% · 巩固 " + s.solid + "/" + s.total +
-           " · 通关需 " + s.need +
-           " · 新" + s.neu + " 到期" + s.due + " 学" + s.learning);
+        : ("本组进度 " + pct + "% · 巩固 " + s.solid + "/" + s.need);
     }
   }
 
@@ -1409,6 +1529,10 @@
   }
 
   function onLevelClear() {
+    if (challengeFailed || levelClearing) return;
+    levelClearing = true;
+    const challengeWon = challengeActive && !sessionStartedClear;
+    stopChallenge();
     const stars = levelStars(currentLevel);
     save.levelStars[String(currentLevel)] = Math.max(save.levelStars[String(currentLevel)] || 0, stars);
     if (currentLevel >= save.unlockedLevel) {
@@ -1419,9 +1543,11 @@
     save.points += 50;
     persist();
     const cs = levelClearStats(currentLevel);
-    $("clear-msg").textContent =
-      setTitle(currentLevel) + " cleared (+50). Rule: 新词0 · 到期0 · 学习中0 · 巩固 " +
-      cs.solid + "/" + cs.need + " (≥80%, interval≥1天). Stars: " + stars + "/3.";
+    const mins = Math.round(SRS.CHALLENGE_MS / MIN_MS);
+    const line = "巩固 " + cs.solid + "/" + cs.total + "，通关线 " + cs.need + "（80%，间隔≥1天）。";
+    $("clear-msg").textContent = challengeWon
+      ? (setTitle(currentLevel) + " 在 " + mins + " 分钟内通关（+50）。" + line)
+      : (setTitle(currentLevel) + " cleared (+50). " + line);
     const starEl = $("clear-stars");
     starEl.className = "stars star-pop";
     starEl.innerHTML = "";
@@ -1430,10 +1556,21 @@
       s.textContent = i < stars ? "★" : "☆";
       starEl.appendChild(s);
     }
+    const trophy = $("clear-trophy");
+    if (trophy) trophy.hidden = !challengeWon;
+    const title = $("clear-title");
+    if (title) title.textContent = challengeWon ? "挑战成功" : "Set cleared!";
+    const clearScreen = $("screen-clear");
+    if (clearScreen) clearScreen.classList.toggle("challenge-win", !!challengeWon);
     showScreen("clear");
     spawnPointsFloater(50);
     flashStage("ok");
-    playPartClearCue(currentLevel);
+    if (challengeWon) {
+      showKillBanner("挑战成功", "cheer");
+      playChallengeCue("success");
+    } else {
+      playPartClearCue(currentLevel);
+    }
   }
 
 
@@ -1689,14 +1826,9 @@
   /** Same pass rule as levelClearStats, but never creates card entries. */
   function clearReadyPure(li, words) {
     const now = Date.now();
-    let neu = 0, due = 0, learning = 0, solid = 0;
-    for (const w of words) {
-      const p = save.cards[cardKey(li, w.word)];
-      if (!p || isNewCard(p)) { neu++; continue; }
-      if (isDue(p, now)) due++;
-      if (p.state === "review" && (p.interval || 0) >= CLEAR_MIN_INTERVAL_DAYS) solid++; else learning++;
-    }
-    return words.length > 0 && neu === 0 && due === 0 && learning === 0 && solid >= Math.ceil(words.length * CLEAR_SOLID_PCT);
+    const progs = [];
+    for (const w of words) progs.push(save.cards[cardKey(li, w.word)] || null);
+    return SRS.summarizeSet(progs, now).ready;
   }
 
   function weakWords(limit) {
@@ -1865,6 +1997,18 @@
     switchTrack, computeStats, buildReport, reportCode,
     get track() { return currentTrack; },
     get levels() { return LEVELS; },
+    get challengeMs() { return SRS.CHALLENGE_MS; },
+    debugExpireChallenge() {
+      if (!challengeActive || challengeFailed) return false;
+      challengeDeadline = Date.now() - 1;
+      tickChallenge();
+      return true;
+    },
+    debugCelebrateChallenge() {
+      if (!challengeActive || challengeFailed) return false;
+      onLevelClear();
+      return true;
+    },
     getSave() { return save; },
     applyCloudSave(data) {
       let payload = data;
@@ -1930,6 +2074,21 @@
     }
   });
   $("btn-quit").addEventListener("click", () => {
+    playGen += 1;
+    stopChallenge();
+    challengeFailed = false;
+    showScreen("home");
+    renderStats();
+    refreshHud();
+  });
+  if ($("btn-fail-retry")) $("btn-fail-retry").addEventListener("click", () => {
+    challengeFailed = false;
+    startLevel(currentLevel);
+  });
+  if ($("btn-fail-home")) $("btn-fail-home").addEventListener("click", () => {
+    playGen += 1;
+    challengeFailed = false;
+    stopChallenge();
     showScreen("home");
     renderStats();
     refreshHud();

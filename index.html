@@ -440,6 +440,38 @@
     color: var(--gold); font-size: 1.25rem; line-height: 1;
     font-variant-numeric: tabular-nums;
   }
+  #challenge-clock {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    line-height: 1; min-width: 4.6rem;
+  }
+  #challenge-clock[hidden] { display: none !important; }
+  .challenge-caption {
+    font-size: .68rem; letter-spacing: .16em; opacity: .8; margin-bottom: 2px;
+  }
+  #challenge-timer {
+    font-size: 1.55rem; font-weight: 800; letter-spacing: .03em;
+    font-variant-numeric: tabular-nums; color: var(--cyan);
+  }
+  #challenge-timer.warn { color: var(--red); }
+  #clear-trophy {
+    font-size: 3.2rem; line-height: 1; margin: 4px 0 10px;
+    filter: drop-shadow(0 0 14px rgba(230, 201, 138, 0.9));
+  }
+  #clear-trophy[hidden] { display: none !important; }
+  #screen-clear.challenge-win h2 { color: var(--gold); letter-spacing: .12em; }
+  #screen-fail .title-card h2 {
+    color: var(--red);
+    font-size: clamp(2rem, 7vw, 3.1rem);
+    letter-spacing: .18em;
+    text-shadow: 0 0 18px rgba(255, 80, 100, 0.45);
+  }
+  #kill-banner.cheer {
+    color: #ffe9a8;
+    text-shadow:
+      0 0 12px #ffd84d,
+      0 0 28px rgba(255, 216, 77, 0.85),
+      0 2px 0 rgba(0, 0, 0, 0.45);
+  }
   .progress-bar {
     height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; margin: 0 0 4px;
     position: relative;
@@ -907,6 +939,8 @@
     }
     body.at-play .set-progress { margin: 2px 0 0; }
     body.at-play #set-progress-pct { font-size: 1rem; }
+    body.at-play #challenge-timer { font-size: 1.25rem; }
+    body.at-play .challenge-caption { font-size: .62rem; }
     body.at-play #feedback { margin-top: 6px; min-height: 0; }
     body.at-play #feedback .fb-title { font-size: .95rem; margin-bottom: 0; }
     body.at-play #feedback .fb-ex { font-size: .72rem; }
@@ -991,7 +1025,7 @@
     <section id="screen-levels" class="screen">
       <div class="title-card">
         <h2>选择关卡 Word sets</h2>
-        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. Cleared when due/new/learning are 0 and ≥80% cards have review interval ≥1 day. Next part unlocks on clear.</p>
+        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set clears when 80% of its cards are in review with an interval of at least 1 day. Missed cards come back; they do not block the set. An uncleared set is a 12-minute challenge.</p>
         <div id="level-grid" class="level-grid"></div>
         <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
       </div>
@@ -1002,6 +1036,10 @@
       <div class="set-progress">
         <div class="set-progress-top">
           <span id="set-progress-label">本组进度</span>
+          <div id="challenge-clock" hidden role="timer" aria-live="off">
+            <span class="challenge-caption">挑战</span>
+            <strong id="challenge-timer">12:00</strong>
+          </div>
           <strong id="set-progress-pct">0%</strong>
         </div>
         <div class="progress-bar" id="set-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="set-progress-label">
@@ -1021,12 +1059,25 @@
     <!-- LEVEL CLEAR -->
     <section id="screen-clear" class="screen">
       <div class="title-card">
-        <h2>Set cleared!</h2>
+        <div id="clear-trophy" hidden aria-hidden="true">🏆</div>
+        <h2 id="clear-title">Set cleared!</h2>
         <p class="sub" id="clear-msg">Great work.</p>
         <div class="stars" id="clear-stars">★★★</div>
         <div class="btn-row">
           <button id="btn-next-level" type="button">Next set</button>
           <button id="btn-clear-home" class="secondary" type="button">Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHALLENGE FAIL -->
+    <section id="screen-fail" class="screen" aria-label="挑战失败">
+      <div class="title-card">
+        <h2 id="fail-title">遗憾失败</h2>
+        <p class="sub" id="fail-msg">时间到了。这组还没通关。错词会再出现，再试一次即可。</p>
+        <div class="btn-row">
+          <button id="btn-fail-retry" type="button">再试一次</button>
+          <button id="btn-fail-home" class="secondary" type="button">Home</button>
         </div>
       </div>
     </section>
@@ -1043,6 +1094,7 @@
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
+  <script src="srs-rules.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>

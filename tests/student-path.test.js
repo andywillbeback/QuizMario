@@ -92,6 +92,14 @@ function staticGuards() {
     "game.js must not filter the queue with dueOnly or a typed-answer mode");
   assert.ok(game.includes("delete save.dueOnly"), "a leftover dueOnly flag is still stripped from the save");
   assert.ok(sync.includes("sendToLogin"), "sync.js still sends a missing session to login");
+  assert.ok(index.includes('src="srs-rules.js"'), "clearance rules load with the game");
+  assert.ok(index.includes('id="challenge-timer"'), "the 12-minute clock is on the training card");
+  assert.ok(index.includes('id="screen-fail"') && index.includes("遗憾失败"), "timeout has a regret-fail screen");
+  assert.ok(game.includes('hint: '), "training card still shows the hint line");
+  const rules = read("srs-rules.js");
+  assert.ok(rules.includes("12 * 60 * 1000"), "challenge length constant is 12 minutes");
+  assert.ok(rules.includes("audio/13_challenge_cheer.m4a"), "cheer voice path");
+  assert.ok(rules.includes("audio/14_challenge_regret.m4a"), "regret voice path");
 }
 
 function sleep(ms) {
@@ -482,6 +490,9 @@ async function main() {
         clear: !!(clear && clear.classList.contains("active")),
         n: n,
         prompt: document.getElementById("prompt-main").textContent,
+        hint: document.getElementById("prompt-hint").textContent,
+        clock: (document.getElementById("challenge-timer") || {}).textContent || "",
+        challengeMs: window.__QM && window.__QM.challengeMs,
         queue: Number(document.getElementById("play-queue").textContent),
         typed: !!document.getElementById("answer-input"),
         due: !!document.getElementById("btn-due-only")
@@ -494,6 +505,41 @@ async function main() {
     assert.ok(fresh.queue >= 1, "the queue is not empty after the first card");
     assert.strictEqual(fresh.typed, false);
     assert.strictEqual(fresh.due, false);
+    assert.strictEqual(fresh.challengeMs, 12 * 60 * 1000, "training challenge is 12 minutes");
+    assert.ok(fresh.clock === "12:00" || fresh.clock === "11:59", "clock reads " + fresh.clock);
+    assert.ok(fresh.hint.indexOf("hint:") !== -1 || fresh.hint.indexOf("例") !== -1, "hint stays on the card: " + fresh.hint);
+
+    const won = await evalRetry(`window.__QM.debugCelebrateChallenge()`);
+    assert.strictEqual(won, true, "an active 12-minute challenge can be won");
+    const cele = await waitFor(async () => evalRetry(`(() => {
+      const clear = document.getElementById("screen-clear");
+      if (!clear || !clear.classList.contains("active")) return null;
+      const trophy = document.getElementById("clear-trophy");
+      return {
+        title: (document.getElementById("clear-title") || {}).textContent || "",
+        trophy: !!(trophy && !trophy.hidden)
+      };
+    })()`), 8000, "challenge success");
+    assert.ok(cele.title.indexOf("挑战成功") !== -1, cele.title);
+    assert.strictEqual(cele.trophy, true, "win shows the trophy");
+
+    await evalRetry(`document.getElementById("btn-clear-home").click()`);
+    await waitFor(async () => evalRetry(`document.getElementById("screen-home").classList.contains("active") ? true : null`), 8000, "home after win");
+    await evalRetry(`document.getElementById("btn-continue").click()`);
+    await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      return true;
+    })()`), 10000, "next challenge after a win");
+
+    await evalRetry(`window.__QM.debugExpireChallenge()`);
+    const failed = await waitFor(async () => evalRetry(`(() => {
+      const fail = document.getElementById("screen-fail");
+      if (!fail || !fail.classList.contains("active")) return null;
+      return { title: (document.getElementById("fail-title") || {}).textContent || "" };
+    })()`), 8000, "regret fail screen");
+    assert.ok(failed.title.indexOf("遗憾失败") !== -1, failed.title);
 
     await evalRetry(`(() => {
       const track = (window.VOCAB_EXAM_TRACKS || []).find((t) => t.id === "zhongkao");

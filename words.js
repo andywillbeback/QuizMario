@@ -19177,12 +19177,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "communicate",
-      meaning_zh: "显露",
+      meaning_zh: "沟通；交流",
       pos: "v.",
       roots: "communicate",
       affix: "词根 · communicate",
       scene: "通讯媒体 · Communications and Media",
-      explain_zh: "中考/CEFR 常用词：显露",
+      explain_zh: "中考/CEFR 常用词：沟通；交流",
       root_group: "词根 · communicate",
       example_en: "We communicate with our friends online.",
       example_zh: "我们在线上与朋友沟通。"
