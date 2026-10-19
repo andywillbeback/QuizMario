@@ -3993,7 +3993,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：允许",
       root_group: "基础词 · base",
       example_en: "My parents don't allow me to play games on school nights.",
-      example_zh: "我父母不允许我在学校晚上玩游戏。"
+      example_zh: "我父母不允许我在上学日的晚上玩游戏。"
     },
     {
       word: "apply",

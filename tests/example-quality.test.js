@@ -54,6 +54,17 @@ assert.ok(clock && /\bo'clock\b/i.test(clock.example_en) && /点/.test(clock.exa
 assert.ok(whatever && /\bwhatever\b/i.test(whatever.example_en) && whatever.meaning_zh === "无论什么");
 assert.ok(elseCard && !/邵总/.test(elseCard.example_zh));
 assert.ok(ought && /\bought to\b/i.test(ought.example_en));
+
+const allow = practice.find((c) => c.word === "allow");
+assert.ok(allow, "allow card");
+assert.ok(/school nights/i.test(allow.example_en));
+assert.ok(/上学日的晚上/.test(allow.example_zh));
+assert.ok(!/在学校晚上/.test(allow.example_zh));
+const gameSrc = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const gradeSrc = gameSrc.slice(gameSrc.indexOf("function grade("), gameSrc.indexOf("function confirmCorrect"));
+const missSrc = gradeSrc.slice(gradeSrc.lastIndexOf("} else {"));
+assert.equal((missSrc.match(/requeueSoon\.push/g) || []).length, 1);
+assert.ok(!/queue\.splice/.test(missSrc), "a miss must not also splice the word back into the queue");
 assert.ok(!practice.some((c) => /finished the work|The teacher is coming|She spoke \S+ in front of the class/i.test(c.example_en)));
 
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");

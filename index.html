@@ -570,6 +570,19 @@
     40% { opacity: 1; transform: translate(-50%, -4px) scale(1.05); }
     100% { opacity: 0; transform: translate(-50%, -30px) scale(.9); }
   }
+  /* Phone: keep the streak line on the progress strip, not over the hint. */
+  @keyframes killPopTop {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(.75); }
+    20% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    70% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -6px) scale(.96); }
+  }
+  @keyframes shutPopTop {
+    0% { opacity: 0; transform: translate(-50%, 0) scale(.7); }
+    18% { opacity: 1; transform: translate(-50%, 0) scale(1.05); }
+    65% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -6px) scale(.96); }
+  }
 
   #feedback .fb-title { font-size: 1.05rem; margin-bottom: 4px; }
   #feedback .fb-answer { opacity: .9; font-weight: 600; }
@@ -849,9 +862,31 @@
       overflow: visible;
     }
     body.at-play #prompt-box {
+      position: relative;
+      z-index: 6;
       min-height: 0;
       margin: 4px 0 6px;
       padding: 8px 8px;
+      background: rgba(12, 18, 36, 0.96);
+    }
+    body.at-play #kill-banner {
+      top: 2px;
+      z-index: 4;
+      font-size: 0.92rem;
+      letter-spacing: 0.04em;
+      max-width: calc(100% - 12px);
+      text-align: center;
+    }
+    body.at-play #kill-banner.show {
+      animation-name: killPopTop;
+      animation-duration: 1.15s;
+    }
+    body.at-play #kill-banner.shutdown {
+      letter-spacing: 0.06em;
+    }
+    body.at-play #kill-banner.shutdown.show {
+      animation-name: shutPopTop;
+      animation-duration: 1.35s;
     }
     body.at-play #prompt-main { font-size: 1.28rem; margin: 0; }
     body.at-play #prompt-hint {

@@ -282,5 +282,8 @@
   "ought": {
     "example_en": "You ought to bring your book tomorrow.",
     "example_zh": "你明天应该把书带来。"
+  },
+  "allow": {
+    "example_zh": "我父母不允许我在上学日的晚上玩游戏。"
   }
 }

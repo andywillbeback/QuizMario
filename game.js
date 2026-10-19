@@ -569,7 +569,10 @@
         requeueSoon.splice(i, 1);
       }
     }
-    if (ready.length) queue.unshift(...ready);
+    if (ready.length) {
+      const incoming = ready.filter((card) => !queue.some((c) => c.key === card.key));
+      if (incoming.length) queue.unshift(...incoming);
+    }
   }
 
   function animRestart(el, className) {
@@ -1223,10 +1226,13 @@
       animRestart($("prompt-box"), "shake");
       clearAnim($("prompt-box"), "shake", 500);
 
-      const delay = 1 + Math.floor(Math.random() * 2);
-      requeueSoon.push({ appearAt: stepCounter + delay, card: { ...currentCard, _repeat: true } });
-      if (!queue.some((c) => c.key === currentCard.key && c._repeat)) {
-        queue.splice(Math.min(2, queue.length), 0, { ...currentCard, _repeat: true });
+      // One later repeat. Inserting into both queue and requeueSoon counted
+      // the miss twice (题数 +2) and dealt the same word twice.
+      const alreadyWaiting = requeueSoon.some((r) => r.card && r.card.key === currentCard.key)
+        || queue.some((c) => c.key === currentCard.key && c._repeat);
+      if (!alreadyWaiting) {
+        const delay = 1 + Math.floor(Math.random() * 2);
+        requeueSoon.push({ appearAt: stepCounter + delay, card: { ...currentCard, _repeat: true } });
       }
       persist();
       setTimeout(nextCard, 2600);
