@@ -192,10 +192,10 @@
     "example_zh": "雨后，乌龟慢慢地爬过了花园。"
   },
   "trace": {
-    "pos": "n.",
-    "meaning_zh": "痕迹",
-    "example_en": "There was no trace of the cake after the children finished lunch.",
-    "example_zh": "孩子们吃完午饭后，蛋糕一点痕迹都没有了。"
+    "pos": "v.",
+    "meaning_zh": "追踪",
+    "example_en": "Police can trace the lost bag through the cameras.",
+    "example_zh": "警方可以通过摄像头追踪丢失的包。"
   },
   "tram": {
     "pos": "n.",
@@ -343,9 +343,9 @@
   },
   "web": {
     "pos": "n.",
-    "meaning_zh": "网",
-    "example_en": "In the corner of the classroom window, a spider made a web.",
-    "example_zh": "在教室窗户的角落里，一只蜘蛛结了一张网。"
+    "meaning_zh": "网络",
+    "example_en": "Students search the web for the club timetable.",
+    "example_zh": "学生们在网上查找社团的时间表。"
   },
   "webpage": {
     "pos": "n.",
@@ -444,10 +444,10 @@
     "example_zh": "咱们这周六下午在家烤苹果派吧。"
   },
   "bang": {
-    "pos": "n.",
-    "meaning_zh": "巨响",
-    "example_en": "From the kitchen, a loud bang made the baby start crying.",
-    "example_zh": "从厨房传来一声巨响，把宝宝吓哭了。"
+    "pos": "v.",
+    "meaning_zh": "重击",
+    "example_en": "Don't bang the door; Grandpa is asleep.",
+    "example_zh": "不要用力关门，爷爷在睡觉。"
   },
   "best-seller": {
     "pos": "n.",

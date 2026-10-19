@@ -1,0 +1,116 @@
+{
+  "balance": {
+    "pos": "v.",
+    "example_en": "She tries to balance study and rest.",
+    "example_zh": "她尽量平衡学习和休息。"
+  },
+  "chip": {
+    "example_en": "He ate a bag of chips at lunch.",
+    "example_zh": "他午饭吃了一袋薯片。"
+  },
+  "cold": {
+    "example_en": "They kept training even though the weather was cold.",
+    "example_zh": "即使天气寒冷，他们也一直在训练。"
+  },
+  "prefer": {
+    "example_en": "Most students prefer group work.",
+    "example_zh": "大多数学生更喜欢小组作业。"
+  },
+  "presentation": {
+    "meaning_zh": "演示文稿",
+    "example_en": "Everyone takes this presentation seriously.",
+    "example_zh": "每个人都认真对待这个演示文稿。"
+  },
+  "appeal": {
+    "pos": "v.",
+    "meaning_zh": "吸引",
+    "example_en": "Camping in the rain doesn't appeal to me.",
+    "example_zh": "雨中露营对我没有吸引力。"
+  },
+  "brush": {
+    "pos": "v.",
+    "meaning_zh": "刷",
+    "example_en": "I brush my teeth every night.",
+    "example_zh": "我每天晚上刷牙。"
+  },
+  "contact": {
+    "pos": "v.",
+    "meaning_zh": "联系",
+    "example_en": "Contact the teacher if you have a question.",
+    "example_zh": "如果有问题，请联系老师。"
+  },
+  "lift": {
+    "pos": "n.",
+    "meaning_zh": "电梯",
+    "example_en": "We took the lift up to the fifth floor.",
+    "example_zh": "我们乘电梯上了五楼。"
+  },
+  "no": {
+    "pos": "det.",
+    "meaning_zh": "没有",
+    "example_en": "There is no milk left in the fridge.",
+    "example_zh": "冰箱里没有牛奶了。"
+  },
+  "nod": {
+    "pos": "n.",
+    "meaning_zh": "点头",
+    "example_en": "She answered with a nod.",
+    "example_zh": "她点头作了回答。"
+  },
+  "order": {
+    "pos": "v.",
+    "meaning_zh": "点（菜）",
+    "example_en": "We ordered a bowl of noodles for lunch.",
+    "example_zh": "我们午饭点了一碗面条。"
+  },
+  "panic": {
+    "pos": "v.",
+    "meaning_zh": "恐慌",
+    "example_en": "Don't panic if you miss the first bus.",
+    "example_zh": "如果没赶上第一班公交，也不要恐慌。"
+  },
+  "potential": {
+    "pos": "n.",
+    "meaning_zh": "潜力",
+    "example_en": "She has the potential to be a great singer.",
+    "example_zh": "她有潜力成为一名出色的歌手。"
+  },
+  "repair": {
+    "pos": "v.",
+    "meaning_zh": "修理",
+    "example_en": "Dad can repair my bike this weekend.",
+    "example_zh": "爸爸这周末能给我修自行车。"
+  },
+  "smile": {
+    "pos": "n.",
+    "meaning_zh": "微笑",
+    "example_en": "She met me with a warm smile.",
+    "example_zh": "她带着温暖的微笑迎接我。"
+  },
+  "waste": {
+    "pos": "v.",
+    "meaning_zh": "浪费",
+    "example_en": "Don't waste the evening watching TV.",
+    "example_zh": "不要把晚上的时间浪费在看电视上。"
+  },
+  "eighteenth": {
+    "example_en": "Her birthday is on the eighteenth of June.",
+    "example_zh": "她的生日是六月十八日。"
+  },
+  "Mount Huangshan": {
+    "example_en": "Mount Huangshan is famous for pine trees and a sea of clouds.",
+    "example_zh": "黄山以松树和云海闻名。"
+  },
+  "high-rise": {
+    "pos": "n.",
+    "meaning_zh": "高层建筑",
+    "example_en": "A new high-rise beside the station has shops on the ground floor.",
+    "example_zh": "车站旁的一座新高层建筑，底层有商店。"
+  },
+  "side road": {
+    "pos": "n.",
+    "meaning_zh": "支路；旁路",
+    "example_en": "We turned onto a quiet side road to avoid the traffic.",
+    "example_zh": "我们拐上一条安静的支路，好避开堵车。"
+  }
+}

@@ -7,7 +7,7 @@ D = {
 "oxygen": ("n.", "氧", "People need oxygen to live.", "人需要氧气才能生存。"),
 "package": ("n.", "包裹", "A package arrived this morning.", "今天早上到了一个包裹。"),
 "pan": ("n.", "平底锅", "Heat the pan before you add oil.", "加油前先把锅烧热。"),
-"panic": ("n.", "恐慌", "There is no need to panic.", "没必要恐慌。"),
+"panic": ("v.", "恐慌", "Don't panic if you miss the first bus.", "如果没赶上第一班公交，也不要恐慌。"),
 "passive": ("adj.", "被动的", "Don't stay passive; ask a question.", "别一直被动，问个问题。"),
 "patent": ("n.", "专利", "The company owns a patent for the device.", "公司拥有这项装置的专利。"),
 "patience": ("n.", "耐心", "Teaching young children takes patience.", "教小孩子需要耐心。"),

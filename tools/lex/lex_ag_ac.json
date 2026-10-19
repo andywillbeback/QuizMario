@@ -203,11 +203,11 @@
     "example_en": "Wool sweaters may shrink if you wash them in very hot water.",
     "example_zh": "羊毛衫如果用很热的水洗，可能会缩水。"
   },
-  "sideroad": {
+  "side road": {
     "pos": "n.",
     "meaning_zh": "支路；旁路",
-    "example_en": "We turned onto a quiet sideroad to avoid the long traffic jam.",
-    "example_zh": "我们拐上一条安静的支路，以避开长长的堵车。"
+    "example_en": "We turned onto a quiet side road to avoid the traffic.",
+    "example_zh": "我们拐上一条安静的支路，好避开堵车。"
   },
   "sidewalk": {
     "pos": "n.",

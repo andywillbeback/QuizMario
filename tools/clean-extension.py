@@ -106,6 +106,10 @@ def forms_of(item):
 
 def is_infl(word, present):
     n = norm(word)
+    # Native respellings of solid list typos. They are lemmas, not inflections
+    # of high, rise, side, or road, and must stay on the student track.
+    if n in {"high-rise", "side road"}:
+        return ""
     if n == "yourselves":
         return "inflected pronoun; yourself is already present"
     if n == "buried":
