@@ -464,9 +464,10 @@
     "meaning_zh": "有创意的"
   },
   "criminal": {
-    "example_en": "Criminal damage to the lockers was reported to the office.",
-    "example_zh": "储物柜被人故意破坏的事已经报告给了办公室。",
-    "meaning_zh": "犯罪的"
+    "pos": "adj.",
+    "meaning_zh": "犯罪的",
+    "example_en": "Criminal damage to the lockers was reported before lunch.",
+    "example_zh": "午饭前，有人报告储物柜被人故意破坏了。"
   },
   "critical": {
     "example_en": "The injured player was in a critical condition that night.",

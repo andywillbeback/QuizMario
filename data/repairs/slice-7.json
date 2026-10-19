@@ -211,8 +211,8 @@
     "meaning_zh": "诗歌"
   },
   "point": {
-    "example_en": "She argued her point until the fare debate ended.",
-    "example_zh": "她一直论证自己的论点，直到票价辩论结束。"
+    "example_en": "She explained her point with a simple example.",
+    "example_zh": "她用一个简单的例子说明了自己的论点。"
   },
   "Poland": {
     "example_en": "My uncle in Poland sent a box of chocolates.",
@@ -248,7 +248,7 @@
     "example_zh": "我留了一部分披萨给弟弟。"
   },
   "position": {
-    "example_en": "On shorter exams, her position never changed.",
+    "example_en": "Her position on shorter exams never changed.",
     "example_zh": "关于缩短考试，她的立场从未改变。"
   },
   "possession": {
@@ -433,7 +433,7 @@
     "example_zh": "看熊猫就是我们这次参观的全部目的。"
   },
   "quality": {
-    "example_en": "This bread has better quality than yesterday's loaf.",
+    "example_en": "This bread is better quality than yesterday's loaf.",
     "example_zh": "这面包的质量比昨天那条更好。"
   },
   "quantity": {

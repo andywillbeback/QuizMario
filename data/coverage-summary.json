@@ -173,15 +173,15 @@
   "zhongkaoSets": 58,
   "seniorEntries": 2999,
   "seniorLemmas": 3003,
-  "gaokaoOfficial": 3216,
+  "gaokaoOfficial": 3215,
   "gaokaoExt": 1028,
-  "gaokaoExtraLemmas": 1449,
-  "gaokaoCards": 4244,
+  "gaokaoExtraLemmas": 1448,
+  "gaokaoCards": 4243,
   "gaokaoOfficialSets": 65,
   "gaokaoExtSets": 21,
   "gaokaoSets": 86,
   "newGlosses": 1190,
-  "reusedFromBank": 3540,
+  "reusedFromBank": 3539,
   "before": {
     "zhongkao": {
       "cards": 1667,
@@ -213,7 +213,6 @@
   "extraOnlyOldZhongkao": [],
   "juniorLemmasOutsideSeniorList": [
     "an",
-    "according",
     "AI",
     "app",
     "bee",

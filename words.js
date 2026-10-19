@@ -1061,14 +1061,14 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "no",
-      meaning_zh: "不；没有",
-      pos: "excl.",
+      meaning_zh: "没有",
+      pos: "det.",
       roots: "no",
       affix: "基础词 · base",
       scene: "基础功能词 · Core Function Words",
-      explain_zh: "中考/CEFR 常用词：不；没有",
+      explain_zh: "中考/CEFR 常用词：没有",
       root_group: "基础词 · base",
-      example_en: "There is no milk in the fridge.",
+      example_en: "There is no milk left in the fridge.",
       example_zh: "冰箱里没有牛奶了。"
     },
     {
@@ -3822,8 +3822,8 @@ window.VOCAB_LEVELS = [
       scene: "日常活动 · Daily Routine",
       explain_zh: "中考/CEFR 常用词：更喜欢",
       root_group: "后缀 · -er/-or",
-      example_en: "I suppose that the result is that most students prefer group work.",
-      example_zh: "我想结果是大多数学生更喜欢小组作业。"
+      example_en: "Most students prefer group work.",
+      example_zh: "大多数学生更喜欢小组作业。"
     }
   ],
   [
@@ -6420,8 +6420,8 @@ window.VOCAB_LEVELS = [
       scene: "家居 · House and Home",
       explain_zh: "中考/CEFR 常用词：薯片；芯片",
       root_group: "基础词 · base",
-      example_en: "He ate a chip at lunch.",
-      example_zh: "他午饭吃了一片薯片。"
+      example_en: "He ate a bag of chips at lunch.",
+      example_zh: "他午饭吃了一袋薯片。"
     },
     {
       word: "Christmas",
@@ -7730,7 +7730,7 @@ window.VOCAB_LEVELS = [
       scene: "校园学习 · School and Education",
       explain_zh: "中考/CEFR 常用词：立场",
       root_group: "后缀 · -tion/-sion",
-      example_en: "On shorter exams, her position never changed.",
+      example_en: "Her position on shorter exams never changed.",
       example_zh: "关于缩短考试，她的立场从未改变。"
     },
     {
@@ -8076,14 +8076,14 @@ window.VOCAB_LEVELS = [
     {
       word: "contact",
       meaning_zh: "联系",
-      pos: "n.",
+      pos: "v.",
       roots: "contact",
       affix: "基础词 · base",
       scene: "校园学习 · School and Education",
       explain_zh: "中考/CEFR 常用词：联系",
       root_group: "基础词 · base",
-      example_en: "Please contact us if you have any questions.",
-      example_zh: "如果你有任何疑问，请与我们联系。"
+      example_en: "Contact the teacher if you have a question.",
+      example_zh: "如果有问题，请联系老师。"
     },
     {
       word: "edge",
@@ -8458,8 +8458,8 @@ window.VOCAB_LEVELS = [
       scene: "校园学习 · School and Education",
       explain_zh: "中考/CEFR 常用词：论点",
       root_group: "基础词 · base",
-      example_en: "She argued her point until the fare debate ended.",
-      example_zh: "她一直论证自己的论点，直到票价辩论结束。"
+      example_en: "She explained her point with a simple example.",
+      example_zh: "她用一个简单的例子说明了自己的论点。"
     },
     {
       word: "president",
@@ -10671,15 +10671,15 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "presentation",
-      meaning_zh: "赠与",
+      meaning_zh: "演示文稿",
       pos: "n.",
       roots: "presenta",
       affix: "后缀 · -tion/-sion",
       scene: "购物 · Shopping",
-      explain_zh: "中考/CEFR 常用词：赠与",
+      explain_zh: "中考/CEFR 常用词：演示文稿",
       root_group: "后缀 · -tion/-sion",
-      example_en: "I suppose that the fact is that everyone takes this presentation seriously.",
-      example_zh: "我想事实是，每个人都认真对待这个演示文稿。"
+      example_en: "Everyone takes this presentation seriously.",
+      example_zh: "每个人都认真对待这个演示文稿。"
     },
     {
       word: "provision",
@@ -11406,7 +11406,7 @@ window.VOCAB_LEVELS = [
       scene: "购物 · Shopping",
       explain_zh: "中考/CEFR 常用词：质量",
       root_group: "基础词 · base",
-      example_en: "This bread has better quality than yesterday's loaf.",
+      example_en: "This bread is better quality than yesterday's loaf.",
       example_zh: "这面包的质量比昨天那条更好。"
     },
     {
@@ -16150,8 +16150,8 @@ window.VOCAB_LEVELS = [
       scene: "运动 · Sport",
       explain_zh: "中考/CEFR 常用词：追踪",
       root_group: "基础词 · base",
-      example_en: "Detectives can trace the missing bag through the cameras.",
-      example_zh: "侦探可以通过摄像头追踪丢失的包。"
+      example_en: "Police can trace the lost bag through the cameras.",
+      example_zh: "警方可以通过摄像头追踪丢失的包。"
     },
     {
       word: "trainers",
@@ -16818,8 +16818,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：重击",
       root_group: "基础词 · base",
-      example_en: "Don't bang the door when Grandpa is taking a nap.",
-      example_zh: "爷爷午睡的时候，不要重击房门。"
+      example_en: "Don't bang the door; Grandpa is asleep.",
+      example_zh: "不要用力关门，爷爷在睡觉。"
     },
     {
       word: "beauty",
@@ -18208,14 +18208,14 @@ window.VOCAB_LEVELS = [
     {
       word: "balance",
       meaning_zh: "平衡",
-      pos: "n.",
+      pos: "v.",
       roots: "balance",
       affix: "基础词 · base",
       scene: "娱乐休闲 · Entertainment and Leisure",
       explain_zh: "中考/CEFR 常用词：平衡",
       root_group: "基础词 · base",
-      example_en: "The parent expects that the child will be able to balance study and rest.",
-      example_zh: "父母希望孩子能够平衡学习和休息。"
+      example_en: "She tries to balance study and rest.",
+      example_zh: "她尽量平衡学习和休息。"
     },
     {
       word: "band",
@@ -20027,15 +20027,15 @@ window.VOCAB_LEVELS = [
   [
     {
       word: "lift",
-      meaning_zh: "电梯；举起",
-      pos: "v.",
+      meaning_zh: "电梯",
+      pos: "n.",
       roots: "lift",
       affix: "基础词 · base",
       scene: "通讯媒体 · Communications and Media",
-      explain_zh: "中考/CEFR 常用词：电梯；举起",
+      explain_zh: "中考/CEFR 常用词：电梯",
       root_group: "基础词 · base",
-      example_en: "Take the lift to the fifth floor.",
-      example_zh: "乘电梯到五楼。"
+      example_en: "We took the lift up to the fifth floor.",
+      example_zh: "我们乘电梯上了五楼。"
     },
     {
       word: "London",
@@ -20566,8 +20566,8 @@ window.VOCAB_LEVELS = [
       scene: "通讯媒体 · Communications and Media",
       explain_zh: "中考/CEFR 常用词：网络",
       root_group: "基础词 · base",
-      example_en: "Students search the school web for the club timetable.",
-      example_zh: "学生们在学校网络上查找社团的时间表。"
+      example_en: "Students search the web for the club timetable.",
+      example_zh: "学生们在网上查找社团的时间表。"
     }
   ],
   [
@@ -22254,8 +22254,8 @@ window.VOCAB_LEVELS = [
       scene: "工作职业 · Work and Jobs",
       explain_zh: "中考/CEFR 常用词：犯罪的",
       root_group: "后缀 · -al",
-      example_en: "Criminal damage to the lockers was reported to the office.",
-      example_zh: "储物柜被人故意破坏的事已经报告给了办公室。"
+      example_en: "Criminal damage to the lockers was reported before lunch.",
+      example_zh: "午饭前，有人报告储物柜被人故意破坏了。"
     },
     {
       word: "rotten",
@@ -23217,15 +23217,15 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "order",
-      meaning_zh: "点（菜）；命令",
-      pos: "n.",
+      meaning_zh: "点（菜）",
+      pos: "v.",
       roots: "order",
       affix: "基础词 · base",
       scene: "工作职业 · Work and Jobs",
-      explain_zh: "中考/CEFR 常用词：点（菜）；命令",
+      explain_zh: "中考/CEFR 常用词：点（菜）",
       root_group: "基础词 · base",
-      example_en: "I'd like to order a bowl of noodles.",
-      example_zh: "我想点一碗面条。"
+      example_en: "We ordered a bowl of noodles for lunch.",
+      example_zh: "我们午饭点了一碗面条。"
     },
     {
       word: "police",
@@ -23290,14 +23290,14 @@ window.VOCAB_LEVELS = [
     {
       word: "repair",
       meaning_zh: "修理",
-      pos: "n.",
+      pos: "v.",
       roots: "repair",
       affix: "基础词 · base",
       scene: "工作职业 · Work and Jobs",
       explain_zh: "中考/CEFR 常用词：修理",
       root_group: "基础词 · base",
-      example_en: "Can you repair my bike?",
-      example_zh: "你给我修修自行车行吗？"
+      example_en: "Dad can repair my bike this weekend.",
+      example_zh: "爸爸这周末能给我修自行车。"
     }
   ],
   [
@@ -28143,15 +28143,15 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "appeal",
-      meaning_zh: "吸引；呼吁",
-      pos: "n.",
+      meaning_zh: "吸引",
+      pos: "v.",
       roots: "appe",
       affix: "后缀 · -al",
       scene: "天气 · Weather",
-      explain_zh: "中考/CEFR 常用词：吸引；呼吁",
+      explain_zh: "中考/CEFR 常用词：吸引",
       root_group: "后缀 · -al",
-      example_en: "The idea doesn't appeal to me.",
-      example_zh: "这个想法对我没有吸引力。"
+      example_en: "Camping in the rain doesn't appeal to me.",
+      example_zh: "雨中露营对我没有吸引力。"
     },
     {
       word: "mental",
@@ -28782,8 +28782,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：冷的",
       root_group: "基础词 · base",
-      example_en: "I suppose that they kept training even though the weather was cold.",
-      example_zh: "我想即使天气寒冷，他们也一直在训练。"
+      example_en: "They kept training even though the weather was cold.",
+      example_zh: "即使天气寒冷，他们也一直在训练。"
     },
     {
       word: "community",
@@ -30948,14 +30948,14 @@ window.VOCAB_LEVELS = [
     {
       word: "waste",
       meaning_zh: "浪费",
-      pos: "n.",
+      pos: "v.",
       roots: "waste",
       affix: "基础词 · base",
       scene: "自然环境 · Environment and Nature",
       explain_zh: "中考/CEFR 常用词：浪费",
       root_group: "基础词 · base",
-      example_en: "Don't waste your time watching TV.",
-      example_zh: "不要浪费时间看电视。"
+      example_en: "Don't waste the evening watching TV.",
+      example_zh: "不要把晚上的时间浪费在看电视上。"
     },
     {
       word: "wildlife",
@@ -34478,14 +34478,14 @@ window.VOCAB_LEVELS = [
     {
       word: "potential",
       meaning_zh: "潜力",
-      pos: "adj.",
+      pos: "n.",
       roots: "potenti",
       affix: "后缀 · -al",
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：潜力",
       root_group: "后缀 · -al",
-      example_en: "She has the potential to become a great singer.",
-      example_zh: "她有潜力成为一名伟大的歌手。"
+      example_en: "She has the potential to be a great singer.",
+      example_zh: "她有潜力成为一名出色的歌手。"
     },
     {
       word: "special",

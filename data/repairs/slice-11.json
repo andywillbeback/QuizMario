@@ -664,8 +664,10 @@
     "meaning_zh": "系；打成平局"
   },
   "trace": {
-    "example_en": "Detectives can trace the missing bag through the cameras.",
-    "example_zh": "侦探可以通过摄像头追踪丢失的包。"
+    "pos": "v.",
+    "meaning_zh": "追踪",
+    "example_en": "Police can trace the lost bag through the cameras.",
+    "example_zh": "警方可以通过摄像头追踪丢失的包。"
   },
   "train": {
     "example_en": "The club will train new swimmers in the shallow pool.",

@@ -2,14 +2,13 @@
 # Headwords follow the national curriculum lists; sentences are original.
 
 A = {
-"according": ("prep.", "根据", "According to the map, the museum is two stops away.", "根据地图，博物馆还有两站。"),
 "AI": ("n.", "人工智能", "Our science class watched a video about AI.", "科学课上我们看了一段关于人工智能的视频。"),
 "a.m.": ("abbr.", "上午", "The school bus leaves at 7 a.m.", "校车早上七点出发。"),
 "app": ("n.", "应用程序", "I use a dictionary app to check new words.", "我用词典应用查生词。"),
 "bamboo": ("n.", "竹子", "The panda was eating fresh bamboo.", "熊猫在吃新鲜的竹子。"),
 "blouse": ("n.", "女衬衫", "She wore a blue blouse to the concert.", "她穿了一件蓝衬衫去听音乐会。"),
 "born": ("v.", "出生", "My cousin was born in a small seaside town.", "我表弟出生在一个海滨小镇。"),
-"brush": ("n.", "刷子；刷", "I brush my teeth before I go to bed.", "我睡觉前刷牙。"),
+"brush": ("v.", "刷", "I brush my teeth every night.", "我每天晚上刷牙。"),
 "bully": ("v.", "欺凌", "Students should never bully a classmate.", "学生绝不应该欺凌同学。"),
 "butter": ("n.", "黄油", "She spread butter on the warm bread.", "她在热面包上抹了黄油。"),
 "butterfly": ("n.", "蝴蝶", "A yellow butterfly landed on the flower.", "一只黄蝴蝶落在花上。"),
@@ -130,7 +129,7 @@ A = {
 "Mrs": ("n.", "太太", "Mrs Wang lives next door.", "王太太住在隔壁。"),
 "Ms": ("n.", "女士", "Ms Zhao will meet the parents tonight.", "赵女士今晚会见家长。"),
 "mutton": ("n.", "羊肉", "This restaurant is famous for mutton.", "这家餐馆以羊肉出名。"),
-"nod": ("v.", "点头", "She gave a small nod and sat down.", "她轻轻点了点头，然后坐下。"),
+"nod": ("n.", "点头", "She answered with a nod.", "她点头作了回答。"),
 "noodle": ("n.", "面条", "I ordered a bowl of noodle soup.", "我点了一碗面条汤。"),
 "noon": ("n.", "中午", "We eat lunch at noon.", "我们中午吃午饭。"),
 "notebook": ("n.", "笔记本", "Write the new word in your notebook.", "把生词写在笔记本上。"),
@@ -198,7 +197,7 @@ A = {
 "ski": ("v.", "滑雪", "We ski in the mountains in winter.", "冬天我们在山里滑雪。"),
 "slim": ("adj.", "苗条的", "Regular walking keeps her slim.", "经常走路让她保持苗条。"),
 "smart": ("adj.", "聪明的", "That was a smart way to solve it.", "那样解决很聪明。"),
-"smile": ("v.", "微笑", "She gave me a warm smile.", "她给了我一个温暖的微笑。"),
+"smile": ("n.", "微笑", "She met me with a warm smile.", "她带着温暖的微笑迎接我。"),
 "snack": ("n.", "零食", "Fruit is a healthier snack than chips.", "水果比薯片更健康。"),
 "snake": ("n.", "蛇", "A snake moved through the grass.", "一条蛇在草丛里游动。"),
 "socialism": ("n.", "社会主义", "The lesson introduced socialism in simple words.", "这节课用简单的话介绍了社会主义。"),

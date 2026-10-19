@@ -220,8 +220,9 @@
     "example_zh": "博物馆把一件古老的武器保存在玻璃柜里。"
   },
   "web": {
-    "example_en": "Students search the school web for the club timetable.",
-    "example_zh": "学生们在学校网络上查找社团的时间表。"
+    "meaning_zh": "网络",
+    "example_en": "Students search the web for the club timetable.",
+    "example_zh": "学生们在网上查找社团的时间表。"
   },
   "website": {
     "example_en": "The library website shows which books are still available.",
@@ -754,8 +755,10 @@
     "example_zh": "周日早上，我们在家一起烤面包。"
   },
   "bang": {
-    "example_en": "Don't bang the door when Grandpa is taking a nap.",
-    "example_zh": "爷爷午睡的时候，不要重击房门。"
+    "pos": "v.",
+    "meaning_zh": "重击",
+    "example_en": "Don't bang the door; Grandpa is asleep.",
+    "example_zh": "不要用力关门，爷爷在睡觉。"
   },
   "base": {
     "example_en": "The coach will base the lineup on yesterday's practice.",

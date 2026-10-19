@@ -864,10 +864,10 @@
     "example_zh": "孩子们在院子里踢足球，直到天色变得太暗。"
   },
   "criminal": {
-    "pos": "n.",
-    "meaning_zh": "罪犯",
-    "example_en": "The criminal was arrested near the station after a short police search.",
-    "example_zh": "经过警方短时间搜查，这名罪犯在车站附近被逮捕。"
+    "pos": "adj.",
+    "meaning_zh": "犯罪的",
+    "example_en": "Criminal damage to the lockers was reported before lunch.",
+    "example_zh": "午饭前，有人报告储物柜被人故意破坏了。"
   },
   "crossroads": {
     "pos": "n.",
