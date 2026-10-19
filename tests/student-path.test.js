@@ -1,9 +1,15 @@
 "use strict";
 
+// Node 22+ provides global WebSocket. Node 20 needs the ws package.
+if (typeof WebSocket === "undefined") {
+  global.WebSocket = require("ws");
+}
+
 /*
  * Student-path smoke test.
  *
  * Run: node tests/student-path.test.js
+ * Node 20: npm install ws   (Node 22+ already has global WebSocket)
  *
  * QuizMario kept breaking in a loop because two questions were answered in
  * more than one place, and no test failed when those answers diverged:
@@ -60,6 +66,12 @@ function staticGuards() {
   assert.ok(index.includes("meteor.js"), "approved meteor background stays");
   assert.ok(index.includes("Doctoral product powered by Pu Jin"), "credit line stays");
   assert.ok(login.includes("Doctoral product powered by Pu Jin"), "login credit line stays");
+  assert.ok(login.includes('src="orb.js"'), "login shows the Doubao orb");
+  assert.ok(login.includes("logo-mark.png"), "login uses the orb logo mark");
+  assert.ok(login.includes('id="orb"'), "login orb canvas is present");
+  assert.ok(!login.includes("meteor.js"), "login must not load the meteor shower");
+  assert.ok(!login.includes("fonts.googleapis.com"), "login must not depend on Google Fonts");
+  assert.ok(!login.includes("photon-spiral"), "login must not keep the old meteor canvas");
 
   const banned = [
     ["id=\"report-panel\"", "student report"],
@@ -330,7 +342,7 @@ async function main() {
           confirmHidden: !!(document.getElementById("confirm-label") || {}).hidden,
           formHidden: !!form.hidden,
           banner: banner && !banner.hidden ? banner.textContent : "",
-          credit: (document.querySelector(".gold-footer") || {}).textContent || ""
+          credit: ((document.querySelector(".credit") || document.querySelector(".gold-footer")) || {}).textContent || ""
         };
       })()`);
       return snap;

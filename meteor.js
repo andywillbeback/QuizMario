@@ -1,4 +1,5 @@
-/* Meteor shower for login, exam gate, and training.
+/* Meteor shower for the exam gate and training.
+ * Login uses orb.js instead. Keep this file: index.html still loads it.
  * Canvas 2D, no libraries. Replaces the spiral field on those pages.
  *
  * ~24 meteors respawn forever, twinkling stars, radial glow.
