@@ -1,281 +1,63 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
+<html lang="zh-CN"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#03060f">
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<meta name="application-name" content="聚光单词">
-<title>聚光单词 · 登录</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@900&text=%E8%81%9A%E5%85%89%E5%8D%95%E8%AF%8D&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#060d1c"><link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="application-name" content="聚光单词"><title>聚光单词 · 登录</title>
 <style>
-  :root {
-    --gold: #e6c98a;
-    --text: #f4f7ff;
-    --muted: rgba(226, 234, 248, 0.72);
-    --line: rgba(255, 255, 255, 0.16);
-    --danger: #ffb4c0;
-    --ok: #b7f7d2;
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; max-width: 100%; overflow-x: hidden; }
-  body {
-    margin: 0;
-    min-height: 100vh;
-    overflow-x: hidden;
-    color: var(--text);
-    font-family: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", system-ui, sans-serif;
-    background: #03060f;
-  }
-  #photon-spiral {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    pointer-events: none;
-  }
-  .vignette {
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse at 50% 36%, transparent 0%, transparent 34%, rgba(2, 5, 14, 0.22) 60%, rgba(1, 3, 10, 0.78) 100%);
-  }
-  .stage {
-    position: relative;
-    z-index: 2;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    justify-content: safe center;
-    padding: 28px 16px 96px;
-  }
-  .brand {
-    position: relative;
-    isolation: isolate;
-    text-align: center;
-    margin: 0 0 22px;
-  }
-  .brand::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: -140px;
-    width: min(520px, 100vw);
-    height: 330px;
-    transform: translateX(-50%);
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(ellipse 50% 60% at 50% 72%, rgba(255, 236, 170, 0.30), rgba(255, 214, 120, 0.10) 45%, transparent 72%),
-      conic-gradient(from 168deg at 50% 0%, transparent 0deg, rgba(255, 240, 200, 0.16) 12deg, transparent 24deg);
-    filter: blur(6px);
-    animation: spotPulse 4.5s ease-in-out infinite;
-  }
-  @keyframes spotPulse {
-    0%, 100% { opacity: 0.75; transform: translateX(-50%) scale(1); }
-    50% { opacity: 1; transform: translateX(-50%) scale(1.06); }
-  }
-  .brand h1 {
-    margin: 0;
-    font-family: "Noto Sans SC", "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
-    font-weight: 900;
-    font-size: clamp(54px, 6.6vw, 80px);
-    letter-spacing: 0.08em;
-    line-height: 1.15;
-    background: linear-gradient(100deg, #fff4d6 0%, #ffffff 35%, #fff 42%, #ffe08a 48%, #ffffff 54%, #fff 60%, #fff4d6 100%);
-    background-size: 250% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    -webkit-text-fill-color: transparent;
-    animation: sheen 3.6s ease-in-out infinite, glow 4.5s ease-in-out infinite;
-  }
-  @keyframes sheen {
-    0% { background-position: 120% 0; }
-    60%, 100% { background-position: -120% 0; }
-  }
-  @keyframes glow {
-    0%, 100% { filter: drop-shadow(0 0 8px rgba(255, 226, 140, 0.45)) drop-shadow(0 0 22px rgba(255, 200, 90, 0.28)); }
-    50% { filter: drop-shadow(0 0 14px rgba(255, 230, 150, 0.75)) drop-shadow(0 0 40px rgba(255, 200, 90, 0.45)); }
-  }
-  .subtitle {
-    margin: 12px 0 0;
-    font-family: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    font-style: normal;
-    font-weight: 500;
-    font-size: 20px;
-    letter-spacing: 0.32em;
-    padding-left: 0.32em;
-    color: #f3e6c4;
-    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8), 0 0 16px rgba(3, 6, 16, 0.7);
-  }
-  .card {
-    width: min(420px, 100%);
-    padding: 18px 18px 16px;
-    border-radius: 22px;
-    background:
-      linear-gradient(180deg, rgba(18, 28, 52, 0.58), rgba(7, 12, 24, 0.46));
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    box-shadow:
-      0 30px 70px rgba(0, 0, 0, 0.42),
-      inset 0 1px 0 rgba(255, 255, 255, 0.32),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(6px) saturate(1.2);
-    -webkit-backdrop-filter: blur(6px) saturate(1.2);
-  }
-  .tabs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px;
-    padding: 4px;
-    margin-bottom: 14px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .tabs button {
-    appearance: none;
-    border: 0;
-    cursor: pointer;
-    border-radius: 999px;
-    padding: 9px 12px;
-    background: transparent;
-    color: rgba(244, 247, 255, 0.66);
-    font: inherit;
-    font-weight: 650;
-    letter-spacing: 0.08em;
-  }
-  .tabs button[aria-pressed="true"] {
-    background: rgba(255, 255, 255, 0.16);
-    color: #fff;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
-  }
-  label {
-    display: block;
-    margin: 12px 0 6px;
-    font-size: 0.78rem;
-    letter-spacing: 0.06em;
-    color: rgba(226, 234, 248, 0.8);
-  }
-  input {
-    width: 100%;
-    font: inherit;
-    font-size: 16px;
-    color: #fff;
-    padding: 12px 13px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(3, 6, 14, 0.42);
-  }
-  input:focus {
-    outline: none;
-    border-color: rgba(190, 214, 255, 0.9);
-    box-shadow: 0 0 0 3px rgba(150, 186, 255, 0.18);
-  }
-  .actions { margin-top: 16px; }
-  button.primary, a.primary {
-    appearance: none;
-    display: block;
-    width: 100%;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-    border: 0;
-    border-radius: 12px;
-    padding: 12px 16px;
-    font: inherit;
-    font-weight: 700;
-    color: #121722;
-    background: linear-gradient(180deg, #f8fbff, #d5e3f6);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-  }
-  button.primary:disabled { opacity: 0.55; cursor: not-allowed; }
-  button.texty {
-    appearance: none;
-    display: block;
-    width: 100%;
-    margin-top: 8px;
-    padding: 8px;
-    border: 0;
-    background: transparent;
-    color: rgba(214, 226, 246, 0.78);
-    font: inherit;
-    font-size: 0.86rem;
-    cursor: pointer;
-  }
-  button.texty:disabled { opacity: 0.55; cursor: not-allowed; }
-  #auth-msg {
-    min-height: 1.35em;
-    margin: 12px 0 0;
-    font-size: 0.86rem;
-    line-height: 1.45;
-    text-align: center;
-  }
-  #auth-msg.ok { color: var(--ok); }
-  #auth-msg.bad { color: var(--danger); }
-  #config-banner {
-    margin: 0 0 12px;
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 0.8rem;
-    line-height: 1.45;
-    color: #f3e2b4;
-    background: rgba(230, 201, 138, 0.1);
-    border: 1px dashed rgba(230, 201, 138, 0.45);
-  }
-  #session-panel h2 {
-    margin: 4px 0 8px;
-    font-size: 1.15rem;
-    font-weight: 600;
-    text-align: center;
-  }
-  #session-panel p { margin: 0 0 12px; text-align: center; color: var(--muted); }
-  #password-form { margin-top: 8px; }
-  .gold-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: max(14px, env(safe-area-inset-bottom));
-    z-index: 3;
-    margin: 0;
-    text-align: center;
-    color: var(--gold);
-    font-family: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    font-weight: 500;
-    font-size: 0.95rem;
-    letter-spacing: 0.22em;
-    padding-left: 0.22em;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
-    pointer-events: none;
-  }
-  button:focus-visible, a:focus-visible, input:focus-visible {
-    outline: 2px solid #f7fbff;
-    outline-offset: 2px;
-  }
-  @media (max-width: 420px) {
-    .brand h1 { font-size: 46px; letter-spacing: 0.06em; }
-    .subtitle { font-size: 15px; letter-spacing: 0.18em; padding-left: 0.18em; }
-    .gold-footer { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
-  }
-</style>
-</head>
-<body>
-<canvas id="photon-spiral" aria-hidden="true"></canvas>
-<div class="vignette" aria-hidden="true"></div>
-<main class="stage">
-  <header class="brand">
-    <h1>聚光单词</h1>
-    <p class="subtitle">Vocab Spotlight</p>
-  </header>
-  <section class="card" aria-label="账号">
+*{box-sizing:border-box}html{background:#050b18}html,body{margin:0;overflow-x:hidden}
+body{color:#fff;font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC","Noto Sans CJK SC",system-ui,sans-serif;
+ background:radial-gradient(ellipse 70% 80% at 60% 50%,#0c1a33 0%,#081226 55%,#050b18 100%);}
+.grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+ background-image:linear-gradient(rgba(120,160,230,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,160,230,.06) 1px,transparent 1px);
+ background-size:44px 44px;animation:gridDrift 30s linear infinite;
+ -webkit-mask-image:radial-gradient(ellipse at 55% 50%,#000 30%,transparent 85%);mask-image:radial-gradient(ellipse at 55% 50%,#000 30%,transparent 85%)}
+@keyframes gridDrift{to{background-position:44px 44px,44px 44px}}
+.topbar{position:fixed;top:22px;left:28px;z-index:3;display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;letter-spacing:.06em}
+.topbar img{width:34px;height:34px}
+.wrap{position:relative;z-index:2;min-height:100vh;display:grid;grid-template-columns:minmax(300px,36%) 1fr;align-items:center;padding:0 0 0 7%}
+.card{width:300px}
+h1{margin:0;font-size:38px;font-weight:700;letter-spacing:.02em;text-shadow:0 0 18px rgba(120,170,255,.25)}
+.sub{margin:14px 0 26px;font-size:17px;color:#e8eefb}
+.sub small{display:block;margin-top:6px;font-size:12px;letter-spacing:.28em;color:rgba(170,195,240,.6)}
+.tabs{display:flex;gap:22px;margin:0 0 14px;border-bottom:1px solid rgba(140,170,230,.15)}
+.tabs button{appearance:none;background:none;border:0;color:rgba(200,215,245,.55);font:inherit;font-size:15px;padding:0 2px 9px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-pressed=true]{color:#fff;border-color:#1f7bff}
+label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+input{display:block;width:100%;height:46px;margin:0 0 12px;padding:0 13px;font:inherit;font-size:15px;color:#fff;
+ background:rgba(66,84,112,.55);border:1px solid rgba(150,175,215,.12);border-radius:4px}
+input::placeholder{color:rgba(205,215,235,.6)}
+input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,255,.2)}
+.actions{margin-top:6px}
+.primary{display:block;width:100%;height:46px;border:0;border-radius:4px;background:linear-gradient(180deg,#2a8bff,#1670f0);color:#fff;font:inherit;font-size:16px;letter-spacing:.2em;cursor:pointer;text-align:center;line-height:46px;text-decoration:none;box-shadow:0 6px 18px rgba(22,112,240,.35)}
+.primary:hover{filter:brightness(1.08)}.primary:disabled{opacity:.55}
+.links{display:flex;gap:16px;margin-top:10px}
+.texty{appearance:none;background:none;border:0;padding:4px 0;color:rgba(220,230,250,.82);font:inherit;font-size:13px;cursor:pointer}
+.texty:hover{color:#fff}
+#auth-msg{min-height:1.3em;margin:10px 0 0;font-size:13px;line-height:1.45}
+#auth-msg.ok{color:#b7f7d2}#auth-msg.bad{color:#ffb4c0}
+#config-banner{margin:0 0 12px;padding:8px 10px;font-size:12px;color:#cfe0ff;border:1px dashed rgba(100,160,255,.45);border-radius:4px}
+#session-panel h2{margin:0 0 8px;font-size:18px}#session-panel p{margin:0 0 12px;color:#cdd8ee}
+#session-panel .texty{display:block;margin:8px 0}
+.orbbox{position:relative;height:100vh;min-height:560px}
+#orb{position:absolute;inset:0;width:100%;height:100%}
+.credit{position:fixed;left:28px;bottom:22px;z-index:3;margin:0;font-size:20px;letter-spacing:.16em;font-weight:700;color:#ffe9a0;background:linear-gradient(105deg,#c9a227 0%,#fff4c2 32%,#ffffff 48%,#ffd76a 58%,#e8b84a 78%,#a67c1a 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px rgba(255,232,150,.95)) drop-shadow(0 0 22px rgba(255,210,100,.7)) drop-shadow(0 0 40px rgba(232,180,60,.4)) drop-shadow(0 2px 5px rgba(0,0,0,.65));}
+[hidden]{display:none!important}
+@media (max-width:760px){
+ .wrap{display:flex;flex-direction:column;align-items:center;padding:60px 20px 24px}
+ .orbbox{order:-1;width:100%;height:270px;min-height:0;margin-bottom:0}
+ .card{width:100%;max-width:340px;text-align:left}
+ h1{font-size:30px;text-align:center}.sub{text-align:center;margin:10px 0 20px;font-size:15px}
+ .topbar{position:absolute;top:18px;left:20px}
+ .credit{position:static;text-align:center;margin:28px 0 0;font-size:17px;letter-spacing:.14em}
+}
+</style></head><body>
+<div class="grid" aria-hidden="true"></div>
+<div class="topbar"><img src="logo-mark.png" alt="">聚光单词</div>
+<main class="wrap">
+ <div class="left">
+ <h1>欢迎使用</h1>
+ <p class="sub">登录以同步你的学习进度<small>VOCAB SPOTLIGHT</small></p>
+ <section class="card" aria-label="账号" style="width:auto">
     <p id="config-banner" hidden></p>
     <form id="auth-form">
       <div class="tabs" role="tablist" aria-label="登录或注册">
@@ -283,16 +65,16 @@
         <button type="button" id="mode-register" role="tab" aria-pressed="true" aria-selected="true">注册</button>
       </div>
       <label for="email">邮箱</label>
-      <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="you@example.com">
+      <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="邮箱">
       <label for="password">密码</label>
-      <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="至少 6 位">
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="密码（至少 6 位）">
       <div id="confirm-label">
         <label for="confirm">确认密码</label>
-        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="再输入一次">
+        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="确认密码">
       </div>
       <div class="actions">
         <button type="submit" class="primary" id="btn-submit">注册</button>
-        <button type="button" class="texty" id="btn-forgot">忘记密码</button>
+        <div class="links"><button type="button" class="texty" id="btn-forgot">忘记密码？</button></div>
       </div>
     </form>
 
@@ -313,13 +95,15 @@
     </section>
     <p id="auth-msg" role="status"></p>
   </section>
+
+ </div>
+ <div class="orbbox" aria-hidden="true"><canvas id="orb"></canvas></div>
+ <p class="credit">Doctoral product powered by Pu Jin</p>
 </main>
-<p class="gold-footer">Doctoral product powered by Pu Jin</p>
-<script src="meteor.js"></script>
+<script src="orb.js"></script>
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script src="sync-merge.js"></script>
 <script src="cloud-client.js"></script>
 <script src="auth-page.js"></script>
-</body>
-</html>
+</body></html>
