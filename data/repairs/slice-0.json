@@ -1,0 +1,872 @@
+{
+  "able": {
+    "example_en": "She is able to finish the science report without any help.",
+    "example_zh": "她能够独自完成那份科学报告。",
+    "meaning_zh": "能够；有能力的"
+  },
+  "abnormal": {
+    "example_en": "A temperature of forty degrees is abnormal and needs a doctor.",
+    "example_zh": "四十度的体温不正常，需要去看医生。"
+  },
+  "absolute": {
+    "example_en": "The hall stayed in absolute silence while the exam began.",
+    "example_zh": "考试开始时，大厅里保持着绝对的安静。"
+  },
+  "acceptable": {
+    "example_en": "Handing in the essay one day late was acceptable this time.",
+    "example_zh": "这次作文晚交一天是可以接受的。"
+  },
+  "accessible": {
+    "example_en": "The new ramp makes the library accessible to wheelchair users.",
+    "example_zh": "新坡道让坐轮椅的人也能进入图书馆。",
+    "meaning_zh": "容易到达的"
+  },
+  "accidental": {
+    "example_en": "An accidental bump knocked the paint onto his white shirt.",
+    "example_zh": "一次意外的碰撞把颜料弄到了他的白衬衫上。",
+    "meaning_zh": "意外的"
+  },
+  "active": {
+    "example_en": "She takes an active part in the class debate.",
+    "example_zh": "她积极参加课堂辩论。"
+  },
+  "actual": {
+    "example_en": "The actual number of visitors was twice what we guessed.",
+    "example_zh": "实际的参观人数是我们估计的两倍。",
+    "meaning_zh": "实际的"
+  },
+  "additional": {
+    "example_en": "Mum packed additional snacks because the hike would be long.",
+    "example_zh": "因为徒步路程很长，妈妈额外装了些零食。",
+    "meaning_zh": "额外的"
+  },
+  "adorable": {
+    "example_en": "Everyone smiled at the adorable baby in the red hat.",
+    "example_zh": "大家看见戴红帽子的可爱宝宝都笑了。",
+    "meaning_zh": "可爱的"
+  },
+  "advanced": {
+    "example_en": "Only advanced students may enter the chemistry lab alone.",
+    "example_zh": "只有高级班的学生可以独自进入化学实验室。",
+    "meaning_zh": "高级的；先进的"
+  },
+  "adverbial": {
+    "example_en": "An adverbial phrase at the start tells when the action happened.",
+    "example_zh": "句首的状语短语说明动作是什么时候发生的。"
+  },
+  "aged": {
+    "example_en": "The aged man walks his dog around the lake at dusk.",
+    "example_zh": "那位年老的男士黄昏时绕着湖遛狗。"
+  },
+  "aggressive": {
+    "example_en": "The history book described an aggressive attack on the island.",
+    "example_zh": "历史书描述了对那座岛的侵略性进攻。"
+  },
+  "agricultural": {
+    "example_en": "We visited an agricultural show and saw cows that won prizes.",
+    "example_zh": "我们参观了农业展览，看到了获奖的牛。"
+  },
+  "alcoholic": {
+    "example_en": "Alcoholic drinks were banned at the school leavers' party.",
+    "example_zh": "学校毕业生聚会上禁止含酒精的饮料。",
+    "meaning_zh": "含酒精的"
+  },
+  "alive": {
+    "example_en": "Luckily the goldfish was still alive after the weekend.",
+    "example_zh": "幸运的是，那条金鱼过完周末还活着。",
+    "meaning_zh": "活着的"
+  },
+  "allergic": {
+    "example_en": "Ben is allergic to cats, so he sneezes at his aunt's flat.",
+    "example_zh": "本对猫过敏，所以在阿姨家会打喷嚏。",
+    "meaning_zh": "过敏的"
+  },
+  "alright": {
+    "example_en": "Dad said it was alright to borrow his umbrella today.",
+    "example_zh": "爸爸说今天可以借他的伞。"
+  },
+  "amazed": {
+    "example_en": "I was amazed when the quiet boy won the singing prize.",
+    "example_zh": "那个安静的男孩赢得歌唱奖时，我非常吃惊。"
+  },
+  "ambitious": {
+    "example_en": "The ambitious student aims for the top score in physics.",
+    "example_zh": "那个有野心的学生想拿下物理最高分。"
+  },
+  "American": {
+    "example_en": "Our host family cooked an American breakfast with pancakes.",
+    "example_zh": "寄宿家庭给我们做了有煎饼的美式早餐。",
+    "meaning_zh": "美国的"
+  },
+  "amused": {
+    "example_en": "The toddlers were amused by the puppet show in the hall.",
+    "example_zh": "大厅里的木偶戏把幼儿们逗乐了。"
+  },
+  "amusing": {
+    "example_en": "Grandpa told an amusing joke while we washed the dishes.",
+    "example_zh": "我们洗碗时，爷爷讲了一个有趣的笑话。"
+  },
+  "animated": {
+    "example_en": "The children loved the animated film about a lost robot.",
+    "example_zh": "孩子们喜欢那部关于迷路机器人的动画电影。",
+    "meaning_zh": "动画的"
+  },
+  "annoying": {
+    "example_en": "That annoying drip from the tap kept me up all night.",
+    "example_zh": "水龙头恼人的滴水声让我整夜没睡着。"
+  },
+  "annual": {
+    "example_en": "Our annual school fair raises money for new library books.",
+    "example_zh": "我们一年一度的学校义卖为图书馆的新书筹款。",
+    "meaning_zh": "每年的"
+  },
+  "anti": {
+    "example_en": "Her history essay was anti-war and earned a high mark.",
+    "example_zh": "她的历史作文反对战争，并且得了高分。"
+  },
+  "armed": {
+    "example_en": "Armed officers checked bags at the stadium entrance.",
+    "example_zh": "武装人员在体育场入口检查了背包。",
+    "meaning_zh": "武装的"
+  },
+  "artificial": {
+    "example_en": "These artificial flowers do not need water or sunlight.",
+    "example_zh": "这些人造花不需要水和阳光。",
+    "meaning_zh": "人造的"
+  },
+  "artistic": {
+    "example_en": "Her artistic design for the poster won the class vote.",
+    "example_zh": "她为海报做的艺术设计赢得了全班投票。"
+  },
+  "ashamed": {
+    "example_en": "He felt ashamed after copying answers during the quiz.",
+    "example_zh": "他在测验中抄了答案，事后感到羞愧。"
+  },
+  "Asian": {
+    "example_en": "We ordered Asian noodles at the small restaurant downtown.",
+    "example_zh": "我们在市中心的小餐馆点了亚洲面条。"
+  },
+  "asleep": {
+    "example_en": "The baby was asleep in the pram during the whole walk.",
+    "example_zh": "整个散步途中，宝宝都在婴儿车里睡着。",
+    "meaning_zh": "睡着的"
+  },
+  "assistant": {
+    "example_en": "The assistant coach timed every lap on the running track.",
+    "example_zh": "助理教练在跑道上给每一圈计时。",
+    "meaning_zh": "助理的"
+  },
+  "athletic": {
+    "example_en": "My athletic brother plays both football and basketball.",
+    "example_zh": "我那健壮的哥哥既踢足球又打篮球。"
+  },
+  "atomic": {
+    "example_en": "The textbook diagram shows atomic structure in simple steps.",
+    "example_zh": "课本上的图用简单步骤展示原子结构。",
+    "meaning_zh": "原子的"
+  },
+  "attractive": {
+    "example_en": "Bright colours made the poster attractive from across the hall.",
+    "example_zh": "鲜艳的颜色让海报在大厅另一头也很吸引人。"
+  },
+  "audio": {
+    "example_en": "The audio guide described each painting in the museum.",
+    "example_zh": "音频导览介绍了博物馆里的每一幅画。",
+    "meaning_zh": "音频的"
+  },
+  "Australian": {
+    "example_en": "My Australian pen friend sent photos of a beach near Sydney.",
+    "example_zh": "我的澳大利亚笔友寄来了悉尼附近海滩的照片。",
+    "meaning_zh": "澳大利亚的"
+  },
+  "automatic": {
+    "example_en": "The automatic doors opened as we entered the supermarket.",
+    "example_zh": "我们走进超市时，自动门打开了。",
+    "meaning_zh": "自动的"
+  },
+  "auxiliary": {
+    "example_en": "An auxiliary generator kept the lights on during the storm.",
+    "example_zh": "暴风雨期间，辅助发电机让灯一直亮着。"
+  },
+  "available": {
+    "example_en": "Seats are still available for the concert in the school hall.",
+    "example_zh": "学校礼堂的音乐会还有空位。"
+  },
+  "average": {
+    "example_en": "His average mark in English rose from sixty to seventy-five.",
+    "example_zh": "他的英语平均分从六十分升到了七十五分。",
+    "meaning_zh": "平均的；普通的"
+  },
+  "awake": {
+    "example_en": "I stayed awake until I heard Mum's key in the door.",
+    "example_zh": "我一直醒着，直到听见妈妈用钥匙开门。",
+    "meaning_zh": "醒着的"
+  },
+  "aware": {
+    "example_en": "She became aware of the smoke and called for a teacher.",
+    "example_zh": "她察觉到烟味，立刻叫来了老师。"
+  },
+  "awesome": {
+    "example_en": "The view from the cable car was awesome in clear weather.",
+    "example_zh": "天气晴朗时，从缆车看出去的景色棒极了。",
+    "meaning_zh": "很棒的"
+  },
+  "awful": {
+    "example_en": "An awful smell came from the unlocked fridge this morning.",
+    "example_zh": "今天早上，没关严的冰箱里冒出一股可怕的气味。",
+    "meaning_zh": "可怕的"
+  },
+  "awkward": {
+    "example_en": "His awkward hands dropped the cups while he washed up.",
+    "example_zh": "他笨拙的双手在洗碗时把杯子掉了。"
+  },
+  "bad": {
+    "example_en": "The bad apple at the bottom spoiled the rest of the fruit.",
+    "example_zh": "底部的坏苹果把其余的水果也弄坏了。"
+  },
+  "bald": {
+    "example_en": "My bald grandfather wears a cap when he works in the garden.",
+    "example_zh": "我秃头的爷爷在花园干活时会戴帽子。",
+    "meaning_zh": "秃头的"
+  },
+  "bare": {
+    "example_en": "The children ran across the hot sand with bare feet.",
+    "example_zh": "孩子们光着脚跑过滚烫的沙子。",
+    "meaning_zh": "赤裸的"
+  },
+  "basic": {
+    "example_en": "Cooks learn basic knife skills before they cut vegetables.",
+    "example_zh": "厨师在切菜之前先学基本的用刀技巧。"
+  },
+  "beautiful": {
+    "example_en": "The beautiful bridge looks golden when the sun sets.",
+    "example_zh": "日落时，那座美丽的桥看上去金灿灿的。"
+  },
+  "beloved": {
+    "example_en": "She read her beloved diary again on the train home.",
+    "example_zh": "她在回家的火车上又读了一遍心爱的日记。",
+    "meaning_zh": "心爱的"
+  },
+  "bent": {
+    "example_en": "The bent wheel made his bicycle wobble on the way home.",
+    "example_zh": "弯曲的车轮让他的自行车在回家路上一直晃。"
+  },
+  "best": {
+    "example_en": "She saved her best painting for the campus art show.",
+    "example_zh": "她把最好的画留到校园画展上展出。",
+    "meaning_zh": "最好的"
+  },
+  "better": {
+    "example_en": "This pencil is better for sketching than the cheap one.",
+    "example_zh": "这支铅笔比那支便宜的更适合素描。",
+    "meaning_zh": "更好的"
+  },
+  "big": {
+    "example_en": "A big dog waited outside the bakery for its owner.",
+    "example_zh": "一只大狗在面包店外面等它的主人。"
+  },
+  "bilingual": {
+    "example_en": "The bilingual menu lists dishes in both Chinese and English.",
+    "example_zh": "双语菜单用中文和英文列出菜品。",
+    "meaning_zh": "双语的"
+  },
+  "bitter": {
+    "example_en": "The bitter medicine worked, though he hated the taste.",
+    "example_zh": "这种苦药起了作用，尽管他讨厌那个味道。"
+  },
+  "black": {
+    "example_en": "A black umbrella kept both of us dry in the storm.",
+    "example_zh": "一把黑伞让我们俩在暴风雨里没被淋湿。"
+  },
+  "blank": {
+    "example_en": "Write your name on the blank line at the top of the page.",
+    "example_zh": "把你的名字写在页面上方的空白线上。",
+    "meaning_zh": "空白的"
+  },
+  "blind": {
+    "example_en": "The blind passenger asked where the next stop was.",
+    "example_zh": "那位失明的乘客问下一站在哪里。",
+    "meaning_zh": "失明的"
+  },
+  "blonde": {
+    "example_en": "The blonde singer waved to her family in the front row.",
+    "example_zh": "那位金发歌手向第一排的家人挥了挥手。",
+    "meaning_zh": "金发的"
+  },
+  "blue": {
+    "example_en": "Her blue scarf blew off while she waited for the bus.",
+    "example_zh": "她等公交时，蓝围巾被风吹走了。"
+  },
+  "boiled": {
+    "example_en": "Boiled potatoes and carrots were all we had for dinner.",
+    "example_zh": "晚饭我们只有煮土豆和胡萝卜。"
+  },
+  "bold": {
+    "example_en": "Her bold colours made the classroom mural easy to notice.",
+    "example_zh": "她大胆的配色让教室壁画很容易被注意到。"
+  },
+  "bored": {
+    "example_en": "The boys grew bored halfway through the long assembly.",
+    "example_zh": "冗长的集会进行到一半，男孩们就感到无聊了。"
+  },
+  "bound": {
+    "example_en": "She felt bound to return the wallet she found on the bus.",
+    "example_zh": "她觉得必须把在公交车上捡到的钱包还回去。"
+  },
+  "brave": {
+    "example_en": "A brave firefighter carried the child out of the smoke.",
+    "example_zh": "一位勇敢的消防员把孩子从烟雾中抱了出来。"
+  },
+  "brief": {
+    "example_en": "The principal gave a brief welcome before the concert started.",
+    "example_zh": "音乐会开始前，校长做了简短的欢迎。"
+  },
+  "bright": {
+    "example_en": "Bright lamps over the desk help my eyes during homework.",
+    "example_zh": "书桌上方的明亮台灯让我写作业时眼睛更舒服。"
+  },
+  "British": {
+    "example_en": "British coins look different from the ones in my pocket.",
+    "example_zh": "英国硬币和我口袋里的那些看起来不一样。"
+  },
+  "broad": {
+    "example_en": "A broad path leads from the gate to the sports field.",
+    "example_zh": "一条宽阔的小路从大门通向运动场。",
+    "meaning_zh": "宽阔的"
+  },
+  "broken": {
+    "example_en": "We taped the broken chair so nobody would sit on it.",
+    "example_zh": "我们把坏椅子用胶带封住，免得有人去坐。",
+    "meaning_zh": "破损的"
+  },
+  "brown": {
+    "example_en": "Brown shoes got muddy on the way across the wet field.",
+    "example_zh": "棕色的鞋子在穿过湿地时沾上了泥。",
+    "meaning_zh": "棕色的"
+  },
+  "busy": {
+    "example_en": "The busy waiter forgot our soup during the lunch rush.",
+    "example_zh": "忙碌的服务员在午饭高峰时忘了我们的汤。"
+  },
+  "Canadian": {
+    "example_en": "My Canadian uncle coaches ice hockey at a local rink.",
+    "example_zh": "我的加拿大叔叔在当地溜冰场教冰球。",
+    "meaning_zh": "加拿大的"
+  },
+  "Catholic": {
+    "example_en": "They sing in a Catholic church choir on Sunday mornings.",
+    "example_zh": "他们周日上午在天主教堂的唱诗班唱歌。",
+    "meaning_zh": "天主教的"
+  },
+  "central": {
+    "example_en": "Our flat is central, so the ride to school is short.",
+    "example_zh": "我们的公寓在市中心，所以去学校的路程很短。",
+    "meaning_zh": "中心的"
+  },
+  "certain": {
+    "example_en": "I am certain the keys are still in my coat pocket.",
+    "example_zh": "我确定钥匙还在我的外套口袋里。",
+    "meaning_zh": "确定的"
+  },
+  "cheeky": {
+    "example_en": "The cheeky parrot repeated our teacher's hello from its cage.",
+    "example_zh": "那只厚脸皮的鹦鹉在笼子里重复我们老师的问候。"
+  },
+  "chief": {
+    "example_en": "Safety is the chief concern when we use the science lab.",
+    "example_zh": "我们使用科学实验室时，安全是最主要的考虑。"
+  },
+  "Chinese": {
+    "example_en": "Chinese tea is served after meals at my grandparents' house.",
+    "example_zh": "在爷爷奶奶家，饭后会上一壶中国茶。",
+    "meaning_zh": "中国的"
+  },
+  "civil": {
+    "example_en": "The poster listed basic civil rights beside the classroom door.",
+    "example_zh": "海报在教室门边列出了基本的公民权利。",
+    "meaning_zh": "公民的"
+  },
+  "classic": {
+    "example_en": "This classic song still plays at our winter school dance.",
+    "example_zh": "这首经典歌曲仍会在我们的冬季学校舞会上播放。",
+    "meaning_zh": "经典的"
+  },
+  "classical": {
+    "example_en": "She practises classical piano for an hour after supper.",
+    "example_zh": "她晚饭后会练一个小时的古典钢琴。",
+    "meaning_zh": "古典的"
+  },
+  "clean": {
+    "example_en": "His clean shirt was ready on the bed before the interview.",
+    "example_zh": "面试前，他的干净衬衫已经放在床上。",
+    "meaning_zh": "干净的"
+  },
+  "clear": {
+    "example_en": "Her clear explanation helped me understand the map scale.",
+    "example_zh": "她清楚的讲解帮我明白了地图的比例尺。",
+    "meaning_zh": "清楚的"
+  },
+  "clever": {
+    "example_en": "A clever shortcut through the park gets us home faster.",
+    "example_zh": "穿过公园的一条巧妙近路让我们更快到家。"
+  },
+  "clinical": {
+    "example_en": "Students practise clinical skills at the hospital open day.",
+    "example_zh": "学生们在医院开放日练习临床技能。",
+    "meaning_zh": "临床的"
+  },
+  "comfortable": {
+    "example_en": "These comfortable trainers are what I wear for long walks.",
+    "example_zh": "我走远路时就穿这双舒适的运动鞋。"
+  },
+  "common": {
+    "example_en": "Plastic rulers are common in nearly every pencil case.",
+    "example_zh": "几乎每个铅笔盒里都有塑料尺，这很常见。",
+    "meaning_zh": "普通的；常见的"
+  },
+  "competitive": {
+    "example_en": "The competitive final drew a huge crowd to the school gym.",
+    "example_zh": "这场竞争激烈的决赛把一大群人吸引到了学校体育馆。"
+  },
+  "comprehensive": {
+    "example_en": "This comprehensive guide lists every bus that passes the school.",
+    "example_zh": "这本全面的指南列出了经过学校的每一路公交。"
+  },
+  "confident": {
+    "example_en": "She sounded confident when she introduced the guest speaker.",
+    "example_zh": "她介绍演讲嘉宾时，声音听起来很自信。"
+  },
+  "contemporary": {
+    "example_en": "Contemporary dance was the highlight of the talent show.",
+    "example_zh": "当代舞是才艺表演中最精彩的部分。"
+  },
+  "continuous": {
+    "example_en": "Continuous rain flooded the path behind the science block.",
+    "example_zh": "连续的降雨淹没了科学楼后面的小路。",
+    "meaning_zh": "连续的"
+  },
+  "conventional": {
+    "example_en": "A conventional oven takes longer than our microwave at home.",
+    "example_zh": "家里的传统烤箱比微波炉花的时间更长。",
+    "meaning_zh": "传统的"
+  },
+  "cool": {
+    "example_en": "The cool shade under the oak saved us from the heat.",
+    "example_zh": "橡树下凉爽的树荫让我们躲开了酷热。"
+  },
+  "correct": {
+    "example_en": "Check that the correct name is printed on your exam card.",
+    "example_zh": "核对准考证上印的姓名是否正确。"
+  },
+  "creative": {
+    "example_en": "His creative use of cardboard became a model of our town.",
+    "example_zh": "他有创意地用纸板做成了我们小镇的模型。",
+    "meaning_zh": "有创意的"
+  },
+  "criminal": {
+    "example_en": "Criminal damage to the lockers was reported to the office.",
+    "example_zh": "储物柜被人故意破坏的事已经报告给了办公室。",
+    "meaning_zh": "犯罪的"
+  },
+  "critical": {
+    "example_en": "The injured player was in a critical condition that night.",
+    "example_zh": "那名受伤的球员当晚伤势危急。",
+    "meaning_zh": "危急的"
+  },
+  "cultural": {
+    "example_en": "The cultural festival featured songs from five countries.",
+    "example_zh": "文化节上表演了来自五个国家的歌曲。",
+    "meaning_zh": "文化的"
+  },
+  "current": {
+    "example_en": "The current timetable is pinned on the board by the office.",
+    "example_zh": "当前的时刻表钉在办公室旁边的布告板上。",
+    "meaning_zh": "当前的"
+  },
+  "daft": {
+    "example_en": "It felt daft to wear sandals during that heavy snowstorm.",
+    "example_zh": "在那场大暴风雪里穿凉鞋，感觉太蠢了。"
+  },
+  "daily": {
+    "example_en": "Daily practice on the violin has improved her tone.",
+    "example_zh": "每天练小提琴让她的音色变好了。"
+  },
+  "dead": {
+    "example_en": "Dead leaves were swept into piles along the garden path.",
+    "example_zh": "枯叶被扫成一堆一堆，沿着花园小径堆好。"
+  },
+  "decent": {
+    "example_en": "He made a decent apology and his friend accepted it.",
+    "example_zh": "他得体地道了歉，朋友接受了。"
+  },
+  "deep": {
+    "example_en": "The pond is deep at the far end, so swimming is banned there.",
+    "example_zh": "池塘远端水深，所以那里禁止游泳。",
+    "meaning_zh": "深的"
+  },
+  "dependent": {
+    "example_en": "Young chicks are dependent on the hen for warmth.",
+    "example_zh": "小鸡要靠母鸡来取暖。",
+    "meaning_zh": "依赖的"
+  },
+  "detailed": {
+    "example_en": "She kept a detailed record of how the beans grew.",
+    "example_zh": "她详细记录了豆子的生长情况。"
+  },
+  "direct": {
+    "example_en": "Is there a direct train from our town to the capital?",
+    "example_zh": "从我们镇到首都有直达火车吗？",
+    "meaning_zh": "直接的"
+  },
+  "dirty": {
+    "example_en": "Dirty boots were left outside so the kitchen floor stayed clean.",
+    "example_zh": "脏靴子放在门外，厨房地板才保持干净。"
+  },
+  "disabled": {
+    "example_en": "A disabled athlete finished the city race in a wheelchair.",
+    "example_zh": "一位残疾运动员坐着轮椅完成了城市赛跑。",
+    "meaning_zh": "残疾的"
+  },
+  "disgusting": {
+    "example_en": "The disgusting mould on the bread meant we threw it away.",
+    "example_zh": "面包上恶心的霉让我们把它扔掉了。"
+  },
+  "distinctive": {
+    "example_en": "His distinctive handwriting is easy to spot on shared posters.",
+    "example_zh": "他与众不同的笔迹在共用的海报上很容易认出来。",
+    "meaning_zh": "独特的"
+  },
+  "diverse": {
+    "example_en": "The diverse menu offers rice, noodles, soup, and salad.",
+    "example_zh": "多样的菜单上有米饭、面条、汤和沙拉。",
+    "meaning_zh": "多样的"
+  },
+  "domestic": {
+    "example_en": "Domestic flights were delayed because of the thick fog.",
+    "example_zh": "国内航班因为浓雾延误了。",
+    "meaning_zh": "国内的"
+  },
+  "double": {
+    "example_en": "We ordered a double portion of rice after the long hike.",
+    "example_zh": "长途徒步之后，我们点了双份米饭。"
+  },
+  "dramatic": {
+    "example_en": "A dramatic sunset turned the whole lake red and purple.",
+    "example_zh": "戏剧性的日落把整个湖染成了红色和紫色。",
+    "meaning_zh": "戏剧性的"
+  },
+  "dry": {
+    "example_en": "The towels were dry after an hour in the hot sun.",
+    "example_zh": "毛巾在烈日下晒了一个小时就干了。"
+  },
+  "due": {
+    "example_en": "The history essay is due before the winter holiday begins.",
+    "example_zh": "历史作文在寒假开始之前必须交。"
+  },
+  "Dutch": {
+    "example_en": "We tried Dutch cheese at the food stall beside the river.",
+    "example_zh": "我们在河边的食品摊品尝了荷兰奶酪。",
+    "meaning_zh": "荷兰的"
+  },
+  "east": {
+    "example_en": "The east side of the house stays cool during hot afternoons.",
+    "example_zh": "房子的东侧在炎热的下午仍然凉快。",
+    "meaning_zh": "东边的"
+  },
+  "eastern": {
+    "example_en": "Eastern provinces expect heavy snow according to the forecast.",
+    "example_zh": "根据天气预报，东部省份将有大雪。"
+  },
+  "easy": {
+    "example_en": "The easy questions at the start gave everyone some confidence.",
+    "example_zh": "开头的简单题目给了每个人一些信心。"
+  },
+  "economic": {
+    "example_en": "The economic report on the evening news worried my parents.",
+    "example_zh": "晚间新闻里的经济报道让我父母担心。",
+    "meaning_zh": "经济的"
+  },
+  "educational": {
+    "example_en": "The educational visit to the dam taught us how power is made.",
+    "example_zh": "这次有教育意义的大坝参观让我们明白了电是怎样产生的。",
+    "meaning_zh": "有教育意义的"
+  },
+  "effective": {
+    "example_en": "Short, effective notes helped her revise while riding the bus.",
+    "example_zh": "简短而有效的笔记帮她在坐公交时复习。"
+  },
+  "elderly": {
+    "example_en": "An elderly neighbour waters our plants whenever we travel.",
+    "example_zh": "我们外出时，一位年长的邻居会给植物浇水。",
+    "meaning_zh": "年老的"
+  },
+  "electric": {
+    "example_en": "The electric fan kept our classroom bearable in June.",
+    "example_zh": "电风扇让我们的教室在六月还能待下去。",
+    "meaning_zh": "电动的"
+  },
+  "electrical": {
+    "example_en": "An electrical fault shut the lights off during the play.",
+    "example_zh": "一次电气故障让演出中途灯灭了。",
+    "meaning_zh": "电气的"
+  },
+  "electronic": {
+    "example_en": "Electronic tickets on his phone got us into the museum.",
+    "example_zh": "他手机上的电子票让我们进了博物馆。",
+    "meaning_zh": "电子的"
+  },
+  "embarrassed": {
+    "example_en": "She felt embarrassed when her phone rang in the quiet library.",
+    "example_zh": "她的手机在安静的图书馆里响了，她觉得很尴尬。"
+  },
+  "embarrassing": {
+    "example_en": "Tripping on the stage was embarrassing, but she kept singing.",
+    "example_zh": "在台上绊倒很尴尬，但她继续唱了下去。"
+  },
+  "emotional": {
+    "example_en": "The emotional song made several parents cry at the concert.",
+    "example_zh": "那首伤感的歌让好几位家长在音乐会上哭了。",
+    "meaning_zh": "伤感的"
+  },
+  "empty": {
+    "example_en": "The empty bottle rolled under the seat during the bus ride.",
+    "example_zh": "空瓶子在乘公交时滚到了座位底下。",
+    "meaning_zh": "空的"
+  },
+  "environmental": {
+    "example_en": "Our environmental club cleaned rubbish from the riverbank.",
+    "example_zh": "我们的环境社团清理了河岸上的垃圾。",
+    "meaning_zh": "环境的"
+  },
+  "equal": {
+    "example_en": "Both teams had equal numbers of players after the change.",
+    "example_zh": "调整之后，两队的球员人数相等。",
+    "meaning_zh": "相等的"
+  },
+  "equivalent": {
+    "example_en": "A kilometre is equivalent to one thousand metres.",
+    "example_zh": "一公里等同于一千米。",
+    "meaning_zh": "等同的"
+  },
+  "European": {
+    "example_en": "European cities appear often in our geography worksheets this term.",
+    "example_zh": "欧洲城市经常出现在我们这学期的地理练习里。",
+    "meaning_zh": "欧洲的"
+  },
+  "everyday": {
+    "example_en": "Everyday shoes are fine for the walk, so leave the heavy boots.",
+    "example_zh": "这次走路穿日常的鞋就行，把沉重的靴子留下。"
+  },
+  "exact": {
+    "example_en": "Measure the exact length of the table before buying the cloth.",
+    "example_zh": "买桌布之前，先量一量桌子的准确长度。"
+  },
+  "excellent": {
+    "example_en": "Her excellent drawing hung in the school corridor all month.",
+    "example_zh": "她的优秀画作在学校走廊里挂了整整一个月。"
+  },
+  "excited": {
+    "example_en": "The pupils were excited about visiting the zoo on Thursday.",
+    "example_zh": "学生们对周四去动物园感到兴奋。"
+  },
+  "exclusive": {
+    "example_en": "Membership at that exclusive club costs more than my bicycle.",
+    "example_zh": "那个排外俱乐部的会费比我的自行车还贵。"
+  },
+  "existing": {
+    "example_en": "The existing bridge stays open while workers build the new one.",
+    "example_zh": "工人修建新桥时，现有的桥仍然开放。"
+  },
+  "experienced": {
+    "example_en": "An experienced guide led us safely along the cliff path.",
+    "example_zh": "一位有经验的向导带领我们安全地走过悬崖小道。",
+    "meaning_zh": "有经验的"
+  },
+  "extended": {
+    "example_en": "The extended lunch break let us finish eating without rushing.",
+    "example_zh": "延长的午休让我们从容吃完了饭。"
+  },
+  "extensive": {
+    "example_en": "Extensive damage followed the storm that hit the coast.",
+    "example_zh": "袭击海岸的风暴造成了大范围破坏。",
+    "meaning_zh": "广泛的"
+  },
+  "external": {
+    "example_en": "Paint the external walls before the rainy season starts.",
+    "example_zh": "在雨季开始前把外墙刷好。",
+    "meaning_zh": "外部的"
+  },
+  "extraordinary": {
+    "example_en": "An extraordinary comet was visible from our balcony last night.",
+    "example_zh": "昨晚从我们的阳台能看见一颗非凡的彗星。"
+  },
+  "extreme": {
+    "example_en": "Extreme cold forced the football match to stop early.",
+    "example_zh": "极端的寒冷迫使足球比赛提前结束。"
+  },
+  "fair": {
+    "example_en": "The judge gave a fair score to every dancer on the stage.",
+    "example_zh": "评委给舞台上的每一位舞者都打了公平的分数。"
+  },
+  "false": {
+    "example_en": "A false fire alarm emptied the canteen during lunch.",
+    "example_zh": "一次假火警让食堂在午饭时被清空了。"
+  },
+  "famous": {
+    "example_en": "The famous swimmer visited our pool and signed our shirts.",
+    "example_zh": "那位著名的游泳运动员来到我们的泳池，并在我们的衬衫上签名。"
+  },
+  "fantastic": {
+    "example_en": "That fantastic save kept our team in the match until the end.",
+    "example_zh": "那次精彩的扑救让我们队一直撑到了比赛结束。",
+    "meaning_zh": "极好的"
+  },
+  "fascinating": {
+    "example_en": "The fascinating documentary followed turtles across the ocean.",
+    "example_zh": "那部迷人的纪录片跟随海龟穿越了海洋。",
+    "meaning_zh": "迷人的"
+  },
+  "fast": {
+    "example_en": "A fast current pulled the little boat away from the bank.",
+    "example_zh": "快速的水流把小船从岸边冲走了。"
+  },
+  "fat": {
+    "example_en": "The fat sparrow could barely reach the bird feeder.",
+    "example_zh": "那只胖麻雀几乎飞不到喂鸟器上。",
+    "meaning_zh": "胖的"
+  },
+  "fellow": {
+    "example_en": "She lent a tissue to her fellow passenger on the crowded train.",
+    "example_zh": "她在拥挤的火车上把纸巾借给了同行的乘客。",
+    "meaning_zh": "同伴的"
+  },
+  "female": {
+    "example_en": "A female referee controlled the final with a firm whistle.",
+    "example_zh": "一位女裁判用有力的哨声掌控了决赛。",
+    "meaning_zh": "女性的"
+  },
+  "filthy": {
+    "example_en": "Filthy mud covered our socks after the cross-country run.",
+    "example_zh": "越野跑之后，污浊的泥巴糊满了我们的袜子。"
+  },
+  "final": {
+    "example_en": "The final whistle brought a huge cheer from the stands.",
+    "example_zh": "终场哨声引来看台上巨大的欢呼。"
+  },
+  "financial": {
+    "example_en": "Dad reads the financial page while he drinks his morning tea.",
+    "example_zh": "爸爸早上喝茶时会读报纸的金融版。",
+    "meaning_zh": "金融的"
+  },
+  "fine": {
+    "example_en": "The weather stayed fine, so our picnic blankets remained outside.",
+    "example_zh": "天气一直很好，所以我们的野餐垫就留在外面。"
+  },
+  "flat": {
+    "example_en": "The flat field behind the school is perfect for flying kites.",
+    "example_zh": "学校后面那块平地非常适合放风筝。",
+    "meaning_zh": "平坦的"
+  },
+  "foreign": {
+    "example_en": "Foreign stamps fill the album my uncle gave me last year.",
+    "example_zh": "外国邮票贴满了叔叔去年送我的集邮册。"
+  },
+  "formal": {
+    "example_en": "He wore a formal suit to his sister's graduation dinner.",
+    "example_zh": "他穿了一套正式西装去参加姐姐的毕业晚宴。",
+    "meaning_zh": "正式的"
+  },
+  "former": {
+    "example_en": "Our former captain spoke to the squad before kickoff.",
+    "example_zh": "我们的前任队长在开球前对队员讲了话。"
+  },
+  "free": {
+    "example_en": "I was free after the club, so I helped tidy the art room.",
+    "example_zh": "社团活动结束后我有空，就帮忙收拾了美术教室。"
+  },
+  "freezing": {
+    "example_en": "Freezing rain made the playground too slippery for ball games.",
+    "example_zh": "冻雨让操场太滑，没法进行球类游戏。",
+    "meaning_zh": "极冷的"
+  },
+  "French": {
+    "example_en": "We bought French bread and cheese for the class picnic.",
+    "example_zh": "我们为班级野餐买了法式面包和奶酪。",
+    "meaning_zh": "法国的"
+  },
+  "fresh": {
+    "example_en": "Fresh strawberries were cheaper at the morning market.",
+    "example_zh": "新鲜草莓在早市上更便宜。"
+  },
+  "friendly": {
+    "example_en": "A friendly librarian showed me where the atlases are kept.",
+    "example_zh": "一位友好的图书管理员告诉我地图册放在哪里。"
+  },
+  "full": {
+    "example_en": "The full kettle was too heavy for my little cousin to lift.",
+    "example_zh": "满满的水壶太重，我的小表弟提不起来。",
+    "meaning_zh": "满的"
+  },
+  "funny": {
+    "example_en": "His funny drawing of the head teacher made everyone laugh.",
+    "example_zh": "他把校长画得很滑稽，大家都笑了。"
+  },
+  "general": {
+    "example_en": "The general rule is to walk, not run, inside the corridors.",
+    "example_zh": "总的规则是在走廊里走路，不要跑。"
+  },
+  "genuine": {
+    "example_en": "Her genuine apology made her friend forgive the broken vase.",
+    "example_zh": "她真诚的道歉让朋友原谅了打碎花瓶的事。"
+  },
+  "German": {
+    "example_en": "Our German exchange student shared homemade cake at lunch.",
+    "example_zh": "我们的德国交换生午饭时分享了自制蛋糕。",
+    "meaning_zh": "德国的"
+  },
+  "glad": {
+    "example_en": "I am glad the lost cat found its way back home.",
+    "example_zh": "我很高兴那只走失的猫自己找到了回家的路。"
+  },
+  "global": {
+    "example_en": "Global news about the flood stayed on television all evening.",
+    "example_zh": "关于洪水的全球新闻在电视上播了一整个晚上。",
+    "meaning_zh": "全球的"
+  },
+  "grand": {
+    "example_en": "A grand parade filled the main street on National Day.",
+    "example_zh": "国庆节那天，隆重的游行挤满了主街。",
+    "meaning_zh": "隆重的"
+  },
+  "grateful": {
+    "example_en": "We were grateful when a stranger returned my brother's phone.",
+    "example_zh": "一位陌生人送回了我弟弟的手机，我们非常感激。",
+    "meaning_zh": "感激的"
+  },
+  "great": {
+    "example_en": "A great chance came when the coach needed another singer.",
+    "example_zh": "教练还需要一名歌手时，一个极好的机会来了。",
+    "meaning_zh": "极好的；伟大的"
+  },
+  "Greek": {
+    "example_en": "Greek salad was the most popular dish at the food fair.",
+    "example_zh": "希腊沙拉是美食节上最受欢迎的菜。",
+    "meaning_zh": "希腊的"
+  },
+  "green": {
+    "example_en": "Green apples from our garden taste sharper than the red ones.",
+    "example_zh": "我们花园里的青苹果比红苹果味道更酸。"
+  },
+  "grey": {
+    "example_en": "Grey clouds piled up, so we carried the washing inside.",
+    "example_zh": "灰云堆了起来，于是我们把洗好的衣服收了进去。"
+  },
+  "happy": {
+    "example_en": "Happy shouts came from the playground as soon as the bell rang.",
+    "example_zh": "铃声一响，操场上就传来开心的喊声。"
+  },
+  "hard": {
+    "example_en": "The hard ground made our feet ache during the morning drill.",
+    "example_zh": "坚硬的地面让我们在早操时脚发疼。"
+  }
+}

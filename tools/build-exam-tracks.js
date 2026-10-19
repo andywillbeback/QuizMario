@@ -8,6 +8,8 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { isTemplateExample } = require("./example-templates");
+const { loadRepairs } = require("./apply-example-repairs");
 
 const root = path.join(__dirname, "..");
 
@@ -363,10 +365,25 @@ function main() {
   const gaokaoOfficialKeys = new Set(
     zhongkaoOfficial.map((c) => senseKey(c.word)).concat(gaokaoOfficialExtra.map((c) => senseKey(c.word)))
   );
+  const repairs = loadRepairs();
+  function applyRepair(card) {
+    const fix = repairs.get(card.word) || repairs.get(senseKey(card.word));
+    if (!fix) return;
+    if (fix.meaning_zh) card.meaning_zh = fix.meaning_zh;
+    if (fix.pos) {
+      card.pos = fix.pos;
+      card.root_group = fix.pos;
+    }
+    if (fix.example_en) card.example_en = fix.example_en;
+    if (fix.example_zh) card.example_zh = fix.example_zh;
+  }
+  for (const card of zhongkaoOfficial.concat(zhongkaoExt, gaokaoOfficialExtra)) applyRepair(card);
+
   const gaokaoExtFromJunior = zhongkaoExt
     .filter((c) => !gaokaoOfficialKeys.has(senseKey(c.word)))
     .map((c) => Object.assign({}, c, { scene: "高考" }));
   const gaokaoExtOwn = plan.gaokaoExtra.map((s) => makeCard(s, bank, lex, "高考", gaps, zhPatch));
+  for (const card of gaokaoExtOwn) applyRepair(card);
   const gaokaoExt = gaokaoExtFromJunior.concat(gaokaoExtOwn);
 
   const gaokaoOfficial = zhongkaoOfficial.map((c) => Object.assign({}, c, { scene: "高考" })).concat(gaokaoOfficialExtra);
@@ -389,6 +406,20 @@ function main() {
     "高考",
     "高考拓展"
   );
+
+  function assertNoTemplates(track) {
+    const bad = [];
+    for (const set of track.sets) {
+      for (const card of set) {
+        if (isTemplateExample(card.example_en)) bad.push(card.word + ": " + card.example_en);
+      }
+    }
+    if (bad.length) {
+      throw new Error(track.id + " still has " + bad.length + " template examples:\n" + bad.slice(0, 12).join("\n"));
+    }
+  }
+  assertNoTemplates(zhongkao);
+  assertNoTemplates(gaokao);
 
   const oldZk = (tracks.find((t) => t.id === "zhongkao") || { sets: [] });
   const oldWords = flattenSets(oldZk).map((c) => c.word);

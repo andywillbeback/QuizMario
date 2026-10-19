@@ -1,0 +1,289 @@
+{
+  "significantly": {
+    "example_en": "Her English has improved significantly this term.",
+    "example_zh": "这学期她的英语进步很大。"
+  },
+  "slowly": {
+    "example_en": "The bus moved slowly through the snow.",
+    "example_zh": "公交车在雪里开得很慢。"
+  },
+  "badly": {
+    "example_en": "She cut her finger badly while cooking.",
+    "example_zh": "她做饭时手指伤得很重。"
+  },
+  "fully": {
+    "example_en": "I fully understand this grammar rule now.",
+    "example_zh": "我现在完全明白这条语法规则了。"
+  },
+  "alike": {
+    "example_en": "The twin sisters look alike, so teachers often mix up their names.",
+    "example_zh": "这对双胞胎姐妹长得很像，老师经常把她们的名字搞混。"
+  },
+  "locally": {
+    "example_en": "We try to buy vegetables that are grown locally.",
+    "example_zh": "我们尽量买当地种的蔬菜。"
+  },
+  "safely": {
+    "example_en": "The children crossed the road safely.",
+    "example_zh": "孩子们安全地过了马路。"
+  },
+  "specially": {
+    "example_en": "Mum baked this cake specially for Dad's birthday.",
+    "example_zh": "妈妈专门为爸爸的生日烤了这个蛋糕。"
+  },
+  "largely": {
+    "example_en": "The plan worked largely because everyone helped.",
+    "example_zh": "计划能成，主要是因为大家都帮了忙。"
+  },
+  "partly": {
+    "example_en": "The window was partly open.",
+    "example_zh": "窗户开了一半。"
+  },
+  "heavily": {
+    "example_en": "It snowed heavily last night.",
+    "example_zh": "昨晚雪下得很大。"
+  },
+  "necessarily": {
+    "example_en": "A bigger bag is not necessarily better.",
+    "example_zh": "包大不一定更好。"
+  },
+  "simply": {
+    "example_en": "I simply want a glass of water.",
+    "example_zh": "我只要一杯水。"
+  },
+  "beautifully": {
+    "example_en": "She played the piano beautifully at the concert.",
+    "example_zh": "她在音乐会上钢琴弹得很动听。"
+  },
+  "directly": {
+    "example_en": "This train goes directly to Shanghai.",
+    "example_zh": "这趟火车直达上海。"
+  },
+  "entirely": {
+    "example_en": "That story is entirely true.",
+    "example_zh": "那个故事完全是真的。"
+  },
+  "exactly": {
+    "example_en": "Your answer is exactly right.",
+    "example_zh": "你的答案完全正确。"
+  },
+  "mainly": {
+    "example_en": "This shop mainly sells stationery.",
+    "example_zh": "这家店主要卖文具。"
+  },
+  "quickly": {
+    "example_en": "Please reply quickly so we can book the tickets.",
+    "example_zh": "请尽快回复，我们好订票。"
+  },
+  "specifically": {
+    "example_en": "The teacher specifically asked us to bring a ruler.",
+    "example_zh": "老师特别要求我们带一把尺子。"
+  },
+  "unfortunately": {
+    "example_en": "Unfortunately, the library is closed today.",
+    "example_zh": "不巧，图书馆今天关门。"
+  },
+  "boldly": {
+    "example_en": "She boldly volunteered to speak first.",
+    "example_zh": "她大胆地主动要求第一个发言。"
+  },
+  "precisely": {
+    "example_en": "Please arrive at eight precisely.",
+    "example_zh": "请准时八点到。"
+  },
+  "hopefully": {
+    "example_en": "She looked hopefully at the score on the screen.",
+    "example_zh": "她满怀希望地看着屏幕上的分数。"
+  },
+  "strongly": {
+    "example_en": "The teacher strongly advised us to review tonight.",
+    "example_zh": "老师强烈建议我们今晚复习。"
+  },
+  "reasonably": {
+    "example_en": "The shop priced the pen reasonably.",
+    "example_zh": "这家店给钢笔定的价格还算合理。"
+  },
+  "anxiously": {
+    "example_en": "She waited anxiously for the test result.",
+    "example_zh": "她焦急地等待考试成绩。"
+  },
+  "widely": {
+    "example_en": "Football is widely played in our school.",
+    "example_zh": "我们学校踢足球的人很多。"
+  },
+  "naturally": {
+    "example_en": "She talks naturally with new classmates.",
+    "example_zh": "她和新同学说话很自然。"
+  },
+  "perfectly": {
+    "example_en": "The cake fits in the box perfectly.",
+    "example_zh": "蛋糕和盒子的大小正好合适。"
+  },
+  "somehow": {
+    "example_en": "Somehow the classroom door opened by itself.",
+    "example_zh": "不知怎么的，教室的门自己开了。"
+  },
+  "completely": {
+    "example_en": "I completely forgot my homework.",
+    "example_zh": "我把作业忘得干干净净。"
+  },
+  "effectively": {
+    "example_en": "Pictures help students remember new words effectively.",
+    "example_zh": "图片能帮助学生有效记住生词。"
+  },
+  "truly": {
+    "example_en": "I truly believe you can pass this test.",
+    "example_zh": "我真的相信你能通过这次考试。"
+  },
+  "equally": {
+    "example_en": "The two sisters are equally good at maths.",
+    "example_zh": "两姐妹数学一样好。"
+  },
+  "successfully": {
+    "example_en": "He successfully climbed to the top of the hill.",
+    "example_zh": "他成功地爬到了山顶。"
+  },
+  "aloud": {
+    "example_en": "Please read the first paragraph aloud.",
+    "example_zh": "请把第一段大声读出来。"
+  },
+  "regularly": {
+    "example_en": "She visits her grandparents regularly.",
+    "example_zh": "她经常去看望祖父母。"
+  },
+  "carefully": {
+    "example_en": "Please handle the glass carefully.",
+    "example_zh": "拿玻璃杯请小心。"
+  },
+  "thoroughly": {
+    "example_en": "Wash your hands thoroughly before lunch.",
+    "example_zh": "午饭前把手彻底洗干净。"
+  },
+  "deeply": {
+    "example_en": "He was deeply moved by the story.",
+    "example_zh": "他被这个故事深深打动了。"
+  },
+  "frequently": {
+    "example_en": "It rains frequently here in spring.",
+    "example_zh": "这里春天经常下雨。"
+  },
+  "properly": {
+    "example_en": "Please close the door properly.",
+    "example_zh": "请把门关好。"
+  },
+  "accurately": {
+    "example_en": "Write the date accurately on the form.",
+    "example_zh": "在表格上把日期写准确。"
+  },
+  "closely": {
+    "example_en": "Listen closely to the recording.",
+    "example_zh": "仔细听这段录音。"
+  },
+  "easily": {
+    "example_en": "Beginners can use this app easily.",
+    "example_zh": "初学者用这个应用很容易。"
+  },
+  "automatically": {
+    "example_en": "The lights turn on automatically after dark.",
+    "example_zh": "这些灯天黑后会自动打开。"
+  },
+  "considerably": {
+    "example_en": "The town has grown considerably in ten years.",
+    "example_zh": "这座小镇十年里扩大了不少。"
+  },
+  "constantly": {
+    "example_en": "My little brother constantly asks questions.",
+    "example_zh": "我弟弟不停地问问题。"
+  },
+  "primarily": {
+    "example_en": "This book is primarily for middle-school students.",
+    "example_zh": "这本书主要是给中学生看的。"
+  },
+  "seriously": {
+    "example_en": "Please take the doctor's advice seriously.",
+    "example_zh": "请认真对待医生的建议。"
+  },
+  "rapidly": {
+    "example_en": "The river rose rapidly after the storm.",
+    "example_zh": "暴风雨过后河水涨得很快。"
+  },
+  "bravely": {
+    "example_en": "She bravely told the teacher the truth.",
+    "example_zh": "她勇敢地把实情告诉了老师。"
+  },
+  "accidentally": {
+    "example_en": "I accidentally sent the message to the wrong classmate.",
+    "example_zh": "我不小心把消息发给了别的同学。"
+  },
+  "totally": {
+    "example_en": "I totally forgot about the meeting.",
+    "example_zh": "我把这次会面忘得一干二净。"
+  },
+  "definitely": {
+    "example_en": "We should definitely leave before six.",
+    "example_zh": "我们肯定得在六点前走。"
+  },
+  "certainly": {
+    "example_en": "I will certainly help you with the project.",
+    "example_zh": "我一定会帮你做这个项目。"
+  },
+  "bye": {
+    "example_en": "Bye! See you tomorrow morning.",
+    "example_zh": "再见！明天早上见。"
+  },
+  "oh": {
+    "example_en": "Oh! I left my keys in the classroom.",
+    "example_zh": "哦！我把钥匙落在教室里了。"
+  },
+  "pardon": {
+    "example_en": "Pardon? Could you say that again?",
+    "example_zh": "请再说一遍？你能再说一次吗？"
+  },
+  "thanks": {
+    "example_en": "Thanks for lending me your pen.",
+    "example_zh": "谢谢你把笔借给我。"
+  },
+  "hey": {
+    "example_en": "Hey! Your book is on the floor.",
+    "example_zh": "嘿！你的书掉在地上了。"
+  },
+  "wow": {
+    "example_en": "Wow! You finished the puzzle so fast.",
+    "example_zh": "哇！你这么快就拼完了。"
+  },
+  "unless": {
+    "example_en": "You will miss the bus unless you leave now.",
+    "example_zh": "你现在不走就会错过公交车。"
+  },
+  "whilst": {
+    "example_en": "Please stay quiet whilst the baby is sleeping.",
+    "example_zh": "宝宝睡觉时请保持安静。"
+  },
+  "wherever": {
+    "example_en": "Sit wherever you like.",
+    "example_zh": "你喜欢坐哪儿就坐哪儿。"
+  },
+  "plus": {
+    "example_en": "The ticket is twenty yuan, plus a small booking fee.",
+    "example_zh": "票价二十元，另加一点订票费。"
+  },
+  "o'clock": {
+    "example_en": "Class starts at eight o'clock.",
+    "example_zh": "八点开始上课。"
+  },
+  "else": {
+    "example_zh": "你还想要点别的吗？"
+  },
+  "whatever": {
+    "meaning_zh": "无论什么",
+    "example_en": "Choose whatever seat you like.",
+    "example_zh": "你喜欢哪个座位就选哪个。"
+  },
+  "ought": {
+    "example_en": "You ought to bring your book tomorrow.",
+    "example_zh": "你明天应该把书带来。"
+  },
+  "allow": {
+    "example_zh": "我父母不允许我在上学日的晚上玩游戏。"
+  }
+}

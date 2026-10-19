@@ -1,0 +1,820 @@
+{
+  "bleed": {
+    "example_en": "His knee began to bleed after he fell on the playground.",
+    "example_zh": "他在操场上摔倒后，膝盖开始流血。"
+  },
+  "blend": {
+    "example_en": "Blend the milk and eggs in a large bowl.",
+    "example_zh": "把牛奶和鸡蛋放在大碗里搅拌均匀。"
+  },
+  "bless": {
+    "example_en": "Grandma will bless the family meal before anyone eats.",
+    "example_zh": "大家吃饭前，奶奶会为这顿饭祝福。"
+  },
+  "blow": {
+    "example_en": "Strong winds blow the leaves across our front yard.",
+    "example_zh": "大风把落叶吹过我们家的前院。"
+  },
+  "boast": {
+    "example_en": "He likes to boast about his score in the maths test.",
+    "example_zh": "他喜欢夸耀自己数学测验的分数。"
+  },
+  "boil": {
+    "example_en": "Boil the eggs for eight minutes before breakfast.",
+    "example_zh": "早饭前把鸡蛋煮八分钟。"
+  },
+  "bore": {
+    "example_en": "Long speeches bore the students waiting in the hall.",
+    "example_zh": "冗长的发言让在礼堂里等候的学生感到厌烦。"
+  },
+  "borrow": {
+    "example_en": "May I borrow your ruler for this drawing exercise?",
+    "example_zh": "这道绘画练习我可以借你的尺子吗？",
+    "meaning_zh": "借"
+  },
+  "bother": {
+    "example_en": "Don't bother Dad while he is cooking dinner.",
+    "example_zh": "爸爸做晚饭的时候别打扰他。"
+  },
+  "bounce": {
+    "example_en": "The basketball will bounce off the gym wall.",
+    "example_zh": "篮球会从体育馆的墙上反弹回来。",
+    "meaning_zh": "反弹"
+  },
+  "break": {
+    "example_en": "Don't break the glass when you wash the dishes.",
+    "example_zh": "洗碗时别把玻璃杯打破。",
+    "meaning_zh": "打破"
+  },
+  "breed": {
+    "example_en": "Farmers breed sheep on the green hills near town.",
+    "example_zh": "农民在城镇附近的青山上饲养绵羊。",
+    "meaning_zh": "饲养"
+  },
+  "bring": {
+    "example_en": "Please bring your lunch to the picnic by the lake.",
+    "example_zh": "去湖边野餐时，请带上你的午餐。"
+  },
+  "build": {
+    "example_en": "We will build a small bookshelf for my bedroom.",
+    "example_zh": "我们要为我的卧室做一个小书架。"
+  },
+  "burn": {
+    "example_en": "Too much sun can burn your skin at the beach.",
+    "example_zh": "在海滩上，阳光太强会晒伤你的皮肤。"
+  },
+  "bury": {
+    "example_en": "The dog tried to bury its bone in the garden.",
+    "example_zh": "那只狗想把骨头埋进花园里。"
+  },
+  "buy": {
+    "example_en": "Mum will buy fresh fruit at the market after work.",
+    "example_zh": "妈妈下班后会去市场买新鲜水果。"
+  },
+  "calculate": {
+    "example_en": "Calculate the total cost before you pay the cashier.",
+    "example_zh": "付给收银员之前，先把总价算清楚。"
+  },
+  "call": {
+    "example_en": "I will call my grandma after I get home.",
+    "example_zh": "我到家以后会给奶奶打电话。"
+  },
+  "capture": {
+    "example_en": "The net can capture small fish in the pond.",
+    "example_zh": "这张网能捕获池塘里的小鱼。",
+    "meaning_zh": "捕获"
+  },
+  "carry": {
+    "example_en": "Two students carry the heavy box up to the classroom.",
+    "example_zh": "两个学生把这个重箱子搬到教室去。"
+  },
+  "catch": {
+    "example_en": "Try to catch the ball with both hands.",
+    "example_zh": "试着用双手把球接住。"
+  },
+  "cause": {
+    "example_en": "Wet roads can cause accidents near our school.",
+    "example_zh": "湿滑的路面可能在我们学校附近引发事故。",
+    "meaning_zh": "引起"
+  },
+  "celebrate": {
+    "example_en": "We celebrate my sister's birthday with a big cake.",
+    "example_zh": "我们用一个大蛋糕庆祝姐姐的生日。"
+  },
+  "chase": {
+    "example_en": "The puppy began to chase a ball across the field.",
+    "example_zh": "小狗开始追着球跑过球场。",
+    "meaning_zh": "追逐"
+  },
+  "chat": {
+    "example_en": "My friends and I chat on the bus ride home.",
+    "example_zh": "我和朋友们在回家的公交车上聊天。"
+  },
+  "check": {
+    "example_en": "Check your answers before you hand in the paper.",
+    "example_zh": "交卷之前先把答案检查一遍。"
+  },
+  "chew": {
+    "example_en": "Chew your food slowly during family dinner.",
+    "example_zh": "家庭晚餐时要慢慢咀嚼食物。"
+  },
+  "choose": {
+    "example_en": "Choose a story you really want to read tonight.",
+    "example_zh": "选一个你今晚真正想读的故事。"
+  },
+  "chuck": {
+    "example_en": "The boys chuck waste paper into the bin after art class.",
+    "example_zh": "美术课结束后，男孩们把废纸扔进垃圾桶。",
+    "meaning_zh": "扔掉"
+  },
+  "claim": {
+    "example_en": "She can claim her lost bag at the school office.",
+    "example_zh": "她可以到学校办公室认领丢失的书包。"
+  },
+  "climb": {
+    "example_en": "The children climb the hill behind our school.",
+    "example_zh": "孩子们爬学校后面的那座小山。",
+    "meaning_zh": "爬"
+  },
+  "combine": {
+    "example_en": "Art students combine red and blue to get purple.",
+    "example_zh": "美术班的学生把红色和蓝色调成紫色。"
+  },
+  "come": {
+    "example_en": "Come to my house after the football game.",
+    "example_zh": "足球比赛结束后到我家来。"
+  },
+  "compare": {
+    "example_en": "Compare these two maps before choosing a route.",
+    "example_zh": "选路线之前先比较这两张地图。"
+  },
+  "compile": {
+    "example_en": "The monitor will compile our scores into one chart.",
+    "example_zh": "班长会把我们的分数汇总成一张表。"
+  },
+  "complete": {
+    "example_en": "Please complete this form before you leave the office.",
+    "example_zh": "离开办公室前，请把这份表格填写完成。",
+    "meaning_zh": "完成"
+  },
+  "comprise": {
+    "example_en": "The concert will comprise three short songs and a dance.",
+    "example_zh": "这场音乐会将包括三首短歌和一支舞蹈。"
+  },
+  "concentrate": {
+    "example_en": "Concentrate on the listening test and ignore the noise.",
+    "example_zh": "做听力测试时要集中注意力，别管噪音。"
+  },
+  "concern": {
+    "example_en": "Exam results concern my parents more than sports scores.",
+    "example_zh": "我父母更关注考试成绩，而不是体育分数。"
+  },
+  "conclude": {
+    "example_en": "These results let us conclude that the plant needs more sun.",
+    "example_zh": "这些结果让我们得出结论：这种植物需要更多阳光。"
+  },
+  "confuse": {
+    "example_en": "Similar spellings confuse me during the spelling quiz.",
+    "example_zh": "相近的拼写在拼写小测里让我感到困惑。"
+  },
+  "connect": {
+    "example_en": "Connect the printer to the computer with this cable.",
+    "example_zh": "用这根线把打印机连到电脑上。"
+  },
+  "consider": {
+    "example_en": "Consider the weather before you leave for the picnic.",
+    "example_zh": "出发去野餐前，先考虑一下天气。"
+  },
+  "consist": {
+    "example_en": "The dinner will consist of rice, soup, and fish.",
+    "example_zh": "晚饭将由米饭、汤和鱼组成。"
+  },
+  "construct": {
+    "example_en": "They construct a model bridge during science class.",
+    "example_zh": "他们在科学课上搭建一座桥的模型。"
+  },
+  "consult": {
+    "example_en": "We consult the coach before changing the match plan.",
+    "example_zh": "更改比赛方案之前，我们会先和教练商量。"
+  },
+  "continue": {
+    "example_en": "Continue the story from the page where we stopped.",
+    "example_zh": "从我们上次停下的那一页继续读这个故事。"
+  },
+  "convert": {
+    "example_en": "Convert these minutes into hours on the timetable.",
+    "example_zh": "在时间表上把这些分钟换算成小时。",
+    "meaning_zh": "转换"
+  },
+  "cook": {
+    "example_en": "Dad will cook noodles for the whole family tonight.",
+    "example_zh": "爸爸今晚会给全家人煮面条。"
+  },
+  "cope": {
+    "example_en": "She can cope with a busy week of exams.",
+    "example_zh": "她能应付这忙碌的考试周。"
+  },
+  "cough": {
+    "example_en": "Cover your mouth if you cough in the classroom.",
+    "example_zh": "如果在教室里咳嗽，请捂住嘴巴。"
+  },
+  "count": {
+    "example_en": "Count the chairs before the guests sit down.",
+    "example_zh": "客人坐下之前，先数一数椅子。",
+    "meaning_zh": "数"
+  },
+  "cover": {
+    "example_en": "Cover the pot while the soup is still boiling.",
+    "example_zh": "汤还在煮的时候，把锅盖上。"
+  },
+  "create": {
+    "example_en": "We create a short play for the school festival.",
+    "example_zh": "我们为学校的节日创作一个短剧。"
+  },
+  "cross": {
+    "example_en": "The two main streets cross near the city library.",
+    "example_zh": "两条主要街道在市图书馆附近交叉。"
+  },
+  "cry": {
+    "example_en": "The baby may cry when the bedroom lights go out.",
+    "example_zh": "卧室的灯灭了以后，宝宝可能会哭。"
+  },
+  "cut": {
+    "example_en": "Cut the apple into four pieces for the children.",
+    "example_zh": "把苹果切成四块分给孩子们。",
+    "meaning_zh": "切"
+  },
+  "decide": {
+    "example_en": "Decide which club you want to join before Friday.",
+    "example_zh": "星期五之前，先决定你想加入哪个社团。"
+  },
+  "declare": {
+    "example_en": "The referee will declare the winner after the race.",
+    "example_zh": "裁判会在赛跑结束后宣布获胜者。"
+  },
+  "dedicate": {
+    "example_en": "She will dedicate this song to her mother.",
+    "example_zh": "她要把这首歌献给妈妈。"
+  },
+  "defend": {
+    "example_en": "Thick coats defend us against the cold winter wind.",
+    "example_zh": "厚外套能帮我们挡住冬天的寒风。"
+  },
+  "define": {
+    "example_en": "Can you define this science term in simple words?",
+    "example_zh": "你能用简单的话给这个科学术语下定义吗？"
+  },
+  "delay": {
+    "example_en": "Heavy rain may delay the school bus this afternoon.",
+    "example_zh": "大雨可能会让校车今天下午晚点。",
+    "meaning_zh": "推迟"
+  },
+  "deny": {
+    "example_en": "He would not deny breaking the classroom window.",
+    "example_zh": "他不会否认教室的窗户是他打破的。"
+  },
+  "depend": {
+    "example_en": "Our picnic plans depend on clear weather this weekend.",
+    "example_zh": "我们的野餐安排取决于这个周末是否放晴。"
+  },
+  "derive": {
+    "example_en": "Many local cheeses derive from milk on nearby farms.",
+    "example_zh": "许多本地奶酪都来自附近农场的牛奶。"
+  },
+  "describe": {
+    "example_en": "Describe your bedroom in five clear sentences.",
+    "example_zh": "用五个清楚的句子描述一下你的卧室。"
+  },
+  "deserve": {
+    "example_en": "Hard-working players deserve a rest after the final.",
+    "example_zh": "勤奋的队员在决赛之后值得休息一下。"
+  },
+  "design": {
+    "example_en": "Our group will design a poster for sports day.",
+    "example_zh": "我们小组要为运动会设计一张海报。"
+  },
+  "destroy": {
+    "example_en": "A strong storm can destroy crops in the fields.",
+    "example_zh": "强风暴可能会毁掉田里的庄稼。"
+  },
+  "determine": {
+    "example_en": "The final race will determine this year's team winner.",
+    "example_zh": "最后一场比赛将决定今年的团体冠军。"
+  },
+  "develop": {
+    "example_en": "Daily practice can develop your football skills.",
+    "example_zh": "每天练习能够提升你的足球技术。"
+  },
+  "die": {
+    "example_en": "These plants die quickly without water in summer.",
+    "example_zh": "这些植物在夏天缺水会很快枯死。",
+    "meaning_zh": "死"
+  },
+  "dig": {
+    "example_en": "We dig small holes for trees behind the gym.",
+    "example_zh": "我们在体育馆后面挖小坑种树。",
+    "meaning_zh": "挖"
+  },
+  "disappear": {
+    "example_en": "The sun will disappear behind those hills at dusk.",
+    "example_zh": "黄昏时，太阳会消失在那些山后面。"
+  },
+  "discuss": {
+    "example_en": "Let's discuss the picnic menu during lunch break.",
+    "example_zh": "午休时，我们来讨论一下野餐的菜单吧。"
+  },
+  "distribute": {
+    "example_en": "Teachers distribute the test papers at nine o'clock.",
+    "example_zh": "老师们在九点分发试卷。"
+  },
+  "divide": {
+    "example_en": "Divide the cake into eight equal pieces.",
+    "example_zh": "把蛋糕分成八等份。"
+  },
+  "do": {
+    "example_en": "I do my maths homework at the kitchen table.",
+    "example_zh": "我在厨房的桌子上做数学作业。",
+    "meaning_zh": "做"
+  },
+  "download": {
+    "example_en": "Download the city map before you leave home.",
+    "example_zh": "出门之前先把城市地图下载好。"
+  },
+  "draw": {
+    "example_en": "Draw a picture of your family for art class.",
+    "example_zh": "美术课上画一张你的全家福。",
+    "meaning_zh": "画"
+  },
+  "drive": {
+    "example_en": "My uncle will drive us to the science museum.",
+    "example_zh": "叔叔会开车送我们去科学博物馆。"
+  },
+  "drop": {
+    "example_en": "The plate will drop if you hold it with one hand.",
+    "example_zh": "如果你只用一只手拿，盘子就会掉下去。"
+  },
+  "earn": {
+    "example_en": "She can earn pocket money by walking the neighbour's dog.",
+    "example_zh": "她靠帮邻居遛狗来赚零花钱。"
+  },
+  "eat": {
+    "example_en": "We eat dumplings together on New Year's Eve.",
+    "example_zh": "除夕晚上我们一起吃饺子。"
+  },
+  "edit": {
+    "example_en": "Edit your essay carefully before handing it in.",
+    "example_zh": "交稿之前仔细修改你的文章。"
+  },
+  "educate": {
+    "example_en": "Good schools educate children from many different towns.",
+    "example_zh": "好学校会教育来自许多不同城镇的孩子。"
+  },
+  "elect": {
+    "example_en": "Our class will elect a new monitor on Monday.",
+    "example_zh": "我们班星期一将选出新班长。"
+  },
+  "emerge": {
+    "example_en": "The moon will emerge from behind the clouds tonight.",
+    "example_zh": "今晚月亮会从云层后面露出来。"
+  },
+  "emphasise": {
+    "example_en": "The coach will emphasise teamwork before the game.",
+    "example_zh": "比赛开始前，教练会强调团队合作。"
+  },
+  "enable": {
+    "example_en": "This card will enable you to borrow library books.",
+    "example_zh": "这张卡能让你借阅图书馆的书。"
+  },
+  "encourage": {
+    "example_en": "Parents encourage us to read before we sleep.",
+    "example_zh": "父母鼓励我们睡前读书。"
+  },
+  "engage": {
+    "example_en": "Our club members engage in team sports after lessons.",
+    "example_zh": "课后，我们的社团成员会参加团队运动。",
+    "meaning_zh": "参加"
+  },
+  "enhance": {
+    "example_en": "Songs and films enhance our spoken English after school.",
+    "example_zh": "放学后，歌曲和电影能提高我们的英语口语。"
+  },
+  "enjoy": {
+    "example_en": "We enjoy hot soup on cold winter evenings.",
+    "example_zh": "寒冷的冬夜，我们喜欢喝热汤。"
+  },
+  "ensure": {
+    "example_en": "Ensure the front door is locked when you leave.",
+    "example_zh": "离开的时候，一定要确认前门已经锁好。"
+  },
+  "enter": {
+    "example_en": "Enter the museum through the wide main gate.",
+    "example_zh": "从宽阔的正门进入博物馆。"
+  },
+  "entitle": {
+    "example_en": "A student ticket will entitle you to a cheaper seat.",
+    "example_zh": "持学生票可以买到更便宜的座位。"
+  },
+  "escape": {
+    "example_en": "The hamster tried to escape from its small cage.",
+    "example_zh": "那只仓鼠试图从自己的小笼子里逃走。"
+  },
+  "establish": {
+    "example_en": "The school will establish a new reading club.",
+    "example_zh": "学校将成立一个新的阅读社团。"
+  },
+  "examine": {
+    "example_en": "The doctor will examine your sore throat today.",
+    "example_zh": "医生今天会检查你疼痛的喉咙。"
+  },
+  "exist": {
+    "example_en": "Wild pandas exist mainly in the mountains of Sichuan.",
+    "example_zh": "野生大熊猫主要存在于四川的山区。"
+  },
+  "expect": {
+    "example_en": "I expect a letter from my uncle this week.",
+    "example_zh": "我期待这周能收到叔叔的信。"
+  },
+  "explain": {
+    "example_en": "Can you explain this maths problem to me?",
+    "example_zh": "你能把这道数学题解释给我听吗？"
+  },
+  "express": {
+    "example_en": "Short poems help students express feelings about home.",
+    "example_zh": "短诗能帮助学生表达对家的感情。"
+  },
+  "extend": {
+    "example_en": "The school may extend the holiday if snow continues.",
+    "example_zh": "如果雪继续下，学校可能会延长假期。"
+  },
+  "face": {
+    "example_en": "Young athletes face strong rivals in the city final.",
+    "example_zh": "年轻选手要在全市决赛中面对强大的对手。"
+  },
+  "fail": {
+    "example_en": "You may fail the quiz if several answers stay blank.",
+    "example_zh": "如果好几道题空着，你这次小测可能会不及格。"
+  },
+  "fall": {
+    "example_en": "Ripe apples fall from the old tree in autumn.",
+    "example_zh": "秋天，熟了的苹果会从那棵老树上掉下来。",
+    "meaning_zh": "落下"
+  },
+  "feed": {
+    "example_en": "I feed the goldfish before I leave for school.",
+    "example_zh": "我上学前会喂金鱼。",
+    "meaning_zh": "喂养"
+  },
+  "feel": {
+    "example_en": "I feel cold when the classroom windows stay open.",
+    "example_zh": "教室窗户开着的时候，我觉得冷。"
+  },
+  "fetch": {
+    "example_en": "Could you fetch a clean towel from the bathroom?",
+    "example_zh": "你能去浴室拿一条干净毛巾吗？"
+  },
+  "fight": {
+    "example_en": "Those two boys should not fight in the hallway.",
+    "example_zh": "那两个男孩不该在走廊里打架。"
+  },
+  "fill": {
+    "example_en": "Fill your bottle with water before the long hike.",
+    "example_zh": "长途步行之前，把你的水瓶灌满水。"
+  },
+  "find": {
+    "example_en": "I often find my keys in this coat pocket.",
+    "example_zh": "我经常在这件外套的口袋里找到钥匙。"
+  },
+  "finish": {
+    "example_en": "Finish your soup before it gets completely cold.",
+    "example_zh": "趁汤还没彻底凉掉，把它喝完。"
+  },
+  "fit": {
+    "example_en": "These new shoes fit me after a week of walking.",
+    "example_zh": "这双新鞋走了一个星期以后很合脚。"
+  },
+  "fix": {
+    "example_en": "Dad can fix the broken chair on Saturday morning.",
+    "example_zh": "爸爸星期六早上能把那把坏椅子修好。"
+  },
+  "fly": {
+    "example_en": "Some birds fly across the sea when winter comes.",
+    "example_zh": "冬天来的时候，有些鸟会飞过大海。",
+    "meaning_zh": "飞"
+  },
+  "focus": {
+    "example_en": "Focus on your own paper during the maths exam.",
+    "example_zh": "数学考试时要专心看自己的试卷。"
+  },
+  "follow": {
+    "example_en": "Follow the blue signs to the city library.",
+    "example_zh": "沿着蓝色指示牌走到市图书馆。"
+  },
+  "forget": {
+    "example_en": "I sometimes forget my lunch box on the kitchen counter.",
+    "example_zh": "我有时会把饭盒忘在厨房的台面上。"
+  },
+  "found": {
+    "example_en": "Local families will found a music club next term.",
+    "example_zh": "一些本地家庭下学期要创办一个音乐社团。"
+  },
+  "frighten": {
+    "example_en": "Loud thunder can frighten our dog at night.",
+    "example_zh": "夜里的响雷会把我们的狗吓到。"
+  },
+  "gain": {
+    "example_en": "You gain confidence when you speak in front of the class.",
+    "example_zh": "当你在全班面前发言时，你会获得自信。"
+  },
+  "gather": {
+    "example_en": "We gather fallen leaves in the school garden.",
+    "example_zh": "我们在学校花园里把落叶收集起来。"
+  },
+  "grant": {
+    "example_en": "The head teacher may grant us extra rehearsal time.",
+    "example_zh": "校长可能会允许我们多一些排练时间。"
+  },
+  "grow": {
+    "example_en": "Tomatoes grow well in our sunny backyard.",
+    "example_zh": "西红柿在我们家向阳的后院长得很好。"
+  },
+  "guess": {
+    "example_en": "Guess the price of that cake in the bakery window.",
+    "example_zh": "猜一猜面包店橱窗里那块蛋糕的价钱。"
+  },
+  "handle": {
+    "example_en": "The monitor can handle problems while the teacher is out.",
+    "example_zh": "老师不在时，班长能处理出现的问题。",
+    "meaning_zh": "处理"
+  },
+  "hang": {
+    "example_en": "Hang your wet coat on the hook by the door.",
+    "example_zh": "把湿外套挂在门边的钩子上。"
+  },
+  "happen": {
+    "example_en": "Accidents often happen when people run on wet stairs.",
+    "example_zh": "人们在湿楼梯上奔跑时，常常会发生事故。"
+  },
+  "hate": {
+    "example_en": "I hate getting up early on cold winter mornings.",
+    "example_zh": "我讨厌在寒冷的冬天早起。"
+  },
+  "hear": {
+    "example_en": "I can hear birds singing outside my bedroom window.",
+    "example_zh": "我能听见鸟儿在我卧室的窗外唱歌。"
+  },
+  "help": {
+    "example_en": "Older classmates help younger ones with difficult homework.",
+    "example_zh": "高年级同学在较难的作业上帮助低年级同学。"
+  },
+  "hide": {
+    "example_en": "The kitten likes to hide behind the living room curtains.",
+    "example_zh": "小猫喜欢躲在客厅的窗帘后面。",
+    "meaning_zh": "躲藏"
+  },
+  "highlight": {
+    "example_en": "Highlight the key dates on your revision sheet.",
+    "example_zh": "在复习提纲上把重要的日期标出来。"
+  },
+  "hit": {
+    "example_en": "A fast ball can hit the window beside the gym.",
+    "example_zh": "飞快的球可能会打到体育馆旁边的窗户。",
+    "meaning_zh": "打"
+  },
+  "hold": {
+    "example_en": "Hold the rope tightly while you cross the stream.",
+    "example_zh": "过小溪的时候要紧紧抓住绳子。"
+  },
+  "hope": {
+    "example_en": "I hope the rain stops before our family picnic.",
+    "example_zh": "我希望家庭野餐开始前雨能停。"
+  },
+  "host": {
+    "example_en": "Our school will host the city basketball final.",
+    "example_zh": "我们学校将主办全市篮球决赛。",
+    "meaning_zh": "主办"
+  },
+  "hurry": {
+    "example_en": "Hurry to the school gate or you will miss the bus.",
+    "example_zh": "赶快跑到校门口，不然你会错过公交车。",
+    "meaning_zh": "赶快"
+  },
+  "hurt": {
+    "example_en": "Tight shoes can hurt your feet on a long walk.",
+    "example_zh": "鞋子太紧，走长路会把脚弄疼。"
+  },
+  "imagine": {
+    "example_en": "Imagine a quiet beach during the summer holiday.",
+    "example_zh": "想象一下暑假里那片安静的海滩。"
+  },
+  "implement": {
+    "example_en": "The school will implement new lunch rules next month.",
+    "example_zh": "学校下个月将实施新的午餐规定。",
+    "meaning_zh": "实施"
+  },
+  "imply": {
+    "example_en": "His faint smile seemed to imply that he agreed.",
+    "example_zh": "他淡淡的微笑似乎在暗示他同意了。",
+    "meaning_zh": "暗示"
+  },
+  "impose": {
+    "example_en": "Do not impose extra chores on the youngest child.",
+    "example_zh": "不要把额外的家务强加给家里最小的孩子。",
+    "meaning_zh": "强加"
+  },
+  "impress": {
+    "example_en": "Her confident speech can impress the whole school.",
+    "example_zh": "她自信的发言能给全校同学留下深刻印象。",
+    "meaning_zh": "给……留下印象"
+  },
+  "include": {
+    "example_en": "The ticket price will include lunch and the bus fare.",
+    "example_zh": "票价里将包括午餐和车费。"
+  },
+  "incorporate": {
+    "example_en": "We incorporate family photos into the class yearbook.",
+    "example_zh": "我们把家人的照片编进班级年鉴。"
+  },
+  "increase": {
+    "example_en": "Warm weather will increase the sales of cold drinks.",
+    "example_zh": "天气变暖后，冷饮的销量会增加。"
+  },
+  "inform": {
+    "example_en": "Inform the nurse if you feel sick at school.",
+    "example_zh": "在学校身体不舒服时，要告诉校医。"
+  },
+  "insist": {
+    "example_en": "Mum will insist on warm coats in this cold wind.",
+    "example_zh": "风这么冷，妈妈一定会坚持让我们穿厚外套。"
+  },
+  "install": {
+    "example_en": "Dad will install a brighter lamp in my bedroom.",
+    "example_zh": "爸爸会在我的卧室里装一盏更亮的灯。"
+  },
+  "integrate": {
+    "example_en": "The coach will integrate new players into the team.",
+    "example_zh": "教练会让新队员融入这支球队。"
+  },
+  "intend": {
+    "example_en": "I intend to visit my grandparents this weekend.",
+    "example_zh": "我打算这个周末去看望爷爷奶奶。",
+    "meaning_zh": "打算"
+  },
+  "introduce": {
+    "example_en": "Let me introduce my cousin from Shanghai to you.",
+    "example_zh": "让我把从上海来的表姐介绍给你。"
+  },
+  "invest": {
+    "example_en": "My aunt will invest her savings in a small bookshop.",
+    "example_zh": "我姑姑会把积蓄投资到一家小书店。"
+  },
+  "invite": {
+    "example_en": "We invite our neighbours to the New Year dinner.",
+    "example_zh": "我们邀请邻居们来家里吃年夜饭。"
+  },
+  "join": {
+    "example_en": "Join the art club if you enjoy painting.",
+    "example_zh": "如果你喜欢画画，就加入美术社团吧。"
+  },
+  "judge": {
+    "example_en": "Three teachers will judge the English speech contest.",
+    "example_zh": "三位老师将评判英语演讲比赛。",
+    "meaning_zh": "判断"
+  },
+  "jump": {
+    "example_en": "The cat can jump from the chair onto the table.",
+    "example_zh": "猫可以从椅子跳到桌子上。"
+  },
+  "justify": {
+    "example_en": "He tried to justify the broken window to his dad.",
+    "example_zh": "他试图为打碎的窗户向爸爸辩解。"
+  },
+  "kick": {
+    "example_en": "Kick the football toward the goal rather than the seats.",
+    "example_zh": "把足球踢向球门，别踢向座位。",
+    "meaning_zh": "踢"
+  },
+  "kill": {
+    "example_en": "Late frost can kill young plants in the garden.",
+    "example_zh": "晚霜会把花园里的幼苗冻死。"
+  },
+  "knock": {
+    "example_en": "Knock on the office door before you go inside.",
+    "example_zh": "进办公室之前要先敲门。",
+    "meaning_zh": "敲"
+  },
+  "know": {
+    "example_en": "I know a safe path to the nearest bus stop.",
+    "example_zh": "我知道一条通往最近公交站的安全小路。"
+  },
+  "laugh": {
+    "example_en": "We laugh at funny cartoons during the lunch break.",
+    "example_zh": "午休时我们看着搞笑卡通，忍不住大笑。"
+  },
+  "launch": {
+    "example_en": "The reading club will launch a book week in March.",
+    "example_zh": "阅读社团将在三月发起读书周。"
+  },
+  "lay": {
+    "example_en": "Lay the map flat on the desk so everyone can see it.",
+    "example_zh": "把地图平铺在书桌上，好让每个人都能看见。"
+  },
+  "lead": {
+    "example_en": "Our captain will lead the team onto the field.",
+    "example_zh": "队长会带领球队走上球场。",
+    "meaning_zh": "带领"
+  },
+  "learn": {
+    "example_en": "Children learn to ride bikes on the park path.",
+    "example_zh": "孩子们在公园的小路上学骑自行车。"
+  },
+  "leave": {
+    "example_en": "We leave the classroom when the bell rings.",
+    "example_zh": "铃声一响，我们就离开教室。"
+  },
+  "lend": {
+    "example_en": "Can you lend me a pencil for the history quiz?",
+    "example_zh": "历史小测时，你能借我一支铅笔吗？"
+  },
+  "lick": {
+    "example_en": "The hungry dog will lick the empty rice bowl.",
+    "example_zh": "那只饿狗会去舔空饭碗。",
+    "meaning_zh": "舔"
+  },
+  "lie": {
+    "example_en": "Lie on the sofa for a while if you feel dizzy.",
+    "example_zh": "如果觉得头晕，就在沙发上躺一会儿。",
+    "meaning_zh": "躺；说谎"
+  },
+  "limit": {
+    "example_en": "Limit phone time so you can finish tonight's homework.",
+    "example_zh": "限制玩手机的时间，这样才能做完今晚的作业。"
+  },
+  "listen": {
+    "example_en": "Listen carefully to the announcement in the hall.",
+    "example_zh": "仔细听礼堂里的广播通知。"
+  },
+  "live": {
+    "example_en": "My cousins live in a flat near the city park.",
+    "example_zh": "我的表兄妹住在城市公园附近的一套公寓里。"
+  },
+  "load": {
+    "example_en": "Load the suitcases into the car before we leave.",
+    "example_zh": "出发前把行李箱装进汽车里。",
+    "meaning_zh": "装载"
+  },
+  "lock": {
+    "example_en": "Lock your bicycle before you enter the bookshop.",
+    "example_zh": "进书店之前，先把自行车锁好。",
+    "meaning_zh": "锁"
+  },
+  "log": {
+    "example_en": "Students log their running times in a sports notebook.",
+    "example_zh": "学生们把每次跑步的时间记在运动笔记本上。",
+    "meaning_zh": "记录"
+  },
+  "look": {
+    "example_en": "Look both ways before you step off the pavement.",
+    "example_zh": "走下人行道之前，先看左右两边。",
+    "meaning_zh": "看"
+  },
+  "lose": {
+    "example_en": "She may lose her student card on the crowded bus.",
+    "example_zh": "她可能会在拥挤的公交车上弄丢学生卡。"
+  },
+  "love": {
+    "example_en": "I love spicy noodles on rainy Sunday evenings.",
+    "example_zh": "我喜欢在下雨的星期天晚上吃辣面条。"
+  },
+  "make": {
+    "example_en": "Grandma and I make dumplings every Spring Festival.",
+    "example_zh": "每年春节，我和奶奶一起包饺子。",
+    "meaning_zh": "制作"
+  },
+  "manage": {
+    "example_en": "She can manage the weekend book sale by herself.",
+    "example_zh": "周末的售书活动她一个人就能办好。"
+  },
+  "mark": {
+    "example_en": "Mark each wrong answer with a red pen.",
+    "example_zh": "用红笔把每一道错题标出来。",
+    "meaning_zh": "标记；打分"
+  },
+  "marry": {
+    "example_en": "They will marry at the town hall next spring.",
+    "example_zh": "他们明年春天将在市政厅结婚。"
+  },
+  "match": {
+    "example_en": "This blue tie does not match my white shirt.",
+    "example_zh": "这条蓝领带和我的白衬衫不相配。",
+    "meaning_zh": "配对；比得上"
+  },
+  "mean": {
+    "example_en": "A red flag on the beach can mean danger.",
+    "example_zh": "海滩上的红旗可能意味着有危险。"
+  },
+  "meet": {
+    "example_en": "We meet our teacher at the museum entrance.",
+    "example_zh": "我们在博物馆入口遇见老师。",
+    "meaning_zh": "遇见"
+  }
+}
