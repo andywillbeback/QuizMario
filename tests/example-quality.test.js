@@ -46,6 +46,16 @@ assert.ok(/\bable\b/i.test(able.example_en));
 assert.ok(!/day at school/i.test(able.example_en));
 assert.ok(/能够/.test(able.example_zh));
 
+const clock = practice.find((c) => c.word === "o'clock");
+const whatever = practice.find((c) => c.word === "whatever");
+const elseCard = practice.find((c) => c.word === "else");
+const ought = practice.find((c) => c.word === "ought");
+assert.ok(clock && /\bo'clock\b/i.test(clock.example_en) && /点/.test(clock.example_zh) && !/点钟地/.test(clock.example_zh));
+assert.ok(whatever && /\bwhatever\b/i.test(whatever.example_en) && whatever.meaning_zh === "无论什么");
+assert.ok(elseCard && !/邵总/.test(elseCard.example_zh));
+assert.ok(ought && /\bought to\b/i.test(ought.example_en));
+assert.ok(!practice.some((c) => /finished the work|The teacher is coming|She spoke \S+ in front of the class/i.test(c.example_en)));
+
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(html.includes('id="play-chrome"'), "compact play chrome");

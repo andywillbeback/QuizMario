@@ -426,8 +426,8 @@ window.VOCAB_LEVELS = [
       scene: "基础功能词 · Core Function Words",
       explain_zh: "中考/CEFR 常用词：再见",
       root_group: "基础词 · base",
-      example_en: "Bye! The teacher is coming.",
-      example_zh: "再见！老师来了。"
+      example_en: "Bye! See you tomorrow morning.",
+      example_zh: "再见！明天早上见。"
     },
     {
       word: "can",
@@ -1166,8 +1166,8 @@ window.VOCAB_LEVELS = [
       scene: "基础功能词 · Core Function Words",
       explain_zh: "中考/CEFR 常用词：哦",
       root_group: "基础词 · base",
-      example_en: "Oh! The teacher is coming.",
-      example_zh: "哦！老师来了。"
+      example_en: "Oh! I left my keys in the classroom.",
+      example_zh: "哦！我把钥匙落在教室里了。"
     },
     {
       word: "on",
@@ -1312,8 +1312,8 @@ window.VOCAB_LEVELS = [
       scene: "基础功能词 · Core Function Words",
       explain_zh: "中考/CEFR 常用词：请再说一遍；原谅",
       root_group: "基础词 · base",
-      example_en: "Pardon! The teacher is coming.",
-      example_zh: "请再说一遍！老师来了。"
+      example_en: "Pardon? Could you say that again?",
+      example_zh: "请再说一遍？你能再说一次吗？"
     },
     {
       word: "per",
@@ -1518,8 +1518,8 @@ window.VOCAB_LEVELS = [
       scene: "基础功能词 · Core Function Words",
       explain_zh: "中考/CEFR 常用词：谢谢",
       root_group: "基础词 · base",
-      example_en: "Thanks! The teacher is coming.",
-      example_zh: "谢谢！老师来了。"
+      example_en: "Thanks for lending me your pen.",
+      example_zh: "谢谢你把笔借给我。"
     },
     {
       word: "that",
@@ -1784,8 +1784,8 @@ window.VOCAB_LEVELS = [
       scene: "基础功能词 · Core Function Words",
       explain_zh: "中考/CEFR 常用词：除非",
       root_group: "基础词 · base",
-      example_en: "I was tired, unless I kept studying.",
-      example_zh: "我很累，除非我仍继续学习。"
+      example_en: "You will miss the bus unless you leave now.",
+      example_zh: "你现在不走就会错过公交车。"
     },
     {
       word: "until",
@@ -1899,15 +1899,15 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "whatever",
-      meaning_zh: "不论",
+      meaning_zh: "无论什么",
       pos: "det.",
       roots: "whatever",
       affix: "基础词 · base",
       scene: "基础功能词 · Core Function Words",
-      explain_zh: "中考/CEFR 常用词：不论",
+      explain_zh: "中考/CEFR 常用词：无论什么",
       root_group: "基础词 · base",
-      example_en: "Whatever students finished the worksheet.",
-      example_zh: "不论学生做完了练习纸。"
+      example_en: "Choose whatever seat you like.",
+      example_zh: "你喜欢哪个座位就选哪个。"
     },
     {
       word: "when",
@@ -1990,8 +1990,8 @@ window.VOCAB_LEVELS = [
       scene: "基础功能词 · Core Function Words",
       explain_zh: "中考/CEFR 常用词：当……时；而",
       root_group: "基础词 · base",
-      example_en: "I was tired, whilst I kept studying.",
-      example_zh: "我很累，当……时我仍继续学习。"
+      example_en: "Please stay quiet whilst the baby is sleeping.",
+      example_zh: "宝宝睡觉时请保持安静。"
     },
     {
       word: "who",
@@ -2429,7 +2429,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：设计师",
       root_group: "后缀 · -er/-or",
       example_en: "The designer tested three logos before the team chose the star.",
-      example_zh: "设计师试了三种图案，球队才选定了那颗星。"
+      example_zh: "设计师试了三种队徽，球队才选定了星星那一款。"
     },
     {
       word: "hairdresser",
@@ -2912,8 +2912,8 @@ window.VOCAB_LEVELS = [
       scene: "家庭情感 · Family Friends and Feelings",
       explain_zh: "中考/CEFR 常用词：十年",
       root_group: "基础词 · base",
-      example_en: "A decade ago this cafeteria was still an empty car park.",
-      example_zh: "十年前，这个食堂还是一座空停车场。"
+      example_en: "A decade ago this cafeteria was an empty car park.",
+      example_zh: "十年前，这个食堂还是一片空停车场。"
     }
   ],
   [
@@ -2927,7 +2927,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：名录",
       root_group: "基础词 · base",
       example_en: "I found the clinic in the directory pinned beside the office phone.",
-      example_zh: "我在办公室电话旁边钉着的名录里找到了诊所。"
+      example_zh: "办公室电话旁钉着名录，我从里面查到了诊所。"
     },
     {
       word: "doll",
@@ -4491,7 +4491,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：结束",
       root_group: "基础词 · base",
       example_en: "Stay until the end, because the last scene explains the mystery.",
-      example_zh: "请看到结束，因为最后一场才揭开谜底。"
+      example_zh: "请一直看到结束，因为最后一场才揭开谜底。"
     },
     {
       word: "enjoy",
@@ -6056,8 +6056,8 @@ window.VOCAB_LEVELS = [
       scene: "家居 · House and Home",
       explain_zh: "中考/CEFR 常用词：大胆地",
       root_group: "后缀 · -ly",
-      example_en: "She answered boldly.",
-      example_zh: "她大胆地回答了。"
+      example_en: "She boldly volunteered to speak first.",
+      example_zh: "她大胆地主动要求第一个发言。"
     },
     {
       word: "significantly",
@@ -6068,8 +6068,8 @@ window.VOCAB_LEVELS = [
       scene: "家居 · House and Home",
       explain_zh: "中考/CEFR 常用词：显著地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work significantly.",
-      example_zh: "他们显著地完成了工作。"
+      example_en: "Her English has improved significantly this term.",
+      example_zh: "这学期她的英语进步很大。"
     },
     {
       word: "slowly",
@@ -6080,8 +6080,8 @@ window.VOCAB_LEVELS = [
       scene: "家居 · House and Home",
       explain_zh: "中考/CEFR 常用词：慢慢地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work slowly.",
-      example_zh: "他们慢慢地完成了工作。"
+      example_en: "The bus moved slowly through the snow.",
+      example_zh: "公交车在雪里开得很慢。"
     },
     {
       word: "apartment",
@@ -7608,8 +7608,8 @@ window.VOCAB_LEVELS = [
       scene: "校园学习 · School and Education",
       explain_zh: "中考/CEFR 常用词：严重地；很差",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work badly.",
-      example_zh: "他们严重地完成了工作。"
+      example_en: "She cut her finger badly while cooking.",
+      example_zh: "她做饭时手指伤得很重。"
     },
     {
       word: "basically",
@@ -7644,8 +7644,8 @@ window.VOCAB_LEVELS = [
       scene: "校园学习 · School and Education",
       explain_zh: "中考/CEFR 常用词：完全地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work fully.",
-      example_zh: "他们完全地完成了工作。"
+      example_en: "I fully understand this grammar rule now.",
+      example_zh: "我现在完全明白这条语法规则了。"
     }
   ],
   [
@@ -7802,8 +7802,8 @@ window.VOCAB_LEVELS = [
       scene: "校园学习 · School and Education",
       explain_zh: "中考/CEFR 常用词：相似地；相像的",
       root_group: "基础词 · base",
-      example_en: "They finished the work alike.",
-      example_zh: "他们相似地完成了工作。"
+      example_en: "The twin sisters look alike, so teachers often mix up their names.",
+      example_zh: "这对双胞胎姐妹长得很像，老师经常把她们的名字搞混。"
     },
     {
       word: "antonym",
@@ -8859,7 +8859,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：烹饪",
       root_group: "词尾 · -ing",
       example_en: "The smell of Mum's cooking pulled us into the kitchen at once.",
-      example_zh: "妈妈烹饪的香味一下子把我们引进了厨房。"
+      example_zh: "妈妈烹饪的香味一下子把我们吸引进了厨房。"
     },
     {
       word: "reading",
@@ -9527,7 +9527,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：欲望",
       root_group: "基础词 · base",
       example_en: "His desire to make the team kept him running before breakfast.",
-      example_zh: "他想进队的欲望让他每天早饭前都去跑步。"
+      example_zh: "他想进队的欲望让他早饭前坚持跑步。"
     },
     {
       word: "diet",
@@ -10520,8 +10520,8 @@ window.VOCAB_LEVELS = [
       scene: "购物 · Shopping",
       explain_zh: "中考/CEFR 常用词：同样地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak equally in class.",
-      example_zh: "请在课上同样地说话。"
+      example_en: "The two sisters are equally good at maths.",
+      example_zh: "两姐妹数学一样好。"
     },
     {
       word: "locally",
@@ -10532,8 +10532,8 @@ window.VOCAB_LEVELS = [
       scene: "购物 · Shopping",
       explain_zh: "中考/CEFR 常用词：在当地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work locally.",
-      example_zh: "他们在当地完成了工作。"
+      example_en: "We try to buy vegetables that are grown locally.",
+      example_zh: "我们尽量买当地种的蔬菜。"
     },
     {
       word: "personally",
@@ -10570,8 +10570,8 @@ window.VOCAB_LEVELS = [
       scene: "购物 · Shopping",
       explain_zh: "中考/CEFR 常用词：安全地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work safely.",
-      example_zh: "他们安全地完成了工作。"
+      example_en: "The children crossed the road safely.",
+      example_zh: "孩子们安全地过了马路。"
     },
     {
       word: "department",
@@ -11722,8 +11722,8 @@ window.VOCAB_LEVELS = [
       scene: "购物 · Shopping",
       explain_zh: "中考/CEFR 常用词：精确地",
       root_group: "前缀 · pre-",
-      example_en: "She answered precisely.",
-      example_zh: "她精确地回答了。"
+      example_en: "Please arrive at eight precisely.",
+      example_zh: "请准时八点到。"
     },
     {
       word: "receipt",
@@ -13979,7 +13979,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：细节",
       root_group: "基础词 · base",
       example_en: "One detail in the photo showed a cat sitting on the roof.",
-      example_zh: "照片里的一个细节是屋顶上坐着一只猫。"
+      example_zh: "照片里的一个细节显示屋顶上坐着一只猫。"
     },
     {
       word: "dress",
@@ -14792,8 +14792,8 @@ window.VOCAB_LEVELS = [
       scene: "运动 · Sport",
       explain_zh: "中考/CEFR 常用词：成功地",
       root_group: "词根 · success",
-      example_en: "Please speak successfully in class.",
-      example_zh: "请在课上成功地说话。"
+      example_en: "He successfully climbed to the top of the hill.",
+      example_zh: "他成功地爬到了山顶。"
     },
     {
       word: "amused",
@@ -15010,8 +15010,8 @@ window.VOCAB_LEVELS = [
       scene: "运动 · Sport",
       explain_zh: "中考/CEFR 常用词：有希望地",
       root_group: "后缀 · -ly",
-      example_en: "She answered hopefully.",
-      example_zh: "她有希望地回答了。"
+      example_en: "She looked hopefully at the score on the screen.",
+      example_zh: "她满怀希望地看着屏幕上的分数。"
     },
     {
       word: "Italy",
@@ -15034,8 +15034,8 @@ window.VOCAB_LEVELS = [
       scene: "运动 · Sport",
       explain_zh: "中考/CEFR 常用词：强烈地",
       root_group: "后缀 · -ly",
-      example_en: "She answered strongly.",
-      example_zh: "她强烈地回答了。"
+      example_en: "The teacher strongly advised us to review tonight.",
+      example_zh: "老师强烈建议我们今晚复习。"
     },
     {
       word: "virtually",
@@ -15435,7 +15435,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：法院；球场",
       root_group: "基础词 · base",
       example_en: "Rain moved our tennis match onto the indoor court.",
-      example_zh: "下雨后，我们的网球赛改到了室内球场。"
+      example_zh: "一下雨，我们的网球赛就改到了室内球场。"
     },
     {
       word: "criticism",
@@ -16309,7 +16309,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：图画",
       root_group: "词尾 · -ing",
       example_en: "Her drawing of the old bridge hangs in the school entrance.",
-      example_zh: "她画的旧桥图画挂在学校门口。"
+      example_zh: "她的那幅旧桥图画挂在学校入口处。"
     },
     {
       word: "embarrassing",
@@ -16550,8 +16550,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：自动地",
       root_group: "后缀 · -ly",
-      example_en: "He walked automatically to school.",
-      example_zh: "他自动地走去学校。"
+      example_en: "The lights turn on automatically after dark.",
+      example_zh: "这些灯天黑后会自动打开。"
     },
     {
       word: "considerably",
@@ -16562,8 +16562,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：相当地",
       root_group: "后缀 · -ly",
-      example_en: "He walked considerably to school.",
-      example_zh: "他相当地走去学校。"
+      example_en: "The town has grown considerably in ten years.",
+      example_zh: "这座小镇十年里扩大了不少。"
     }
   ],
   [
@@ -16576,8 +16576,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：不断地",
       root_group: "后缀 · -ly",
-      example_en: "He walked constantly to school.",
-      example_zh: "他不断地走去学校。"
+      example_en: "My little brother constantly asks questions.",
+      example_zh: "我弟弟不停地问问题。"
     },
     {
       word: "firstly",
@@ -16600,8 +16600,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：主要地",
       root_group: "后缀 · -ly",
-      example_en: "He walked primarily to school.",
-      example_zh: "他主要地走去学校。"
+      example_en: "This book is primarily for middle-school students.",
+      example_zh: "这本书主要是给中学生看的。"
     },
     {
       word: "seriously",
@@ -16612,8 +16612,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：认真地；严重地",
       root_group: "后缀 · -ly",
-      example_en: "He walked seriously to school.",
-      example_zh: "他认真地走去学校。"
+      example_en: "Please take the doctor's advice seriously.",
+      example_zh: "请认真对待医生的建议。"
     },
     {
       word: "surely",
@@ -16708,8 +16708,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：大声地",
       root_group: "基础词 · base",
-      example_en: "Please speak aloud in class.",
-      example_zh: "请在课上大声地说话。"
+      example_en: "Please read the first paragraph aloud.",
+      example_zh: "请把第一段大声读出来。"
     },
     {
       word: "amount",
@@ -17182,8 +17182,8 @@ window.VOCAB_LEVELS = [
       scene: "兴趣爱好 · Hobbies and Leisure",
       explain_zh: "中考/CEFR 常用词：嗨",
       root_group: "基础词 · base",
-      example_en: "Hey! The teacher is coming.",
-      example_zh: "嘿！老师来了。"
+      example_en: "Hey! Your book is on the floor.",
+      example_zh: "嘿！你的书掉在地上了。"
     },
     {
       word: "however",
@@ -18421,7 +18421,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：交流",
       root_group: "基础词 · base",
       example_en: "Our exchange with the Japanese club included songs and handwritten letters.",
-      example_zh: "我们和日本社团的交流包括唱歌和手写信。"
+      example_zh: "我们和日本社团的交流包括歌曲和亲笔信。"
     },
     {
       word: "expenditure",
@@ -19197,7 +19197,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：交流",
       root_group: "词根 · communicate",
       example_en: "Poor communication made the relay team drop the baton twice.",
-      example_zh: "交流不畅，接力队两次掉了棒。"
+      example_zh: "交流没做好，接力队两次把接力棒掉在了地上。"
     },
     {
       word: "inform",
@@ -19512,8 +19512,8 @@ window.VOCAB_LEVELS = [
       scene: "通讯媒体 · Communications and Media",
       explain_zh: "中考/CEFR 常用词：特别地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work specially.",
-      example_zh: "他们特别地完成了工作。"
+      example_en: "Mum baked this cake specially for Dad's birthday.",
+      example_zh: "妈妈专门为爸爸的生日烤了这个蛋糕。"
     },
     {
       word: "advertisement",
@@ -19865,7 +19865,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：证据",
       root_group: "基础词 · base",
       example_en: "Footprints in the flour were evidence that the dog had been on the counter.",
-      example_zh: "面粉上的爪印证明狗上过厨房台面。"
+      example_zh: "面粉上的爪印就是狗上过台面的证据。"
     },
     {
       word: "example",
@@ -19876,8 +19876,8 @@ window.VOCAB_LEVELS = [
       scene: "通讯媒体 · Communications and Media",
       explain_zh: "中考/CEFR 常用词：例子",
       root_group: "基础词 · base",
-      example_en: "The teacher pinned Maya's graph up as an example of a clear axis.",
-      example_zh: "老师把玛娅的图钉起来，作为坐标轴清楚的例子。"
+      example_en: "Maya's rainfall graph became an example that the rest of the class copied.",
+      example_zh: "玛娅的降雨统计图成了班上其他人仿照的例子。"
     },
     {
       word: "expose",
@@ -21004,8 +21004,8 @@ window.VOCAB_LEVELS = [
       scene: "科学技术 · Science and Technology",
       explain_zh: "中考/CEFR 常用词：合理地",
       root_group: "后缀 · -ly",
-      example_en: "She answered reasonably.",
-      example_zh: "她合理地回答了。"
+      example_en: "The shop priced the pen reasonably.",
+      example_zh: "这家店给钢笔定的价格还算合理。"
     },
     {
       word: "silly",
@@ -21381,7 +21381,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：上下文",
       root_group: "基础词 · base",
       example_en: "The joke only makes sense if you know the context from yesterday.",
-      example_zh: "这个笑话只有知道昨天的上下文才好笑。"
+      example_zh: "只有知道昨天的上下文，这个笑话才讲得通。"
     },
     {
       word: "custom",
@@ -21465,7 +21465,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：努力",
       root_group: "基础词 · base",
       example_en: "One last effort up the hill brought her level with the leader.",
-      example_zh: "上坡时的最后一股努力让她追上了领先的人。"
+      example_zh: "上坡时的最后一次努力让她追上了领先的人。"
     },
     {
       word: "elect",
@@ -22132,8 +22132,8 @@ window.VOCAB_LEVELS = [
       scene: "科学技术 · Science and Technology",
       explain_zh: "中考/CEFR 常用词：经常地；定期地",
       root_group: "前缀 · re-",
-      example_en: "Please speak regularly in class.",
-      example_zh: "请在课上经常地说话。"
+      example_en: "She visits her grandparents regularly.",
+      example_zh: "她经常去看望祖父母。"
     },
     {
       word: "resolve",
@@ -22508,8 +22508,8 @@ window.VOCAB_LEVELS = [
       scene: "工作职业 · Work and Jobs",
       explain_zh: "中考/CEFR 常用词：主要地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work largely.",
-      example_zh: "他们主要地完成了工作。"
+      example_en: "The plan worked largely because everyone helped.",
+      example_zh: "计划能成，主要是因为大家都帮了忙。"
     },
     {
       word: "monthly",
@@ -22532,8 +22532,8 @@ window.VOCAB_LEVELS = [
       scene: "工作职业 · Work and Jobs",
       explain_zh: "中考/CEFR 常用词：部分地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work partly.",
-      example_zh: "他们部分地完成了工作。"
+      example_en: "The window was partly open.",
+      example_zh: "窗户开了一半。"
     },
     {
       word: "acknowledgment",
@@ -23636,8 +23636,8 @@ window.VOCAB_LEVELS = [
       scene: "出行机场 · Travel Airport",
       explain_zh: "中考/CEFR 常用词：小心地",
       root_group: "词根 · care",
-      example_en: "Please speak carefully in class.",
-      example_zh: "请在课上小心地说话。"
+      example_en: "Please handle the glass carefully.",
+      example_zh: "拿玻璃杯请小心。"
     },
     {
       word: "creative",
@@ -23831,7 +23831,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：承包商",
       root_group: "后缀 · -er/-or",
       example_en: "The contractor replaced the broken gym windows over the weekend.",
-      example_zh: "承包商在周末换掉了体育馆破掉的窗户。"
+      example_zh: "承包商在周末换掉了体育馆破损的窗户。"
     },
     {
       word: "monitor",
@@ -23904,8 +23904,8 @@ window.VOCAB_LEVELS = [
       scene: "出行机场 · Travel Airport",
       explain_zh: "中考/CEFR 常用词：迅速地",
       root_group: "后缀 · -ly",
-      example_en: "He walked rapidly to school.",
-      example_zh: "他迅速地走去学校。"
+      example_en: "The river rose rapidly after the storm.",
+      example_zh: "暴风雨过后河水涨得很快。"
     },
     {
       word: "announcement",
@@ -24341,7 +24341,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：组成部分",
       root_group: "基础词 · base",
       example_en: "The missing component was a tiny screw from the robot's arm.",
-      example_zh: "缺掉的组成部分是机器人手臂上的一颗小螺丝。"
+      example_zh: "缺少的那个组成部分是机器人手臂上的一颗小螺丝。"
     },
     {
       word: "copy",
@@ -24704,8 +24704,8 @@ window.VOCAB_LEVELS = [
       scene: "出行机场 · Travel Airport",
       explain_zh: "中考/CEFR 常用词：应该",
       root_group: "基础词 · base",
-      example_en: "You ought bring your book tomorrow.",
-      example_zh: "你应该明天把书带来。"
+      example_en: "You ought to bring your book tomorrow.",
+      example_zh: "你明天应该把书带来。"
     },
     {
       word: "pilot",
@@ -24996,8 +24996,8 @@ window.VOCAB_LEVELS = [
       scene: "出行机场 · Travel Airport",
       explain_zh: "中考/CEFR 常用词：无论哪里",
       root_group: "基础词 · base",
-      example_en: "I was tired, wherever I kept studying.",
-      example_zh: "我很累，无论哪里我仍继续学习。"
+      example_en: "Sit wherever you like.",
+      example_zh: "你喜欢坐哪儿就坐哪儿。"
     },
     {
       word: "disability",
@@ -25286,8 +25286,8 @@ window.VOCAB_LEVELS = [
       scene: "出行交通 · Travel and Transport",
       explain_zh: "中考/CEFR 常用词：勇敢地",
       root_group: "后缀 · -ly",
-      example_en: "He walked bravely to school.",
-      example_zh: "他勇敢地走去学校。"
+      example_en: "She bravely told the teacher the truth.",
+      example_zh: "她勇敢地把实情告诉了老师。"
     },
     {
       word: "telly",
@@ -25737,7 +25737,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：爸爸",
       root_group: "基础词 · base",
       example_en: "The toddler calls Daddy and holds up his arms to be lifted.",
-      example_zh: "小孩叫着爸爸，举起胳膊要人抱。"
+      example_zh: "小孩喊爸爸，并举起胳膊要人抱。"
     },
     {
       word: "deny",
@@ -26792,8 +26792,8 @@ window.VOCAB_LEVELS = [
       scene: "城镇场所 · Places and Buildings",
       explain_zh: "中考/CEFR 常用词：焦虑地",
       root_group: "后缀 · -ly",
-      example_en: "She answered anxiously.",
-      example_zh: "她焦虑地回答了。"
+      example_en: "She waited anxiously for the test result.",
+      example_zh: "她焦急地等待考试成绩。"
     },
     {
       word: "daily",
@@ -26816,8 +26816,8 @@ window.VOCAB_LEVELS = [
       scene: "城镇场所 · Places and Buildings",
       explain_zh: "中考/CEFR 常用词：沉重地；大量地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work heavily.",
-      example_zh: "他们沉重地完成了工作。"
+      example_en: "It snowed heavily last night.",
+      example_zh: "昨晚雪下得很大。"
     },
     {
       word: "secondly",
@@ -26840,8 +26840,8 @@ window.VOCAB_LEVELS = [
       scene: "城镇场所 · Places and Buildings",
       explain_zh: "中考/CEFR 常用词：彻底地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak thoroughly in class.",
-      example_zh: "请在课上彻底地说话。"
+      example_en: "Wash your hands thoroughly before lunch.",
+      example_zh: "午饭前把手彻底洗干净。"
     },
     {
       word: "requirement",
@@ -28296,8 +28296,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：意外地",
       root_group: "后缀 · -ly",
-      example_en: "He walked accidentally to school.",
-      example_zh: "他意外地走去学校。"
+      example_en: "I accidentally sent the message to the wrong classmate.",
+      example_zh: "我不小心把消息发给了别的同学。"
     },
     {
       word: "annually",
@@ -28344,8 +28344,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：深深地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak deeply in class.",
-      example_zh: "请在课上深深地说话。"
+      example_en: "He was deeply moved by the story.",
+      example_zh: "他被这个故事深深打动了。"
     },
     {
       word: "elderly",
@@ -28368,8 +28368,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：频繁地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak frequently in class.",
-      example_zh: "请在课上频繁地说话。"
+      example_en: "It rains frequently here in spring.",
+      example_zh: "这里春天经常下雨。"
     },
     {
       word: "necessarily",
@@ -28380,8 +28380,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：必要地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work necessarily.",
-      example_zh: "他们必要地完成了工作。"
+      example_en: "A bigger bag is not necessarily better.",
+      example_zh: "包大不一定更好。"
     },
     {
       word: "properly",
@@ -28392,8 +28392,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：适当地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak properly in class.",
-      example_zh: "请在课上适当地说话。"
+      example_en: "Please close the door properly.",
+      example_zh: "请把门关好。"
     }
   ],
   [
@@ -28418,8 +28418,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：简单地；仅仅",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work simply.",
-      example_zh: "他们简单地完成了工作。"
+      example_en: "I simply want a glass of water.",
+      example_zh: "我只要一杯水。"
     },
     {
       word: "totally",
@@ -28430,8 +28430,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：完全地",
       root_group: "后缀 · -ly",
-      example_en: "He walked totally to school.",
-      example_zh: "他完全地走去学校。"
+      example_en: "I totally forgot about the meeting.",
+      example_zh: "我把这次会面忘得一干二净。"
     },
     {
       word: "widely",
@@ -28442,8 +28442,8 @@ window.VOCAB_LEVELS = [
       scene: "天气 · Weather",
       explain_zh: "中考/CEFR 常用词：广泛地",
       root_group: "后缀 · -ly",
-      example_en: "She answered widely.",
-      example_zh: "她广泛地回答了。"
+      example_en: "Football is widely played in our school.",
+      example_zh: "我们学校踢足球的人很多。"
     },
     {
       word: "comment",
@@ -28479,7 +28479,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：解释",
       root_group: "后缀 · -tion/-sion",
       example_en: "His explanation of the graph used one simple story about rainfall.",
-      example_zh: "他解释这张图时，只用了一个关于降雨的简单故事。"
+      example_zh: "他对这张图的解释，只用了一个关于降雨的简单故事。"
     },
     {
       word: "inspection",
@@ -28843,7 +28843,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：全体人员",
       root_group: "基础词 · base",
       example_en: "The stage crew moved the piano during the interval.",
-      example_zh: "舞台上的全体人员在中场休息时挪走了钢琴。"
+      example_zh: "负责舞台的全体人员在中场休息时挪走了钢琴。"
     },
     {
       word: "degree",
@@ -29594,8 +29594,8 @@ window.VOCAB_LEVELS = [
       scene: "自然环境 · Environment and Nature",
       explain_zh: "中考/CEFR 常用词：自然地",
       root_group: "词根 · nature",
-      example_en: "She answered naturally.",
-      example_zh: "她自然地回答了。"
+      example_en: "She talks naturally with new classmates.",
+      example_zh: "她和新同学说话很自然。"
     },
     {
       word: "nature",
@@ -31330,8 +31330,8 @@ window.VOCAB_LEVELS = [
       scene: "动物 · Animals",
       explain_zh: "中考/CEFR 常用词：准确地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak accurately in class.",
-      example_zh: "请在课上准确地说话。"
+      example_en: "Write the date accurately on the form.",
+      example_zh: "在表格上把日期写准确。"
     },
     {
       word: "beautifully",
@@ -31342,8 +31342,8 @@ window.VOCAB_LEVELS = [
       scene: "动物 · Animals",
       explain_zh: "中考/CEFR 常用词：漂亮地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work beautifully.",
-      example_zh: "他们漂亮地完成了工作。"
+      example_en: "She played the piano beautifully at the concert.",
+      example_zh: "她在音乐会上钢琴弹得很动听。"
     },
     {
       word: "definitely",
@@ -31354,8 +31354,8 @@ window.VOCAB_LEVELS = [
       scene: "动物 · Animals",
       explain_zh: "中考/CEFR 常用词：肯定地",
       root_group: "后缀 · -ly",
-      example_en: "He walked definitely to school.",
-      example_zh: "他肯定地走去学校。"
+      example_en: "We should definitely leave before six.",
+      example_zh: "我们肯定得在六点前走。"
     },
     {
       word: "imply",
@@ -31390,8 +31390,8 @@ window.VOCAB_LEVELS = [
       scene: "动物 · Animals",
       explain_zh: "中考/CEFR 常用词：完美地",
       root_group: "后缀 · -ly",
-      example_en: "She answered perfectly.",
-      example_zh: "她完美地回答了。"
+      example_en: "The cake fits in the box perfectly.",
+      example_zh: "蛋糕和盒子的大小正好合适。"
     },
     {
       word: "argument",
@@ -31415,7 +31415,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：文件",
       root_group: "后缀 · -ment",
       example_en: "Save the document with your name before the computer logs you out.",
-      example_zh: "电脑自动退出之前，请用你的名字把文件存好。"
+      example_zh: "在电脑退出登录之前，用你的名字把这份文件保存好。"
     },
     {
       word: "investment",
@@ -31889,7 +31889,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：错误",
       root_group: "基础词 · base",
       example_en: "An error in the timetable sent our class to the wrong room.",
-      example_zh: "时间表上的一处错误把我们班指到了另一间教室。"
+      example_zh: "时间表上的一处错误让我们班走错了教室。"
     },
     {
       word: "fact",
@@ -32348,8 +32348,8 @@ window.VOCAB_LEVELS = [
       scene: "动物 · Animals",
       explain_zh: "中考/CEFR 常用词：不知怎么地",
       root_group: "基础词 · base",
-      example_en: "She answered somehow.",
-      example_zh: "她不知怎么地回答了。"
+      example_en: "Somehow the classroom door opened by itself.",
+      example_zh: "不知怎么的，教室的门自己开了。"
     },
     {
       word: "sound",
@@ -32506,8 +32506,8 @@ window.VOCAB_LEVELS = [
       scene: "动物 · Animals",
       explain_zh: "中考/CEFR 常用词：哇",
       root_group: "基础词 · base",
-      example_en: "Wow! The teacher is coming.",
-      example_zh: "哇！老师来了。"
+      example_en: "Wow! You finished the puzzle so fast.",
+      example_zh: "哇！你这么快就拼完了。"
     },
     {
       word: "presence",
@@ -33696,8 +33696,8 @@ window.VOCAB_LEVELS = [
       scene: "时间数字 · Time Numbers and Quantity",
       explain_zh: "中考/CEFR 常用词：加；加上",
       root_group: "基础词 · base",
-      example_en: "I was tired, plus I kept studying.",
-      example_zh: "我很累，加我仍继续学习。"
+      example_en: "The ticket is twenty yuan, plus a small booking fee.",
+      example_zh: "票价二十元，另加一点订票费。"
     },
     {
       word: "politician",
@@ -34630,8 +34630,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：确定地",
       root_group: "后缀 · -ly",
-      example_en: "He walked certainly to school.",
-      example_zh: "他确定地走去学校。"
+      example_en: "I will certainly help you with the project.",
+      example_zh: "我一定会帮你做这个项目。"
     },
     {
       word: "closely",
@@ -34642,8 +34642,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：密切地；接近地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak closely in class.",
-      example_zh: "请在课上密切地说话。"
+      example_en: "Listen closely to the recording.",
+      example_zh: "仔细听这段录音。"
     },
     {
       word: "completely",
@@ -34654,8 +34654,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：完全地",
       root_group: "后缀 · -ly",
-      example_en: "She answered completely.",
-      example_zh: "她完全地回答了。"
+      example_en: "I completely forgot my homework.",
+      example_zh: "我把作业忘得干干净净。"
     },
     {
       word: "currently",
@@ -34678,8 +34678,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：直接地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work directly.",
-      example_zh: "他们直接地完成了工作。"
+      example_en: "This train goes directly to Shanghai.",
+      example_zh: "这趟火车直达上海。"
     },
     {
       word: "easily",
@@ -34690,8 +34690,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：容易地",
       root_group: "后缀 · -ly",
-      example_en: "Please speak easily in class.",
-      example_zh: "请在课上容易地说话。"
+      example_en: "Beginners can use this app easily.",
+      example_zh: "初学者用这个应用很容易。"
     },
     {
       word: "effectively",
@@ -34702,8 +34702,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：有效地",
       root_group: "后缀 · -ly",
-      example_en: "She answered effectively.",
-      example_zh: "她有效地回答了。"
+      example_en: "Pictures help students remember new words effectively.",
+      example_zh: "图片能帮助学生有效记住生词。"
     },
     {
       word: "entirely",
@@ -34714,8 +34714,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：完全地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work entirely.",
-      example_zh: "他们完全地完成了工作。"
+      example_en: "That story is entirely true.",
+      example_zh: "那个故事完全是真的。"
     },
     {
       word: "especially",
@@ -34750,8 +34750,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：确切地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work exactly.",
-      example_zh: "他们确切地完成了工作。"
+      example_en: "Your answer is exactly right.",
+      example_zh: "你的答案完全正确。"
     },
     {
       word: "extremely",
@@ -34848,8 +34848,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：主要地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work mainly.",
-      example_zh: "他们主要地完成了工作。"
+      example_en: "This shop mainly sells stationery.",
+      example_zh: "这家店主要卖文具。"
     },
     {
       word: "nearly",
@@ -34944,8 +34944,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：迅速地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work quickly.",
-      example_zh: "他们迅速地完成了工作。"
+      example_en: "Please reply quickly so we can book the tickets.",
+      example_zh: "请尽快回复，我们好订票。"
     }
   ],
   [
@@ -34982,8 +34982,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：具体地",
       root_group: "后缀 · -ly",
-      example_en: "They finished the work specifically.",
-      example_zh: "他们具体地完成了工作。"
+      example_en: "The teacher specifically asked us to bring a ruler.",
+      example_zh: "老师特别要求我们带一把尺子。"
     },
     {
       word: "truly",
@@ -34994,8 +34994,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：真正地",
       root_group: "后缀 · -ly",
-      example_en: "She answered truly.",
-      example_zh: "她真正地回答了。"
+      example_en: "I truly believe you can pass this test.",
+      example_zh: "我真的相信你能通过这次考试。"
     },
     {
       word: "famous",
@@ -35395,7 +35395,7 @@ window.VOCAB_LEVELS = [
       explain_zh: "中考/CEFR 常用词：另外",
       root_group: "基础词 · base",
       example_en: "Would you like anything else?",
-      example_zh: "邵总，还需要什么？"
+      example_zh: "你还想要点别的吗？"
     },
     {
       word: "enough",
@@ -35892,8 +35892,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities",
       explain_zh: "中考/CEFR 常用词：点钟",
       root_group: "基础词 · base",
-      example_en: "She spoke o'clock in front of the class.",
-      example_zh: "她在全班面前点钟地发言。"
+      example_en: "Class starts at eight o'clock.",
+      example_zh: "八点开始上课。"
     },
     {
       word: "open",
@@ -36400,8 +36400,8 @@ window.VOCAB_LEVELS = [
       scene: "描述性状 · Description and Qualities · 续2",
       explain_zh: "中考/CEFR 常用词：不幸地",
       root_group: "前缀 · un-",
-      example_en: "They finished the work unfortunately.",
-      example_zh: "他们不幸地完成了工作。"
+      example_en: "Unfortunately, the library is closed today.",
+      example_zh: "不巧，图书馆今天关门。"
     }
   ]
 ];

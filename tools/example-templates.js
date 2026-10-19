@@ -29,6 +29,14 @@ const FAMILIES = [
   { id: "read-article", label: "I read a(n) WORD article last night.", re: /^I read an? .+ article last night\.?$/i },
   { id: "lesson-today", label: "This is the WORD lesson today.", re: /^This is the .+ lesson today\.?$/i },
   { id: "bag-chair", label: "Put your bag WORD the chair.", re: /^Put your bag .+ the chair\.?$/i },
+  { id: "finished-work", label: "They finished the work WORD.", re: /^They finished the work .+\.?$/i },
+  { id: "she-answered", label: "She answered WORD.", re: /^She answered \S+\.?$/i },
+  { id: "speak-in-class", label: "Please speak WORD in class.", re: /^Please speak .+ in class\.?$/i },
+  { id: "walked-to-school", label: "He walked WORD to school.", re: /^He walked .+ to school\.?$/i },
+  { id: "teacher-coming", label: "WORD! The teacher is coming.", re: /The teacher is coming\.?$/i },
+  { id: "tired-kept", label: "I was tired, WORD I kept studying.", re: /^I was tired, .+ I kept studying\.?$/i },
+  { id: "spoke-in-front", label: "She spoke WORD in front of the class.", re: /^She spoke .+ in front of the class\.?$/i },
+  { id: "whatever-worksheet", label: "Whatever students finished the worksheet.", re: /^Whatever students finished the worksheet\.?$/i },
 ];
 
 function templateFamily(example) {
