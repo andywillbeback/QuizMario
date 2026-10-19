@@ -1,0 +1,833 @@
+{
+  "Scotland": {
+    "example_en": "My aunt posts a short letter from Scotland every month.",
+    "example_zh": "我姨妈每个月都从苏格兰寄来一封简短的信。"
+  },
+  "screen": {
+    "example_en": "I cleaned the dusty screen before the online lesson.",
+    "example_zh": "上网课之前，我把落满灰尘的屏幕擦干净了。",
+    "meaning_zh": "屏幕"
+  },
+  "script": {
+    "example_en": "The drama club reprinted the script with fewer pages.",
+    "example_zh": "戏剧社重印了剧本，页数比以前少。",
+    "meaning_zh": "剧本"
+  },
+  "sea": {
+    "example_en": "We collected shells by the sea during the holiday.",
+    "example_zh": "放假的时候，我们在海边捡贝壳。"
+  },
+  "search": {
+    "example_en": "The search for my lost keys took the whole evening.",
+    "example_zh": "寻找丢失的钥匙花了整整一个晚上。"
+  },
+  "season": {
+    "example_en": "Autumn is my favourite season because leaves turn red.",
+    "example_zh": "秋天是我最喜欢的季节，因为树叶会变红。"
+  },
+  "seat": {
+    "example_en": "Save me a seat near the front of the school bus.",
+    "example_zh": "在校车靠前的位置给我留一个位子。"
+  },
+  "secretary": {
+    "example_en": "The school secretary printed the letters after lunch.",
+    "example_zh": "学校秘书午饭后把那些信打印了出来。"
+  },
+  "section": {
+    "example_en": "Dad works in the records section of the hospital.",
+    "example_zh": "爸爸在医院的档案部门工作。"
+  },
+  "sector": {
+    "example_en": "Tourism is a major sector in this coastal town.",
+    "example_zh": "旅游业是这座海滨小镇的一个重要行业。",
+    "meaning_zh": "行业"
+  },
+  "security": {
+    "example_en": "Security at the airport checked every bag carefully.",
+    "example_zh": "机场的安保人员仔细检查了每一个包。"
+  },
+  "seed": {
+    "example_en": "I planted one bean seed in a cup by the window.",
+    "example_zh": "我在窗边的杯子里种下了一颗豆子种子。"
+  },
+  "self": {
+    "example_en": "He showed his true self when he helped the lost boy.",
+    "example_zh": "他帮助那个迷路的男孩时，露出了真实的自己。"
+  },
+  "seminar": {
+    "example_en": "The history seminar begins at four in room twelve.",
+    "example_zh": "历史研讨会四点在十二号教室开始。"
+  },
+  "sense": {
+    "example_en": "The last sentence makes no sense without the chart.",
+    "example_zh": "没有那张图表，最后一句就讲不通。"
+  },
+  "September": {
+    "example_en": "Our new school year always begins in September.",
+    "example_zh": "我们的新学年总是在九月开始。"
+  },
+  "sequence": {
+    "example_en": "Follow the sequence of pictures to build the model.",
+    "example_zh": "按照图片的先后顺序把模型拼出来。"
+  },
+  "series": {
+    "example_en": "She is halfway through a series of mystery novels.",
+    "example_zh": "那套推理小说她已经读了一半。",
+    "meaning_zh": "系列"
+  },
+  "server": {
+    "example_en": "Our server forgot the soup and apologised at once.",
+    "example_zh": "服务员忘了上汤，马上道了歉。",
+    "meaning_zh": "服务员"
+  },
+  "service": {
+    "example_en": "The night bus service ends at half past ten.",
+    "example_zh": "夜间公共汽车服务到十点半结束。",
+    "meaning_zh": "服务"
+  },
+  "session": {
+    "example_en": "The morning training session finished just after noon.",
+    "example_zh": "上午的训练课刚过中午就结束了。",
+    "meaning_zh": "一节；一场"
+  },
+  "settee": {
+    "example_en": "Grandma nodded off on the settee during the film.",
+    "example_zh": "看电影的时候，奶奶在长靠背椅上打起了盹。"
+  },
+  "setting": {
+    "example_en": "The hotel has a quiet setting beside a small lake.",
+    "example_zh": "这家旅馆坐落在小湖旁边，环境很安静。"
+  },
+  "settlement": {
+    "example_en": "An old settlement still stands beside the wide river.",
+    "example_zh": "一处古老的定居点仍然坐落在那条大河边。",
+    "meaning_zh": "定居点"
+  },
+  "sex": {
+    "example_en": "The application form asks for age, name, and sex.",
+    "example_zh": "申请表上要填写年龄、姓名和性别。"
+  },
+  "shame": {
+    "example_en": "He felt real shame after shouting at his little sister.",
+    "example_zh": "他对妹妹大喊大叫之后，感到非常羞耻。"
+  },
+  "shape": {
+    "example_en": "Fold the card into the shape of a small heart.",
+    "example_zh": "把这张卡片折成一颗小爱心的形状。",
+    "meaning_zh": "形状"
+  },
+  "sheet": {
+    "example_en": "Write your class number at the top of the sheet.",
+    "example_zh": "把你的班级号写在这张纸的上方。",
+    "meaning_zh": "纸张"
+  },
+  "shelf": {
+    "example_en": "Mum keeps the jars on a high shelf in the kitchen.",
+    "example_zh": "妈妈把罐子放在厨房高处的架子上。"
+  },
+  "shift": {
+    "example_en": "We felt a sudden shift in the wind before the storm.",
+    "example_zh": "暴风雨来临前，我们感到风向突然变了。"
+  },
+  "ship": {
+    "example_en": "The cargo ship left the port before the sun rose.",
+    "example_zh": "那艘货船在太阳升起之前离开了港口。",
+    "meaning_zh": "船"
+  },
+  "shirt": {
+    "example_en": "I spilt orange juice down my white shirt at breakfast.",
+    "example_zh": "早饭时，我把橙汁洒在了白衬衫上。",
+    "meaning_zh": "衬衫"
+  },
+  "shock": {
+    "example_en": "News of the broken bridge came as a terrible shock.",
+    "example_zh": "桥断了的消息传来，让人非常震惊。",
+    "meaning_zh": "震惊"
+  },
+  "shoe": {
+    "example_en": "Her left shoe came off in the mud near the gate.",
+    "example_zh": "她的左脚鞋子掉在了大门附近的泥里。"
+  },
+  "shop": {
+    "example_en": "That corner shop sells bread, milk, and cheap pens.",
+    "example_zh": "拐角那家商店卖面包、牛奶和便宜的笔。"
+  },
+  "shopping": {
+    "example_en": "Dad does the weekly shopping on his way home.",
+    "example_zh": "爸爸在回家的路上把一周要买的东西买好。"
+  },
+  "shorts": {
+    "example_en": "He changed into red shorts before the PE lesson.",
+    "example_zh": "上体育课之前，他换上了红色短裤。"
+  },
+  "shot": {
+    "example_en": "His final shot bounced off the rim and missed.",
+    "example_zh": "他最后一投砸在篮筐上，没有进。",
+    "meaning_zh": "投篮；射击"
+  },
+  "shoulder": {
+    "example_en": "Carrying the camping bag left my shoulder sore.",
+    "example_zh": "背了那个露营包，我的肩膀又酸又疼。",
+    "meaning_zh": "肩膀"
+  },
+  "shower": {
+    "example_en": "A heavy shower soaked us halfway home from school.",
+    "example_zh": "放学走到半路，一阵大雨把我们淋透了。"
+  },
+  "side": {
+    "example_en": "Please sit on the window side of the dining table.",
+    "example_zh": "请坐在餐桌靠窗的那一边。"
+  },
+  "sight": {
+    "example_en": "Snow on the rooftops made a lovely sight at dawn.",
+    "example_zh": "黎明时分，屋顶上的雪构成一幅可爱的景象。"
+  },
+  "sign": {
+    "example_en": "A yellow sign told cars to slow near the school.",
+    "example_zh": "一块黄色标志让车辆在学校附近减速。",
+    "meaning_zh": "标志"
+  },
+  "singer": {
+    "example_en": "The young singer forgot a line and then laughed.",
+    "example_zh": "那位年轻歌手忘了一句歌词，接着笑了。"
+  },
+  "sir": {
+    "example_en": "Excuse me, sir, which bus goes to the museum?",
+    "example_zh": "先生，请问哪路公共汽车去博物馆？"
+  },
+  "sister": {
+    "example_en": "My younger sister borrowed my coat and lost a button.",
+    "example_zh": "我妹妹借了我的外套，还弄丢了一颗扣子。"
+  },
+  "site": {
+    "example_en": "Workers fenced off the building site beside the gym.",
+    "example_zh": "工人们把体育馆旁边的建筑工地围了起来。"
+  },
+  "situation": {
+    "example_en": "The situation on the icy road improved after sunrise.",
+    "example_zh": "日出之后，结冰路面的情况好转了。"
+  },
+  "size": {
+    "example_en": "These football boots are the wrong size for me.",
+    "example_zh": "这双足球鞋的大小不适合我。"
+  },
+  "skill": {
+    "example_en": "Cutting vegetables is a useful skill at home.",
+    "example_zh": "在家切菜是一项很有用的技能。"
+  },
+  "skin": {
+    "example_en": "Too much sun at the beach burned my skin.",
+    "example_zh": "在海边晒得太久，我的皮肤被晒伤了。",
+    "meaning_zh": "皮肤"
+  },
+  "skirt": {
+    "example_en": "She wore a grey skirt to the winter concert.",
+    "example_zh": "她穿了一条灰裙子去听冬季音乐会。"
+  },
+  "sky": {
+    "example_en": "The evening sky turned pink behind our block of flats.",
+    "example_zh": "傍晚，我们公寓楼后面的天空变成了粉红色。"
+  },
+  "smell": {
+    "example_en": "The smell of fried noodles drifted down the corridor.",
+    "example_zh": "炒面的味道顺着走廊飘了过来。"
+  },
+  "smoke": {
+    "example_en": "Grey smoke poured from the chemistry lab window.",
+    "example_zh": "灰色的烟从化学实验室的窗户涌出来。",
+    "meaning_zh": "烟"
+  },
+  "snow": {
+    "example_en": "Deep snow blocked the lane that leads to school.",
+    "example_zh": "厚厚的雪堵住了通向学校的小路。",
+    "meaning_zh": "雪"
+  },
+  "sock": {
+    "example_en": "I found a wet sock behind the bathroom door.",
+    "example_zh": "我在浴室门后发现了一只湿短袜。"
+  },
+  "software": {
+    "example_en": "This free software helps me record my spoken English.",
+    "example_zh": "这个免费软件能帮我录下自己说的英语。"
+  },
+  "soil": {
+    "example_en": "Beans will not grow if the soil stays this dry.",
+    "example_zh": "土壤要是一直这么干，豆子就长不出来。",
+    "meaning_zh": "土壤"
+  },
+  "soldier": {
+    "example_en": "The young soldier wrote a letter home every week.",
+    "example_zh": "那位年轻战士每个星期都给家里写信。"
+  },
+  "solution": {
+    "example_en": "Nobody offered a solution until my partner raised her hand.",
+    "example_zh": "直到我的搭档举手，才有人提出解决方法。"
+  },
+  "son": {
+    "example_en": "Their only son started nursery after the summer.",
+    "example_zh": "他们的独生子夏天过后上了幼儿园。"
+  },
+  "song": {
+    "example_en": "The whole bus sang one song until we reached camp.",
+    "example_zh": "整辆车上的人唱着同一首歌，直到我们到达营地。",
+    "meaning_zh": "歌曲"
+  },
+  "sort": {
+    "example_en": "Which sort of sandwich do you want in your lunchbox?",
+    "example_zh": "你想在午餐盒里放哪种三明治？"
+  },
+  "soul": {
+    "example_en": "Quiet music can calm your soul before a big exam.",
+    "example_zh": "大考之前，安静的音乐能让灵魂平静下来。"
+  },
+  "sound": {
+    "example_en": "A buzzing sound came from the broken classroom clock.",
+    "example_zh": "坏掉的教室时钟发出了嗡嗡的声音。"
+  },
+  "source": {
+    "example_en": "Old newspapers were the source of our history project.",
+    "example_zh": "旧报纸是我们历史课题的资料来源。"
+  },
+  "south": {
+    "example_en": "Warm winds from the south melted the last ice.",
+    "example_zh": "从南面吹来的暖风融化了最后的冰。"
+  },
+  "space": {
+    "example_en": "There is hardly any space under my bed for boxes.",
+    "example_zh": "我的床底下几乎没有放箱子的空间了。"
+  },
+  "Spain": {
+    "example_en": "The oranges from Spain were sweeter than ours.",
+    "example_zh": "从西班牙运来的橙子比我们这儿的更甜。"
+  },
+  "speaker": {
+    "example_en": "The guest speaker showed photos of her village school.",
+    "example_zh": "嘉宾演讲者展示了她乡村学校的照片。",
+    "meaning_zh": "演讲者"
+  },
+  "specialist": {
+    "example_en": "A heart specialist told Grandpa to walk every day.",
+    "example_zh": "心脏专家让爷爷每天都去散步。",
+    "meaning_zh": "专家"
+  },
+  "species": {
+    "example_en": "This rare species nests only on the island cliffs.",
+    "example_zh": "这个稀有物种只在岛上的悬崖筑巢。"
+  },
+  "speech": {
+    "example_en": "Her short speech made the hall go completely quiet.",
+    "example_zh": "她简短的演讲让礼堂里完全安静下来。"
+  },
+  "speed": {
+    "example_en": "Reduce your speed when the road is wet and dark.",
+    "example_zh": "路又湿又黑的时候，要把速度降下来。"
+  },
+  "spending": {
+    "example_en": "Holiday spending left almost nothing in my purse.",
+    "example_zh": "假期的开支几乎把我钱包里的钱花光了。"
+  },
+  "spider": {
+    "example_en": "A large spider sat in the web above the shed door.",
+    "example_zh": "一只大蜘蛛停在棚屋门上方的网上。",
+    "meaning_zh": "蜘蛛"
+  },
+  "spirit": {
+    "example_en": "Their fighting spirit returned after the coach spoke.",
+    "example_zh": "教练讲完话以后，他们的拼搏精神又回来了。"
+  },
+  "spoon": {
+    "example_en": "Stir the porridge with a wooden spoon, not a fork.",
+    "example_zh": "搅拌粥要用木匙，不要用叉子。"
+  },
+  "sport": {
+    "example_en": "Table tennis is the sport he practises with his dad.",
+    "example_zh": "乒乓球是他和爸爸一起练习的运动。"
+  },
+  "spot": {
+    "example_en": "We picked a shady spot and ate lunch on the grass.",
+    "example_zh": "我们挑了一处阴凉的地方，坐在草地上吃午饭。",
+    "meaning_zh": "地点"
+  },
+  "spring": {
+    "example_en": "Blossom covers the playground trees in early spring.",
+    "example_zh": "早春的时候，操场上的树开满了花。",
+    "meaning_zh": "春天"
+  },
+  "staff": {
+    "example_en": "Kitchen staff prepared sandwiches for the sports day.",
+    "example_zh": "厨房人员为运动会准备了三明治。"
+  },
+  "stage": {
+    "example_en": "Drawing a plan is the first stage of our poster.",
+    "example_zh": "画草图是我们制作海报的第一阶段。"
+  },
+  "stamp": {
+    "example_en": "She chose a panda stamp for the letter to Beijing.",
+    "example_zh": "她给寄往北京的信选了一张熊猫邮票。",
+    "meaning_zh": "邮票"
+  },
+  "standard": {
+    "example_en": "This essay is below the standard our teacher set.",
+    "example_zh": "这篇文章没有达到老师定下的标准。"
+  },
+  "standing": {
+    "example_en": "Winning twice improved her standing among the players.",
+    "example_zh": "连赢两场之后，她在队员中的地位提高了。",
+    "meaning_zh": "地位"
+  },
+  "star": {
+    "example_en": "A famous film star waved to us outside the cinema.",
+    "example_zh": "一位著名的电影明星在电影院外向我们招手。"
+  },
+  "state": {
+    "example_en": "In its solid state, water becomes ice in the freezer.",
+    "example_zh": "水处于固态时，放进冰箱就会变成冰。"
+  },
+  "statement": {
+    "example_en": "The captain read a short statement before the match.",
+    "example_zh": "队长在比赛前读了一则简短的陈述。"
+  },
+  "station": {
+    "example_en": "We missed the train and waited an hour at the station.",
+    "example_zh": "我们误了那趟火车，在车站等了一个小时。",
+    "meaning_zh": "车站"
+  },
+  "statistics": {
+    "example_en": "These statistics show fewer students arriving by car.",
+    "example_zh": "这些统计显示，开车到校的学生变少了。"
+  },
+  "status": {
+    "example_en": "Her status as team captain brought extra duties.",
+    "example_zh": "她作为队长的地位带来了更多职责。"
+  },
+  "steak": {
+    "example_en": "We grilled one steak and plenty of corn outside.",
+    "example_zh": "我们在外面烤了一块牛排，还有不少玉米。"
+  },
+  "steel": {
+    "example_en": "Workers painted the steel bridge blue last month.",
+    "example_zh": "工人们上个月把那座钢铁桥漆成了蓝色。"
+  },
+  "step": {
+    "example_en": "I heard one slow step on the stairs after midnight.",
+    "example_zh": "午夜过后，我听见楼梯上有一下缓慢的脚步。"
+  },
+  "stock": {
+    "example_en": "The canteen has little stock of juice this month.",
+    "example_zh": "食堂这个月的果汁库存已经不多了。",
+    "meaning_zh": "库存"
+  },
+  "stomach": {
+    "example_en": "Ice cream before dinner upset my stomach badly.",
+    "example_zh": "晚饭前吃了冰淇淋，把我的肚子吃坏了。"
+  },
+  "stone": {
+    "example_en": "A flat stone skipped three times across the pond.",
+    "example_zh": "一块扁石头在池塘上打出了三个水漂。"
+  },
+  "storage": {
+    "example_en": "Winter coats stay in storage until the weather turns.",
+    "example_zh": "冬天的外套先存放着，等到天气转冷再拿出来。"
+  },
+  "store": {
+    "example_en": "I bought eggs at the store before it closed.",
+    "example_zh": "商店关门之前，我买了鸡蛋。",
+    "meaning_zh": "商店"
+  },
+  "storey": {
+    "example_en": "The art room is on the top storey of this block.",
+    "example_zh": "美术教室在这栋楼的最高一层。"
+  },
+  "story": {
+    "example_en": "Grandma's story about the lost dog made us laugh.",
+    "example_zh": "奶奶讲的那只走失小狗的故事把我们逗笑了。"
+  },
+  "strawberry": {
+    "example_en": "He dropped a ripe strawberry into the cold yoghurt.",
+    "example_zh": "他把一颗熟草莓放进了冰酸奶里。",
+    "meaning_zh": "草莓"
+  },
+  "street": {
+    "example_en": "Cars crawl along our street when children arrive.",
+    "example_zh": "孩子们到校的时候，车辆在我们这条马路上缓慢行驶。"
+  },
+  "strength": {
+    "example_en": "She pushed the stuck door with all her strength.",
+    "example_zh": "她使出全部力气去推那扇卡住的门。",
+    "meaning_zh": "力气"
+  },
+  "string": {
+    "example_en": "This kite needs new string before it can fly again.",
+    "example_zh": "这只风筝得换上新细线，才能再飞起来。"
+  },
+  "structure": {
+    "example_en": "Label the structure of the flower on your diagram.",
+    "example_zh": "在你的图上标出这朵花的结构。"
+  },
+  "student": {
+    "example_en": "Only one student remembered a ruler for maths.",
+    "example_zh": "只有一个学生上数学课时记得带尺子。"
+  },
+  "studio": {
+    "example_en": "They record the school podcast in a tiny studio.",
+    "example_zh": "他们在一间很小的工作室里录制学校播客。"
+  },
+  "stuff": {
+    "example_en": "Leave wet sports stuff outside the classroom door.",
+    "example_zh": "把湿的运动用品放在教室门外。"
+  },
+  "style": {
+    "example_en": "I prefer her plain style to very fancy writing.",
+    "example_zh": "比起花哨的文字，我更喜欢她朴素的风格。",
+    "meaning_zh": "风格"
+  },
+  "subject": {
+    "example_en": "Physics became my hardest subject after the test.",
+    "example_zh": "那次测试之后，物理成了我最难的科目。"
+  },
+  "substance": {
+    "example_en": "Flour is the main substance in this simple bread.",
+    "example_zh": "面粉是这种简单面包里的主要物质。"
+  },
+  "success": {
+    "example_en": "Finishing the race was a real success for him.",
+    "example_zh": "对他来说，跑完这场比赛是一次真正的成功。"
+  },
+  "sugar": {
+    "example_en": "I stopped putting sugar in my morning cocoa.",
+    "example_zh": "我早上喝可可时不再放糖了。",
+    "meaning_zh": "糖"
+  },
+  "suggestion": {
+    "example_en": "My suggestion was to start the meeting earlier.",
+    "example_zh": "我的提议是把会议提前开始。"
+  },
+  "suite": {
+    "example_en": "The hotel suite had a sofa and two single beds.",
+    "example_zh": "这家旅馆的套间里有一张沙发和两张单人床。"
+  },
+  "sum": {
+    "example_en": "Check the sum before you pay the restaurant bill.",
+    "example_zh": "付餐馆账单之前，先把总和核对一遍。",
+    "meaning_zh": "总和"
+  },
+  "summary": {
+    "example_en": "Our summary of the chapter filled half a page.",
+    "example_zh": "我们对这一章写的摘要占了半页纸。"
+  },
+  "summer": {
+    "example_en": "Last summer we camped beside a river for a week.",
+    "example_zh": "去年夏天，我们在河边露营了一个星期。"
+  },
+  "sun": {
+    "example_en": "The afternoon sun made the classroom too hot.",
+    "example_zh": "下午的太阳把教室晒得太热了。",
+    "meaning_zh": "太阳"
+  },
+  "Sunday": {
+    "example_en": "Sunday is quiet because our family stays at home.",
+    "example_zh": "星期日很安静，因为我们全家都待在家里。",
+    "meaning_zh": "星期日"
+  },
+  "supper": {
+    "example_en": "Fish and rice made a hot supper after swimming.",
+    "example_zh": "游完泳以后，晚饭是热乎的鱼和米饭。"
+  },
+  "supplier": {
+    "example_en": "A local supplier brings vegetables to our canteen.",
+    "example_zh": "一位本地供应商给我们食堂送蔬菜。"
+  },
+  "supporter": {
+    "example_en": "Each supporter wore a red scarf in the cold wind.",
+    "example_zh": "每一位支持者都在冷风里戴着红围巾。",
+    "meaning_zh": "支持者"
+  },
+  "surface": {
+    "example_en": "Thick dust covered the surface of the old piano.",
+    "example_zh": "厚厚的灰尘盖住了那架旧钢琴的表面。"
+  },
+  "surgery": {
+    "example_en": "Minor surgery on his wrist kept him at home for days.",
+    "example_zh": "手腕上的一个小手术让他在家待了好几天。",
+    "meaning_zh": "手术"
+  },
+  "surprise": {
+    "example_en": "Mum's surprise was tickets to the weekend match.",
+    "example_zh": "妈妈给的惊喜是周末比赛的门票。"
+  },
+  "survey": {
+    "example_en": "Our group ran a survey on how classmates travel.",
+    "example_zh": "我们小组做了一项关于同学如何出行的调查。"
+  },
+  "survival": {
+    "example_en": "Clean water meant survival for the hikers on the hill.",
+    "example_zh": "对山上的徒步者来说，干净的水意味着能够存活。"
+  },
+  "Sweden": {
+    "example_en": "My pen friend in Sweden sent photos of frozen lakes.",
+    "example_zh": "我在瑞典的笔友寄来了结冰湖面的照片。"
+  },
+  "swimming": {
+    "example_en": "Swimming before breakfast wakes me up completely.",
+    "example_zh": "早饭前游泳能让我完全清醒过来。"
+  },
+  "Switzerland": {
+    "example_en": "Chocolate brought back from Switzerland filled the tin.",
+    "example_zh": "从瑞士带回来的巧克力把那个罐子装满了。"
+  },
+  "symbol": {
+    "example_en": "The olive branch is a symbol of peace in the play.",
+    "example_zh": "在这部话剧里，橄榄枝是和平的象征。",
+    "meaning_zh": "象征"
+  },
+  "symptom": {
+    "example_en": "A high temperature was the first symptom of his cold.",
+    "example_zh": "高烧是他感冒后出现的第一个症状。"
+  },
+  "system": {
+    "example_en": "Our heating system rattles whenever the wind rises.",
+    "example_zh": "风一大，我们的供暖系统就咔咔作响。",
+    "meaning_zh": "系统"
+  },
+  "tablet": {
+    "example_en": "Take one tablet with water after you eat breakfast.",
+    "example_zh": "吃完早饭后，用水送服一片药片。",
+    "meaning_zh": "药片"
+  },
+  "tail": {
+    "example_en": "The cat's tail knocked a cup off the low table.",
+    "example_zh": "猫的尾巴把矮桌上的杯子碰掉了。"
+  },
+  "Taiwan": {
+    "example_en": "We changed planes in Taiwan on the way to see cousins.",
+    "example_zh": "去看表亲的路上，我们在台湾换了飞机。"
+  },
+  "tale": {
+    "example_en": "Dad's tale about a brave mouse lasted until bedtime.",
+    "example_zh": "爸爸讲的勇敢小老鼠的故事一直讲到睡觉。"
+  },
+  "tank": {
+    "example_en": "Mud covered the tank as it crossed the empty field.",
+    "example_zh": "坦克穿过空地时，身上沾满了泥。"
+  },
+  "tape": {
+    "example_en": "A piece of clear tape held the torn map together.",
+    "example_zh": "一小段透明胶带把撕破的地图粘在了一起。",
+    "meaning_zh": "胶带"
+  },
+  "target": {
+    "example_en": "Beating our old score is the target for Friday.",
+    "example_zh": "超过我们以前的分数，是星期五的目标。"
+  },
+  "task": {
+    "example_en": "Sorting the library books became my task on Friday.",
+    "example_zh": "星期五，整理图书馆的书成了我的任务。",
+    "meaning_zh": "任务"
+  },
+  "taste": {
+    "example_en": "I prefer the taste of warm milk to cold milk.",
+    "example_zh": "比起冰牛奶，我更喜欢热牛奶的味道。"
+  },
+  "tax": {
+    "example_en": "The tax added two pounds to the price of the coat.",
+    "example_zh": "加上税费以后，这件外套的价格多了两英镑。"
+  },
+  "taxi": {
+    "example_en": "The taxi arrived late, so we ran into assembly.",
+    "example_zh": "出租车来晚了，我们只好跑着去参加晨会。"
+  },
+  "tea": {
+    "example_en": "Grandpa drinks weak tea with no milk every evening.",
+    "example_zh": "爷爷每天晚上都喝不加奶的淡茶。",
+    "meaning_zh": "茶"
+  },
+  "teacher": {
+    "example_en": "Our maths teacher stayed late to mark our graphs.",
+    "example_zh": "我们的数学老师留到很晚，批改我们的图表。"
+  },
+  "teaching": {
+    "example_en": "Good teaching made the dull chapter feel exciting.",
+    "example_zh": "出色的教导让枯燥的那一章变得有趣了。"
+  },
+  "team": {
+    "example_en": "The relay team dropped the baton on the last bend.",
+    "example_zh": "接力队在最后一个弯道掉了接力棒。"
+  },
+  "technique": {
+    "example_en": "Her serving technique improved after weeks of practice.",
+    "example_zh": "练了几个星期之后，她的发球手法进步了。"
+  },
+  "technology": {
+    "example_en": "New technology lets farmers water fields from home.",
+    "example_zh": "新技术让农民在家里就能给田地浇水。"
+  },
+  "telephone": {
+    "example_en": "The office telephone rang all through lunch break.",
+    "example_zh": "办公室的电话响了整整一个午休。"
+  },
+  "television": {
+    "example_en": "We argued about the film we saw on television.",
+    "example_zh": "我们就在电视上看到的那部电影争论了起来。"
+  },
+  "telly": {
+    "example_en": "Grandad sleeps in his chair with the telly still on.",
+    "example_zh": "爷爷在椅子上睡着了，电视却还开着。"
+  },
+  "tennis": {
+    "example_en": "Rain cancelled tennis, so we played cards indoors.",
+    "example_zh": "下雨取消了网球，我们就改在室内打牌。"
+  },
+  "tension": {
+    "example_en": "You could feel the tension while the scores were read.",
+    "example_zh": "宣读分数的时候，你能感到那种紧张。",
+    "meaning_zh": "紧张"
+  },
+  "term": {
+    "example_en": "The autumn term ends two days before Christmas.",
+    "example_zh": "秋季学期在圣诞节前两天结束。",
+    "meaning_zh": "学期"
+  },
+  "territory": {
+    "example_en": "Wolves mark territory so other packs stay away.",
+    "example_zh": "狼会标记领土，让别的狼群不敢靠近。",
+    "meaning_zh": "领土"
+  },
+  "test": {
+    "example_en": "Open your test only when the teacher starts the clock.",
+    "example_zh": "等老师开始计时，再打开测试卷。"
+  },
+  "text": {
+    "example_en": "Copy the text from the board into your notebook.",
+    "example_zh": "把黑板上的文本抄到你的笔记本里。"
+  },
+  "theatre": {
+    "example_en": "Our class booked seats at the theatre for Friday.",
+    "example_zh": "我们班订了星期五去剧院的座位。"
+  },
+  "theme": {
+    "example_en": "Courage is the theme running through this novel.",
+    "example_zh": "勇气是贯穿这本小说的主题。"
+  },
+  "therapy": {
+    "example_en": "Speech therapy helped my cousin say the hard sounds.",
+    "example_zh": "言语疗法帮我表弟发出了那些难发的音。"
+  },
+  "thing": {
+    "example_en": "Losing the bus ticket was the worst thing all week.",
+    "example_zh": "把公共汽车票弄丢了，是这一周最糟糕的事。"
+  },
+  "thinking": {
+    "example_en": "Slow thinking saved him from a careless mistake.",
+    "example_zh": "慢慢思考让他避免了一个粗心的错误。"
+  },
+  "thought": {
+    "example_en": "A worrying thought kept me awake past midnight.",
+    "example_zh": "一个令人不安的想法让我过了午夜还睡不着。",
+    "meaning_zh": "想法"
+  },
+  "threat": {
+    "example_en": "Floodwater became a threat to houses by the river.",
+    "example_zh": "洪水成了河边那些房子的威胁。"
+  },
+  "throat": {
+    "example_en": "Hot lemon water eased my throat while I had a cold.",
+    "example_zh": "我感冒的时候，热柠檬水缓解了喉咙的不适。",
+    "meaning_zh": "喉咙"
+  },
+  "Thursday": {
+    "example_en": "Thursday is match day for our school football team.",
+    "example_zh": "星期四是我们学校足球队的比赛日。"
+  },
+  "tights": {
+    "example_en": "Her tights tore when she climbed over the fence.",
+    "example_zh": "她翻篱笆的时候，裤袜刮破了。"
+  },
+  "time": {
+    "example_en": "Check the time so we do not miss the coach.",
+    "example_zh": "看一下时间，免得我们错过长途汽车。"
+  },
+  "tip": {
+    "example_en": "I left a tip because the waiter had been kind.",
+    "example_zh": "服务员一直很热情，所以我留了小费。",
+    "meaning_zh": "小费；窍门"
+  },
+  "toast": {
+    "example_en": "The toast popped up burnt, so I scraped it.",
+    "example_zh": "吐司弹起来已经糊了，我把糊的地方刮掉。"
+  },
+  "today": {
+    "example_en": "Today is sports day, so lessons finish at noon.",
+    "example_zh": "今天是运动会，所以上课到中午就结束。",
+    "meaning_zh": "今天"
+  },
+  "tomorrow": {
+    "example_en": "Tomorrow is too soon for such a long hike.",
+    "example_zh": "这么长的徒步，明天就出发实在太赶了。",
+    "meaning_zh": "明天"
+  },
+  "tone": {
+    "example_en": "Do not use a rude tone when you ask for help.",
+    "example_zh": "向别人求助的时候，不要用粗鲁的语气。",
+    "meaning_zh": "语气"
+  },
+  "tonight": {
+    "example_en": "Tonight is parents' evening in the main hall.",
+    "example_zh": "今晚学校主礼堂举行家长会。",
+    "meaning_zh": "今晚"
+  },
+  "tool": {
+    "example_en": "Bring a small tool if the tent pole will not fit.",
+    "example_zh": "如果帐篷杆装不上，就带一把小工具来。"
+  },
+  "tooth": {
+    "example_en": "The baby got a new tooth and cried all evening.",
+    "example_zh": "宝宝长了一颗新牙，哭了整整一个晚上。"
+  },
+  "topic": {
+    "example_en": "Our topic for the debate is phones in school.",
+    "example_zh": "我们这场辩论的话题是学校里能不能用手机。"
+  },
+  "touch": {
+    "example_en": "Even a light touch on his arm made him jump.",
+    "example_zh": "哪怕轻轻碰一下他的胳膊，他都会吓得跳起来。"
+  },
+  "tourist": {
+    "example_en": "The tourist photographed the bridge from the bus.",
+    "example_zh": "那位旅游者从公共汽车上拍下了那座桥。"
+  },
+  "tower": {
+    "example_en": "From the tower we could see the whole harbour.",
+    "example_zh": "从高塔上，我们能看见整个港口。"
+  },
+  "town": {
+    "example_en": "Shops in this town close early on winter evenings.",
+    "example_zh": "冬天的晚上，这座城镇里的商店关得很早。"
+  },
+  "toy": {
+    "example_en": "The puppy chewed the rubber toy until it split.",
+    "example_zh": "小狗把那个橡胶玩具啃到裂开了。"
+  },
+  "track": {
+    "example_en": "Stay in your lane when you run on the track.",
+    "example_zh": "在跑道上跑的时候，要待在自己的赛道里。",
+    "meaning_zh": "跑道"
+  },
+  "trade": {
+    "example_en": "Wool trade kept the harbour busy for years.",
+    "example_zh": "羊毛贸易让这个港口热闹了好多年。",
+    "meaning_zh": "贸易"
+  },
+  "trading": {
+    "example_en": "Market trading slows down once the rain starts.",
+    "example_zh": "雨一开始下，市场上的贸易就慢了下来。"
+  },
+  "tradition": {
+    "example_en": "Lighting lanterns is a tradition in her hometown.",
+    "example_zh": "点灯笼是她家乡的一项传统。",
+    "meaning_zh": "传统"
+  },
+  "trainers": {
+    "example_en": "Clean your trainers before you walk on the carpet.",
+    "example_zh": "走上地毯之前，先把运动鞋擦干净。"
+  }
+}

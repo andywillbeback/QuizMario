@@ -487,9 +487,7 @@
       el.classList.toggle("sort-active", mode === sortMode);
     }
     const label = $("sort-mode-label");
-    if (label) {
-      label.textContent = sortMode === "scene" ? "场景" : "默认（到期优先 SRS）";
-    }
+    if (label) label.textContent = sortMode === "scene" ? "场景" : "默认";
   }
 
   function setSortMode(mode) {
@@ -1163,14 +1161,19 @@
 
       const goodLabel = previewScheduleLabel(prog, 1);
       const easyLabel = previewScheduleLabel(prog, 2);
+      const rateBtn = (id, cls, zh, en, when) =>
+        '<button type="button" class="rate-btn ' + cls + '" id="' + id + '">' +
+        '<span class="rate-zh">' + zh + "</span>" +
+        '<span class="rate-sub">' + en + " · " + escapeHtml(when) + "</span></button>";
       fb.innerHTML =
         '<div class="fb-title">Correct! +' + bonus + "</div>" +
-        '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" + speakButtons(currentCard) +
-        '<div class="fb-meta">选择复习力度（Anki：Good / Easy）</div>' +
+        '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+        '<div class="fb-meta">选下次再练的时间</div>' +
         '<div class="rate-row">' +
-        '<button type="button" class="rate-btn good" id="btn-rate-good">Good · ' + escapeHtml(goodLabel) + "</button>" +
-        '<button type="button" class="rate-btn easy" id="btn-rate-easy">Easy · ' + escapeHtml(easyLabel) + "</button>" +
-        "</div>";
+        rateBtn("btn-rate-good", "good", "记住了", "Good", goodLabel) +
+        rateBtn("btn-rate-easy", "easy", "太简单", "Easy", easyLabel) +
+        "</div>" +
+        speakButtons(currentCard);
       fb.className = "ok show";
 
       flashStage("ok");
@@ -1239,13 +1242,11 @@
     const nowMs = Date.now();
     schedule(prog, quality === 2 ? 2 : 1, nowMs);
     const fb = $("feedback");
-    const qName = quality === 2 ? "Easy" : "Good";
+    const qName = quality === 2 ? "太简单" : "记住了";
     fb.innerHTML =
       '<div class="fb-title">Correct · ' + qName + "</div>" +
       '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
-      '<div class="fb-meta">下次 · ' + escapeHtml(formatDue(prog)) +
-      ((prog.interval || 0) >= 1 ? "（间隔 " + prog.interval + " 天）" : "") +
-      "</div>";
+      '<div class="fb-meta">下次见 · ' + escapeHtml(formatDue(prog)) + "</div>";
     fb.className = "ok show";
 
     const newMastery = Math.floor(prog.mastery || 0);
