@@ -30,6 +30,34 @@ assert.strictEqual(srs.formatChallengeClock(1000), "0:01");
 assert.strictEqual(srs.formatChallengeClock(0), "0:00");
 assert.strictEqual(srs.CHALLENGE_VO.success, "audio/13_challenge_cheer.m4a");
 assert.strictEqual(srs.CHALLENGE_VO.fail, "audio/14_challenge_regret.m4a");
+assert.strictEqual(srs.CHALLENGE_SFX.success, "audio/15_applause.wav");
+assert.strictEqual(srs.CHALLENGE_SFX.fail, "audio/16_crows.wav");
+assert.deepStrictEqual(srs.CHALLENGE_LINES.success, ["就你叫生词啊？", "我要打十个！", "力微，饭否？"]);
+assert.deepStrictEqual(srs.CHALLENGE_LINES.fail, ["就这？", "单词：来打我呀。", "这把给了。"]);
+assert.strictEqual(srs.pickChallengeLine("success", 0), "就你叫生词啊？");
+assert.strictEqual(srs.pickChallengeLine("success", 0.34), "我要打十个！");
+assert.strictEqual(srs.pickChallengeLine("success", 0.67), "力微，饭否？");
+assert.strictEqual(srs.pickChallengeLine("fail", 0), "就这？");
+assert.strictEqual(srs.pickChallengeLine("fail", 0.34), "单词：来打我呀。");
+assert.strictEqual(srs.pickChallengeLine("fail", 0.999), "这把给了。");
+{
+  const counts = {};
+  for (let i = 0; i < 6000; i++) {
+    const line = srs.pickChallengeLine("success");
+    counts[line] = (counts[line] || 0) + 1;
+  }
+  for (const line of srs.CHALLENGE_LINES.success) {
+    assert.ok(counts[line] > 1500, "success line not fair: " + line + " " + counts[line]);
+  }
+  const failCounts = {};
+  for (let i = 0; i < 6000; i++) {
+    const line = srs.pickChallengeLine("fail");
+    failCounts[line] = (failCounts[line] || 0) + 1;
+  }
+  for (const line of srs.CHALLENGE_LINES.fail) {
+    assert.ok(failCounts[line] > 1500, "fail line not fair: " + line + " " + failCounts[line]);
+  }
+}
 
 /* Early misses used to freeze a 50-card exam set: 40 graduated, 10 still learning. */
 {
@@ -143,5 +171,31 @@ assert.ok(index.includes('src="srs-rules.js"'));
 assert.ok(index.includes('id="challenge-timer"'));
 assert.ok(index.includes("遗憾失败"));
 assert.ok(index.includes('id="screen-fail"'));
+assert.ok(index.includes('id="clear-achievement"'));
+assert.ok(index.includes('id="fail-banner"'));
+assert.ok(index.includes('id="crow-pass"'));
+assert.ok(game.includes("pickChallengeLine"));
+assert.ok(game.includes('kind === "applause"') && game.includes('kind === "crow"'));
+assert.ok(!/function playChallengeCue[\s\S]*?function showCrowPass/.test(game) || !/function playChallengeCue[\s\S]*?function showCrowPass/.exec(game)[0].includes("speakZh"),
+  "default challenge cue must not speak a human line");
+for (const rel of ["audio/15_applause.wav", "audio/16_crows.wav"]) {
+  const buf = fs.readFileSync(path.join(root, rel));
+  assert.strictEqual(buf.toString("ascii", 0, 4), "RIFF", rel);
+  assert.strictEqual(buf.toString("ascii", 8, 12), "WAVE", rel);
+  const rate = buf.readUInt32LE(24);
+  const dataBytes = buf.readUInt32LE(40);
+  const samples = dataBytes / 2;
+  const seconds = samples / rate;
+  assert.ok(seconds > 0.8 && seconds < 3, rel + " duration " + seconds);
+  let sum = 0;
+  let peak = 0;
+  for (let i = 0; i < samples; i += 20) {
+    const v = buf.readInt16LE(44 + i * 2) / 32768;
+    sum += v * v;
+    peak = Math.max(peak, Math.abs(v));
+  }
+  const rms = Math.sqrt(sum / Math.ceil(samples / 20));
+  assert.ok(rms > 0.02 && peak > 0.2, rel + " rms " + rms + " peak " + peak);
+}
 
 console.log("srs-clearance ok");

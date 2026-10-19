@@ -440,7 +440,8 @@
   },
   "story": {
     "example_en": "Grandma's story about the lost dog made us laugh.",
-    "example_zh": "奶奶讲的那只走失小狗的故事把我们逗笑了。"
+    "example_zh": "奶奶讲的那只走失小狗的故事把我们逗笑了。",
+    "meaning_zh": "故事"
   },
   "strawberry": {
     "example_en": "He dropped a ripe strawberry into the cold yoghurt.",

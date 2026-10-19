@@ -14,10 +14,14 @@
  *   do not veto the set. A miss is not free: that card drops out of solid.
  *
  * Challenge clock: CHALLENGE_MS is exactly 12 minutes. Change this constant
- * to retune (10 or 15 minutes). Custom voice files, same folder as the kill clips:
- *   audio/13_challenge_cheer.m4a    reward voice on a win inside the clock
- *   audio/14_challenge_regret.m4a   regret voice on 遗憾失败
- * Missing files fall back to an oscillator sting plus Chinese speech.
+ * to retune (10 or 15 minutes).
+ * Optional spoken overrides (drop a file to replace the default SFX):
+ *   audio/13_challenge_cheer.m4a    spoken win line
+ *   audio/14_challenge_regret.m4a   spoken fail line
+ * Default SFX when those files are absent (original, replaceable):
+ *   audio/15_applause.wav           applause / cheers, no spoken line
+ *   audio/16_crows.wav              crow caws
+ * Regenerate the defaults with node tools/gen-challenge-sfx.js.
  */
 (function (root, factory) {
   var api = factory();
@@ -35,6 +39,24 @@
     success: "audio/13_challenge_cheer.m4a",
     fail: "audio/14_challenge_regret.m4a",
   };
+  var CHALLENGE_SFX = {
+    success: "audio/15_applause.wav",
+    fail: "audio/16_crows.wav",
+  };
+  var CHALLENGE_LINES = {
+    success: ["就你叫生词啊？", "我要打十个！", "力微，饭否？"],
+    fail: ["就这？", "单词：来打我呀。", "这把给了。"],
+  };
+
+  /** Fair pick. Pass roll in [0, 1) to force a line in tests. */
+  function pickChallengeLine(kind, roll) {
+    var pool = CHALLENGE_LINES[kind];
+    if (!pool || !pool.length) return "";
+    var r = typeof roll === "number" && isFinite(roll) ? roll : Math.random();
+    if (r < 0) r = 0;
+    if (r >= 1) r = 0.999999;
+    return pool[Math.floor(r * pool.length)];
+  }
 
   function defaultCardProg() {
     return {
@@ -202,6 +224,9 @@
     CLEAR_MIN_INTERVAL_DAYS: CLEAR_MIN_INTERVAL_DAYS,
     CHALLENGE_MS: CHALLENGE_MS,
     CHALLENGE_VO: CHALLENGE_VO,
+    CHALLENGE_SFX: CHALLENGE_SFX,
+    CHALLENGE_LINES: CHALLENGE_LINES,
+    pickChallengeLine: pickChallengeLine,
     defaultCardProg: defaultCardProg,
     isNewCard: isNewCard,
     isLearning: isLearning,

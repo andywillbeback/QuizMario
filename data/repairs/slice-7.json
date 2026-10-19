@@ -482,7 +482,8 @@
   },
   "rail": {
     "example_en": "A loose rail made the train stop outside town.",
-    "example_zh": "一根松动的铁轨让火车停在了城外。"
+    "example_zh": "一根松动的铁轨让火车停在了城外。",
+    "meaning_zh": "铁轨"
   },
   "railway": {
     "example_en": "The railway crosses the wide river on a high bridge.",

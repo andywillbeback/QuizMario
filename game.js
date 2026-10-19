@@ -49,6 +49,8 @@
   let challengeFailed = false;
   let challengeDeadline = 0;
   let challengeTimer = null;
+  /** Optional [0, 1) roll so a test can force one achievement line. */
+  let forcedChallengeRoll = null;
   /** Root-affix browse stays in the word bank, but the control is hidden for now. */
   function publicSortMode(mode) {
     return mode === "scene" ? "scene" : "default";
@@ -875,56 +877,108 @@
         g.connect(master);
         o.start(t0);
         o.stop(t0 + 0.72);
+      } else if (kind === "applause") {
+        const dur = 1.5;
+        const len = Math.floor(audioCtx.sampleRate * dur);
+        const buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let c = 0; c < 46; c++) {
+          const start = Math.floor((0.02 + Math.random() * 1.3) * audioCtx.sampleRate);
+          const amp = 0.3 + Math.random() * 0.7;
+          const clapLen = Math.floor(audioCtx.sampleRate * 0.02);
+          for (let i = 0; i < clapLen && start + i < len; i++) {
+            data[start + i] += (Math.random() * 2 - 1) * amp * Math.exp(-i / (audioCtx.sampleRate * 0.004));
+          }
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "highpass";
+        filter.frequency.value = 900;
+        master.gain.setValueAtTime(0.85, t0);
+        src.connect(filter);
+        filter.connect(master);
+        src.start(t0);
+        src.stop(t0 + dur);
+      } else if (kind === "crow") {
+        master.gain.setValueAtTime(0.9, t0);
+        for (let k = 0; k < 3; k++) {
+          const t = t0 + k * 0.42;
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          const filter = audioCtx.createBiquadFilter();
+          o.type = "sawtooth";
+          o.frequency.setValueAtTime(720, t);
+          o.frequency.exponentialRampToValueAtTime(380, t + 0.24);
+          filter.type = "bandpass";
+          filter.frequency.setValueAtTime(1400, t);
+          filter.Q.value = 3.2;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.34, t + 0.03);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+          o.connect(filter);
+          filter.connect(g);
+          g.connect(master);
+          o.start(t);
+          o.stop(t + 0.32);
+        }
       }
     } catch (_) {}
   }
 
   /**
-   * Challenge voices. Drop Andy's recordings on these exact paths
-   * (same folder as the kill clips) and they replace the fallback:
+   * Challenge audio. Optional spoken overrides, if the files exist:
    *   audio/13_challenge_cheer.m4a
    *   audio/14_challenge_regret.m4a
-   * A missing file plays the cheer/regret sting and speaks the Chinese line.
+   * Otherwise the default is applause or crow caws
+   * (audio/15_applause.wav, audio/16_crows.wav), then a procedural sting.
+   * The default path does not speak a human line.
    */
-  function speakZh(text, pitch) {
-    if (!text || !window.speechSynthesis) return;
-    try {
-      stopCustomVo();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "zh-CN";
-      u.rate = 1;
-      u.pitch = pitch == null ? 1 : pitch;
-      speakUtterance(u);
-    } catch (_) {}
-  }
-
-  function playChallengeCue(kind) {
-    const src = SRS.CHALLENGE_VO[kind];
-    const spoken = kind === "success" ? "挑战成功" : "遗憾失败";
-    const sting = kind === "success" ? "cheer" : "regret";
-    const pitch = kind === "success" ? 1.12 : 0.82;
-    let settled = false;
-    const fallback = () => {
-      if (settled) return;
-      settled = true;
-      playSting(sting, { force: true });
-      speakZh(spoken, pitch);
-    };
+  function playSrc(src, onFail) {
     if (!src) {
-      fallback();
+      onFail();
       return;
     }
+    let settled = false;
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      onFail();
+    };
     try {
       const audio = new Audio(src);
       audio.preload = "auto";
-      audio.addEventListener("error", fallback, { once: true });
+      audio.addEventListener("error", fail, { once: true });
       const started = audio.play();
       if (started && typeof started.then === "function") {
-        started.then(() => { settled = true; }).catch(fallback);
+        started.then(() => { settled = true; }).catch(fail);
       }
     } catch (_) {
-      fallback();
+      fail();
     }
+  }
+
+  function rollChallenge() {
+    if (forcedChallengeRoll == null) return Math.random();
+    const roll = forcedChallengeRoll;
+    forcedChallengeRoll = null;
+    return roll;
+  }
+
+  function playChallengeCue(kind) {
+    const voice = SRS.CHALLENGE_VO[kind];
+    const sfx = SRS.CHALLENGE_SFX[kind];
+    const sting = kind === "success" ? "applause" : "crow";
+    playSrc(voice, () => playSrc(sfx, () => playSting(sting, { force: true })));
+  }
+
+  function showCrowPass() {
+    const el = $("crow-pass");
+    if (!el) return;
+    el.hidden = false;
+    el.classList.remove("fly");
+    void el.offsetWidth;
+    el.classList.add("fly");
   }
 
   function hideKillBanner() {
@@ -1078,8 +1132,13 @@
     const mins = Math.round(SRS.CHALLENGE_MS / MIN_MS);
     const msg = $("fail-msg");
     if (msg) msg.textContent = mins + " 分钟到了。这组还没通关。错词会再出现，再试一次即可。";
+    const banner = $("fail-banner");
+    if (banner) {
+      banner.hidden = false;
+      banner.textContent = SRS.pickChallengeLine("fail", rollChallenge());
+    }
     showScreen("fail");
-    showKillBanner("遗憾失败", "regret");
+    showCrowPass();
     playChallengeCue("fail");
   }
 
@@ -1560,13 +1619,18 @@
     if (trophy) trophy.hidden = !challengeWon;
     const title = $("clear-title");
     if (title) title.textContent = challengeWon ? "挑战成功" : "Set cleared!";
+    const achievement = challengeWon ? SRS.pickChallengeLine("success", rollChallenge()) : "";
+    const achEl = $("clear-achievement");
+    if (achEl) {
+      achEl.hidden = !challengeWon;
+      achEl.textContent = achievement;
+    }
     const clearScreen = $("screen-clear");
     if (clearScreen) clearScreen.classList.toggle("challenge-win", !!challengeWon);
     showScreen("clear");
     spawnPointsFloater(50);
     flashStage("ok");
     if (challengeWon) {
-      showKillBanner("挑战成功", "cheer");
       playChallengeCue("success");
     } else {
       playPartClearCue(currentLevel);
@@ -2008,6 +2072,9 @@
       if (!challengeActive || challengeFailed) return false;
       onLevelClear();
       return true;
+    },
+    debugSetChallengeRoll(roll) {
+      forcedChallengeRoll = roll;
     },
     getSave() { return save; },
     applyCloudSave(data) {

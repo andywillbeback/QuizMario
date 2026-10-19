@@ -100,6 +100,13 @@ function staticGuards() {
   assert.ok(rules.includes("12 * 60 * 1000"), "challenge length constant is 12 minutes");
   assert.ok(rules.includes("audio/13_challenge_cheer.m4a"), "cheer voice path");
   assert.ok(rules.includes("audio/14_challenge_regret.m4a"), "regret voice path");
+  assert.ok(rules.includes("audio/15_applause.wav"), "applause sfx path");
+  assert.ok(rules.includes("audio/16_crows.wav"), "crow sfx path");
+  assert.ok(rules.includes("就你叫生词啊？") && rules.includes("这把给了。"), "achievement lines");
+  assert.ok(index.includes('id="clear-achievement"'), "success achievement banner");
+  assert.ok(index.includes('id="fail-banner"'), "fail banner");
+  assert.ok(index.includes('id="crow-pass"'), "crow fly overlay");
+  assert.ok(!/function playChallengeCue[\s\S]*?speakZh/.test(game), "challenge cue does not speak");
 }
 
 function sleep(ms) {
@@ -515,13 +522,16 @@ async function main() {
       const clear = document.getElementById("screen-clear");
       if (!clear || !clear.classList.contains("active")) return null;
       const trophy = document.getElementById("clear-trophy");
+      const ach = document.getElementById("clear-achievement");
       return {
         title: (document.getElementById("clear-title") || {}).textContent || "",
-        trophy: !!(trophy && !trophy.hidden)
+        trophy: !!(trophy && !trophy.hidden),
+        achievement: ach && !ach.hidden ? ach.textContent : ""
       };
     })()`), 8000, "challenge success");
     assert.ok(cele.title.indexOf("挑战成功") !== -1, cele.title);
     assert.strictEqual(cele.trophy, true, "win shows the trophy");
+    assert.ok(["就你叫生词啊？", "我要打十个！", "力微，饭否？"].indexOf(cele.achievement) !== -1, cele.achievement);
 
     await evalRetry(`document.getElementById("btn-clear-home").click()`);
     await waitFor(async () => evalRetry(`document.getElementById("screen-home").classList.contains("active") ? true : null`), 8000, "home after win");
@@ -537,9 +547,17 @@ async function main() {
     const failed = await waitFor(async () => evalRetry(`(() => {
       const fail = document.getElementById("screen-fail");
       if (!fail || !fail.classList.contains("active")) return null;
-      return { title: (document.getElementById("fail-title") || {}).textContent || "" };
+      const banner = document.getElementById("fail-banner");
+      const crow = document.getElementById("crow-pass");
+      return {
+        title: (document.getElementById("fail-title") || {}).textContent || "",
+        banner: banner && !banner.hidden ? banner.textContent : "",
+        crow: !!(crow && !crow.hidden && crow.classList.contains("fly"))
+      };
     })()`), 8000, "regret fail screen");
     assert.ok(failed.title.indexOf("遗憾失败") !== -1, failed.title);
+    assert.ok(["就这？", "单词：来打我呀。", "这把给了。"].indexOf(failed.banner) !== -1, failed.banner);
+    assert.strictEqual(failed.crow, true, "fail shows the crow fly");
 
     await evalRetry(`(() => {
       const track = (window.VOCAB_EXAM_TRACKS || []).find((t) => t.id === "zhongkao");
