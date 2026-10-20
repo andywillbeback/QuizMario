@@ -304,6 +304,27 @@
   }
   button.ghost:active { transform: translateY(1px) scale(.97); background: rgba(255,255,255,.06); }
   button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  .count-badge {
+    display: inline-block;
+    min-width: 1.25em;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #121722;
+    color: #f8fbff;
+    font-size: .75rem;
+    line-height: 1.35;
+    vertical-align: 1px;
+  }
+  button.secondary .count-badge { background: var(--gold); color: #121722; }
+  .count-badge[hidden] { display: none; }
+  .queue-empty {
+    margin: 10px auto 0;
+    max-width: 28rem;
+    line-height: 1.55;
+    color: var(--gold);
+  }
+  .continue-hint { margin-top: 8px; font-size: .85rem; }
 
   .level-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1053,6 +1074,11 @@
           <select id="track-select" aria-label="选择词库"></select>
           <div id="track-desc"></div>
         </div>
+        <div class="btn-row" id="home-queues">
+          <button id="btn-due-today" type="button">今日到期 <span id="due-badge" class="count-badge" hidden>0</span></button>
+          <button id="btn-wrong-book" class="secondary" type="button">错词本 <span id="wrong-badge" class="count-badge" hidden>0</span></button>
+        </div>
+        <p id="queue-empty" class="queue-empty" hidden></p>
         <div class="btn-row">
           <button id="btn-continue" type="button">继续闯关</button>
           <button id="btn-levels" class="secondary" type="button">选择关卡</button>
@@ -1060,6 +1086,7 @@
           <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
         </div>
+        <p id="continue-hint" class="sub continue-hint" hidden></p>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
           Tip: 点选英文单词 · 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>
         </p>
@@ -1161,6 +1188,7 @@
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
   <script src="srs-rules.js"></script>
+  <script src="review-queues.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>

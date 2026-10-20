@@ -17,6 +17,18 @@ const blank = { points: 0, unlockedLevel: 1, cards: { unused: { reps: 0, correct
 
 assert.strictEqual(m.isBlank(null), true);
 assert.strictEqual(m.isBlank(blank), true);
+assert.strictEqual(m.isBlank({
+  points: 0,
+  unlockedLevel: 1,
+  cards: {},
+  wrongBook: { "zhongkao::apple": { active: true, lemma: "apple" } },
+}), false);
+assert.strictEqual(m.isBlank({
+  points: 0,
+  unlockedLevel: 1,
+  cards: {},
+  wrongBook: { "zhongkao::apple": { active: false, lemma: "apple" } },
+}), true);
 assert.strictEqual(m.isBlank(studied(1)), false);
 assert.strictEqual(m.isBlank({ unlockedLevel: 2, cards: {} }), false);
 assert.strictEqual(m.studiedCount(studied(3)), 3);
