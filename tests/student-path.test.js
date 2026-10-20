@@ -100,6 +100,13 @@ function staticGuards() {
   assert.ok(!index.includes(">场景<") && !index.includes(">默认<"), "sort labels are gone");
   assert.ok(!game.includes("btn-sort-scene") && !game.includes('sortMode === "scene"'), "scene sort path is gone");
   assert.ok(game.includes('return "default"'), "saved sort mode collapses to default");
+  assert.ok(index.includes('id="btn-due-today"') && index.includes("今日到期"), "今日到期 entry");
+  assert.ok(index.includes('id="btn-wrong-book"') && index.includes("错词本"), "错词本 entry");
+  assert.ok(index.includes('src="review-queues.js"'), "queue rules load with the game");
+  assert.ok(game.includes("今天没有到期的单词"), "due empty copy");
+  assert.ok(game.includes("错词本还是空的"), "wrong-book empty copy");
+  assert.ok(game.includes('sessionKind === "wrongbook"'), "wrong book is its own practice mode");
+  assert.ok(!game.includes("btn-rate-again"), "no third Again button");
   const rules = read("srs-rules.js");
   assert.ok(rules.includes("12 * 60 * 1000"), "challenge length constant is 12 minutes");
   assert.ok(rules.includes("audio/13_challenge_cheer.m4a"), "cheer voice path");
@@ -488,6 +495,36 @@ async function main() {
       assert.ok(!home.html.includes(needle) && !home.text.includes(needle), "student home still shows " + needle);
     }
     assert.ok(home.text.includes("继续闯关"), "continue practice is on the student home");
+    assert.ok(home.text.includes("今日到期"), "今日到期 is on the student home");
+    assert.ok(home.text.includes("错词本"), "错词本 is on the student home");
+
+    const emptyQueues = await evalRetry(`(() => {
+      document.getElementById("btn-due-today").click();
+      const due = document.getElementById("queue-empty");
+      const dueSnap = {
+        text: due ? due.textContent : "",
+        home: document.getElementById("screen-home").classList.contains("active"),
+        play: document.getElementById("screen-play").classList.contains("active"),
+        clear: document.getElementById("screen-clear").classList.contains("active")
+      };
+      document.getElementById("btn-wrong-book").click();
+      const wrong = document.getElementById("queue-empty");
+      return {
+        due: dueSnap,
+        wrongText: wrong ? wrong.textContent : "",
+        wrongHome: document.getElementById("screen-home").classList.contains("active"),
+        wrongPlay: document.getElementById("screen-play").classList.contains("active"),
+        again: !!document.getElementById("btn-rate-again")
+      };
+    })()`);
+    assert.strictEqual(emptyQueues.due.home, true, "empty 今日到期 stays on the homepage");
+    assert.strictEqual(emptyQueues.due.play, false);
+    assert.strictEqual(emptyQueues.due.clear, false);
+    assert.ok(emptyQueues.due.text.includes("没有到期"), emptyQueues.due.text);
+    assert.strictEqual(emptyQueues.wrongHome, true);
+    assert.strictEqual(emptyQueues.wrongPlay, false);
+    assert.ok(emptyQueues.wrongText.includes("错词本还是空的"), emptyQueues.wrongText);
+    assert.strictEqual(emptyQueues.again, false);
 
     await evalRetry(`document.getElementById("btn-continue").click()`);
     const fresh = await waitFor(async () => evalRetry(`(() => {
@@ -681,6 +718,129 @@ async function main() {
     assert.ok(next.level.includes("第2组"), "next set title was " + next.level);
     assert.notStrictEqual(next.level, before);
     assert.ok(next.queue >= 1);
+
+    const planted = await evalRetry(`(() => {
+      const track = (window.VOCAB_EXAM_TRACKS || []).find((t) => t.id === "zhongkao");
+      if (!track || !track.sets[2] || track.sets[0].length < 3 || track.sets[1].length < 2) {
+        throw new Error("中考 track is too short to plant a cross-group due queue");
+      }
+      const now = Date.now();
+      const review = (due, wrong) => ({
+        ef: 2.5, interval: 3, reps: 4, lapses: wrong || 0, due: due,
+        correct: 4, wrong: wrong || 0, mastery: 2, state: "review"
+      });
+      const fresh = { ef: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, correct: 0, wrong: 0, mastery: 0, state: "new" };
+      const key = (li, word) => "zhongkao|" + li + "::" + String(word).toLowerCase();
+      const a = track.sets[0][0];
+      const b = track.sets[1][0];
+      const locked = track.sets[2][0];
+      const neu = track.sets[0][1];
+      const later = track.sets[1][1];
+      const weak = track.sets[0][2];
+      const cards = {};
+      cards[key(0, a.word)] = review(now - 60000, 0);
+      cards[key(1, b.word)] = review(now - 1000, 0);
+      cards[key(2, locked.word)] = review(now - 60000, 0);
+      cards[key(0, neu.word)] = fresh;
+      cards[key(1, later.word)] = review(now + 5 * 86400000, 0);
+      cards[key(0, weak.word)] = review(now + 5 * 86400000, 2);
+      localStorage.setItem("vocabSpotlight_v1", JSON.stringify({
+        points: 10, streak: 0, bestStreak: 1, unlockedLevel: 2,
+        cards: cards, levelStars: {}, sortMode: "default", voiceOn: false,
+        track: "zhongkao",
+        trackUnlock: { zhongkao: 2 },
+        trackStars: { zhongkao: {} },
+        daily: {},
+        profile: { name: "", cls: "" },
+        updatedAt: "2020-01-01T00:00:00.000Z"
+      }));
+      return { word: a.word, meaning: a.meaning_zh, other: b.word, locked: locked.word, weak: weak.word };
+    })()`);
+    await reloadToGate("gate before due aggregation");
+    await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
+    const dueHome = await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const due = document.getElementById("due-badge");
+      const wrong = document.getElementById("wrong-badge");
+      const hint = document.getElementById("continue-hint");
+      if (!home || !home.classList.contains("active") || !due || due.hidden) return null;
+      return {
+        due: due.textContent,
+        wrong: wrong && !wrong.hidden ? wrong.textContent : "0",
+        hint: hint && !hint.hidden ? hint.textContent : ""
+      };
+    })()`), 10000, "home with dues");
+    assert.strictEqual(dueHome.due, "2", "opened groups share one due count, locked and new cards stay out");
+    assert.ok(Number(dueHome.wrong) >= 1, "cumulative wrong >= 2 is already in 错词本");
+    assert.ok(dueHome.hint.includes("今日到期"), dueHome.hint);
+
+    await evalRetry(`document.getElementById("btn-continue").click()`);
+    const duePlay = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      const clock = document.getElementById("challenge-clock");
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      return {
+        title: document.getElementById("play-level").textContent,
+        prompt: document.getElementById("prompt-main").textContent.trim(),
+        clockHidden: !clock || clock.hidden,
+        again: !!document.getElementById("btn-rate-again")
+      };
+    })()`), 10000, "due queue");
+    assert.strictEqual(duePlay.title, "今日到期");
+    assert.strictEqual(duePlay.prompt, planted.meaning, "earliest due card is first");
+    assert.strictEqual(duePlay.clockHidden, true, "a due queue is not a 12-minute set challenge");
+    assert.strictEqual(duePlay.again, false);
+
+    const missed = await evalRetry(`(() => {
+      const word = ${JSON.stringify(planted && planted.word)};
+      const buttons = Array.from(document.querySelectorAll("#choices .choice"));
+      const bad = buttons.find((b) => b.textContent.replace(/^\\d+\\.\\s*/, "").trim().toLowerCase() !== String(word).toLowerCase());
+      if (!bad) return { ok: false };
+      bad.click();
+      return { ok: true };
+    })()`);
+    assert.strictEqual(missed.ok, true, "a wrong choice was available");
+    await waitFor(async () => evalRetry(`(() => {
+      const fb = document.getElementById("feedback").textContent || "";
+      return fb.indexOf("再想想") !== -1 ? true : null;
+    })()`), 5000, "wrong answer feedback");
+    const booked = await evalRetry(`(() => {
+      const save = window.__QM.getSave();
+      const word = ${JSON.stringify(planted && planted.word)};
+      const row = save.wrongBook && save.wrongBook["zhongkao::" + String(word).toLowerCase()];
+      const card = save.cards["zhongkao|0::" + String(word).toLowerCase()];
+      return {
+        active: !!(row && row.active),
+        wrong: card ? card.wrong : null
+      };
+    })()`);
+    assert.strictEqual(booked.active, true, "a wrong answer enters 错词本");
+    assert.ok(booked.wrong >= 1, "Again still increments wrong");
+
+    await evalRetry(`document.getElementById("btn-quit").click()`);
+    const wrongHome = await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const wrong = document.getElementById("wrong-badge");
+      if (!home || !home.classList.contains("active") || !wrong || wrong.hidden) return null;
+      return wrong.textContent;
+    })()`), 8000, "home after a miss");
+    assert.ok(Number(wrongHome) >= 2, "miss plus the older wrong>=2 card are both listed");
+
+    await evalRetry(`document.getElementById("btn-wrong-book").click()`);
+    const wrongPlay = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      return {
+        title: document.getElementById("play-level").textContent,
+        again: !!document.getElementById("btn-rate-again"),
+        typed: !!document.getElementById("answer-input")
+      };
+    })()`), 10000, "错词本 practice");
+    assert.strictEqual(wrongPlay.title, "错词本");
+    assert.strictEqual(wrongPlay.again, false);
+    assert.strictEqual(wrongPlay.typed, false);
 
     console.log("student-path ok");
   } catch (err) {

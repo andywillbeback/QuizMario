@@ -3,6 +3,8 @@
  * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
  * Clearance: ≥80% of the set in review with interval ≥1 day (srs-rules.js).
  * Uncleared sets run a 12-minute challenge (CHALLENGE_MS).
+ * 今日到期: one SM-2 queue of due cards across opened groups (review-queues.js).
+ * 错词本: misses and cumulative wrong >= 2; two correct ratings in that mode graduate.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  */
 (function () {
@@ -22,6 +24,8 @@
   let LEVEL_COUNT = LEVELS.length;
   const SRS = window.QuizMarioSRS;
   if (!SRS) throw new Error("srs-rules.js must load before game.js");
+  const RQ = window.QuizMarioQueues;
+  if (!RQ) throw new Error("review-queues.js must load before game.js");
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
   /** Max new cards introduced per level session (Anki-like) */
@@ -44,6 +48,8 @@
   let playGen = 0;
   /** True when this visit opened a set that had already cleared. Review, not a challenge. */
   let sessionStartedClear = false;
+  /** "level" keeps the set flow. "due" and "wrongbook" are cross-group MC queues. */
+  let sessionKind = "level";
   let levelClearing = false;
   let challengeActive = false;
   let challengeFailed = false;
@@ -93,6 +99,9 @@
     sv.trackStars = data.trackStars || {};
     sv.daily = data.daily || {};
     sv.profile = data.profile || { name: "", cls: "" };
+    sv.wrongBook = (data.wrongBook && typeof data.wrongBook === "object" && !Array.isArray(data.wrongBook))
+      ? data.wrongBook
+      : {};
     if (data.updatedAt) sv.updatedAt = data.updatedAt;
     return sv;
   }
@@ -240,6 +249,7 @@
     for (const el of document.querySelectorAll(".screen")) el.classList.remove("active");
     const s = $("screen-" + name);
     if (s) s.classList.add("active");
+    if (name === "home") refreshHomeQueues();
     // Level select is much taller than play. Leaving the old scroll offset
     // (especially with overflow-x:hidden on iOS) shows empty space instead of the word.
     try { window.scrollTo(0, 0); } catch (_) {}
@@ -348,6 +358,7 @@
       mastery: p.mastery || 0,
       srsState: p.state || "new",
       dueAt: p.due || 0,
+      levelIdx: levelIdx,
     };
   }
 
@@ -401,7 +412,12 @@
   function startLevel(levelNum) {
     playGen += 1;
     levelClearing = false;
+    sessionKind = "level";
     currentLevel = levelNum;
+    const progressLabel = $("set-progress-label");
+    if (progressLabel) progressLabel.textContent = "本组进度";
+    const nextBtn = $("btn-next-level");
+    if (nextBtn) nextBtn.hidden = false;
     sessionStartedClear = isLevelClear(levelNum);
     queue = buildQueue(levelNum);
     requeueSoon.length = 0;
@@ -1089,54 +1105,69 @@
       }
     }
 
-    const endSet = SRS.shouldEndSet({
-      ready: isLevelClear(currentLevel),
-      startedClear: sessionStartedClear,
-      queueEmpty: queue.length === 0,
-      requeueEmpty: requeueSoon.length === 0,
-    });
-    if (endSet) {
-      queue = [];
-      requeueSoon.length = 0;
-      onLevelClear();
-      return;
-    }
-
-    if (queue.length === 0) {
-      queue = buildQueue(currentLevel);
-      // Drop cards already seen this session if we still have unseen due/new
-      if (!queue.length) {
-        if (isLevelClear(currentLevel)) {
-          onLevelClear();
-          return;
+    if (sessionKind !== "level") {
+      if (queue.length === 0 && requeueSoon.length) {
+        for (let i = requeueSoon.length - 1; i >= 0; i--) {
+          const again = requeueSoon[i].card;
+          requeueSoon.splice(i, 1);
+          if (again && !queue.some((c) => c.key === again.key)) queue.unshift(again);
         }
-        // Nothing due: offer a short early-review slice or clear
-        const words = LEVELS[currentLevel - 1] || [];
-        const now = Date.now();
-        const upcoming = words
-          .map((w, idx) => enrichItem(w, currentLevel - 1, idx))
-          .filter((it) => {
-            const p = getProg(it.key);
-            return !isNewCard(p) && p.due > now;
-          })
-          .sort((a, b) => a.dueAt - b.dueAt)
-          .slice(0, 5);
-        if (upcoming.length) queue = upcoming;
-        else {
-          // Do not call onLevelClear here. 巩固 0/40 is not a pass, and that
-          // screen's Next set / Home loop never deals another question.
-          const pool = words.map((w, idx) => enrichItem(w, currentLevel - 1, idx));
-          const fresh = pool.filter((it) => isNewCard(getProg(it.key))).slice(0, NEW_PER_SESSION);
-          queue = fresh.length ? fresh : pool.slice(0, NEW_PER_SESSION);
-          if (!queue.length) {
-            showScreen("home");
+      }
+      if (queue.length === 0 && requeueSoon.length === 0) {
+        finishQueueSession();
+        return;
+      }
+    } else {
+      const endSet = SRS.shouldEndSet({
+        ready: isLevelClear(currentLevel),
+        startedClear: sessionStartedClear,
+        queueEmpty: queue.length === 0,
+        requeueEmpty: requeueSoon.length === 0,
+      });
+      if (endSet) {
+        queue = [];
+        requeueSoon.length = 0;
+        onLevelClear();
+        return;
+      }
+
+      if (queue.length === 0) {
+        queue = buildQueue(currentLevel);
+        // Drop cards already seen this session if we still have unseen due/new
+        if (!queue.length) {
+          if (isLevelClear(currentLevel)) {
+            onLevelClear();
             return;
+          }
+          // Nothing due: offer a short early-review slice or clear
+          const words = LEVELS[currentLevel - 1] || [];
+          const now = Date.now();
+          const upcoming = words
+            .map((w, idx) => enrichItem(w, currentLevel - 1, idx))
+            .filter((it) => {
+              const p = getProg(it.key);
+              return !isNewCard(p) && p.due > now;
+            })
+            .sort((a, b) => a.dueAt - b.dueAt)
+            .slice(0, 5);
+          if (upcoming.length) queue = upcoming;
+          else {
+            // Do not call onLevelClear here. 巩固 0/40 is not a pass, and that
+            // screen's Next set / Home loop never deals another question.
+            const pool = words.map((w, idx) => enrichItem(w, currentLevel - 1, idx));
+            const fresh = pool.filter((it) => isNewCard(getProg(it.key))).slice(0, NEW_PER_SESSION);
+            queue = fresh.length ? fresh : pool.slice(0, NEW_PER_SESSION);
+            if (!queue.length) {
+              showScreen("home");
+              return;
+            }
           }
         }
       }
     }
 
     const card = queue.shift();
+    if (card && card.levelIdx != null) currentLevel = card.levelIdx + 1;
     stepCounter += 1;
     sessionSeen += 1;
 
@@ -1204,6 +1235,25 @@
   }
 
   function updateProgress() {
+    if (sessionKind === "due" || sessionKind === "wrongbook") {
+      const left = queue.length + requeueSoon.length + (currentCard ? 1 : 0);
+      const total = Math.max(sessionTarget, left, 1);
+      const done = Math.max(0, Math.min(total, total - left));
+      const pct = Math.round((done / total) * 100);
+      const modeLabel = sessionKind === "due" ? "今日到期" : "错词本";
+      const bar = $("play-progress");
+      if (bar) bar.style.width = pct + "%";
+      const pctEl = $("set-progress-pct");
+      if (pctEl) pctEl.textContent = "剩 " + left;
+      const barWrap = $("set-progress-bar");
+      if (barWrap) {
+        barWrap.setAttribute("aria-valuenow", String(pct));
+        barWrap.setAttribute("aria-valuetext", modeLabel + " 剩余 " + left);
+      }
+      const label = $("set-progress-label");
+      if (label) label.textContent = modeLabel;
+      return;
+    }
     const s = levelClearStats(currentLevel);
     const pct = setCompletionPercent(s);
     const bar = $("play-progress");
@@ -1294,6 +1344,7 @@
       bindRate("btn-rate-easy", 2);
     } else {
       schedule(prog, 0, nowMs);
+      rememberMiss(currentCard, prog);
       save.streak = 0;
       const brokenStreak = killStreak;
       killStreak = 0;
@@ -1316,6 +1367,9 @@
       }
       why +=
         '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
+      if (sessionKind === "wrongbook") {
+        why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
+      }
       fb.innerHTML = '<div class="fb-title">再想想 Not yet</div>' + speakButtons(currentCard) + why;
       fb.className = "bad show";
 
@@ -1344,12 +1398,24 @@
     const prog = getProg(currentCard.key);
     const nowMs = Date.now();
     schedule(prog, quality === 2 ? 2 : 1, nowMs);
+    let bookNote = "";
+    if (sessionKind === "wrongbook" && currentCard) {
+      const res = RQ.noteWrongBookCorrect(
+        ensureWrongBook(),
+        RQ.lemmaKey(currentTrack, currentCard.word),
+        prog.wrong || 0
+      );
+      bookNote = res.graduated
+        ? '<div class="fb-meta">错词本毕业 · 这个词先离开错词本了</div>'
+        : '<div class="fb-meta">错词本连续答对 ' + res.streak + "/2</div>";
+    }
     const fb = $("feedback");
     const qName = quality === 2 ? "太简单" : "记住了";
     fb.innerHTML =
       '<div class="fb-title">Correct · ' + qName + "</div>" +
       '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
-      '<div class="fb-meta">下次见 · ' + escapeHtml(formatDue(prog)) + "</div>";
+      '<div class="fb-meta">下次见 · ' + escapeHtml(formatDue(prog)) + "</div>" +
+      bookNote;
     fb.className = "ok show";
 
     const newMastery = Math.floor(prog.mastery || 0);
@@ -1545,6 +1611,8 @@
     }
     const clearScreen = $("screen-clear");
     if (clearScreen) clearScreen.classList.toggle("challenge-win", !!challengeWon);
+    const nextBtn = $("btn-next-level");
+    if (nextBtn) nextBtn.hidden = false;
     showScreen("clear");
     spawnPointsFloater(50);
     flashStage("ok");
@@ -1592,6 +1660,7 @@
       daily: Object.assign({}, payload.daily || {}),
       profile: Object.assign({ name: "", cls: "" }, payload.profile || {}),
       updatedAt: payload.updatedAt,
+      wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
     });
   }
 
@@ -1876,6 +1945,7 @@
       const s = st.tracks[t.id];
       tr += "<li>" + escapeHtml(t.name) + "：已学会 " + s.learned + "/" + s.total + " · 通关 " + s.cleared.length + "/" + s.sets + " 组</li>";
     }
+    refreshHomeQueues();
     box.innerHTML =
       '<div class="stats-grid">' +
       "<div><b>" + st.streak + "</b>连续打卡(天)</div>" +
@@ -2020,6 +2090,199 @@
   if ($("btn-copy-code")) $("btn-copy-code").addEventListener("click", copyBackupCode);
   if ($("btn-paste-code")) $("btn-paste-code").addEventListener("click", importFromBackupCode);
 
+  const DUE_EMPTY = "今天没有到期的单词。先去闯关，到时间的词会出现在这里。";
+  const WRONG_EMPTY = "错词本还是空的。选错的词，或者累计错过两次的词，会自动收进来。";
+
+  function ensureWrongBook() {
+    if (!save.wrongBook || typeof save.wrongBook !== "object" || Array.isArray(save.wrongBook)) {
+      save.wrongBook = {};
+    }
+    return save.wrongBook;
+  }
+
+  function openedGroupLimit() {
+    return Math.min(LEVELS.length, Math.max(1, save.unlockedLevel || 1));
+  }
+
+  function rememberMiss(card, prog) {
+    if (!card || !card.word) return;
+    RQ.touchWrongBook(ensureWrongBook(), {
+      lemmaKey: RQ.lemmaKey(currentTrack, card.word),
+      lemma: card.word,
+      track: currentTrack,
+      levelIdx: card.levelIdx != null ? card.levelIdx : (currentLevel - 1),
+      cardKey: card.key,
+      now: Date.now(),
+    }, prog, "miss");
+  }
+
+  function scanWrongBook() {
+    const book = ensureWrongBook();
+    const entries = [];
+    const limit = openedGroupLimit();
+    for (let li = 0; li < limit; li++) {
+      const words = LEVELS[li] || [];
+      for (const w of words) {
+        const key = cardKey(li, w.word);
+        const prog = save.cards[key];
+        if (!prog) continue;
+        entries.push({
+          lemmaKey: RQ.lemmaKey(currentTrack, w.word),
+          lemma: w.word,
+          track: currentTrack,
+          levelIdx: li,
+          cardKey: key,
+          prog: prog,
+          now: Date.now(),
+        });
+      }
+    }
+    return RQ.scanCumulative(book, entries);
+  }
+
+  function dueQueueItems(now) {
+    const limit = openedGroupLimit();
+    const groups = [];
+    for (let li = 0; li < limit; li++) groups.push({ levelIdx: li, words: LEVELS[li] || [] });
+    const rows = RQ.collectDue({
+      groups: groups,
+      unlockedLevel: save.unlockedLevel,
+      cards: save.cards,
+      now: now || Date.now(),
+      cardKey: function (levelIdx, word) { return cardKey(levelIdx, word); },
+      isNewCard: SRS.isNewCard,
+      isDue: SRS.isDue,
+    });
+    return rows.map((row) => {
+      const it = enrichItem(row.word, row.levelIdx, 0);
+      it.levelIdx = row.levelIdx;
+      return it;
+    });
+  }
+
+  function wrongBookQueueItems() {
+    scanWrongBook();
+    const rows = RQ.activeWrongEntries(ensureWrongBook(), currentTrack);
+    const items = [];
+    for (const row of rows) {
+      const li = row.levelIdx || 0;
+      const words = LEVELS[li] || [];
+      const lemma = String(row.lemma || "").toLowerCase();
+      const w = words.find((x) => String(x.word).toLowerCase() === lemma);
+      if (!w) continue;
+      const it = enrichItem(w, li, 0);
+      it.levelIdx = li;
+      const prog = save.cards[row.cardKey] || save.cards[it.key];
+      it._wrong = prog ? (prog.wrong || 0) : (row.priority || 0);
+      it._missAt = row.lastMissAt || 0;
+      items.push(it);
+    }
+    items.sort((a, b) => (b._wrong - a._wrong) || (a._missAt - b._missAt));
+    return items;
+  }
+
+  function setCountBadge(id, n) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = String(n);
+    el.hidden = !(n > 0);
+  }
+
+  function showQueueEmpty(text) {
+    const el = $("queue-empty");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = text;
+  }
+
+  function hideQueueEmpty() {
+    const el = $("queue-empty");
+    if (el) el.hidden = true;
+  }
+
+  function refreshHomeQueues() {
+    if (!$("btn-due-today") && !$("btn-wrong-book")) return;
+    hideQueueEmpty();
+    const added = scanWrongBook();
+    const dueItems = dueQueueItems();
+    const wrongItems = wrongBookQueueItems();
+    setCountBadge("due-badge", dueItems.length);
+    setCountBadge("wrong-badge", wrongItems.length);
+    const hint = $("continue-hint");
+    if (hint) {
+      hint.hidden = dueItems.length <= 0;
+      hint.textContent = dueItems.length > 0
+        ? ("有 " + dueItems.length + " 个词到期了，继续闯关会先练今日到期。")
+        : "";
+    }
+    if (added > 0) persist();
+  }
+
+  function startQueueSession(kind, items) {
+    playGen += 1;
+    levelClearing = false;
+    sessionKind = kind;
+    sessionStartedClear = true;
+    queue = items.slice();
+    requeueSoon.length = 0;
+    stepCounter = 0;
+    sessionSeen = 0;
+    sessionTarget = Math.max(queue.length, 1);
+    firstCardOfSession = true;
+    killStreak = 0;
+    pendingRate = false;
+    challengeFailed = false;
+    hideKillBanner();
+    stopChallenge();
+    const choices = $("choices");
+    if (choices) {
+      choices.hidden = true;
+      choices.innerHTML = "";
+    }
+    hideQueueEmpty();
+    showScreen("play");
+    const playLevel = $("play-level");
+    const modeLabel = kind === "due" ? "今日到期" : "错词本";
+    if (playLevel) playLevel.textContent = modeLabel;
+    const progressLabel = $("set-progress-label");
+    if (progressLabel) progressLabel.textContent = modeLabel;
+    refreshHud();
+    nextCard();
+  }
+
+  function finishQueueSession() {
+    stopChallenge();
+    pendingRate = false;
+    awaiting = true;
+    const kind = sessionKind;
+    const trophy = $("clear-trophy");
+    if (trophy) trophy.hidden = true;
+    const achEl = $("clear-achievement");
+    if (achEl) {
+      achEl.hidden = true;
+      achEl.textContent = "";
+    }
+    const starEl = $("clear-stars");
+    if (starEl) starEl.innerHTML = "";
+    const clearScreen = $("screen-clear");
+    if (clearScreen) clearScreen.classList.remove("challenge-win");
+    const nextBtn = $("btn-next-level");
+    if (nextBtn) nextBtn.hidden = true;
+    const title = $("clear-title");
+    const msg = $("clear-msg");
+    if (kind === "due") {
+      if (title) title.textContent = "今日到期练完了";
+      if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
+    } else {
+      const left = wrongBookQueueItems().length;
+      if (title) title.textContent = left ? "这轮错词练完了" : "错词本清空了";
+      if (msg) msg.textContent = left
+        ? ("错词本还剩 " + left + " 个。同一个词在错词本里连续答对两次，就会毕业离开。")
+        : "这些词都在错词本里连续答对了两次，已经毕业离开。";
+    }
+    showScreen("clear");
+  }
+
   function enterExam(id) {
     try {
       switchTrack(id);
@@ -2032,8 +2295,32 @@
   if ($("btn-back-gate")) $("btn-back-gate").addEventListener("click", () => showScreen("gate"));
 
   $("btn-continue").addEventListener("click", () => {
+    const dueItems = dueQueueItems();
+    if (RQ.continueTarget(dueItems.length) === "due") {
+      hideQueueEmpty();
+      startQueueSession("due", dueItems);
+      return;
+    }
     const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
     startLevel(lvl);
+  });
+  if ($("btn-due-today")) $("btn-due-today").addEventListener("click", () => {
+    const dueItems = dueQueueItems();
+    if (!dueItems.length) {
+      showQueueEmpty(DUE_EMPTY);
+      return;
+    }
+    hideQueueEmpty();
+    startQueueSession("due", dueItems);
+  });
+  if ($("btn-wrong-book")) $("btn-wrong-book").addEventListener("click", () => {
+    const items = wrongBookQueueItems();
+    if (!items.length) {
+      showQueueEmpty(WRONG_EMPTY);
+      return;
+    }
+    hideQueueEmpty();
+    startQueueSession("wrongbook", items);
   });
   $("btn-levels").addEventListener("click", () => {
     renderLevels();
@@ -2054,6 +2341,7 @@
       killStreak = 0;
       pendingRate = false;
       refreshHud();
+      refreshHomeQueues();
       alert("Progress cleared.");
     }
   });
