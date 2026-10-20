@@ -440,6 +440,113 @@
     color: var(--gold); font-size: 1.25rem; line-height: 1;
     font-variant-numeric: tabular-nums;
   }
+  #challenge-clock {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    line-height: 1; min-width: 4.6rem;
+  }
+  #challenge-clock[hidden] { display: none !important; }
+  .challenge-caption {
+    font-size: .68rem; letter-spacing: .16em; opacity: .8; margin-bottom: 2px;
+  }
+  #challenge-timer {
+    font-size: 1.55rem; font-weight: 800; letter-spacing: .03em;
+    font-variant-numeric: tabular-nums; color: var(--cyan);
+  }
+  #challenge-timer.warn { color: var(--red); }
+  #clear-trophy {
+    font-size: 3.2rem; line-height: 1; margin: 4px 0 10px;
+    filter: drop-shadow(0 0 14px rgba(230, 201, 138, 0.9));
+  }
+  #clear-trophy[hidden] { display: none !important; }
+  #screen-clear.challenge-win h2 { color: var(--gold); letter-spacing: .12em; }
+  #clear-achievement {
+    display: inline-block;
+    margin: 4px auto 12px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #fff1c4, #e6c98a);
+    color: #2a1c04;
+    font-weight: 900;
+    font-size: clamp(1.15rem, 4.8vw, 1.6rem);
+    letter-spacing: .06em;
+    box-shadow: 0 8px 22px rgba(230, 201, 138, .35);
+    animation: achievementPop .45s cubic-bezier(.22,.61,.36,1);
+  }
+  #clear-achievement[hidden] { display: none !important; }
+  @keyframes achievementPop {
+    0% { opacity: 0; transform: translateY(12px) scale(.82); }
+    100% { opacity: 1; transform: none; }
+  }
+  #screen-fail { position: relative; }
+  #crow-pass {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  #crow-pass[hidden] { display: none !important; }
+  #crow-pass.fly::before {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; top: 6%;
+    height: 78px;
+    background: linear-gradient(180deg, rgba(214, 230, 242, 0), rgba(214, 230, 242, .72), rgba(214, 230, 242, 0));
+  }
+  #crow-pass .crow {
+    position: absolute;
+    width: 132px;
+    height: 74px;
+    top: 7%;
+    left: 0;
+  }
+  #crow-pass.fly .crow { animation: crowCross 2.4s linear forwards; }
+  #crow-pass .wing {
+    transform-box: fill-box;
+    transform-origin: 18% 80%;
+    animation: wingFlap .16s ease-in-out infinite;
+  }
+  @keyframes crowCross {
+    0% { transform: translate(-150px, 8px); }
+    40% { transform: translate(28vw, -8px); }
+    100% { transform: translate(108vw, 22px); }
+  }
+  @keyframes wingFlap {
+    0%, 100% { transform: rotate(12deg); }
+    50% { transform: rotate(-28deg); }
+  }
+  #fail-banner {
+    margin: 6px auto 14px;
+    padding: 12px 16px;
+    background: linear-gradient(180deg, #fff6d8, #f0d48a);
+    color: #6d1020;
+    font-weight: 900;
+    font-size: clamp(1.2rem, 5vw, 1.75rem);
+    letter-spacing: .14em;
+    text-align: center;
+    border-top: 3px solid #c9a24a;
+    border-bottom: 3px solid #c9a24a;
+    box-shadow: 0 6px 0 rgba(90, 16, 32, .28);
+    animation: bannerRaise .4s cubic-bezier(.22,.61,.36,1);
+  }
+  #fail-banner[hidden] { display: none !important; }
+  @keyframes bannerRaise {
+    0% { opacity: 0; transform: translateY(16px) scaleX(.72); }
+    100% { opacity: 1; transform: none; }
+  }
+  #screen-fail .title-card h2 {
+    color: var(--red);
+    font-size: clamp(2rem, 7vw, 3.1rem);
+    letter-spacing: .18em;
+    text-shadow: 0 0 18px rgba(255, 80, 100, 0.45);
+  }
+  #kill-banner.cheer {
+    color: #ffe9a8;
+    text-shadow:
+      0 0 12px #ffd84d,
+      0 0 28px rgba(255, 216, 77, 0.85),
+      0 2px 0 rgba(0, 0, 0, 0.45);
+  }
   .progress-bar {
     height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; margin: 0 0 4px;
     position: relative;
@@ -497,7 +604,6 @@
     display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
     align-items: center; margin: 10px 0 4px;
   }
-  .sort-bar .sort-label { font-size: .8rem; opacity: .7; margin-right: 4px; }
   button.sort-btn {
     padding: 8px 12px; font-size: .82rem; font-weight: 600;
     background: rgba(255,255,255,.08); color: #eee;
@@ -509,24 +615,6 @@
     border-color: var(--gold); color: #fff;
     box-shadow: 0 0 12px rgba(230,201,138,.28);
   }
-
-  #browse-strip {
-    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-    max-height: 72px; overflow-y: auto;
-    margin: 6px 0 4px; padding: 6px 4px;
-    border-radius: 10px; background: rgba(3, 6, 14, 0.42);
-  }
-  .browse-group {
-    font-size: .7rem; color: var(--cyan); font-weight: 700;
-    letter-spacing: .04em; margin-left: 4px; opacity: .9;
-    flex-basis: 100%;
-  }
-  .browse-chip {
-    font-size: .72rem; padding: 2px 8px; border-radius: 999px;
-    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
-    opacity: .85;
-  }
-  .browse-chip.weak { border-color: rgba(255,180,192,.55); color: #ffd5dc; }
 
   /* LoL kill banner */
   #kill-banner {
@@ -793,16 +881,14 @@
     }
   }
 
-  /* Training page: streak only, sort controls pinned to the viewport */
+  /* Training page: streak only. The voice control is pinned while playing. */
   header.brand .subtitle,
   header.brand .examiner,
   header.brand .tagline,
-  #browse-strip,
   #hud .stat:not(#stat-streak),
   #prompt-label,
   footer,
-  #play-clear-label,
-  #sort-bar .sort-label { display: none !important; }
+  #play-clear-label { display: none !important; }
 
   #sort-bar { display: none; }
   body.at-play #sort-bar {
@@ -907,6 +993,8 @@
     }
     body.at-play .set-progress { margin: 2px 0 0; }
     body.at-play #set-progress-pct { font-size: 1rem; }
+    body.at-play #challenge-timer { font-size: 1.25rem; }
+    body.at-play .challenge-caption { font-size: .62rem; }
     body.at-play #feedback { margin-top: 6px; min-height: 0; }
     body.at-play #feedback .fb-title { font-size: .95rem; margin-bottom: 0; }
     body.at-play #feedback .fb-ex { font-size: .72rem; }
@@ -920,10 +1008,7 @@
 <body class="at-gate">
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
-<div id="sort-bar" class="sort-bar" role="group" aria-label="词汇排序">
-  <span class="sort-label">排列</span>
-  <button type="button" class="sort-btn" id="btn-sort-default">默认</button>
-  <button type="button" class="sort-btn" id="btn-sort-scene">场景</button>
+<div id="sort-bar" class="sort-bar" role="group" aria-label="连杀语音">
   <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
 </div>
 <div class="app">
@@ -991,7 +1076,7 @@
     <section id="screen-levels" class="screen">
       <div class="title-card">
         <h2>选择关卡 Word sets</h2>
-        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. Cleared when due/new/learning are 0 and ≥80% cards have review interval ≥1 day. Next part unlocks on clear.</p>
+        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set clears when 80% of its cards are in review with an interval of at least 1 day. Missed cards come back; they do not block the set. An uncleared set is a 12-minute challenge.</p>
         <div id="level-grid" class="level-grid"></div>
         <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
       </div>
@@ -1002,6 +1087,10 @@
       <div class="set-progress">
         <div class="set-progress-top">
           <span id="set-progress-label">本组进度</span>
+          <div id="challenge-clock" hidden role="timer" aria-live="off">
+            <span class="challenge-caption">挑战</span>
+            <strong id="challenge-timer">12:00</strong>
+          </div>
           <strong id="set-progress-pct">0%</strong>
         </div>
         <div class="progress-bar" id="set-progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="set-progress-label">
@@ -1021,12 +1110,40 @@
     <!-- LEVEL CLEAR -->
     <section id="screen-clear" class="screen">
       <div class="title-card">
-        <h2>Set cleared!</h2>
+        <div id="clear-trophy" hidden aria-hidden="true">🏆</div>
+        <h2 id="clear-title">Set cleared!</h2>
+        <p id="clear-achievement" class="achievement-line" hidden></p>
         <p class="sub" id="clear-msg">Great work.</p>
         <div class="stars" id="clear-stars">★★★</div>
         <div class="btn-row">
           <button id="btn-next-level" type="button">Next set</button>
           <button id="btn-clear-home" class="secondary" type="button">Home</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHALLENGE FAIL -->
+    <section id="screen-fail" class="screen" aria-label="挑战失败">
+      <div id="crow-pass" hidden aria-hidden="true">
+        <svg class="crow" viewBox="0 0 160 90" aria-hidden="true">
+          <polygon points="6,50 46,38 46,58" fill="#1a1a1a"/>
+          <ellipse cx="74" cy="50" rx="36" ry="16" fill="#141414"/>
+          <g class="wing">
+            <path d="M46 46 Q78 4 118 28 Q80 34 48 52 Z" fill="#2a2a2a"/>
+          </g>
+          <circle cx="112" cy="38" r="15" fill="#141414"/>
+          <polygon points="124,36 156,44 124,48" fill="#e2b143"/>
+          <circle cx="116" cy="33" r="2.4" fill="#fff"/>
+          <circle cx="117" cy="33" r="1.2" fill="#111"/>
+        </svg>
+      </div>
+      <div class="title-card">
+        <h2 id="fail-title">遗憾失败</h2>
+        <p id="fail-banner" class="awkward-banner" hidden></p>
+        <p class="sub" id="fail-msg">时间到了。这组还没通关。错词会再出现，再试一次即可。</p>
+        <div class="btn-row">
+          <button id="btn-fail-retry" type="button">再试一次</button>
+          <button id="btn-fail-home" class="secondary" type="button">Home</button>
         </div>
       </div>
     </section>
@@ -1043,6 +1160,7 @@
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
+  <script src="srs-rules.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>

@@ -2737,12 +2737,12 @@ window.VOCAB_LEVELS = [
   [
     {
       word: "boom",
-      meaning_zh: "繁荣；轰鸣",
+      meaning_zh: "轰鸣",
       pos: "n.",
       roots: "boom",
       affix: "基础词 · base",
       scene: "家庭情感 · Family Friends and Feelings",
-      explain_zh: "中考/CEFR 常用词：繁荣；轰鸣",
+      explain_zh: "中考/CEFR 常用词：轰鸣",
       root_group: "基础词 · base",
       example_en: "The boom of thunder shook the classroom windows.",
       example_zh: "雷的轰鸣震动了教室的窗户。"
@@ -4265,12 +4265,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "claim",
-      meaning_zh: "声称；要求",
+      meaning_zh: "认领",
       pos: "v.",
       roots: "claim",
       affix: "基础词 · base",
       scene: "日常活动 · Daily Routine",
-      explain_zh: "中考/CEFR 常用词：声称；要求",
+      explain_zh: "中考/CEFR 常用词：认领",
       root_group: "基础词 · base",
       example_en: "She can claim her lost bag at the school office.",
       example_zh: "她可以到学校办公室认领丢失的书包。"
@@ -19177,12 +19177,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "communicate",
-      meaning_zh: "显露",
+      meaning_zh: "沟通；交流",
       pos: "v.",
       roots: "communicate",
       affix: "词根 · communicate",
       scene: "通讯媒体 · Communications and Media",
-      explain_zh: "中考/CEFR 常用词：显露",
+      explain_zh: "中考/CEFR 常用词：沟通；交流",
       root_group: "词根 · communicate",
       example_en: "We communicate with our friends online.",
       example_zh: "我们在线上与朋友沟通。"

@@ -693,7 +693,8 @@
   },
   "attraction": {
     "example_en": "The earth's attraction pulled the ball back to the ground.",
-    "example_zh": "地球的引力把球拉回了地面。"
+    "example_zh": "地球的引力把球拉回了地面。",
+    "meaning_zh": "引力"
   },
   "audience": {
     "example_en": "The audience clapped when the dancers left the stage.",

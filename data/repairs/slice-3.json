@@ -321,7 +321,8 @@
   },
   "boom": {
     "example_en": "The boom of thunder shook the classroom windows.",
-    "example_zh": "雷的轰鸣震动了教室的窗户。"
+    "example_zh": "雷的轰鸣震动了教室的窗户。",
+    "meaning_zh": "轰鸣"
   },
   "boot": {
     "example_en": "Mud covered his left boot after the rainy hike.",

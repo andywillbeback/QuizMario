@@ -1,6 +1,8 @@
 /* Vocab Spotlight — quiz-show English vocabulary trainer
  * Spaced repetition (Anki-lite / SM-2) + active recall. Offline HTML5.
  * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
+ * Clearance: ≥80% of the set in review with interval ≥1 day (srs-rules.js).
+ * Uncleared sets run a 12-minute challenge (CHALLENGE_MS).
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  */
 (function () {
@@ -18,15 +20,12 @@
   let currentTrack = "core";
   let LEVELS = TRACKS[0].sets || [];
   let LEVEL_COUNT = LEVELS.length;
-  const MIN_MS = 60 * 1000;
-  const DAY_MS = 24 * 60 * 60 * 1000;
-  /** Learning step: 10 minutes */
-  const LEARN_MS = 10 * MIN_MS;
+  const SRS = window.QuizMarioSRS;
+  if (!SRS) throw new Error("srs-rules.js must load before game.js");
+  const MIN_MS = SRS.MIN_MS;
+  const DAY_MS = SRS.DAY_MS;
   /** Max new cards introduced per level session (Anki-like) */
   const NEW_PER_SESSION = 12;
-  /** Clearance: due==0, no new, no learning, ≥80% cards in review with interval≥1 day */
-  const CLEAR_SOLID_PCT = 0.8;
-  const CLEAR_MIN_INTERVAL_DAYS = 1;
 
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
   /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, updatedAt?:string}} SaveData */
@@ -41,11 +40,22 @@
   let sessionSeen = 0;
   let sessionTarget = 0;
   let firstCardOfSession = true;
-  /** Root-affix browse stays in the word bank, but the control is hidden for now. */
-  function publicSortMode(mode) {
-    return mode === "scene" ? "scene" : "default";
+  /** Bumps when a session is left, so a late card animation cannot paint over fail/home. */
+  let playGen = 0;
+  /** True when this visit opened a set that had already cleared. Review, not a challenge. */
+  let sessionStartedClear = false;
+  let levelClearing = false;
+  let challengeActive = false;
+  let challengeFailed = false;
+  let challengeDeadline = 0;
+  let challengeTimer = null;
+  /** Optional [0, 1) roll so a test can force one achievement line. */
+  let forcedChallengeRoll = null;
+  /** Student UI has no scene or root-affix sort. Saved values collapse to default. */
+  function publicSortMode(_mode) {
+    return "default";
   }
-  /** @type {"default"|"scene"} */
+  /** @type {"default"} */
   let sortMode = publicSortMode(save.sortMode);
   let voiceOn = save.voiceOn !== false; // default on
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
@@ -88,17 +98,7 @@
   }
 
   function defaultCardProg() {
-    return {
-      ef: 2.5,
-      interval: 0,
-      reps: 0,
-      lapses: 0,
-      due: 0,
-      correct: 0,
-      wrong: 0,
-      mastery: 0,
-      state: "new",
-    };
+    return SRS.defaultCardProg();
   }
 
   /** Migrate old step-counter due (< 1e12) → immediately due in real time. */
@@ -131,7 +131,7 @@
           unlockedLevel: Math.max(1, data.unlockedLevel || 1),
           cards,
           levelStars: data.levelStars || {},
-          sortMode: data.sortMode || "default",
+          sortMode: publicSortMode(data.sortMode),
           voiceOn: data.voiceOn !== false,
         }, data);
       }
@@ -170,16 +170,15 @@
   }
 
   function isNewCard(p) {
-    return (p.state === "new") || ((p.reps || 0) === 0 && (p.correct || 0) === 0 && (p.wrong || 0) === 0);
+    return SRS.isNewCard(p);
   }
 
   function isLearning(p) {
-    return p.state === "learning" || (!isNewCard(p) && (p.interval || 0) < 1 && (p.reps || 0) > 0);
+    return SRS.isLearning(p);
   }
 
   function isDue(p, now) {
-    if (isNewCard(p)) return false;
-    return !p.due || p.due <= now;
+    return SRS.isDue(p, now);
   }
 
   /** Count Due / Learning / New for a level (0 = all levels). */
@@ -203,26 +202,13 @@
     return { due, learning, neu, mastered };
   }
 
-  /** Per-set clearance stats for pass rule. */
+  /** Per-set clearance stats. Pass is solid >= 80%; see srs-rules.js. */
   function levelClearStats(levelNum) {
     const words = LEVELS[levelNum - 1] || [];
     const now = Date.now();
-    let neu = 0, due = 0, learning = 0, solid = 0;
-    const total = words.length;
-    for (const w of words) {
-      const p = getProg(cardKey(levelNum - 1, w.word));
-      if (isNewCard(p)) {
-        neu++;
-        continue;
-      }
-      if (isDue(p, now)) due++;
-      const interval = p.interval || 0;
-      const isSolid = p.state === "review" && interval >= CLEAR_MIN_INTERVAL_DAYS;
-      if (isSolid) solid++;
-      else learning++; // not yet graduated to interval≥1d review
-    }
-    const need = Math.ceil(total * CLEAR_SOLID_PCT);
-    return { total, neu, due, learning, solid, need, ready: neu === 0 && due === 0 && learning === 0 && solid >= need };
+    const progs = [];
+    for (const w of words) progs.push(getProg(cardKey(levelNum - 1, w.word)));
+    return SRS.summarizeSet(progs, now);
   }
 
   function refreshHud() {
@@ -309,55 +295,9 @@
     }
   }
 
-  /**
-   * Anki-lite / SM-2 schedule.
-   * quality: 0 Again, 1 Good, 2 Easy
-   * interval stored in days; due is Date.now()-based ms.
-   */
+  /** Anki-lite / SM-2. quality: 0 Again, 1 Good, 2 Easy. */
   function schedule(prog, quality, nowMs) {
-    const now = nowMs || Date.now();
-    if (quality === 0) {
-      prog.wrong = (prog.wrong || 0) + 1;
-      prog.lapses = (prog.lapses || 0) + 1;
-      prog.reps = 0;
-      prog.interval = 0;
-      prog.state = "learning";
-      prog.due = now + LEARN_MS; // back in ~10 minutes
-      prog.ef = Math.max(1.3, (prog.ef || 2.5) - 0.2);
-      prog.mastery = Math.max(0, (prog.mastery || 0) - 1);
-      return;
-    }
-    prog.correct = (prog.correct || 0) + 1;
-    prog.reps = (prog.reps || 0) + 1;
-    const ef = prog.ef || 2.5;
-
-    if (prog.reps === 1) {
-      // first success → short learning step
-      prog.interval = LEARN_MS / DAY_MS; // ~10 minutes as fraction of a day
-      prog.state = "learning";
-      prog.due = now + LEARN_MS;
-    } else if (prog.reps === 2) {
-      prog.interval = 1;
-      prog.state = "review";
-      prog.due = now + 1 * DAY_MS;
-    } else if (prog.reps === 3) {
-      prog.interval = quality === 2 ? 4 : 3;
-      prog.state = "review";
-      prog.due = now + prog.interval * DAY_MS;
-    } else {
-      let next = Math.max(1, Math.round((prog.interval || 1) * ef));
-      if (quality === 2) next = Math.max(next + 1, Math.round(next * 1.3));
-      prog.interval = next;
-      prog.state = "review";
-      prog.due = now + prog.interval * DAY_MS;
-    }
-
-    if (quality === 2) prog.ef = Math.min(2.8, ef + 0.15);
-    else prog.ef = Math.min(2.8, ef + 0.05);
-
-    prog.mastery = Math.min(3, (prog.mastery || 0) + (quality === 2 ? 1 : 0.5));
-    if (prog.mastery > 2.9) prog.mastery = 3;
-    else if (prog.mastery > 1.9) prog.mastery = Math.max(prog.mastery, 2);
+    return SRS.schedule(prog, quality, nowMs);
   }
 
   function formatDue(p) {
@@ -411,25 +351,6 @@
     };
   }
 
-  function sortItemsForBrowse(items) {
-    if (sortMode === "root_affix") {
-      items.sort((a, b) =>
-        (a.root_group || "").localeCompare(b.root_group || "", "zh") ||
-        a.word.localeCompare(b.word) ||
-        a.mastery - b.mastery
-      );
-    } else if (sortMode === "scene") {
-      items.sort((a, b) =>
-        (a.scene || "").localeCompare(b.scene || "", "zh") ||
-        a.word.localeCompare(b.word) ||
-        a.mastery - b.mastery
-      );
-    } else {
-      items.sort((a, b) => a.mastery - b.mastery || a.sort - b.sort);
-    }
-    return items;
-  }
-
   function buildQueue(levelNum) {
     const words = LEVELS[levelNum - 1] || [];
     const items = words.map((w, idx) => enrichItem(w, levelNum - 1, idx));
@@ -451,15 +372,9 @@
     due.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
     learning.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
 
-    // Within new cards, honour root/scene browse order when selected
-    if (sortMode === "root_affix" || sortMode === "scene") {
-      sortItemsForBrowse(neu);
-    } else {
-      // slight shuffle of new so sessions vary
-      for (let i = neu.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [neu[i], neu[j]] = [neu[j], neu[i]];
-      }
+    for (let i = neu.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [neu[i], neu[j]] = [neu[j], neu[i]];
     }
 
     const q = [...due, ...learning.filter((it) => !due.some((d) => d.key === it.key))];
@@ -475,59 +390,6 @@
   let stepCounter = 0;
   const requeueSoon = [];
 
-  function updateSortButtons() {
-    const map = {
-      default: "btn-sort-default",
-      root_affix: "btn-sort-root",
-      scene: "btn-sort-scene",
-    };
-    for (const [mode, id] of Object.entries(map)) {
-      const el = $(id);
-      if (!el) continue;
-      el.classList.toggle("sort-active", mode === sortMode);
-    }
-    const label = $("sort-mode-label");
-    if (label) label.textContent = sortMode === "scene" ? "场景" : "默认";
-  }
-
-  function setSortMode(mode) {
-    sortMode = publicSortMode(mode);
-    persist();
-    updateSortButtons();
-    // If playing, rebuild remaining queue preserving progress style
-    if ($("screen-play").classList.contains("active") && currentLevel) {
-      queue = buildQueue(currentLevel);
-      requeueSoon.length = 0;
-      renderBrowseStrip();
-      refreshHud();
-    }
-  }
-
-  function renderBrowseStrip() {
-    const strip = $("browse-strip");
-    if (!strip || !currentLevel) return;
-    const words = LEVELS[currentLevel - 1] || [];
-    const items = words.map((w, idx) => enrichItem(w, currentLevel - 1, idx));
-    sortItemsForBrowse(items);
-    let html = "";
-    let lastGroup = null;
-    for (const it of items) {
-      const g = sortMode === "root_affix" ? it.root_group : sortMode === "scene" ? it.scene : null;
-      if (g && g !== lastGroup) {
-        html += '<span class="browse-group">' + escapeHtml(g) + "</span>";
-        lastGroup = g;
-      }
-      const weak = (it.mastery || 0) < 2;
-      html +=
-        '<span class="browse-chip' + (weak ? " weak" : "") + '" title="' +
-        escapeHtml(it.meaning_zh) + '">' +
-        escapeHtml(it.word) +
-        "</span>";
-    }
-    strip.innerHTML = html;
-    strip.hidden = sortMode === "default";
-  }
-
   function escapeHtml(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -537,7 +399,10 @@
   }
 
   function startLevel(levelNum) {
+    playGen += 1;
+    levelClearing = false;
     currentLevel = levelNum;
+    sessionStartedClear = isLevelClear(levelNum);
     queue = buildQueue(levelNum);
     requeueSoon.length = 0;
     stepCounter = 0;
@@ -555,9 +420,8 @@
     showScreen("play");
     const playLevel = $("play-level");
     if (playLevel) playLevel.textContent = setTitle(levelNum);
-    updateSortButtons();
-    renderBrowseStrip();
     refreshHud();
+    beginChallenge();
     nextCard();
   }
 
@@ -858,8 +722,9 @@
   }
 
   /** Short original oscillator sting — no sampled / copyrighted audio. */
-  function playSting(kind) {
-    if (!voiceOn) return;
+  function playSting(kind, opts) {
+    opts = opts || {};
+    if (!voiceOn && !opts.force) return;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
@@ -900,14 +765,146 @@
         g.connect(master);
         o.start(t0);
         o.stop(t0 + 0.48);
+      } else if (kind === "cheer") {
+        master.gain.setValueAtTime(0.0001, t0);
+        master.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+        master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.type = "triangle";
+          o.frequency.setValueAtTime(freq, t0);
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(0.4, t0 + 0.02 + i * 0.07);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.34 + i * 0.06);
+          o.connect(g);
+          g.connect(master);
+          o.start(t0 + i * 0.07);
+          o.stop(t0 + 0.58);
+        });
+      } else if (kind === "regret") {
+        master.gain.setValueAtTime(0.0001, t0);
+        master.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
+        master.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.7);
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.setValueAtTime(392, t0);
+        o.frequency.exponentialRampToValueAtTime(98, t0 + 0.62);
+        g.gain.setValueAtTime(0.45, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.68);
+        o.connect(g);
+        g.connect(master);
+        o.start(t0);
+        o.stop(t0 + 0.72);
+      } else if (kind === "applause") {
+        const dur = 1.5;
+        const len = Math.floor(audioCtx.sampleRate * dur);
+        const buffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let c = 0; c < 46; c++) {
+          const start = Math.floor((0.02 + Math.random() * 1.3) * audioCtx.sampleRate);
+          const amp = 0.3 + Math.random() * 0.7;
+          const clapLen = Math.floor(audioCtx.sampleRate * 0.02);
+          for (let i = 0; i < clapLen && start + i < len; i++) {
+            data[start + i] += (Math.random() * 2 - 1) * amp * Math.exp(-i / (audioCtx.sampleRate * 0.004));
+          }
+        }
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = "highpass";
+        filter.frequency.value = 900;
+        master.gain.setValueAtTime(0.85, t0);
+        src.connect(filter);
+        filter.connect(master);
+        src.start(t0);
+        src.stop(t0 + dur);
+      } else if (kind === "crow") {
+        master.gain.setValueAtTime(0.9, t0);
+        for (let k = 0; k < 3; k++) {
+          const t = t0 + k * 0.42;
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          const filter = audioCtx.createBiquadFilter();
+          o.type = "sawtooth";
+          o.frequency.setValueAtTime(720, t);
+          o.frequency.exponentialRampToValueAtTime(380, t + 0.24);
+          filter.type = "bandpass";
+          filter.frequency.setValueAtTime(1400, t);
+          filter.Q.value = 3.2;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.34, t + 0.03);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+          o.connect(filter);
+          filter.connect(g);
+          g.connect(master);
+          o.start(t);
+          o.stop(t + 0.32);
+        }
       }
     } catch (_) {}
+  }
+
+  /**
+   * Challenge audio. Optional spoken overrides, if the files exist:
+   *   audio/13_challenge_cheer.m4a
+   *   audio/14_challenge_regret.m4a
+   * Otherwise the default is applause or crow caws
+   * (audio/15_applause.wav, audio/16_crows.wav), then a procedural sting.
+   * The default path does not speak a human line.
+   */
+  function playSrc(src, onFail) {
+    if (!src) {
+      onFail();
+      return;
+    }
+    let settled = false;
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      onFail();
+    };
+    try {
+      const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.addEventListener("error", fail, { once: true });
+      const started = audio.play();
+      if (started && typeof started.then === "function") {
+        started.then(() => { settled = true; }).catch(fail);
+      }
+    } catch (_) {
+      fail();
+    }
+  }
+
+  function rollChallenge() {
+    if (forcedChallengeRoll == null) return Math.random();
+    const roll = forcedChallengeRoll;
+    forcedChallengeRoll = null;
+    return roll;
+  }
+
+  function playChallengeCue(kind) {
+    const voice = SRS.CHALLENGE_VO[kind];
+    const sfx = SRS.CHALLENGE_SFX[kind];
+    const sting = kind === "success" ? "applause" : "crow";
+    playSrc(voice, () => playSrc(sfx, () => playSting(sting, { force: true })));
+  }
+
+  function showCrowPass() {
+    const el = $("crow-pass");
+    if (!el) return;
+    el.hidden = false;
+    el.classList.remove("fly");
+    void el.offsetWidth;
+    el.classList.add("fly");
   }
 
   function hideKillBanner() {
     const b = $("kill-banner");
     if (!b) return;
-    b.classList.remove("show", "shutdown");
+    b.classList.remove("show", "shutdown", "cheer");
     b.textContent = "";
   }
 
@@ -915,13 +912,14 @@
     const b = $("kill-banner");
     if (!b || !text) return;
     b.textContent = text;
-    b.classList.remove("show", "shutdown");
-    if (kind === "shutdown") b.classList.add("shutdown");
+    b.classList.remove("show", "shutdown", "cheer");
+    if (kind === "shutdown" || kind === "regret") b.classList.add("shutdown");
+    if (kind === "cheer") b.classList.add("cheer");
     void b.offsetWidth;
     b.classList.add("show");
     setTimeout(() => {
-      b.classList.remove("show", "shutdown");
-    }, kind === "shutdown" ? 2000 : 1600);
+      b.classList.remove("show", "shutdown", "cheer");
+    }, (kind === "shutdown" || kind === "regret") ? 2200 : 1600);
   }
 
   function announceKillStreak() {
@@ -959,9 +957,7 @@
       "★".repeat(filled) +
       "☆".repeat(3 - filled) +
       "</span>";
-    let metaBits = [];
-    if (sortMode === "root_affix" && currentCard.root_group) metaBits.push(currentCard.root_group);
-    if (sortMode === "scene" && currentCard.scene) metaBits.push(currentCard.scene);
+    const metaBits = [];
     const srsTag = isNewCard(prog)
       ? "新词 New"
       : isDue(prog, Date.now())
@@ -986,7 +982,89 @@
     renderChoices();
   }
 
+  function stopChallenge() {
+    challengeActive = false;
+    if (challengeTimer) {
+      clearInterval(challengeTimer);
+      challengeTimer = null;
+    }
+    renderChallengeTimer();
+  }
+
+  function renderChallengeTimer() {
+    const wrap = $("challenge-clock");
+    const el = $("challenge-timer");
+    if (!wrap || !el) return;
+    if (!challengeActive || challengeFailed) {
+      wrap.hidden = true;
+      el.textContent = "";
+      el.classList.remove("warn");
+      return;
+    }
+    const left = challengeDeadline - Date.now();
+    wrap.hidden = false;
+    el.textContent = SRS.formatChallengeClock(left);
+    el.classList.toggle("warn", left > 0 && left <= MIN_MS);
+    wrap.setAttribute("aria-label", "挑战剩余 " + el.textContent);
+  }
+
+  function beginChallenge() {
+    challengeFailed = false;
+    stopChallenge();
+    if (sessionStartedClear) {
+      renderChallengeTimer();
+      return;
+    }
+    challengeActive = true;
+    challengeDeadline = Date.now() + SRS.CHALLENGE_MS;
+    renderChallengeTimer();
+    challengeTimer = setInterval(tickChallenge, 250);
+  }
+
+  function tickChallenge() {
+    if (!challengeActive || challengeFailed) return;
+    renderChallengeTimer();
+    const outcome = SRS.evaluateChallenge({
+      active: true,
+      startedClear: sessionStartedClear,
+      deadline: challengeDeadline,
+      cleared: isLevelClear(currentLevel),
+    }, Date.now());
+    if (outcome === "success") onLevelClear();
+    else if (outcome === "fail") failChallenge();
+  }
+
+  function failChallenge() {
+    if (challengeFailed || !challengeActive) return;
+    if (isLevelClear(currentLevel)) {
+      onLevelClear();
+      return;
+    }
+    challengeFailed = true;
+    playGen += 1;
+    stopChallenge();
+    queue = [];
+    requeueSoon.length = 0;
+    pendingRate = false;
+    awaiting = true;
+    const mins = Math.round(SRS.CHALLENGE_MS / MIN_MS);
+    const msg = $("fail-msg");
+    if (msg) msg.textContent = mins + " 分钟到了。这组还没通关。错词会再出现，再试一次即可。";
+    const banner = $("fail-banner");
+    if (banner) {
+      banner.hidden = false;
+      banner.textContent = SRS.pickChallengeLine("fail", rollChallenge());
+    }
+    showScreen("fail");
+    showCrowPass();
+    playChallengeCue("fail");
+  }
+
   function nextCard() {
+    if (challengeFailed) return;
+    const play = $("screen-play");
+    if (!play || !play.classList.contains("active")) return;
+    const gen = playGen;
     injectRequeues();
     // Keep the previous prompt on screen during the exit animation. Do not
     // grade or swap currentCard until the new card is painted, or a fast tap
@@ -998,7 +1076,28 @@
       fb.className = "";
     }
 
-    if (isLevelClear(currentLevel) && queue.length === 0 && requeueSoon.length === 0) {
+    if (challengeActive) {
+      const outcome = SRS.evaluateChallenge({
+        active: true,
+        startedClear: sessionStartedClear,
+        deadline: challengeDeadline,
+        cleared: isLevelClear(currentLevel),
+      }, Date.now());
+      if (outcome === "fail") {
+        failChallenge();
+        return;
+      }
+    }
+
+    const endSet = SRS.shouldEndSet({
+      ready: isLevelClear(currentLevel),
+      startedClear: sessionStartedClear,
+      queueEmpty: queue.length === 0,
+      requeueEmpty: requeueSoon.length === 0,
+    });
+    if (endSet) {
+      queue = [];
+      requeueSoon.length = 0;
       onLevelClear();
       return;
     }
@@ -1043,6 +1142,7 @@
 
     const box = $("prompt-box");
     const doEnter = () => {
+      if (gen !== playGen || challengeFailed) return;
       currentCard = card;
       awaiting = false;
       fillCardContent();
@@ -1092,16 +1192,15 @@
   }
 
   /**
-   * 进度百分比 for the current word set (how far through this set, not 进步).
-   * A card counts once it meets the existing clearance "solid" review-state:
-   * state === "review" and interval >= CLEAR_MIN_INTERVAL_DAYS.
-   * pct = round(solid / total * 100). 100% means every card in the set is solid.
-   * The pass bar is still 80% of the set (stats.need), tracked separately.
+   * 本组进度. A graduated card (review, interval >= 1 day) counts 1.
+   * A card recalled once since its last miss counts 0.5, so the bar moves
+   * before the second correct. The pass line is still stats.need (80% graduated).
    */
   function setCompletionPercent(stats) {
     const total = stats && stats.total ? stats.total : 0;
     if (!total) return 0;
-    return Math.max(0, Math.min(100, Math.round((stats.solid / total) * 100)));
+    const credit = stats && stats.credit != null ? stats.credit : (stats.solid || 0);
+    return Math.max(0, Math.min(100, Math.round((credit / total) * 100)));
   }
 
   function updateProgress() {
@@ -1120,9 +1219,7 @@
     if (label) {
       label.textContent = s.ready
         ? "通关完成 · 本组进度 " + pct + "%"
-        : ("本组进度 " + pct + "% · 巩固 " + s.solid + "/" + s.total +
-           " · 通关需 " + s.need +
-           " · 新" + s.neu + " 到期" + s.due + " 学" + s.learning);
+        : ("本组进度 " + pct + "% · 巩固 " + s.solid + "/" + s.need);
     }
   }
 
@@ -1409,6 +1506,10 @@
   }
 
   function onLevelClear() {
+    if (challengeFailed || levelClearing) return;
+    levelClearing = true;
+    const challengeWon = challengeActive && !sessionStartedClear;
+    stopChallenge();
     const stars = levelStars(currentLevel);
     save.levelStars[String(currentLevel)] = Math.max(save.levelStars[String(currentLevel)] || 0, stars);
     if (currentLevel >= save.unlockedLevel) {
@@ -1419,9 +1520,11 @@
     save.points += 50;
     persist();
     const cs = levelClearStats(currentLevel);
-    $("clear-msg").textContent =
-      setTitle(currentLevel) + " cleared (+50). Rule: 新词0 · 到期0 · 学习中0 · 巩固 " +
-      cs.solid + "/" + cs.need + " (≥80%, interval≥1天). Stars: " + stars + "/3.";
+    const mins = Math.round(SRS.CHALLENGE_MS / MIN_MS);
+    const line = "巩固 " + cs.solid + "/" + cs.total + "，通关线 " + cs.need + "（80%，间隔≥1天）。";
+    $("clear-msg").textContent = challengeWon
+      ? (setTitle(currentLevel) + " 在 " + mins + " 分钟内通关（+50）。" + line)
+      : (setTitle(currentLevel) + " cleared (+50). " + line);
     const starEl = $("clear-stars");
     starEl.className = "stars star-pop";
     starEl.innerHTML = "";
@@ -1430,10 +1533,26 @@
       s.textContent = i < stars ? "★" : "☆";
       starEl.appendChild(s);
     }
+    const trophy = $("clear-trophy");
+    if (trophy) trophy.hidden = !challengeWon;
+    const title = $("clear-title");
+    if (title) title.textContent = challengeWon ? "挑战成功" : "Set cleared!";
+    const achievement = challengeWon ? SRS.pickChallengeLine("success", rollChallenge()) : "";
+    const achEl = $("clear-achievement");
+    if (achEl) {
+      achEl.hidden = !challengeWon;
+      achEl.textContent = achievement;
+    }
+    const clearScreen = $("screen-clear");
+    if (clearScreen) clearScreen.classList.toggle("challenge-win", !!challengeWon);
     showScreen("clear");
     spawnPointsFloater(50);
     flashStage("ok");
-    playPartClearCue(currentLevel);
+    if (challengeWon) {
+      playChallengeCue("success");
+    } else {
+      playPartClearCue(currentLevel);
+    }
   }
 
 
@@ -1481,6 +1600,7 @@
     save = next;
     applyTrack(save.track || "core", true);
     sortMode = publicSortMode(save.sortMode);
+    save.sortMode = sortMode;
     voiceOn = save.voiceOn !== false;
     delete save.dueOnly;
     const voiceBtn = $("btn-voice-toggle");
@@ -1489,7 +1609,6 @@
       voiceBtn.classList.toggle("sort-active", voiceOn);
     }
     persist(opts);
-    updateSortButtons();
     refreshHud();
     const nm = $("profile-name");
     const cl = $("profile-cls");
@@ -1689,14 +1808,9 @@
   /** Same pass rule as levelClearStats, but never creates card entries. */
   function clearReadyPure(li, words) {
     const now = Date.now();
-    let neu = 0, due = 0, learning = 0, solid = 0;
-    for (const w of words) {
-      const p = save.cards[cardKey(li, w.word)];
-      if (!p || isNewCard(p)) { neu++; continue; }
-      if (isDue(p, now)) due++;
-      if (p.state === "review" && (p.interval || 0) >= CLEAR_MIN_INTERVAL_DAYS) solid++; else learning++;
-    }
-    return words.length > 0 && neu === 0 && due === 0 && learning === 0 && solid >= Math.ceil(words.length * CLEAR_SOLID_PCT);
+    const progs = [];
+    for (const w of words) progs.push(save.cards[cardKey(li, w.word)] || null);
+    return SRS.summarizeSet(progs, now).ready;
   }
 
   function weakWords(limit) {
@@ -1865,6 +1979,21 @@
     switchTrack, computeStats, buildReport, reportCode,
     get track() { return currentTrack; },
     get levels() { return LEVELS; },
+    get challengeMs() { return SRS.CHALLENGE_MS; },
+    debugExpireChallenge() {
+      if (!challengeActive || challengeFailed) return false;
+      challengeDeadline = Date.now() - 1;
+      tickChallenge();
+      return true;
+    },
+    debugCelebrateChallenge() {
+      if (!challengeActive || challengeFailed) return false;
+      onLevelClear();
+      return true;
+    },
+    debugSetChallengeRoll(roll) {
+      forcedChallengeRoll = roll;
+    },
     getSave() { return save; },
     applyCloudSave(data) {
       let payload = data;
@@ -1925,11 +2054,25 @@
       killStreak = 0;
       pendingRate = false;
       refreshHud();
-      updateSortButtons();
       alert("Progress cleared.");
     }
   });
   $("btn-quit").addEventListener("click", () => {
+    playGen += 1;
+    stopChallenge();
+    challengeFailed = false;
+    showScreen("home");
+    renderStats();
+    refreshHud();
+  });
+  if ($("btn-fail-retry")) $("btn-fail-retry").addEventListener("click", () => {
+    challengeFailed = false;
+    startLevel(currentLevel);
+  });
+  if ($("btn-fail-home")) $("btn-fail-home").addEventListener("click", () => {
+    playGen += 1;
+    challengeFailed = false;
+    stopChallenge();
     showScreen("home");
     renderStats();
     refreshHud();
@@ -1952,16 +2095,6 @@
     // empty clear screen. Resume this set, or open the next one when it really passed.
     startLevel(next);
   });
-
-  // Sort mode buttons
-  const bindSort = (id, mode) => {
-    const el = $(id);
-    if (!el) return;
-    el.addEventListener("click", () => setSortMode(mode));
-  };
-  bindSort("btn-sort-default", "default");
-  bindSort("btn-sort-root", "root_affix");
-  bindSort("btn-sort-scene", "scene");
 
   // Voice toggle
   const voiceBtn = $("btn-voice-toggle");
@@ -2010,7 +2143,8 @@
     $("screen-home").innerHTML = "<p style='padding:24px;text-align:center'>No vocabulary loaded. Check words.js.</p>";
   }
   applyTrack(save.track, true);
-  updateSortButtons();
+  sortMode = publicSortMode(save.sortMode);
+  save.sortMode = sortMode;
   refreshHud();
   // Drop a leftover 只练到期 flag without touching updatedAt, so sync order stays intact.
   try {

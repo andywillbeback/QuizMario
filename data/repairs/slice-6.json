@@ -529,7 +529,8 @@
   },
   "mummy": {
     "example_en": "The child would not sleep unless his mummy sat beside him.",
-    "example_zh": "除非妈妈坐在旁边，不然这个孩子不肯睡觉。"
+    "example_zh": "除非妈妈坐在旁边，不然这个孩子不肯睡觉。",
+    "meaning_zh": "妈妈"
   },
   "murder": {
     "example_en": "The play ends with a murder, so younger pupils should not watch.",

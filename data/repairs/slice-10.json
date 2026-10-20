@@ -129,7 +129,8 @@
   },
   "claim": {
     "example_en": "She can claim her lost bag at the school office.",
-    "example_zh": "她可以到学校办公室认领丢失的书包。"
+    "example_zh": "她可以到学校办公室认领丢失的书包。",
+    "meaning_zh": "认领"
   },
   "climb": {
     "example_en": "The children climb the hill behind our school.",
