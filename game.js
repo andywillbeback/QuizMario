@@ -51,11 +51,11 @@
   let challengeTimer = null;
   /** Optional [0, 1) roll so a test can force one achievement line. */
   let forcedChallengeRoll = null;
-  /** Root-affix browse stays in the word bank, but the control is hidden for now. */
-  function publicSortMode(mode) {
-    return mode === "scene" ? "scene" : "default";
+  /** Student UI has no scene or root-affix sort. Saved values collapse to default. */
+  function publicSortMode(_mode) {
+    return "default";
   }
-  /** @type {"default"|"scene"} */
+  /** @type {"default"} */
   let sortMode = publicSortMode(save.sortMode);
   let voiceOn = save.voiceOn !== false; // default on
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
@@ -131,7 +131,7 @@
           unlockedLevel: Math.max(1, data.unlockedLevel || 1),
           cards,
           levelStars: data.levelStars || {},
-          sortMode: data.sortMode || "default",
+          sortMode: publicSortMode(data.sortMode),
           voiceOn: data.voiceOn !== false,
         }, data);
       }
@@ -351,25 +351,6 @@
     };
   }
 
-  function sortItemsForBrowse(items) {
-    if (sortMode === "root_affix") {
-      items.sort((a, b) =>
-        (a.root_group || "").localeCompare(b.root_group || "", "zh") ||
-        a.word.localeCompare(b.word) ||
-        a.mastery - b.mastery
-      );
-    } else if (sortMode === "scene") {
-      items.sort((a, b) =>
-        (a.scene || "").localeCompare(b.scene || "", "zh") ||
-        a.word.localeCompare(b.word) ||
-        a.mastery - b.mastery
-      );
-    } else {
-      items.sort((a, b) => a.mastery - b.mastery || a.sort - b.sort);
-    }
-    return items;
-  }
-
   function buildQueue(levelNum) {
     const words = LEVELS[levelNum - 1] || [];
     const items = words.map((w, idx) => enrichItem(w, levelNum - 1, idx));
@@ -391,15 +372,9 @@
     due.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
     learning.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
 
-    // Within new cards, honour root/scene browse order when selected
-    if (sortMode === "root_affix" || sortMode === "scene") {
-      sortItemsForBrowse(neu);
-    } else {
-      // slight shuffle of new so sessions vary
-      for (let i = neu.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [neu[i], neu[j]] = [neu[j], neu[i]];
-      }
+    for (let i = neu.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [neu[i], neu[j]] = [neu[j], neu[i]];
     }
 
     const q = [...due, ...learning.filter((it) => !due.some((d) => d.key === it.key))];
@@ -414,59 +389,6 @@
 
   let stepCounter = 0;
   const requeueSoon = [];
-
-  function updateSortButtons() {
-    const map = {
-      default: "btn-sort-default",
-      root_affix: "btn-sort-root",
-      scene: "btn-sort-scene",
-    };
-    for (const [mode, id] of Object.entries(map)) {
-      const el = $(id);
-      if (!el) continue;
-      el.classList.toggle("sort-active", mode === sortMode);
-    }
-    const label = $("sort-mode-label");
-    if (label) label.textContent = sortMode === "scene" ? "场景" : "默认";
-  }
-
-  function setSortMode(mode) {
-    sortMode = publicSortMode(mode);
-    persist();
-    updateSortButtons();
-    // If playing, rebuild remaining queue preserving progress style
-    if ($("screen-play").classList.contains("active") && currentLevel) {
-      queue = buildQueue(currentLevel);
-      requeueSoon.length = 0;
-      renderBrowseStrip();
-      refreshHud();
-    }
-  }
-
-  function renderBrowseStrip() {
-    const strip = $("browse-strip");
-    if (!strip || !currentLevel) return;
-    const words = LEVELS[currentLevel - 1] || [];
-    const items = words.map((w, idx) => enrichItem(w, currentLevel - 1, idx));
-    sortItemsForBrowse(items);
-    let html = "";
-    let lastGroup = null;
-    for (const it of items) {
-      const g = sortMode === "root_affix" ? it.root_group : sortMode === "scene" ? it.scene : null;
-      if (g && g !== lastGroup) {
-        html += '<span class="browse-group">' + escapeHtml(g) + "</span>";
-        lastGroup = g;
-      }
-      const weak = (it.mastery || 0) < 2;
-      html +=
-        '<span class="browse-chip' + (weak ? " weak" : "") + '" title="' +
-        escapeHtml(it.meaning_zh) + '">' +
-        escapeHtml(it.word) +
-        "</span>";
-    }
-    strip.innerHTML = html;
-    strip.hidden = sortMode === "default";
-  }
 
   function escapeHtml(s) {
     return String(s)
@@ -498,8 +420,6 @@
     showScreen("play");
     const playLevel = $("play-level");
     if (playLevel) playLevel.textContent = setTitle(levelNum);
-    updateSortButtons();
-    renderBrowseStrip();
     refreshHud();
     beginChallenge();
     nextCard();
@@ -1037,9 +957,7 @@
       "★".repeat(filled) +
       "☆".repeat(3 - filled) +
       "</span>";
-    let metaBits = [];
-    if (sortMode === "root_affix" && currentCard.root_group) metaBits.push(currentCard.root_group);
-    if (sortMode === "scene" && currentCard.scene) metaBits.push(currentCard.scene);
+    const metaBits = [];
     const srsTag = isNewCard(prog)
       ? "新词 New"
       : isDue(prog, Date.now())
@@ -1682,6 +1600,7 @@
     save = next;
     applyTrack(save.track || "core", true);
     sortMode = publicSortMode(save.sortMode);
+    save.sortMode = sortMode;
     voiceOn = save.voiceOn !== false;
     delete save.dueOnly;
     const voiceBtn = $("btn-voice-toggle");
@@ -1690,7 +1609,6 @@
       voiceBtn.classList.toggle("sort-active", voiceOn);
     }
     persist(opts);
-    updateSortButtons();
     refreshHud();
     const nm = $("profile-name");
     const cl = $("profile-cls");
@@ -2136,7 +2054,6 @@
       killStreak = 0;
       pendingRate = false;
       refreshHud();
-      updateSortButtons();
       alert("Progress cleared.");
     }
   });
@@ -2178,16 +2095,6 @@
     // empty clear screen. Resume this set, or open the next one when it really passed.
     startLevel(next);
   });
-
-  // Sort mode buttons
-  const bindSort = (id, mode) => {
-    const el = $(id);
-    if (!el) return;
-    el.addEventListener("click", () => setSortMode(mode));
-  };
-  bindSort("btn-sort-default", "default");
-  bindSort("btn-sort-root", "root_affix");
-  bindSort("btn-sort-scene", "scene");
 
   // Voice toggle
   const voiceBtn = $("btn-voice-toggle");
@@ -2236,7 +2143,8 @@
     $("screen-home").innerHTML = "<p style='padding:24px;text-align:center'>No vocabulary loaded. Check words.js.</p>";
   }
   applyTrack(save.track, true);
-  updateSortButtons();
+  sortMode = publicSortMode(save.sortMode);
+  save.sortMode = sortMode;
   refreshHud();
   // Drop a leftover 只练到期 flag without touching updatedAt, so sync order stays intact.
   try {

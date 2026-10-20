@@ -96,6 +96,10 @@ function staticGuards() {
   assert.ok(index.includes('id="challenge-timer"'), "the 12-minute clock is on the training card");
   assert.ok(index.includes('id="screen-fail"') && index.includes("遗憾失败"), "timeout has a regret-fail screen");
   assert.ok(game.includes('hint: '), "training card still shows the hint line");
+  assert.ok(!index.includes('id="btn-sort-scene"') && !index.includes('id="btn-sort-default"'), "sort toggles are gone");
+  assert.ok(!index.includes(">场景<") && !index.includes(">默认<"), "sort labels are gone");
+  assert.ok(!game.includes("btn-sort-scene") && !game.includes('sortMode === "scene"'), "scene sort path is gone");
+  assert.ok(game.includes('return "default"'), "saved sort mode collapses to default");
   const rules = read("srs-rules.js");
   assert.ok(rules.includes("12 * 60 * 1000"), "challenge length constant is 12 minutes");
   assert.ok(rules.includes("audio/13_challenge_cheer.m4a"), "cheer voice path");
@@ -499,6 +503,8 @@ async function main() {
         prompt: document.getElementById("prompt-main").textContent,
         hint: document.getElementById("prompt-hint").textContent,
         clock: (document.getElementById("challenge-timer") || {}).textContent || "",
+        sceneSort: !!document.getElementById("btn-sort-scene"),
+        defaultSort: !!document.getElementById("btn-sort-default"),
         challengeMs: window.__QM && window.__QM.challengeMs,
         queue: Number(document.getElementById("play-queue").textContent),
         typed: !!document.getElementById("answer-input"),
@@ -515,6 +521,8 @@ async function main() {
     assert.strictEqual(fresh.challengeMs, 12 * 60 * 1000, "training challenge is 12 minutes");
     assert.ok(fresh.clock === "12:00" || fresh.clock === "11:59", "clock reads " + fresh.clock);
     assert.ok(fresh.hint.indexOf("hint:") !== -1 || fresh.hint.indexOf("例") !== -1, "hint stays on the card: " + fresh.hint);
+    assert.strictEqual(fresh.sceneSort, false, "play screen has no 场景 sort button");
+    assert.strictEqual(fresh.defaultSort, false, "play screen has no 默认 sort button");
 
     const won = await evalRetry(`window.__QM.debugCelebrateChallenge()`);
     assert.strictEqual(won, true, "an active 12-minute challenge can be won");

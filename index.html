@@ -604,7 +604,6 @@
     display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
     align-items: center; margin: 10px 0 4px;
   }
-  .sort-bar .sort-label { font-size: .8rem; opacity: .7; margin-right: 4px; }
   button.sort-btn {
     padding: 8px 12px; font-size: .82rem; font-weight: 600;
     background: rgba(255,255,255,.08); color: #eee;
@@ -616,24 +615,6 @@
     border-color: var(--gold); color: #fff;
     box-shadow: 0 0 12px rgba(230,201,138,.28);
   }
-
-  #browse-strip {
-    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
-    max-height: 72px; overflow-y: auto;
-    margin: 6px 0 4px; padding: 6px 4px;
-    border-radius: 10px; background: rgba(3, 6, 14, 0.42);
-  }
-  .browse-group {
-    font-size: .7rem; color: var(--cyan); font-weight: 700;
-    letter-spacing: .04em; margin-left: 4px; opacity: .9;
-    flex-basis: 100%;
-  }
-  .browse-chip {
-    font-size: .72rem; padding: 2px 8px; border-radius: 999px;
-    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
-    opacity: .85;
-  }
-  .browse-chip.weak { border-color: rgba(255,180,192,.55); color: #ffd5dc; }
 
   /* LoL kill banner */
   #kill-banner {
@@ -900,16 +881,14 @@
     }
   }
 
-  /* Training page: streak only, sort controls pinned to the viewport */
+  /* Training page: streak only. The voice control is pinned while playing. */
   header.brand .subtitle,
   header.brand .examiner,
   header.brand .tagline,
-  #browse-strip,
   #hud .stat:not(#stat-streak),
   #prompt-label,
   footer,
-  #play-clear-label,
-  #sort-bar .sort-label { display: none !important; }
+  #play-clear-label { display: none !important; }
 
   #sort-bar { display: none; }
   body.at-play #sort-bar {
@@ -1029,10 +1008,7 @@
 <body class="at-gate">
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
-<div id="sort-bar" class="sort-bar" role="group" aria-label="词汇排序">
-  <span class="sort-label">排列</span>
-  <button type="button" class="sort-btn" id="btn-sort-default">默认</button>
-  <button type="button" class="sort-btn" id="btn-sort-scene">场景</button>
+<div id="sort-bar" class="sort-bar" role="group" aria-label="连杀语音">
   <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
 </div>
 <div class="app">
