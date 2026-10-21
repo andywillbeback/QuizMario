@@ -103,6 +103,11 @@ function staticGuards() {
   assert.ok(index.includes('id="btn-due-today"') && index.includes("今日到期"), "今日到期 entry");
   assert.ok(index.includes('id="btn-wrong-book"') && index.includes("错词本"), "错词本 entry");
   assert.ok(index.includes('src="review-queues.js"'), "queue rules load with the game");
+  assert.ok(index.includes('src="learner-events.js"'), "learner event emitter loads with the game");
+  assert.ok(index.includes('id="btn-export-learner-events"'), "JSONL export is on the home screen");
+  assert.ok(game.includes("emitLearnerAnswer") && game.includes("signalDueItems") && game.includes("emitWrongBook"),
+    "answers, due queue, and wrong-book entry emit learner events");
+  assert.ok(!/已同步到\s*ALS/.test(index + game + sync), "no fake ALS sync banner");
   assert.ok(game.includes("今天没有到期的单词"), "due empty copy");
   assert.ok(game.includes("错词本还是空的"), "wrong-book empty copy");
   assert.ok(game.includes('sessionKind === "wrongbook"'), "wrong book is its own practice mode");
@@ -208,6 +213,15 @@ function mockSource() {
           });
         }
         return reply(201, [{ user_id: session.user.id, updated_at: "2026-01-01T00:00:00.000Z" }]);
+      }
+      if (url.indexOf("/learner_events") !== -1) {
+        if (method === "GET" || method === "HEAD") return reply(200, []);
+        var parsed = [];
+        try { parsed = JSON.parse((init && init.body) || "[]"); } catch (e) { parsed = []; }
+        if (!Array.isArray(parsed)) parsed = parsed ? [parsed] : [];
+        if (!window.__QM_LEARNER_EVENTS) window.__QM_LEARNER_EVENTS = [];
+        for (var i = 0; i < parsed.length; i++) window.__QM_LEARNER_EVENTS.push(parsed[i]);
+        return reply(201, parsed);
       }
       if (url.indexOf("/auth/v1/settings") !== -1) {
         return reply(200, { external: { email: true }, disable_signup: false, mailer_autoconfirm: true });
@@ -817,6 +831,63 @@ async function main() {
     })()`);
     assert.strictEqual(booked.active, true, "a wrong answer enters 错词本");
     assert.ok(booked.wrong >= 1, "Again still increments wrong");
+
+    const signals = await evalRetry(`(async () => {
+      const LE = window.QuizMarioLearnerEvents;
+      if (!LE || typeof LE.flush !== "function" || typeof LE.list !== "function") return null;
+      await LE.flush();
+      const word = ${JSON.stringify(planted && planted.word)}.toLowerCase();
+      const events = LE.list();
+      const posted = window.__QM_LEARNER_EVENTS || [];
+      const due = events.filter((e) => e.event_type === "vocab.due_review");
+      return {
+        localWrong: events.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word).length,
+        localBook: events.filter((e) => e.event_type === "vocab.wrong_book_add" && e.headword === word).length,
+        localCorrect: events.filter((e) => e.event_type === "vocab.answer_correct").length,
+        localDue: due.length,
+        dueAt: due.length > 0 && due.every((e) => e.payload && e.payload.due_at),
+        sourceOk: events.length > 0 && events.every((e) => e.source === "quizmario"),
+        learner: events[0] && events[0].learner_id,
+        sameAlias: events.every((e) => e.user_id === e.learner_id),
+        posted: posted.length,
+        postedSource: posted.length > 0 && posted.every((e) => e.source === "quizmario"),
+        postedLearner: posted[0] && posted[0].learner_id,
+        fakeAls: /已同步到\\s*ALS/.test(document.body.innerText || "")
+      };
+    })()`);
+    assert.ok(signals, "learner events api loaded");
+    assert.ok(signals.localWrong >= 1, "wrong answer stored vocab.answer_wrong");
+    assert.ok(signals.localBook >= 1, "wrong-book add stored vocab.wrong_book_add");
+    assert.ok(signals.localDue >= 2, "due queue stored vocab.due_review");
+    assert.strictEqual(signals.dueAt, true, "due signals include payload.due_at");
+    assert.strictEqual(signals.sourceOk, true);
+    assert.strictEqual(signals.learner, SESSION.user.id);
+    assert.strictEqual(signals.sameAlias, true, "user_id aliases learner_id");
+    assert.ok(signals.posted >= 1, "logged-in path posted learner_events");
+    assert.strictEqual(signals.postedSource, true);
+    assert.strictEqual(signals.postedLearner, SESSION.user.id);
+    assert.strictEqual(signals.fakeAls, false, "the page must not claim an ALS sync");
+
+    const exported = await evalRetry(`(() => {
+      const body = window.QuizMarioLearnerEvents.toJsonl();
+      document.getElementById("btn-export-learner-events").click();
+      const lines = body.trim().split("\\n").filter(Boolean);
+      let parsed = true;
+      try { lines.forEach((line) => JSON.parse(line)); } catch (e) { parsed = false; }
+      return {
+        lines: lines.length,
+        parsed: parsed,
+        note: (document.getElementById("learner-events-note") || {}).textContent || "",
+        hasDue: body.indexOf("vocab.due_review") !== -1,
+        hasWrong: body.indexOf("vocab.answer_wrong") !== -1,
+        hasBook: body.indexOf("vocab.wrong_book_add") !== -1
+      };
+    })()`);
+    assert.ok(exported.lines >= 3, "JSONL export contains the due, wrong, and wrong-book signals");
+    assert.strictEqual(exported.parsed, true, "each JSONL line parses");
+    assert.ok(exported.hasDue && exported.hasWrong && exported.hasBook, JSON.stringify(exported));
+    assert.ok(exported.note.includes("已下载 JSONL"), exported.note);
+    assert.ok(!exported.note.includes("已同步到 ALS"), exported.note);
 
     await evalRetry(`document.getElementById("btn-quit").click()`);
     const wrongHome = await waitFor(async () => evalRetry(`(() => {
