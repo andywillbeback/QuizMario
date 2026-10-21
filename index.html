@@ -357,6 +357,50 @@
     color: var(--muted);
     font-weight: 600;
   }
+  .miss-reasons {
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    text-align: left;
+    border-radius: 12px;
+    background: rgba(3, 6, 14, 0.42);
+    border: 1px solid rgba(255,255,255,.16);
+  }
+  .miss-reasons[hidden] { display: none !important; }
+  .miss-reasons-kicker {
+    margin: 0;
+    font-size: .72rem;
+    letter-spacing: .08em;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .miss-reasons-taxonomy,
+  .miss-reasons-lead,
+  .miss-reasons-counts,
+  .miss-reasons-examples {
+    margin: 4px 0 0;
+    line-height: 1.45;
+  }
+  .miss-reasons-taxonomy {
+    font-size: .78rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .miss-reasons-lead {
+    font-size: .92rem;
+    font-weight: 700;
+    color: #fff;
+  }
+  .miss-reasons-counts {
+    font-size: .85rem;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .miss-reasons-examples {
+    padding: 0;
+    list-style: none;
+    color: var(--muted);
+    font-size: .82rem;
+  }
   button.is-hero {
     font-size: 1.08rem;
     padding: 14px 28px;
@@ -1159,6 +1203,13 @@
           <strong id="home-loop-title" class="home-loop-title">薄弱点 → 今日必练</strong>
           <span id="home-loop-detail" class="home-loop-detail"></span>
         </button>
+        <section id="miss-reasons" class="miss-reasons" hidden aria-label="错因">
+          <p class="miss-reasons-kicker">错因</p>
+          <p class="miss-reasons-taxonomy" data-reason-taxonomy>形近 · 义近 · 词性 · 其他/未归类</p>
+          <p class="miss-reasons-lead" data-reason-lead></p>
+          <p class="miss-reasons-counts" data-reason-counts></p>
+          <ul class="miss-reasons-examples" data-reason-examples></ul>
+        </section>
         <div id="track-panel">
           <label for="track-select"><b>词库</b></label>
           <select id="track-select" aria-label="选择词库"></select>
@@ -1245,6 +1296,13 @@
         <h2 id="clear-title">通关</h2>
         <p id="clear-achievement" class="achievement-line" hidden></p>
         <p class="sub" id="clear-msg">Great work.</p>
+        <section id="clear-reasons" class="miss-reasons" hidden aria-label="错因">
+          <p class="miss-reasons-kicker">错因</p>
+          <p class="miss-reasons-taxonomy" data-reason-taxonomy>形近 · 义近 · 词性 · 其他/未归类</p>
+          <p class="miss-reasons-lead" data-reason-lead></p>
+          <p class="miss-reasons-counts" data-reason-counts></p>
+          <ul class="miss-reasons-examples" data-reason-examples></ul>
+        </section>
         <div class="stars" id="clear-stars">★★★</div>
         <div class="btn-row">
           <button id="btn-placement-enter" type="button" hidden>进入起始组</button>
@@ -1316,6 +1374,7 @@
   <script src="sense-examples.js"></script>
   <script src="practice.js"></script>
   <script src="feedback.js"></script>
+  <script src="error-types.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>

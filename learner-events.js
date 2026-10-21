@@ -74,6 +74,11 @@
     if (gloss) payload.gloss_zh = gloss;
     if (type === TYPES.DUE) payload.due_at = normalizeIso(input.due_at) || dueAtIso(input.due_ms != null ? input.due_ms : input.dueAt) || created;
     if (type === TYPES.WRONG && input.answer) payload.answer = String(input.answer).trim();
+    if (type === TYPES.WRONG && input.reason && (input.reason === "form" || input.reason === "sense" || input.reason === "pos" || input.reason === "other")) {
+      payload.reason = input.reason;
+      var reasonZh = input.reason_zh != null ? String(input.reason_zh).trim() : "";
+      if (reasonZh) payload.reason_zh = reasonZh;
+    }
     if (input.outcome && type !== TYPES.DUE) payload.outcome = String(input.outcome);
     var ev = {
       event_id: input.event_id || newId(),

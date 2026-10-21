@@ -12,7 +12,7 @@ Same Supabase email and password as ALS. Both `learner_id` and `user_id` are the
 
 | `event_type` | When QuizMario emits it | `payload` |
 |---|---|---|
-| `vocab.answer_wrong` | A multiple-choice pick is wrong | `headword`, `track`, `gloss_zh`, `outcome` `"wrong"`, optional `answer` (the picked word) |
+| `vocab.answer_wrong` | A multiple-choice pick is wrong | `headword`, `track`, `gloss_zh`, `outcome` `"wrong"`, optional `answer` (the picked word), optional `reason` (`form` 形近, `sense` 义近, `pos` 词性, `other` 其他/未归类) and `reason_zh`. Missing `reason` means that pick was not classified. |
 | `vocab.answer_unknown` | The student taps「不会」instead of guessing | `headword`, `track`, `gloss_zh`, `outcome` `"unknown"`. Not a wrong pick: no `answer`, and the daily log counts `unk` rather than `w`. |
 | `vocab.wrong_book_add` | The lemma **enters** 错词本 (a new miss, or a cumulative `wrong >= 2` scan). A later miss while it is already in the book does not emit again. | `headword`, `track`, `gloss_zh` |
 | `vocab.due_review` | The home screen builds today's due queue, or the student opens 今日到期 / continue-into-due. Same card + `due_at` is emitted once. | `headword`, `due_at` (ISO-8601 UTC), `track`, `gloss_zh` |

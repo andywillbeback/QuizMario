@@ -13,6 +13,8 @@
  * Home loop strip (home-loop.js): signed-in home shows 薄弱点 → 今日必练.
  * ALS 补了 / 回流词 stays unimplemented until source=als rows are readable.
  * 今日必练 clear pushes 继续闯关第 N 组, then 去 ALS 修语法.
+ * Wrong MC picks are tagged 形近 / 义近 / 词性 / 其他 (error-types.js)
+ * and summed on the student home and the 今日必练 clear screen.
  */
 (function () {
   "use strict";
@@ -43,6 +45,8 @@
   if (!Sense) throw new Error("sense-id.js must load before game.js");
   const Placement = window.QuizMarioPlacement;
   if (!Placement) throw new Error("placement.js must load before game.js");
+  const ET = window.QuizMarioErrorTypes;
+  if (!ET) throw new Error("error-types.js must load before game.js");
   const SenseExamples = window.QuizMarioSenseExamples;
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
@@ -156,6 +160,7 @@
     );
     sv.mustPractice = normalizeMustPractice(data.mustPractice);
     sv.placement = Placement.normalizePlacement(data.placement);
+    sv.missReasons = ET.normalizeLog(data.missReasons);
     const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
     sv.practice = {
       meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
@@ -1643,7 +1648,8 @@
     } else {
       schedule(prog, 0, nowMs, opts);
       rememberMiss(currentCard, prog);
-      emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind);
+      const reason = kind === "wrong" ? recordMissReason(currentCard, chosen) : null;
+      emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind, reason);
       save.streak = 0;
       const brokenStreak = killStreak;
       killStreak = 0;
@@ -1672,6 +1678,7 @@
         why += '<div class="fb-meta">这题记成「不会」，不算选错。稍后还会再出现。</div>';
       } else {
         why += '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
+        if (reason && reason.line) why += '<div class="fb-meta">' + escapeHtml(reason.line) + "</div>";
       }
       if (sessionKind === "wrongbook" || (sessionKind === "must" && cardInWrongBook(currentCard))) {
         why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
@@ -2033,6 +2040,7 @@
       practice: payload.practice && typeof payload.practice === "object" ? payload.practice : {},
       mustPractice: payload.mustPractice,
       placement: payload.placement,
+      missReasons: payload.missReasons,
     });
   }
 
@@ -2542,7 +2550,7 @@
     return window.QuizMarioLearnerEvents || null;
   }
 
-  function emitLearnerAnswer(correct, card, chosen, outcome) {
+  function emitLearnerAnswer(correct, card, chosen, outcome, reason) {
     const LE = learnerEvents();
     if (!LE || !card || typeof LE.record !== "function") return;
     const kind = outcome || (correct ? "correct" : "wrong");
@@ -2556,6 +2564,10 @@
       outcome: kind,
     };
     if (kind === "wrong" && chosen) input.answer = chosen;
+    if (kind === "wrong" && reason && reason.bucket && ET.LABELS[reason.bucket]) {
+      input.reason = reason.bucket;
+      input.reason_zh = ET.LABELS[reason.bucket];
+    }
     try { LE.record(input); } catch (_) {}
   }
 
@@ -2571,6 +2583,58 @@
         gloss_zh: card.meaning_zh || "",
       });
     } catch (_) {}
+  }
+
+  function lookupBankWord(surface, direction) {
+    const want = String(surface || "").trim();
+    if (!want) return null;
+    const norm = want.toLowerCase();
+    const targetNorm = currentCard ? String(currentCard.word || "").trim().toLowerCase() : "";
+    for (let li = 0; li < LEVELS.length; li++) {
+      const words = LEVELS[li] || [];
+      for (const w of words) {
+        if (!w) continue;
+        if (direction === "meaning") {
+          if (String(w.meaning_zh || "").trim() !== want) continue;
+        } else if (String(w.word || "").trim().toLowerCase() !== norm) {
+          continue;
+        }
+        if (targetNorm && String(w.word || "").trim().toLowerCase() === targetNorm) continue;
+        return w;
+      }
+    }
+    return null;
+  }
+
+  /** Wrong MC picks only. Placement and spelling stay out of the tally. */
+  function recordMissReason(card, chosen) {
+    try {
+      if (!card || !ET.countsAsMiss("wrong")) return null;
+      if (sessionKind === "placement" || sessionKind === "spelling") return null;
+      const picked = String(chosen || "").trim();
+      if (!picked) return null;
+      const direction = sessionDirection === "meaning" ? "meaning" : "form";
+      const entry = lookupBankWord(picked, direction);
+      const result = ET.classifyMiss({
+        target: card,
+        chosen: entry || picked,
+        direction: direction,
+      });
+      const otherLabel = entry && entry.word ? entry.word : picked;
+      save.missReasons = ET.noteMiss(save.missReasons, {
+        bucket: result.bucket,
+        lemma: card.word || "",
+        gloss: card.meaning_zh || "",
+        chosen: picked,
+        chosenLemma: entry && entry.word ? entry.word : "",
+        track: currentTrack,
+        at: Date.now(),
+      });
+      result.line = ET.feedbackLine(result, otherLabel);
+      return result;
+    } catch (_) {
+      return null;
+    }
   }
 
   function findSurface(words, lemma) {
@@ -2804,6 +2868,39 @@
     if (detail) detail.textContent = view.detail || "";
   }
 
+  function paintReasonBox(el, view) {
+    if (!el) return;
+    view = view || { visible: false };
+    el.hidden = !view.visible;
+    if (!view.visible) return;
+    const tax = el.querySelector("[data-reason-taxonomy]");
+    const lead = el.querySelector("[data-reason-lead]");
+    const counts = el.querySelector("[data-reason-counts]");
+    const list = el.querySelector("[data-reason-examples]");
+    if (tax) tax.textContent = view.taxonomy || "";
+    if (lead) lead.textContent = view.lead || "";
+    if (counts) counts.textContent = view.countsLine || "";
+    if (list) {
+      list.textContent = "";
+      const lines = view.examples || [];
+      for (let i = 0; i < lines.length; i++) {
+        const li = document.createElement("li");
+        li.textContent = lines[i];
+        list.appendChild(li);
+      }
+    }
+  }
+
+  function renderMissReasons() {
+    const view = ET.present(save.missReasons);
+    if (!studentHomeActive()) view.visible = false;
+    paintReasonBox($("miss-reasons"), view);
+  }
+
+  function renderClearReasons() {
+    paintReasonBox($("clear-reasons"), ET.present(save.missReasons));
+  }
+
   function resetClearActions() {
     const cont = $("btn-clear-continue");
     const als = $("btn-clear-als");
@@ -2816,6 +2913,8 @@
       home.classList.add("secondary");
       home.classList.remove("ghost");
     }
+    const reasons = $("clear-reasons");
+    if (reasons) reasons.hidden = true;
   }
 
   function showMustClearActions(plan) {
@@ -2840,6 +2939,7 @@
       home.classList.remove("secondary");
       home.classList.add("ghost");
     }
+    renderClearReasons();
   }
 
   function dismissMustGate() {
@@ -2886,6 +2986,7 @@
     });
     applyHomePrimacy(mode);
     renderHomeLoop(merged.length);
+    renderMissReasons();
     const hint = $("continue-hint");
     if (hint) {
       hint.hidden = false;
