@@ -253,7 +253,7 @@
   "account": {
     "example_en": "Dad checked his bank account after buying the tickets.",
     "example_zh": "爸爸买完票以后查看了银行账户。",
-    "meaning_zh": "账户；叙述"
+    "meaning_zh": "账户；（银行）户头"
   },
   "accountant": {
     "example_en": "My aunt works as an accountant in a small office.",
@@ -334,11 +334,14 @@
   },
   "advertising": {
     "example_en": "Advertising on the school website brought more visitors.",
-    "example_zh": "学校网站上登的广告带来了更多访问者。"
+    "example_zh": "学校网站上登的广告带来了更多访问者。",
+    "meaning_zh": "广告业；做广告"
   },
   "advice": {
     "example_en": "Mom's advice helped me choose a safer bike route.",
-    "example_zh": "妈妈的建议帮我选了一条更安全的骑车路线。"
+    "example_zh": "妈妈的建议帮我选了一条更安全的骑车路线。",
+    "meaning_zh": "建议（名词，不可数）",
+    "pos": "n."
   },
   "adviser": {
     "example_en": "Our career adviser suggested a summer job at the library.",
@@ -521,7 +524,9 @@
   },
   "apology": {
     "example_en": "He offered an apology for breaking his sister's cup.",
-    "example_zh": "他因为打碎了姐姐的杯子而道了歉。"
+    "example_zh": "他因为打碎了姐姐的杯子而道了歉。",
+    "meaning_zh": "道歉（名词）",
+    "pos": "n."
   },
   "appearance": {
     "example_en": "His sudden appearance at the door surprised everyone.",
@@ -589,7 +594,8 @@
   },
   "army": {
     "example_en": "My cousin joined the army after finishing high school.",
-    "example_zh": "我表哥高中毕业以后参军了。"
+    "example_zh": "我表哥高中毕业以后参军了。",
+    "meaning_zh": "军队"
   },
   "arrangement": {
     "example_en": "The alphabetical arrangement made our class list easy to read.",
@@ -656,7 +662,8 @@
   },
   "astronaut": {
     "example_en": "The astronaut spoke to our class from the space centre.",
-    "example_zh": "宇航员从航天中心向我们班讲了话。"
+    "example_zh": "宇航员从航天中心向我们班讲了话。",
+    "meaning_zh": "宇航员"
   },
   "astronomer": {
     "example_en": "The astronomer let us look at the moon through a telescope.",
@@ -664,7 +671,8 @@
   },
   "athlete": {
     "example_en": "The athlete drank water before the final race.",
-    "example_zh": "那位运动员在决赛开始前喝了水。"
+    "example_zh": "那位运动员在决赛开始前喝了水。",
+    "meaning_zh": "运动员"
   },
   "Atlantic": {
     "example_en": "Ships cross the Atlantic with food for our city.",
@@ -692,9 +700,9 @@
     "example_zh": "他因为全勤，在集会上得了一个奖。"
   },
   "attraction": {
-    "example_en": "The earth's attraction pulled the ball back to the ground.",
-    "example_zh": "地球的引力把球拉回了地面。",
-    "meaning_zh": "引力"
+    "example_en": "The Great Wall is a famous attraction for visitors.",
+    "example_zh": "长城对游客来说是著名的景点。",
+    "meaning_zh": "景点；吸引力"
   },
   "audience": {
     "example_en": "The audience clapped when the dancers left the stage.",
@@ -770,7 +778,8 @@
   },
   "badminton": {
     "example_en": "We play badminton in the gym when it rains.",
-    "example_zh": "下雨的时候，我们就在体育馆里打羽毛球。"
+    "example_zh": "下雨的时候，我们就在体育馆里打羽毛球。",
+    "meaning_zh": "羽毛球"
   },
   "bag": {
     "example_en": "My bag was heavy with books for the art class.",

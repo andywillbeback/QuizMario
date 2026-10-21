@@ -325,7 +325,9 @@
   },
   "represent": {
     "example_en": "Two students represent our class at the city forum.",
-    "example_zh": "两名学生在城市论坛上代表我们班。"
+    "example_zh": "两名学生在城市论坛上代表我们班。",
+    "meaning_zh": "代表（动词）",
+    "pos": "v."
   },
   "require": {
     "example_en": "This form will require a parent's signature by Friday.",
@@ -652,7 +654,9 @@
   },
   "threaten": {
     "example_en": "The heavy rain may threaten the riverside football pitch.",
-    "example_zh": "大雨可能会威胁到河边的足球场。"
+    "example_zh": "大雨可能会威胁到河边的足球场。",
+    "meaning_zh": "威胁（动词）",
+    "pos": "v."
   },
   "throw": {
     "example_en": "Don't throw paper onto the grass beside the court.",
@@ -670,8 +674,10 @@
     "example_zh": "警方可以通过摄像头追踪丢失的包。"
   },
   "train": {
-    "example_en": "The club will train new swimmers in the shallow pool.",
-    "example_zh": "俱乐部将在浅水池里训练新来的游泳者。"
+    "example_en": "The club will train new swimmers this term.",
+    "example_zh": "俱乐部这学期将训练新来的游泳队员。",
+    "meaning_zh": "训练（动词）",
+    "pos": "v."
   },
   "transfer": {
     "example_en": "The bank can transfer the fee straight to the school.",

@@ -33,8 +33,9 @@
     "meaning_zh": "聚会"
   },
   "passage": {
-    "example_en": "The second passage describes a storm far out at sea.",
-    "example_zh": "第二段描写了远海的一场风暴。"
+    "example_en": "The second passage describes a storm at sea.",
+    "example_zh": "第二篇短文描写了海上的一场风暴。",
+    "meaning_zh": "短文；选段"
   },
   "passenger": {
     "example_en": "An elderly passenger offered me a seat on the bus.",
@@ -248,8 +249,9 @@
     "example_zh": "我留了一部分披萨给弟弟。"
   },
   "position": {
-    "example_en": "Her position on shorter exams never changed.",
-    "example_zh": "关于缩短考试，她的立场从未改变。"
+    "example_en": "His position is that school exams should be shorter.",
+    "example_zh": "他的立场是学校考试应该缩短。",
+    "meaning_zh": "立场；位置"
   },
   "possession": {
     "example_en": "That old violin is his most treasured possession.",
@@ -433,7 +435,7 @@
     "example_zh": "看熊猫就是我们这次参观的全部目的。"
   },
   "quality": {
-    "example_en": "This bread is better quality than yesterday's loaf.",
+    "example_en": "This bread is of better quality than yesterday's loaf.",
     "example_zh": "这面包的质量比昨天那条更好。"
   },
   "quantity": {
@@ -511,7 +513,8 @@
   "reaction": {
     "example_en": "A big smile was her reaction to the surprise cake.",
     "example_zh": "面对惊喜蛋糕，她的反应是灿烂一笑。",
-    "meaning_zh": "反应"
+    "meaning_zh": "反应（名词）",
+    "pos": "n."
   },
   "reading": {
     "example_en": "Silent reading starts as soon as we take our seats.",
@@ -608,7 +611,9 @@
   },
   "representative": {
     "example_en": "Each class chose one representative for the student council.",
-    "example_zh": "每个班为学代会选了一名代表。"
+    "example_zh": "每个班为学代会选了一名代表。",
+    "meaning_zh": "代表（名词）",
+    "pos": "n."
   },
   "requirement": {
     "example_en": "A signed letter is a requirement for joining the camp.",

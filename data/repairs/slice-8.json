@@ -492,7 +492,9 @@
   },
   "success": {
     "example_en": "Finishing the race was a real success for him.",
-    "example_zh": "对他来说，跑完这场比赛是一次真正的成功。"
+    "example_zh": "对他来说，跑完这场比赛是一次真正的成功。",
+    "meaning_zh": "成功（名词）",
+    "pos": "n."
   },
   "sugar": {
     "example_en": "I stopped putting sugar in my morning cocoa.",
@@ -728,7 +730,9 @@
   },
   "threat": {
     "example_en": "Floodwater became a threat to houses by the river.",
-    "example_zh": "洪水成了河边那些房子的威胁。"
+    "example_zh": "洪水成了河边那些房子的威胁。",
+    "meaning_zh": "威胁（名词）",
+    "pos": "n."
   },
   "throat": {
     "example_en": "Hot lemon water eased my throat while I had a cold.",

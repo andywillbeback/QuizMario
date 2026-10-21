@@ -201,7 +201,8 @@
   "birth": {
     "example_en": "The baby's birth brought joy to the whole family.",
     "example_zh": "宝宝的出生给全家带来了喜悦。",
-    "meaning_zh": "出生"
+    "meaning_zh": "出生（名词）",
+    "pos": "n."
   },
   "birthday": {
     "example_en": "We baked a cake for Mum's birthday on Saturday.",
@@ -331,7 +332,7 @@
   "border": {
     "example_en": "We showed our passports at the border this morning.",
     "example_zh": "今天早上我们在边界出示了护照。",
-    "meaning_zh": "边界"
+    "meaning_zh": "边界（国界/边沿）"
   },
   "boredom": {
     "example_en": "Long rainy weekends can bring real boredom.",
@@ -352,7 +353,7 @@
   "boundary": {
     "example_en": "A fence marks the boundary of the school field.",
     "example_zh": "一道篱笆标出了学校操场的边界。",
-    "meaning_zh": "边界"
+    "meaning_zh": "边界（分界线）"
   },
   "bow": {
     "example_en": "The violin bow slipped from her hand during practice.",
@@ -704,7 +705,8 @@
   "choice": {
     "example_en": "The menu offers a choice of rice or noodles.",
     "example_zh": "菜单提供米饭或面条的选择。",
-    "meaning_zh": "选择"
+    "meaning_zh": "选择（名词）",
+    "pos": "n."
   },
   "Christ": {
     "example_en": "The church service celebrated the birth of Christ.",
