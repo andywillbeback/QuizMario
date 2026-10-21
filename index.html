@@ -325,6 +325,38 @@
     color: var(--gold);
   }
   .continue-hint { margin-top: 8px; font-size: .85rem; }
+  button.home-loop {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    width: 100%;
+    margin: 4px 0 8px;
+    padding: 12px 14px;
+    text-align: left;
+    white-space: normal;
+    line-height: 1.35;
+    color: var(--text);
+    background: linear-gradient(90deg, rgba(226, 177, 67, 0.22), rgba(190, 214, 255, 0.14));
+    box-shadow: inset 0 0 0 1px rgba(230, 201, 138, 0.55), 0 8px 22px rgba(0, 0, 0, 0.22);
+  }
+  button.home-loop[hidden] { display: none !important; }
+  .home-loop-kicker {
+    font-size: .72rem;
+    letter-spacing: .08em;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .home-loop-title {
+    font-size: 1.08rem;
+    font-weight: 800;
+    color: #fff;
+  }
+  .home-loop-detail {
+    font-size: .85rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
   button.is-hero {
     font-size: 1.08rem;
     padding: 14px 28px;
@@ -1108,6 +1140,11 @@
     <section id="screen-home" class="screen">
       <div class="title-card">
         <h2>欢迎上台 Welcome to the stage</h2>
+        <button id="home-loop" class="home-loop" type="button" hidden>
+          <span class="home-loop-kicker">ALS ↔ QuizMario</span>
+          <strong id="home-loop-title" class="home-loop-title">薄弱点 → 今日必练</strong>
+          <span id="home-loop-detail" class="home-loop-detail"></span>
+        </button>
         <div id="track-panel">
           <label for="track-select"><b>词库</b></label>
           <select id="track-select" aria-label="选择词库"></select>
@@ -1196,6 +1233,9 @@
         <div class="stars" id="clear-stars">★★★</div>
         <div class="btn-row">
           <button id="btn-next-level" type="button">Next set</button>
+          <button id="btn-clear-continue" type="button" hidden>继续闯关第 1 组</button>
+          <!-- Placeholder: this repo has no public ALS URL (Mac ingest only). -->
+          <a id="btn-clear-als" class="btn secondary" href="https://andywillbeback.github.io/#als-placeholder" data-als-placeholder="true" target="_blank" rel="noopener noreferrer" hidden>去 ALS 修语法</a>
           <button id="btn-clear-home" class="secondary" type="button">Home</button>
         </div>
       </div>
@@ -1253,6 +1293,7 @@
   <script src="sense-id.js"></script>
   <script src="srs-rules.js"></script>
   <script src="review-queues.js"></script>
+  <script src="home-loop.js"></script>
   <script src="learner-events.js"></script>
   <script src="cloze.js"></script>
   <script src="sense-examples.js"></script>
