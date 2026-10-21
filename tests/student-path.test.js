@@ -798,13 +798,18 @@ async function main() {
         title: document.getElementById("play-level").textContent,
         prompt: document.getElementById("prompt-main").textContent.trim(),
         clockHidden: !clock || clock.hidden,
-        again: !!document.getElementById("btn-rate-again")
+        again: !!document.getElementById("btn-rate-again"),
+        unknown: (() => {
+          const b = document.getElementById("btn-unknown");
+          return !!(b && !b.hidden && b.textContent.indexOf("不会") !== -1);
+        })()
       };
     })()`), 10000, "due queue");
     assert.strictEqual(duePlay.title, "今日到期");
     assert.strictEqual(duePlay.prompt, planted.meaning, "earliest due card is first");
     assert.strictEqual(duePlay.clockHidden, true, "a due queue is not a 12-minute set challenge");
     assert.strictEqual(duePlay.again, false);
+    assert.strictEqual(duePlay.unknown, true, "不会 is available instead of forcing a guess");
 
     const missed = await evalRetry(`(() => {
       const word = ${JSON.stringify(planted && planted.word)};
@@ -817,8 +822,20 @@ async function main() {
     assert.strictEqual(missed.ok, true, "a wrong choice was available");
     await waitFor(async () => evalRetry(`(() => {
       const fb = document.getElementById("feedback").textContent || "";
-      return fb.indexOf("再想想") !== -1 ? true : null;
+      const cont = document.getElementById("btn-feedback-continue");
+      return fb.indexOf("再想想") !== -1 && cont && cont.textContent.indexOf("继续") !== -1 ? true : null;
     })()`), 5000, "wrong answer feedback");
+    const heldPrompt = await evalRetry(`document.getElementById("prompt-main").textContent`);
+    await sleep(2800);
+    const still = await evalRetry(`(() => {
+      const cont = document.getElementById("btn-feedback-continue");
+      return {
+        prompt: document.getElementById("prompt-main").textContent,
+        continue: !!(cont && cont.textContent.indexOf("继续") !== -1)
+      };
+    })()`);
+    assert.strictEqual(still.prompt, heldPrompt, "wrong-answer explanation stays until Continue");
+    assert.strictEqual(still.continue, true, "Continue is still on screen after the old 2.6s timer");
     const booked = await evalRetry(`(() => {
       const save = window.__QM.getSave();
       const word = ${JSON.stringify(planted && planted.word)};

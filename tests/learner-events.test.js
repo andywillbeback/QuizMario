@@ -178,6 +178,7 @@ function wrong(extra) {
   }
   assert.ok(doc.includes("ingest_learner_events.py"));
   assert.ok(doc.includes("vocab.due_review") && doc.includes("vocab.wrong_book_add"));
+  assert.ok(doc.includes("vocab.answer_unknown"), "不会 is its own event, not a wrong pick");
   assert.ok(!/已同步到\s*ALS/.test(doc + sql));
 }
 

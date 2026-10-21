@@ -7,11 +7,19 @@
  *   so learning === 0 already meant 100% solid. One early miss reset that card
  *   (reps = 0, ~10 min learning step) and blocked the whole set until it graduated.
  *
- * NEW clearance:
+ * NEW clearance (通关):
  *   solid >= ceil(80% of the set). Solid is unchanged: state "review" and
  *   interval >= 1 day, which still takes two correct answers after the last miss.
  *   Leftover new / learning / due cards stay in SRS and are re-asked, but they
  *   do not veto the set. A miss is not free: that card drops out of solid.
+ *
+ * 已学会 is not 通关. Mastery is one clean recognition on a later calendar day:
+ * the card was already scheduled with interval >= 1 day, this is the first
+ * answer of that review, the answer is correct, and the answer was not revealed
+ * beforehand. Two same-day corrects (including a same-day repair) make the card
+ * solid and schedule the next review about a day out. They do not set mastered.
+ * 保持率 counts only those cross-day reviews. A mastered card stays in SM-2:
+ * the next due moves forward, the card is not removed from review.
  *
  * Challenge clock: CHALLENGE_MS is exactly 12 minutes. Change this constant
  * to retune (10 or 15 minutes).
@@ -67,13 +75,96 @@
       due: 0,
       correct: 0,
       wrong: 0,
+      unknown: 0,
       mastery: 0,
+      mastered: false,
+      scheduledAt: 0,
+      lastOutcome: "",
       state: "new",
     };
   }
 
   function isNewCard(p) {
-    return p.state === "new" || ((p.reps || 0) === 0 && (p.correct || 0) === 0 && (p.wrong || 0) === 0);
+    if (!p) return true;
+    // Trust an explicit learning/review state. A「不会」lap resets reps and
+    // does not increment wrong, so the old "all counters are zero" fallback
+    // would have treated that card as new and dropped it from review.
+    if (p.state === "learning" || p.state === "review") return false;
+    if (p.state === "new") return true;
+    return (p.reps || 0) === 0 && (p.correct || 0) === 0 && (p.wrong || 0) === 0 && !(p.unknown > 0);
+  }
+
+  /** Local calendar day, same clock the daily log uses. */
+  function calendarDay(ms) {
+    var d = new Date(ms);
+    if (isNaN(d.getTime())) return "";
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+
+  function attemptOutcome(opts, correct) {
+    if (opts && opts.outcome) return String(opts.outcome);
+    return correct ? "correct" : "wrong";
+  }
+
+  /**
+   * Cross-day review result, or null when this answer is not a retention event.
+   * hit: first answer, correct, hint/answer not already revealed, and the
+   * scheduled interval (>= 1 day) was set on an earlier calendar day.
+   * miss: that same review was wrong,「不会」, hinted, or not the first answer.
+   */
+  function retentionVerdict(prog, opts) {
+    opts = opts || {};
+    var now = opts.now || Date.now();
+    if (!prog || isNewCard(prog)) return null;
+    if (prog.state !== "review" || (prog.interval || 0) < CLEAR_MIN_INTERVAL_DAYS) return null;
+    var scheduled = prog.scheduledAt || 0;
+    if (!scheduled || calendarDay(scheduled) === calendarDay(now)) return null;
+    var outcome = attemptOutcome(opts, !!opts.correct);
+    var clean = outcome === "correct" && opts.correct !== false && opts.firstTry !== false && !opts.hintSeen;
+    return clean ? "hit" : "miss";
+  }
+
+  /** Fold one answer into a daily bucket.「不会」increments unk, not w. */
+  function applyDailyAnswer(day, prog, opts) {
+    opts = opts || {};
+    if (!day || typeof day !== "object") day = {};
+    if (day.c == null) day.c = 0;
+    if (day.w == null) day.w = 0;
+    if (day.rc == null) day.rc = 0;
+    if (day.rw == null) day.rw = 0;
+    if (day.n == null) day.n = 0;
+    if (day.unk == null) day.unk = 0;
+    var outcome = attemptOutcome(opts, !!opts.correct);
+    if (outcome === "unknown") day.unk += 1;
+    else if (outcome === "correct") day.c += 1;
+    else day.w += 1;
+    if (prog && isNewCard(prog)) day.n += 1;
+    var verdict = retentionVerdict(prog, opts);
+    if (verdict === "hit") day.rc += 1;
+    else if (verdict === "miss") day.rw += 1;
+    return { day: day, verdict: verdict, outcome: outcome };
+  }
+
+  /**
+   * Old saves have no mastered flag. A full star bar on a real review interval
+   * stays 已学会. Merely being in review (two same-day corrects) does not.
+   * scheduledAt is reconstructed from due so a same-day reload cannot pretend
+   * the interval already elapsed.
+   */
+  function noteLegacyMastery(prog) {
+    if (!prog || typeof prog !== "object") return prog;
+    if (prog.unknown == null) prog.unknown = 0;
+    var hasMastered = Object.prototype.hasOwnProperty.call(prog, "mastered") && prog.mastered != null;
+    if (!hasMastered) {
+      prog.mastered = !!(prog.state === "review" && (prog.interval || 0) >= CLEAR_MIN_INTERVAL_DAYS && (prog.mastery || 0) >= 3);
+    }
+    if (!prog.scheduledAt && prog.due && prog.state === "review" && (prog.interval || 0) >= CLEAR_MIN_INTERVAL_DAYS) {
+      prog.scheduledAt = prog.due - (prog.interval * DAY_MS);
+    }
+    if (prog.scheduledAt == null) prog.scheduledAt = 0;
+    return prog;
   }
 
   function isLearning(p) {
@@ -88,12 +179,27 @@
   /**
    * Anki-lite / SM-2. quality: 0 Again, 1 Good, 2 Easy.
    * interval is in days; due is an absolute timestamp in ms.
-   * A miss resets reps. Two Goods after that miss graduate the card to 1 day.
+   * A miss resets reps. Two Goods after that miss make the card solid
+   * (interval 1 day) and schedule the cross-day review. That is 通关 credit,
+   * not 已学会. opts.outcome "unknown" is「不会」: it lapses like Again but
+   * does not increment wrong. opts.hintSeen / opts.firstTry gate mastery.
    */
-  function schedule(prog, quality, nowMs) {
+  function schedule(prog, quality, nowMs, opts) {
+    opts = opts || {};
     var now = nowMs || Date.now();
+    if (prog.mastered == null) prog.mastered = false;
+    if (prog.unknown == null) prog.unknown = 0;
+    if (prog.scheduledAt == null) prog.scheduledAt = 0;
+    var outcome = attemptOutcome(opts, quality > 0);
+    var verdict = retentionVerdict(prog, Object.assign({}, opts, {
+      now: now,
+      correct: quality > 0,
+      outcome: outcome,
+    }));
+    prog.lastOutcome = outcome;
     if (quality === 0) {
-      prog.wrong = (prog.wrong || 0) + 1;
+      if (outcome === "unknown") prog.unknown = (prog.unknown || 0) + 1;
+      else prog.wrong = (prog.wrong || 0) + 1;
       prog.lapses = (prog.lapses || 0) + 1;
       prog.reps = 0;
       prog.interval = 0;
@@ -101,6 +207,8 @@
       prog.due = now + LEARN_MS;
       prog.ef = Math.max(1.3, (prog.ef || 2.5) - 0.2);
       prog.mastery = Math.max(0, (prog.mastery || 0) - 1);
+      prog.mastered = false;
+      prog.scheduledAt = now;
       return prog;
     }
     prog.correct = (prog.correct || 0) + 1;
@@ -131,8 +239,16 @@
     else prog.ef = Math.min(2.8, ef + 0.05);
 
     prog.mastery = Math.min(3, (prog.mastery || 0) + (quality === 2 ? 1 : 0.5));
-    if (prog.mastery > 2.9) prog.mastery = 3;
-    else if (prog.mastery > 1.9) prog.mastery = Math.max(prog.mastery, 2);
+    if (verdict === "hit") {
+      prog.mastered = true;
+      prog.mastery = 3;
+    } else if (verdict === "miss") {
+      prog.mastered = false;
+      if (prog.mastery > 2) prog.mastery = 2;
+    } else if (!prog.mastered && prog.mastery > 2) {
+      prog.mastery = 2;
+    }
+    prog.scheduledAt = now;
     return prog;
   }
 
@@ -146,6 +262,11 @@
 
   function isSolidCard(p) {
     return !!(p && p.state === "review" && (p.interval || 0) >= CLEAR_MIN_INTERVAL_DAYS);
+  }
+
+  /** 已学会. Cross-day recognition only. Solid / 通关 credit is isSolidCard. */
+  function isMasteredCard(p) {
+    return !!(p && p.mastered && isSolidCard(p));
   }
 
   /** The pre-fix gate. learning === 0 made the 80% bar unreachable whenever any card had been missed. */
@@ -231,9 +352,14 @@
     isNewCard: isNewCard,
     isLearning: isLearning,
     isDue: isDue,
+    calendarDay: calendarDay,
+    retentionVerdict: retentionVerdict,
+    applyDailyAnswer: applyDailyAnswer,
+    noteLegacyMastery: noteLegacyMastery,
     schedule: schedule,
     cardCredit: cardCredit,
     isSolidCard: isSolidCard,
+    isMasteredCard: isMasteredCard,
     legacyReady: legacyReady,
     summarizeSet: summarizeSet,
     shouldEndSet: shouldEndSet,
