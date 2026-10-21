@@ -20,6 +20,8 @@
  * Practice reminder (practice-reminder.js): after 稍后, the next home
  * entry can show one compact tip, once per day on this device. It stays
  * hidden while the soft gate is up. No push and no SMS.
+ * A card with a sense id, or more than one sense in the track, shows a short
+ * Chinese cue (sense-cue.js). The cue is not the gloss and not the headword.
  */
 (function () {
   "use strict";
@@ -48,6 +50,8 @@
   if (!FB) throw new Error("feedback.js must load before game.js");
   const Sense = window.QuizMarioSense;
   if (!Sense) throw new Error("sense-id.js must load before game.js");
+  const SenseCue = window.QuizMarioSenseCue;
+  if (!SenseCue) throw new Error("sense-cue.js must load before game.js");
   const Placement = window.QuizMarioPlacement;
   if (!Placement) throw new Error("placement.js must load before game.js");
   const ET = window.QuizMarioErrorTypes;
@@ -136,6 +140,37 @@
     // Ordinary words keep the lowercased key so old backups stay valid.
     // may/May and the other case splits use a sense token instead.
     return Sense.cardKeyFor(currentTrack, levelIdx, word);
+  }
+
+  let senseIndex = null;
+  let senseIndexLevels = null;
+
+  function currentSenseCount(word) {
+    if (senseIndexLevels !== LEVELS) {
+      const flat = [];
+      for (let i = 0; i < LEVELS.length; i++) {
+        const set = LEVELS[i] || [];
+        for (let j = 0; j < set.length; j++) flat.push(set[j]);
+      }
+      senseIndex = SenseCue.indexCards(flat);
+      senseIndexLevels = LEVELS;
+    }
+    return SenseCue.countIn(senseIndex, word);
+  }
+
+  /** Pre-answer sense line. Empty for a single plain sense, so the card stays quiet. */
+  function paintSenseCue(card) {
+    const el = $("prompt-sense");
+    if (!el) return;
+    const text = card
+      ? (SenseCue.senseCue(card, {
+          direction: sessionDirection,
+          senseCount: currentSenseCount(card.word),
+          production: true,
+        }) || "")
+      : "";
+    el.textContent = text;
+    el.hidden = !text;
   }
 
   function catalogGroups() {
@@ -1123,6 +1158,7 @@
       if (hint) bits.push("hint: " + hint);
       hintEl.textContent = bits.join(" · ");
     }
+    paintSenseCue(currentCard);
     const queueEl = $("play-queue");
     if (queueEl) queueEl.textContent = String(queue.length + 1);
     showPlacementNote(Placement.itemNote(planned));
@@ -1180,6 +1216,7 @@
         (hint ? "  ·  hint: " + escapeHtml(hint) : "") +
         exampleZh;
     }
+    paintSenseCue(currentCard);
     const queueEl = $("play-queue");
     if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
     updateProgress();
@@ -2506,6 +2543,67 @@
       forcedChallengeRoll = roll;
     },
     get sessionKind() { return sessionKind; },
+    debugPreviewCard(word, direction) {
+      const want = String(word || "");
+      let found = null;
+      let levelIdx = 0;
+      for (let li = 0; li < LEVELS.length; li++) {
+        const set = LEVELS[li] || [];
+        for (let i = 0; i < set.length; i++) {
+          if (set[i] && set[i].word === want) {
+            found = set[i];
+            levelIdx = li;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      if (!found) return { ok: false, word: want };
+      playGen += 1;
+      levelClearing = false;
+      stopChallenge();
+      challengeFailed = false;
+      sessionKind = "must";
+      sessionStarter = false;
+      sessionMode = "study";
+      sessionDirection = direction === "form" || direction === "spelling" ? direction : "meaning";
+      sessionWrongs = [];
+      sessionStartedClear = true;
+      currentLevel = levelIdx + 1;
+      queue = [enrichItem(found, levelIdx, 0)];
+      requeueSoon.length = 0;
+      stepCounter = 0;
+      sessionSeen = 0;
+      sessionTarget = 1;
+      firstCardOfSession = true;
+      pendingRate = false;
+      awaiting = false;
+      hideKillBanner();
+      hidePlacementNote();
+      const choices = $("choices");
+      if (choices) {
+        choices.hidden = true;
+        choices.innerHTML = "";
+      }
+      showScreen("play");
+      const playLevel = $("play-level");
+      if (playLevel) playLevel.textContent = setTitle(levelIdx + 1);
+      nextCard();
+      const el = $("prompt-sense");
+      const cue = el && !el.hidden ? (el.textContent || "") : "";
+      const choiceText = Array.from(document.querySelectorAll("#choices .choice")).map((b) => b.textContent || "");
+      return {
+        ok: true,
+        word: found.word,
+        gloss: found.meaning_zh || "",
+        prompt: ($("prompt-main") && $("prompt-main").textContent) || "",
+        label: ($("prompt-label") && $("prompt-label").textContent) || "",
+        cue: cue,
+        hidden: !el || !!el.hidden,
+        choices: choiceText,
+        clockHidden: !!($("challenge-clock") && $("challenge-clock").hidden),
+      };
+    },
     debugFinishPlacement(correct) {
       if (sessionKind !== "placement") return false;
       const planned = placementTally.planned || Placement.ITEM_COUNT;
