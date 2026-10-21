@@ -868,6 +868,27 @@ async function main() {
     assert.strictEqual(signals.postedLearner, SESSION.user.id);
     assert.strictEqual(signals.fakeAls, false, "the page must not claim an ALS sync");
 
+    const exported = await evalRetry(`(() => {
+      const body = window.QuizMarioLearnerEvents.toJsonl();
+      document.getElementById("btn-export-learner-events").click();
+      const lines = body.trim().split("\\n").filter(Boolean);
+      let parsed = true;
+      try { lines.forEach((line) => JSON.parse(line)); } catch (e) { parsed = false; }
+      return {
+        lines: lines.length,
+        parsed: parsed,
+        note: (document.getElementById("learner-events-note") || {}).textContent || "",
+        hasDue: body.indexOf("vocab.due_review") !== -1,
+        hasWrong: body.indexOf("vocab.answer_wrong") !== -1,
+        hasBook: body.indexOf("vocab.wrong_book_add") !== -1
+      };
+    })()`);
+    assert.ok(exported.lines >= 3, "JSONL export contains the due, wrong, and wrong-book signals");
+    assert.strictEqual(exported.parsed, true, "each JSONL line parses");
+    assert.ok(exported.hasDue && exported.hasWrong && exported.hasBook, JSON.stringify(exported));
+    assert.ok(exported.note.includes("已下载 JSONL"), exported.note);
+    assert.ok(!exported.note.includes("已同步到 ALS"), exported.note);
+
     await evalRetry(`document.getElementById("btn-quit").click()`);
     const wrongHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
