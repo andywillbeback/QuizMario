@@ -25,8 +25,9 @@ if (typeof WebSocket === "undefined") {
  *   another empty clear.
  *
  * This script locks the path those patches were each trying to hold:
- * unsigned → login on 注册 → signup reaches the gate → 中考 practice deals
- * four choices → a leftover 只练到期 flag does not clear a fresh set →
+ * unsigned → login on 注册 → signup reaches the gate → a first-time 中考
+ * pick deals 10 EN→ZH placement items, then offers the starting set →
+ * 中考 practice deals four choices → a leftover 只练到期 flag does not clear a fresh set →
  * a real clear still opens the next set → student home has no report,
  * backup, about, or homescreen tip.
  *
@@ -118,6 +119,10 @@ function staticGuards() {
   assert.ok(index.includes('id="btn-clear-als"') && index.includes("去 ALS 修语法"), "must-clear ALS CTA");
   assert.ok(index.includes('src="home-loop.js"'), "home loop rules load with the game");
   assert.ok(game.includes("onHome: studentHomeActive()"), "soft gate checks the student home");
+  assert.ok(index.includes('src="placement.js"'), "placement rules load with the game");
+  assert.ok(index.includes('id="placement-note"'), "placement copy sits on the card");
+  assert.ok(index.includes('id="btn-placement-enter"') && index.includes("进入起始组"), "placement offers the starting set");
+  assert.ok(game.includes("needsPlacement") && game.includes('sessionKind = "placement"'), "exam pick can open placement");
   assert.ok(!game.includes("继续闯关会先练今日到期"), "继续闯关 no longer prefers the due queue");
   assert.ok(!game.includes("btn-rate-again"), "no third Again button");
   const rules = read("srs-rules.js");
@@ -508,6 +513,87 @@ async function main() {
     await reloadToGate("gate after reload");
 
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
+    const placement = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const note = document.getElementById("placement-note");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      if (!note || note.hidden || !note.textContent) return null;
+      return {
+        home: document.getElementById("screen-home").classList.contains("active"),
+        kind: window.__QM && window.__QM.sessionKind,
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
+        level: (document.getElementById("play-level") || {}).textContent || "",
+        note: note.textContent,
+        prompt: (document.getElementById("prompt-main") || {}).textContent || "",
+        choice: (document.querySelector("#choices .choice") || {}).textContent || "",
+        queue: Number((document.getElementById("play-queue") || {}).textContent || "0"),
+        clockHidden: !!((document.getElementById("challenge-clock") || {}).hidden),
+        progress: (document.getElementById("set-progress-label") || {}).textContent || ""
+      };
+    })()`), 10000, "placement after a first exam pick");
+    assert.strictEqual(placement.home, false, "a first-time exam pick does not open the home bank");
+    assert.strictEqual(placement.kind, "placement");
+    assert.ok(placement.label.indexOf("中文意思") !== -1, placement.label);
+    assert.strictEqual(placement.level, "摸底 1/10", placement.level);
+    assert.ok(placement.note.indexOf("10") !== -1 && placement.note.indexOf("起始组") !== -1, placement.note);
+    assert.ok(placement.prompt && placement.prompt !== "—", "placement deals a real English prompt");
+    assert.ok(/[\u4e00-\u9fff]/.test(placement.choice), "placement choices are Chinese meanings");
+    assert.strictEqual(placement.queue, 10, "the probe is 10 items");
+    assert.strictEqual(placement.clockHidden, true, "placement does not start the 12-minute clock");
+    assert.ok(placement.progress.indexOf("摸底") !== -1, placement.progress);
+
+    const placed = await evalRetry(`window.__QM.debugFinishPlacement(0)`);
+    assert.ok(placed && placed.ok, "placement can be scored");
+    assert.strictEqual(placed.set, 1, "0/10 starts at set 1");
+    assert.strictEqual(placed.total, 10);
+    const offer = await waitFor(async () => evalRetry(`(() => {
+      const clear = document.getElementById("screen-clear");
+      const enter = document.getElementById("btn-placement-enter");
+      if (!clear || !clear.classList.contains("active") || !enter || enter.hidden) return null;
+      return {
+        title: (document.getElementById("clear-title") || {}).textContent || "",
+        msg: (document.getElementById("clear-msg") || {}).textContent || "",
+        enter: enter.textContent.trim(),
+        nextHidden: !!((document.getElementById("btn-next-level") || {}).hidden),
+        alsHidden: !!((document.getElementById("btn-clear-als") || {}).hidden),
+        frontierHidden: !!((document.getElementById("btn-clear-continue") || {}).hidden)
+      };
+    })()`), 8000, "starting-set offer");
+    assert.strictEqual(offer.title, "起始组");
+    assert.ok(offer.msg.indexOf("摸底 0/10") !== -1, offer.msg);
+    assert.ok(offer.msg.indexOf("这是你的起始组") !== -1 && offer.msg.indexOf("第1组") !== -1, offer.msg);
+    assert.strictEqual(offer.enter, "进入起始组");
+    assert.strictEqual(offer.nextHidden, true, "placement does not offer Next set");
+    assert.strictEqual(offer.alsHidden, true, "placement does not offer the ALS link");
+    assert.strictEqual(offer.frontierHidden, true, "placement does not offer the 今日必练 frontier CTA");
+
+    await evalRetry(`document.getElementById("btn-placement-enter").click()`);
+    const starter = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const note = document.getElementById("placement-note");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      if (!note || note.hidden) return null;
+      return {
+        kind: window.__QM && window.__QM.sessionKind,
+        level: (document.getElementById("play-level") || {}).textContent || "",
+        note: note.textContent,
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
+        choice: (document.querySelector("#choices .choice") || {}).textContent || "",
+        clockHidden: !!((document.getElementById("challenge-clock") || {}).hidden),
+        progress: (document.getElementById("set-progress-label") || {}).textContent || ""
+      };
+    })()`), 10000, "starter set after placement");
+    assert.strictEqual(starter.kind, "level", "the starting set is ordinary study");
+    assert.ok(starter.level.indexOf("起始组") !== -1 && starter.level.indexOf("第1组") !== -1, starter.level);
+    assert.ok(starter.note.indexOf("这是你的起始组") !== -1, starter.note);
+    assert.ok(starter.label.indexOf("中文意思") !== -1, starter.label);
+    assert.ok(/[\u4e00-\u9fff]/.test(starter.choice), "the starting set is still EN→ZH");
+    assert.strictEqual(starter.clockHidden, true);
+    assert.strictEqual(starter.progress, "起始组");
+
+    await evalRetry(`document.getElementById("btn-quit").click()`);
     const home = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
       if (!home || !home.classList.contains("active")) return null;

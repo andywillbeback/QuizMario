@@ -41,6 +41,8 @@
   if (!FB) throw new Error("feedback.js must load before game.js");
   const Sense = window.QuizMarioSense;
   if (!Sense) throw new Error("sense-id.js must load before game.js");
+  const Placement = window.QuizMarioPlacement;
+  if (!Placement) throw new Error("placement.js must load before game.js");
   const SenseExamples = window.QuizMarioSenseExamples;
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
@@ -64,8 +66,11 @@
   let playGen = 0;
   /** True when this visit opened a set that had already cleared. Review, not a challenge. */
   let sessionStartedClear = false;
-  /** "level" keeps the set flow. "must" is 今日必练. "due" / "wrongbook" remain for older sessions. "spelling" does not count. */
+  /** "level" keeps the set flow. "placement" is the 10-item EN→ZH probe. "must" is 今日必练. "due" / "wrongbook" remain for older sessions. "spelling" does not count. */
   let sessionKind = "level";
+  /** True only for the set opened straight after placement. */
+  let sessionStarter = false;
+  let placementTally = { correct: 0, total: 0, planned: Placement.ITEM_COUNT };
   /** "study" has no clock. "challenge" is the 12-minute set. */
   let sessionMode = "study";
   /** "meaning" is EN→ZH and counts toward 通关. "form" is the ZH→EN review used by 今日必练. "spelling" does not. */
@@ -150,6 +155,7 @@
         : {}
     );
     sv.mustPractice = normalizeMustPractice(data.mustPractice);
+    sv.placement = Placement.normalizePlacement(data.placement);
     const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
     sv.practice = {
       meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
@@ -497,12 +503,13 @@
     playGen += 1;
     levelClearing = false;
     sessionKind = "level";
+    sessionStarter = !!opts.starter;
     sessionMode = opts.mode === "challenge" ? "challenge" : "study";
     sessionDirection = "meaning";
     sessionWrongs = [];
     currentLevel = levelNum;
     const progressLabel = $("set-progress-label");
-    if (progressLabel) progressLabel.textContent = "本组进度";
+    if (progressLabel) progressLabel.textContent = sessionStarter ? "起始组" : "本组进度";
     const nextBtn = $("btn-next-level");
     if (nextBtn) nextBtn.hidden = false;
     sessionStartedClear = isLevelClear(levelNum);
@@ -524,8 +531,12 @@
     const playLevel = $("play-level");
     if (playLevel) {
       const title = setTitle(levelNum);
-      playLevel.textContent = sessionMode === "challenge" ? (title + " · 挑战") : title;
+      playLevel.textContent = sessionStarter
+        ? ("起始组 · " + title)
+        : (sessionMode === "challenge" ? (title + " · 挑战") : title);
     }
+    if (sessionStarter) showPlacementNote(Placement.starterNote(setTitle(levelNum)));
+    else hidePlacementNote();
     refreshHud();
     if (Practice.usesChallengeClock(sessionMode)) beginChallenge();
     else stopChallenge();
@@ -1052,7 +1063,52 @@
     speakLine("Shut down");
   }
 
+  function hidePlacementNote() {
+    const note = $("placement-note");
+    if (!note) return;
+    note.hidden = true;
+    note.textContent = "";
+  }
+
+  function showPlacementNote(text) {
+    const note = $("placement-note");
+    if (!note) return;
+    note.hidden = false;
+    note.textContent = text || "";
+  }
+
+  function fillPlacementCard() {
+    const planned = placementTally.planned || Placement.ITEM_COUNT;
+    const index = Math.max(1, planned - queue.length);
+    const promptLabel = $("prompt-label");
+    if (promptLabel) promptLabel.textContent = "英文 → 中文意思";
+    const promptMain = $("prompt-main");
+    if (promptMain) promptMain.textContent = currentCard.word || "";
+    const playLevel = $("play-level");
+    if (playLevel) playLevel.textContent = Placement.itemLabel(index, planned);
+    let hint = "";
+    if (currentCard.example_en && !isPlaceholderExample(currentCard.example_en)) {
+      hint = softenHint(currentCard.example_en, currentCard.word);
+    }
+    const hintEl = $("prompt-hint");
+    if (hintEl) {
+      const bits = ["摸底 · 不计通关"];
+      if (currentCard.pos) bits.push(currentCard.pos);
+      if (hint) bits.push("hint: " + hint);
+      hintEl.textContent = bits.join(" · ");
+    }
+    const queueEl = $("play-queue");
+    if (queueEl) queueEl.textContent = String(queue.length + 1);
+    showPlacementNote(Placement.itemNote(planned));
+    updateProgress();
+    renderChoices();
+  }
+
   function fillCardContent() {
+    if (sessionKind === "placement") {
+      fillPlacementCard();
+      return;
+    }
     const meaningMode = sessionDirection === "meaning";
     const promptLabel = $("prompt-label");
     if (promptLabel) {
@@ -1346,7 +1402,7 @@
   }
 
   function updateProgress() {
-    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "must" || sessionKind === "spelling") {
+    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "must" || sessionKind === "spelling" || sessionKind === "placement") {
       const left = queue.length + requeueSoon.length + (currentCard ? 1 : 0);
       const total = Math.max(sessionTarget, left, 1);
       const done = Math.max(0, Math.min(total, total - left));
@@ -1488,7 +1544,39 @@
     updateProgress();
   }
 
+  function gradePlacement(correct, chosen, outcome) {
+    awaiting = true;
+    setUnknownVisible(false);
+    const kind = outcome || (correct ? "correct" : "wrong");
+    const hit = kind === "correct";
+    placementTally.total += 1;
+    if (hit) placementTally.correct += 1;
+    const fb = $("feedback");
+    const title = hit ? "对了" : (kind === "unknown" ? "不会 · 先看答案" : "再想想");
+    if (fb) {
+      fb.innerHTML =
+        '<div class="fb-title">' + title + "</div>" +
+        '<div class="fb-answer">' + escapeHtml(currentCard.word) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
+        '<div class="fb-meta">摸底 ' + placementTally.total + "/" + placementTally.planned + " · 不计通关</div>" +
+        '<div class="rate-row"><button type="button" class="rate-btn good" id="btn-feedback-continue">' +
+        '<span class="rate-zh">继续</span><span class="rate-sub">Continue</span></button></div>';
+      fb.className = (hit ? "ok" : "bad") + " show";
+    }
+    const queueEl = $("play-queue");
+    if (queueEl) queueEl.textContent = String(queue.length);
+    const cont = $("btn-feedback-continue");
+    if (cont) cont.addEventListener("click", () => {
+      if ($("btn-feedback-continue") !== cont) return;
+      nextCard();
+    });
+  }
+
   function grade(correct, easy, chosen, outcome) {
+    if (sessionKind === "placement") {
+      if (awaiting || !currentCard || pendingRate) return;
+      gradePlacement(correct, chosen, outcome);
+      return;
+    }
     if (awaiting || !currentCard || pendingRate) return;
     if (sessionKind === "spelling") {
       gradeSpelling(correct, chosen, outcome);
@@ -1944,6 +2032,7 @@
       wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
       practice: payload.practice && typeof payload.practice === "object" ? payload.practice : {},
       mustPractice: payload.mustPractice,
+      placement: payload.placement,
     });
   }
 
@@ -2387,6 +2476,19 @@
     debugSetChallengeRoll(roll) {
       forcedChallengeRoll = roll;
     },
+    get sessionKind() { return sessionKind; },
+    debugFinishPlacement(correct) {
+      if (sessionKind !== "placement") return false;
+      const planned = placementTally.planned || Placement.ITEM_COUNT;
+      const c = Math.max(0, Math.min(planned, Math.floor(Number(correct) || 0)));
+      placementTally.correct = c;
+      placementTally.total = planned;
+      queue = [];
+      requeueSoon.length = 0;
+      finishPlacement();
+      const setNum = Number(($("btn-placement-enter") && $("btn-placement-enter").dataset.set) || save.unlockedLevel || 1);
+      return { ok: true, set: setNum, correct: c, total: planned };
+    },
     getSave() { return save; },
     applyCloudSave(data) {
       let payload = data;
@@ -2602,6 +2704,7 @@
   }
 
   function queueModeLabel(kind) {
+    if (kind === "placement") return "摸底";
     if (kind === "must") return "今日必练";
     if (kind === "due") return "今日到期";
     if (kind === "spelling") return "拼写";
@@ -2705,6 +2808,8 @@
     const cont = $("btn-clear-continue");
     const als = $("btn-clear-als");
     const home = $("btn-clear-home");
+    const placed = $("btn-placement-enter");
+    if (placed) placed.hidden = true;
     if (cont) cont.hidden = true;
     if (als) als.hidden = true;
     if (home) {
@@ -2797,6 +2902,13 @@
   }
 
   window.__QM.onSessionReady = function () {
+    if (sessionKind === "placement" && !currentNeedsPlacement()) {
+      playGen += 1;
+      stopChallenge();
+      hidePlacementNote();
+      showScreen("home");
+      return;
+    }
     const home = $("screen-home");
     if (home && home.classList.contains("active")) refreshHomeQueues();
     else dismissMustGate();
@@ -2862,6 +2974,8 @@
   function startQueueSession(kind, items) {
     playGen += 1;
     levelClearing = false;
+    sessionStarter = false;
+    hidePlacementNote();
     sessionKind = kind;
     sessionDirection = kind === "spelling" ? "spelling" : "form";
     sessionMode = "study";
@@ -2894,7 +3008,159 @@
     nextCard();
   }
 
+  function currentNeedsPlacement() {
+    return Placement.needsPlacement({
+      signedIn: placementSignedIn(),
+      trackId: currentTrack,
+      cards: save.cards,
+      unlockedLevel: save.unlockedLevel,
+      placement: save.placement,
+    });
+  }
+
+  function placementSignedIn() {
+    if (signedIn()) return true;
+    try {
+      if (window.__QM_EXPECT_SESSION) return true;
+    } catch (_) {}
+    return !!(document.documentElement && document.documentElement.classList.contains("session-ok"));
+  }
+
+  function startPlacement() {
+    const probes = Placement.probeItems(LEVELS, Placement.ITEM_COUNT);
+    if (!probes.length) {
+      showScreen("home");
+      return;
+    }
+    playGen += 1;
+    levelClearing = false;
+    sessionKind = "placement";
+    sessionStarter = false;
+    sessionDirection = "meaning";
+    sessionMode = "study";
+    sessionWrongs = [];
+    sessionStartedClear = true;
+    placementTally = { correct: 0, total: 0, planned: probes.length };
+    queue = probes.map((item) => ({
+      key: "placement:" + item.levelIdx + ":" + item.word,
+      word: item.word,
+      meaning_zh: item.meaning_zh,
+      example_en: item.example_en || "",
+      example_zh: item.example_zh || "",
+      pos: item.pos || "",
+      levelIdx: item.levelIdx,
+    }));
+    requeueSoon.length = 0;
+    stepCounter = 0;
+    sessionSeen = 0;
+    sessionTarget = queue.length;
+    firstCardOfSession = true;
+    killStreak = 0;
+    pendingRate = false;
+    challengeFailed = false;
+    currentCard = null;
+    hideKillBanner();
+    stopChallenge();
+    const choices = $("choices");
+    if (choices) {
+      choices.hidden = true;
+      choices.innerHTML = "";
+    }
+    const fb = $("feedback");
+    if (fb) {
+      fb.innerHTML = "";
+      fb.className = "";
+    }
+    showScreen("play");
+    const progressLabel = $("set-progress-label");
+    if (progressLabel) progressLabel.textContent = "摸底";
+    refreshHud();
+    nextCard();
+  }
+
+  function finishPlacement() {
+    stopChallenge();
+    pendingRate = false;
+    awaiting = true;
+    sessionStarter = false;
+    hidePlacementNote();
+    const total = placementTally.planned || placementTally.total || Placement.ITEM_COUNT;
+    const correct = Math.max(0, Math.min(total, placementTally.correct || 0));
+    const setNum = Placement.startingSet(correct, total, LEVEL_COUNT);
+    if (setNum > (save.unlockedLevel || 1)) {
+      save.unlockedLevel = setNum;
+      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
+      save.trackUnlock[currentTrack] = save.unlockedLevel;
+    }
+    const titled = setTitle(setNum);
+    save.placement = Placement.normalizePlacement(Object.assign({}, save.placement, {
+      [currentTrack]: {
+        done: true,
+        correct: correct,
+        total: total,
+        set: setNum,
+        at: new Date().toISOString(),
+      },
+    }));
+    persist();
+    resetClearActions();
+    const nextBtn = $("btn-next-level");
+    if (nextBtn) nextBtn.hidden = true;
+    const enter = $("btn-placement-enter");
+    if (enter) {
+      enter.hidden = false;
+      enter.textContent = Placement.ENTER_LABEL;
+      enter.dataset.set = String(setNum);
+    }
+    const trophy = $("clear-trophy");
+    if (trophy) trophy.hidden = true;
+    const achEl = $("clear-achievement");
+    if (achEl) {
+      achEl.hidden = true;
+      achEl.textContent = "";
+    }
+    const starEl = $("clear-stars");
+    if (starEl) starEl.innerHTML = "";
+    const clearScreen = $("screen-clear");
+    if (clearScreen) clearScreen.classList.remove("challenge-win");
+    const title = $("clear-title");
+    if (title) title.textContent = Placement.RESULT_TITLE;
+    const msg = $("clear-msg");
+    if (msg) {
+      msg.textContent = Placement.resultMessage({
+        correct: correct,
+        total: total,
+        set: setNum,
+        setTitle: titled,
+      });
+    }
+    const home = $("btn-clear-home");
+    if (home) {
+      home.classList.remove("secondary");
+      home.classList.add("ghost");
+    }
+    showScreen("clear");
+    if (enter && typeof enter.focus === "function") enter.focus();
+  }
+
+  function enterStarterSet() {
+    const btn = $("btn-placement-enter");
+    const n = btn ? parseInt(btn.dataset.set, 10) : save.unlockedLevel;
+    if (btn) btn.hidden = true;
+    const home = $("btn-clear-home");
+    if (home) {
+      home.classList.add("secondary");
+      home.classList.remove("ghost");
+    }
+    const setNum = Math.min(Math.max(1, n || save.unlockedLevel || 1), LEVEL_COUNT || 1);
+    startLevel(setNum, { starter: true });
+  }
+
   function finishQueueSession() {
+    if (sessionKind === "placement") {
+      finishPlacement();
+      return;
+    }
     stopChallenge();
     pendingRate = false;
     awaiting = true;
@@ -2949,7 +3215,8 @@
     try {
       switchTrack(id);
     } finally {
-      showScreen("home");
+      if (currentNeedsPlacement()) startPlacement();
+      else showScreen("home");
     }
   }
   if ($("btn-gate-zhongkao")) $("btn-gate-zhongkao").addEventListener("click", () => enterExam("zhongkao"));
@@ -2972,6 +3239,7 @@
     else if (action === "continue") startFrontierLevel();
   });
   if ($("btn-clear-continue")) $("btn-clear-continue").addEventListener("click", () => startFrontierLevel());
+  if ($("btn-placement-enter")) $("btn-placement-enter").addEventListener("click", () => enterStarterSet());
   $("btn-levels").addEventListener("click", () => {
     renderLevels();
     showScreen("levels");
@@ -3002,6 +3270,8 @@
     playGen += 1;
     stopChallenge();
     challengeFailed = false;
+    sessionStarter = false;
+    hidePlacementNote();
     showScreen("home");
     renderStats();
     refreshHud();
