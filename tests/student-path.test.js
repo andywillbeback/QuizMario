@@ -97,6 +97,10 @@ function staticGuards() {
   assert.ok(index.includes('id="challenge-timer"'), "the 12-minute clock is on the training card");
   assert.ok(index.includes('id="screen-fail"') && index.includes("遗憾失败"), "timeout has a regret-fail screen");
   assert.ok(game.includes('hint: '), "training card still shows the hint line");
+  assert.ok(index.includes('id="prompt-sense"'), "study card has a sense cue line");
+  assert.ok(index.includes('src="sense-cue.js"'), "sense cue loads with the game");
+  assert.ok(index.indexOf('src="sense-id.js"') < index.indexOf('src="sense-cue.js"'), "sense ids load before the cue");
+  assert.ok(index.indexOf('src="sense-cue.js"') < index.indexOf('src="game.js"'), "the cue loads before the game");
   assert.ok(!index.includes('id="btn-sort-scene"') && !index.includes('id="btn-sort-default"'), "sort toggles are gone");
   assert.ok(!index.includes(">场景<") && !index.includes(">默认<"), "sort labels are gone");
   assert.ok(!game.includes("btn-sort-scene") && !game.includes('sortMode === "scene"'), "scene sort path is gone");
@@ -681,6 +685,8 @@ async function main() {
         n: n,
         prompt: document.getElementById("prompt-main").textContent,
         hint: document.getElementById("prompt-hint").textContent,
+        senseHidden: !!(document.getElementById("prompt-sense") || {}).hidden,
+        senseText: (document.getElementById("prompt-sense") || {}).textContent || "",
         clock: (document.getElementById("challenge-timer") || {}).textContent || "",
         clockHidden: !!(document.getElementById("challenge-clock") || {}).hidden,
         label: (document.getElementById("prompt-label") || {}).textContent || "",
@@ -705,6 +711,7 @@ async function main() {
     assert.ok(fresh.label.indexOf("中文意思") !== -1, "study prompt is English → meaning: " + fresh.label);
     assert.ok(/[\u4e00-\u9fff]/.test(fresh.choiceText), "study choices are Chinese meanings");
     assert.ok(fresh.hint.indexOf("hint:") !== -1 || fresh.hint.indexOf("例") !== -1, "hint stays on the card: " + fresh.hint);
+    assert.strictEqual(fresh.senseHidden, true, "a one-sense study card stays quiet: " + fresh.prompt + " " + fresh.senseText);
     assert.strictEqual(fresh.sceneSort, false, "play screen has no 场景 sort button");
     assert.strictEqual(fresh.defaultSort, false, "play screen has no 默认 sort button");
 
@@ -1428,13 +1435,40 @@ async function main() {
         level: (document.getElementById("play-level") || {}).textContent || "",
         label: (document.getElementById("prompt-label") || {}).textContent || "",
         choice: (document.querySelector("#choices .choice") || {}).textContent || "",
-        clockHidden: !!(document.getElementById("challenge-clock") || {}).hidden
+        clockHidden: !!(document.getElementById("challenge-clock") || {}).hidden,
+        senseHidden: !!(document.getElementById("prompt-sense") || {}).hidden
       };
     })()`), 10000, "frontier set from the clear CTA");
     assert.ok(frontier.level.indexOf("第4组") !== -1, frontier.level);
     assert.ok(frontier.label.indexOf("中文意思") !== -1, "frontier set stays English → meaning: " + frontier.label);
     assert.ok(/[\u4e00-\u9fff]/.test(frontier.choice), "frontier choices stay Chinese");
     assert.strictEqual(frontier.clockHidden, true);
+    assert.strictEqual(frontier.senseHidden, true, "the frontier set is still one sense per card");
+
+    const month = await evalRetry(`window.__QM.debugPreviewCard("May", "meaning")`);
+    assert.strictEqual(month.ok, true, "May is in the 中考 bank");
+    assert.strictEqual(month.prompt, "May");
+    assert.ok(month.cue.indexOf("月份") !== -1, month.cue);
+    assert.ok(month.cue.indexOf("五月") === -1, "the cue must not spell the answer: " + month.cue);
+    assert.strictEqual(month.hidden, false, "a multi-sense card shows the cue");
+    assert.ok(month.choices.join("\n").indexOf("五月") !== -1, "五月 stays one of the choices");
+    assert.strictEqual(month.clockHidden, true, "the sense preview does not start the clock");
+    assert.ok(month.label.indexOf("中文意思") !== -1, month.label);
+
+    const modal = await evalRetry(`window.__QM.debugPreviewCard("may", "form")`);
+    assert.strictEqual(modal.ok, true, "may is in the 中考 bank");
+    assert.strictEqual(modal.prompt, "可以；也许");
+    assert.ok(modal.cue.indexOf("情态动词") !== -1, modal.cue);
+    assert.ok(modal.cue.toLowerCase().indexOf("may") === -1, "ZH→EN cue must not spell the word: " + modal.cue);
+    assert.ok(modal.choices.join("\n").toLowerCase().indexOf("may") !== -1, "may stays one of the choices");
+    assert.ok(modal.label.indexOf("英文") !== -1, modal.label);
+
+    const calm = await evalRetry(`window.__QM.debugPreviewCard("ability", "meaning")`);
+    assert.strictEqual(calm.ok, true);
+    assert.strictEqual(calm.prompt, "ability");
+    assert.strictEqual(calm.cue, "");
+    assert.strictEqual(calm.hidden, true, "one sense stays quiet");
+    assert.ok(calm.choices.join("\n").indexOf("能力") !== -1);
 
     console.log("student-path ok");
   } catch (err) {

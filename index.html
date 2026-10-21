@@ -566,6 +566,15 @@
 
   #prompt-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; color: var(--cyan); opacity: .9; }
   #prompt-main { font-size: 1.85rem; font-weight: 700; margin: 8px 0 4px; line-height: 1.35; }
+  #prompt-sense {
+    display: none;
+    margin: 0 0 2px;
+    font-size: .92rem;
+    line-height: 1.35;
+    letter-spacing: .04em;
+    color: var(--gold);
+  }
+  #prompt-sense:not([hidden]) { display: block; }
   #prompt-hint { font-size: .9rem; opacity: .65; min-height: 1.2em; }
   #prompt-hint .mastery-star-anim {
     display: inline-block;
@@ -1180,6 +1189,7 @@
       animation-duration: 1.35s;
     }
     body.at-play #prompt-main { font-size: 1.28rem; margin: 0; }
+    body.at-play #prompt-sense { font-size: .78rem; margin: 1px 0 0; }
     body.at-play #placement-note { font-size: .78rem; margin: 0 0 4px; padding: 4px 8px; }
     body.at-play #prompt-hint {
       font-size: .72rem;
@@ -1344,6 +1354,7 @@
       <div id="prompt-box">
         <div id="prompt-label">英文 → 中文意思</div>
         <div id="prompt-main">—</div>
+        <div id="prompt-sense" hidden></div>
         <div id="prompt-hint"></div>
       </div>
       <div id="answer-area">
@@ -1429,6 +1440,7 @@
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
   <script src="sense-id.js"></script>
+  <script src="sense-cue.js"></script>
   <script src="srs-rules.js"></script>
   <script src="review-queues.js"></script>
   <script src="home-loop.js"></script>
