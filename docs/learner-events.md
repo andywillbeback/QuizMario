@@ -59,6 +59,6 @@ In the Dashboard SQL editor, run `supabase/learner_events.sql` once (same projec
 1. Open the Pages preview, log in with the shared student account.
 2. Pick 中考, answer one card wrong. 错词本 should gain that word.
 3. Home → **ALS 学习信号**. The count includes `vocab.answer_wrong` and, if the word newly entered the book, `vocab.wrong_book_add`. It must not say the rows were synced to ALS.
-4. If today's due queue is non-empty, the same panel includes `vocab.due_review` rows with `payload.due_at`. Opening 今日到期 again does not duplicate the same `due_at`.
+4. If today's due queue is non-empty, the same panel includes `vocab.due_review` rows with `payload.due_at`. Opening 今日必练 again does not duplicate the same `due_at`.
 5. Download JSONL. Each line parses as JSON, `source` is `quizmario`, and `learner_id` is the Supabase uid.
 6. In Supabase, the same `event_id`s are rows in `learner_events`. If the SQL has not been run, the panel says the table is missing and the JSONL download still works. Progress sync (`已登录 · 已同步`) still refers only to `user_progress`.

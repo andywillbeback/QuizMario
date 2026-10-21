@@ -205,6 +205,9 @@
         pendingDuringBoot = false;
         enqueueUpload();
       }
+      if (user && window.__QM && typeof window.__QM.onSessionReady === "function") {
+        try { window.__QM.onSessionReady(); } catch (_) {}
+      }
     }
   }
 

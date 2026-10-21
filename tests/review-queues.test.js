@@ -37,7 +37,8 @@ function due(cards, now) {
 }
 
 assert.strictEqual(rq.continueTarget(0), "latest");
-assert.strictEqual(rq.continueTarget(1), "due");
+assert.strictEqual(rq.continueTarget(1), "latest");
+assert.strictEqual(rq.continueTarget(8), "latest");
 assert.strictEqual(rq.isOpenedGroup(0, 1), true);
 assert.strictEqual(rq.isOpenedGroup(1, 1), false);
 assert.strictEqual(rq.isOpenedGroup(1, 2), true);
@@ -146,17 +147,85 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
   assert.strictEqual(listed[0].lemma, "twice");
 }
 
+{
+  const due = [
+    { key: "a", word: "alpha", dueAt: 1 },
+    { key: "b", word: "beta", dueAt: 2 },
+  ];
+  const wrong = [
+    { key: "b", word: "beta", priority: 9 },
+    { key: "c", word: "gamma", priority: 2 },
+    { cardKey: "c", word: "gamma-again" },
+  ];
+  const merged = rq.mergePracticeQueue(due, wrong);
+  assert.deepStrictEqual(merged.map((row) => row.key || row.cardKey), ["a", "b", "c"]);
+  assert.strictEqual(merged[0].fromDue, true);
+  assert.strictEqual(merged[0].fromWrong, false);
+  assert.strictEqual(merged[1].fromDue, true);
+  assert.strictEqual(merged[1].fromWrong, true, "a card in both lists stays once, in the due slot");
+  assert.strictEqual(merged[1].word, "beta");
+  assert.strictEqual(merged[2].fromDue, false);
+  assert.strictEqual(merged[2].fromWrong, true);
+  assert.strictEqual(due[1].fromWrong, undefined, "merge does not tag the caller's due row");
+  assert.strictEqual(rq.combinedCount(due, wrong), 3);
+  assert.strictEqual(rq.combinedCount([{ key: "a" }], [{ key: "a" }]), 1);
+  assert.deepStrictEqual(rq.mergePracticeQueue([], [{ key: "only" }]).map((row) => row.key), ["only"]);
+  assert.deepStrictEqual(rq.mergePracticeQueue(null, null), []);
+}
+
+{
+  const day = "2026-10-21";
+  const next = "2026-10-22";
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 3, day: day, record: null }), true);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: false, count: 3, day: day, record: null }), false);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 0, day: day, record: null }), false);
+  assert.strictEqual(rq.homePrimacy({ count: 0, day: day, record: null }), "hidden");
+  assert.strictEqual(rq.homePrimacy({ count: 3, day: day, record: null }), "primary");
+
+  const yesterday = { day: "2026-10-20", started: true, dismissed: true };
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 2, day: day, record: yesterday }), true,
+    "a previous day does not suppress today's gate");
+  assert.strictEqual(rq.homePrimacy({ count: 2, day: day, record: yesterday }), "primary");
+
+  const dismissed = rq.markDailyGate(null, day, "dismiss");
+  assert.deepStrictEqual(dismissed, { day: day, started: false, dismissed: true });
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 5, day: day, record: dismissed }), false,
+    "稍后 suppresses the gate for the rest of the day");
+  assert.strictEqual(rq.homePrimacy({ count: 5, day: day, record: dismissed }), "primary",
+    "稍后 does not demote 今日必练");
+  assert.strictEqual(yesterday.started, true, "marking today does not rewrite yesterday");
+
+  const started = rq.markDailyGate(dismissed, day, "start");
+  assert.strictEqual(started.started, true);
+  assert.strictEqual(started.dismissed, true);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 5, day: day, record: started }), false);
+  assert.strictEqual(rq.homePrimacy({ count: 5, day: day, record: started }), "secondary");
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 5, day: next, record: started }), true,
+    "the next calendar day asks again");
+  assert.strictEqual(rq.homePrimacy({ count: 5, day: next, record: started }), "primary");
+  assert.strictEqual(rq.homePrimacy({ count: 0, day: next, record: started }), "hidden");
+}
+
 const root = path.join(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-assert.ok(index.includes('id="btn-due-today"'));
-assert.ok(index.includes('id="btn-wrong-book"'));
+assert.ok(index.includes('id="btn-must-practice"'));
+assert.ok(index.includes("今日必练"));
+assert.ok(index.includes('id="must-gate"'));
+assert.ok(index.includes('id="btn-must-start"') && index.includes(">开始</button>"));
+assert.ok(index.includes('id="btn-must-later"') && index.includes(">稍后</button>"));
+assert.ok(!index.includes('id="btn-due-today"'));
+assert.ok(!index.includes('id="btn-wrong-book"'));
 assert.ok(index.includes('src="review-queues.js"'));
 assert.ok(game.includes("rememberMiss"));
 assert.ok(game.includes("noteWrongBookCorrect"));
-assert.ok(game.includes('continueTarget'));
+assert.ok(game.includes("mergePracticeQueue"));
+assert.ok(game.includes("shouldShowSoftGate"));
+assert.ok(game.includes("homePrimacy"));
+assert.ok(game.includes('startQueueSession("must"'));
+assert.ok(!game.includes("继续闯关会先练今日到期"));
 assert.ok(!game.includes("btn-rate-again"));
-assert.ok(game.includes("今天没有到期的单词"));
-assert.ok(game.includes("错词本还是空的"));
+assert.ok(game.includes("今天没有到期或错词"));
+assert.ok(game.includes("错词本毕业"));
 
 console.log("review-queues ok");
