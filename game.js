@@ -1,7 +1,8 @@
 /* Vocab Spotlight — quiz-show English vocabulary trainer
  * Spaced repetition (Anki-lite / SM-2) + active recall. Offline HTML5.
  * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
- * Clearance: ≥80% of the set in review with interval ≥1 day (srs-rules.js).
+ * Clearance (通关): ≥80% of the set in review with interval ≥1 day (srs-rules.js).
+ * 已学会 is a later-day clean recall, not the same thing as 通关 or 保持率.
  * Uncleared sets run a 12-minute challenge (CHALLENGE_MS).
  * 今日到期: one SM-2 queue of due cards across opened groups (review-queues.js).
  * 错词本: misses and cumulative wrong >= 2; two correct ratings in that mode graduate.
@@ -68,6 +69,8 @@
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
   /** When true, waiting for Good/Easy after a correct answer */
   let pendingRate = false;
+  /** Options from the correct tap, applied when Good / Easy schedules the card. */
+  let pendingAttempt = null;
 
   const KILL_LINES = {
     1: "First blood",
@@ -124,6 +127,7 @@
       else p.state = "review";
     }
     if (p.ef == null) p.ef = 2.5;
+    if (SRS.noteLegacyMastery) SRS.noteLegacyMastery(p);
     return p;
   }
 
@@ -201,7 +205,7 @@
     for (const [li, words] of range) {
       for (const w of words) {
         const p = getProg(cardKey(li, w.word));
-        if ((p.mastery || 0) >= 3) mastered++;
+        if (SRS.isMasteredCard(p)) mastered++;
         if (isNewCard(p)) neu++;
         else if (isLearning(p)) {
           learning++;
@@ -275,7 +279,7 @@
     const words = LEVELS[levelNum - 1] || [];
     let n = 0;
     for (const w of words) {
-      if ((getProg(cardKey(levelNum - 1, w.word)).mastery || 0) >= 3) n++;
+      if (SRS.isMasteredCard(getProg(cardKey(levelNum - 1, w.word)))) n++;
     }
     return n;
   }
@@ -295,9 +299,9 @@
       const clearLabel = cs.ready ? "已通关" : ("通关 " + cs.solid + "/" + cs.need);
       card.innerHTML =
         '<div class="ln">' + escapeHtml(setTitle(i)) + (cs.ready ? " ✓" : "") + "</div>" +
-        '<div class="meta">' + words.length + " words · " + mastered + "/" + words.length + " ★ · " +
+        '<div class="meta">已学会 ' + mastered + "/" + words.length + " · " + clearLabel + " · " +
         (function(){ const c=countSrs(i); return "Due "+c.due; })() +
-        " · " + clearLabel + "</div>" +
+        "</div>" +
         '<div class="stars">' + "★".repeat(stars) + "☆".repeat(3 - stars) + "</div>";
       if (!locked) {
         card.addEventListener("click", () => startLevel(i));
@@ -325,7 +329,8 @@
   function cloneProg(p) {
     return {
       ef: p.ef, interval: p.interval, reps: p.reps, lapses: p.lapses,
-      due: p.due, correct: p.correct, wrong: p.wrong, mastery: p.mastery, state: p.state,
+      due: p.due, correct: p.correct, wrong: p.wrong, unknown: p.unknown, mastery: p.mastery,
+      mastered: p.mastered, scheduledAt: p.scheduledAt, lastOutcome: p.lastOutcome, state: p.state,
     };
   }
 
@@ -975,13 +980,14 @@
       "☆".repeat(3 - filled) +
       "</span>";
     const metaBits = [];
-    const srsTag = isNewCard(prog)
-      ? "新词 New"
-      : isDue(prog, Date.now())
-        ? "到期 Due"
-        : isLearning(prog)
-          ? "学习中 Learning"
-          : formatDue(prog);
+    const now = Date.now();
+    let srsTag;
+    if (SRS.isMasteredCard(prog)) srsTag = isDue(prog, now) ? "已学会 · 到期" : "已学会";
+    else if (isNewCard(prog)) srsTag = "新词 New";
+    else if (isDue(prog, now)) srsTag = "到期 Due";
+    else if (SRS.isSolidCard(prog)) srsTag = "已巩固 · " + formatDue(prog);
+    else if (isLearning(prog)) srsTag = "学习中 Learning";
+    else srsTag = formatDue(prog);
     metaBits.unshift(srsTag);
     const hint = hintForCard(currentCard);
     const exampleZh = currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
@@ -1087,6 +1093,8 @@
     // grade or swap currentCard until the new card is painted, or a fast tap
     // answers the next word against the previous Chinese prompt.
     awaiting = true;
+    pendingAttempt = null;
+    setUnknownVisible(false);
     const fb = $("feedback");
     if (fb) {
       fb.innerHTML = "";
@@ -1195,12 +1203,9 @@
   }
 
   function softenHint(example, word) {
-    try {
-      const re = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "ig");
-      return example.replace(re, "___");
-    } catch (_) {
-      return example;
-    }
+    const api = window.QuizMarioCloze;
+    if (api && typeof api.blankExample === "function") return api.blankExample(example, word);
+    return example == null ? "" : String(example);
   }
 
   function isPlaceholderExample(example) {
@@ -1292,17 +1297,35 @@
     return false;
   }
 
-  function grade(correct, easy, chosen) {
+  function attemptOpts(card, extra) {
+    return Object.assign({
+      firstTry: !(card && card._repeat),
+      hintSeen: !!(card && card._hintSeen),
+      now: Date.now(),
+    }, extra || {});
+  }
+
+  function setUnknownVisible(on) {
+    const b = $("btn-unknown");
+    if (!b) return;
+    b.hidden = !on;
+  }
+
+  function grade(correct, easy, chosen, outcome) {
     if (awaiting || !currentCard || pendingRate) return;
     awaiting = true;
+    setUnknownVisible(false);
+    const kind = outcome || (correct ? "correct" : "wrong");
     const prog = getProg(currentCard.key);
     const prevMastery = Math.floor(prog.mastery || 0);
     const fb = $("feedback");
-    const nowMs = Date.now();
+    const opts = attemptOpts(currentCard, { outcome: kind, correct: kind === "correct" });
+    const nowMs = opts.now;
 
-    logAnswer(correct, prog);
-    if (correct) {
-      emitLearnerAnswer(true, currentCard, "");
+    logAnswer(kind === "correct", prog, opts);
+    if (kind === "correct") {
+      pendingAttempt = opts;
+      emitLearnerAnswer(true, currentCard, "", "correct");
       // Hype first; SRS waits for Good / Easy
       save.streak += 1;
       killStreak += 1;
@@ -1345,18 +1368,22 @@
       bindRate("btn-rate-good", 1);
       bindRate("btn-rate-easy", 2);
     } else {
-      schedule(prog, 0, nowMs);
+      schedule(prog, 0, nowMs, opts);
       rememberMiss(currentCard, prog);
-      emitLearnerAnswer(false, currentCard, chosen);
+      emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind);
       save.streak = 0;
       const brokenStreak = killStreak;
       killStreak = 0;
-      if (brokenStreak >= SHUTDOWN_STREAK_MIN) {
-        announceShutDown();
+      if (kind === "wrong") {
+        if (brokenStreak >= SHUTDOWN_STREAK_MIN) {
+          announceShutDown();
+        } else {
+          hideKillBanner();
+        }
+        save.points = Math.max(0, save.points - 2);
       } else {
         hideKillBanner();
       }
-      save.points = Math.max(0, save.points - 2);
 
       const explain =
         currentCard.explain_zh ||
@@ -1368,12 +1395,18 @@
       if (currentCard.scene) {
         why += '<div class="fb-meta">场景：' + escapeHtml(currentCard.scene) + "</div>";
       }
-      why +=
-        '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
+      if (kind === "unknown") {
+        why += '<div class="fb-meta">这题记成「不会」，不算选错。稍后还会再出现。</div>';
+      } else {
+        why += '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
+      }
       if (sessionKind === "wrongbook") {
         why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
       }
-      fb.innerHTML = '<div class="fb-title">再想想 Not yet</div>' + speakButtons(currentCard) + why;
+      why += '<div class="rate-row"><button type="button" class="rate-btn good" id="btn-feedback-continue">' +
+        '<span class="rate-zh">继续</span><span class="rate-sub">Continue</span></button></div>';
+      const title = kind === "unknown" ? "不会 · 先看答案" : "再想想 Not yet";
+      fb.innerHTML = '<div class="fb-title">' + title + "</div>" + speakButtons(currentCard) + why;
       fb.className = "bad show";
 
       flashStage("bad");
@@ -1382,14 +1415,22 @@
 
       // One later repeat. Inserting into both queue and requeueSoon counted
       // the miss twice (题数 +2) and dealt the same word twice.
+      // The repeat already saw the answer, so it cannot count as a clean recall.
       const alreadyWaiting = requeueSoon.some((r) => r.card && r.card.key === currentCard.key)
         || queue.some((c) => c.key === currentCard.key && c._repeat);
       if (!alreadyWaiting) {
         const delay = 1 + Math.floor(Math.random() * 2);
-        requeueSoon.push({ appearAt: stepCounter + delay, card: { ...currentCard, _repeat: true } });
+        requeueSoon.push({
+          appearAt: stepCounter + delay,
+          card: { ...currentCard, _repeat: true, _hintSeen: true },
+        });
       }
       persist();
-      setTimeout(nextCard, 2600);
+      const cont = $("btn-feedback-continue");
+      if (cont) cont.addEventListener("click", () => {
+        if ($("btn-feedback-continue") !== cont) return;
+        nextCard();
+      });
     }
     $("play-queue").textContent = String(queue.length + requeueSoon.length);
     updateProgress();
@@ -1399,8 +1440,10 @@
     if (!pendingRate || !currentCard) return;
     pendingRate = false;
     const prog = getProg(currentCard.key);
-    const nowMs = Date.now();
-    schedule(prog, quality === 2 ? 2 : 1, nowMs);
+    const opts = pendingAttempt || attemptOpts(currentCard, { outcome: "correct", correct: true });
+    pendingAttempt = null;
+    const nowMs = opts.now || Date.now();
+    schedule(prog, quality === 2 ? 2 : 1, nowMs, opts);
     let bookNote = "";
     if (sessionKind === "wrongbook" && currentCard) {
       const res = RQ.noteWrongBookCorrect(
@@ -1549,10 +1592,11 @@
         if (awaiting) return;
         const ok = answersMatch(opt, correct);
         b.classList.add(ok ? "ok" : "bad");
-        grade(ok, false, opt);
+        grade(ok, false, opt, ok ? "correct" : "wrong");
       });
       box.appendChild(b);
     });
+    setUnknownVisible(true);
   }
 
   function shuffle(arr) {
@@ -1593,7 +1637,7 @@
     const line = "巩固 " + cs.solid + "/" + cs.total + "，通关线 " + cs.need + "（80%，间隔≥1天）。";
     $("clear-msg").textContent = challengeWon
       ? (setTitle(currentLevel) + " 在 " + mins + " 分钟内通关（+50）。" + line)
-      : (setTitle(currentLevel) + " cleared (+50). " + line);
+      : (setTitle(currentLevel) + " 通关（+50）。" + line);
     const starEl = $("clear-stars");
     starEl.className = "stars star-pop";
     starEl.innerHTML = "";
@@ -1605,7 +1649,7 @@
     const trophy = $("clear-trophy");
     if (trophy) trophy.hidden = !challengeWon;
     const title = $("clear-title");
-    if (title) title.textContent = challengeWon ? "挑战成功" : "Set cleared!";
+    if (title) title.textContent = challengeWon ? "挑战成功" : "通关";
     const achievement = challengeWon ? SRS.pickChallengeLine("success", rollChallenge()) : "";
     const achEl = $("clear-achievement");
     if (achEl) {
@@ -1833,13 +1877,12 @@
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
 
-  /** Daily log: c/w = correct/wrong, rc/rw = answers on cards already in review (retention), n = new cards seen. */
-  function logAnswer(correct, prog) {
-    const k = dayKey();
-    const d = save.daily[k] || (save.daily[k] = { c: 0, w: 0, rc: 0, rw: 0, n: 0 });
-    if (correct) d.c++; else d.w++;
-    if (isNewCard(prog)) d.n++;
-    else if (prog.state === "review" && (prog.interval || 0) >= 1) { if (correct) d.rc++; else d.rw++; }
+  /** Daily log. rc/rw are cross-day 保持率 only. unk is「不会」, not a wrong pick. */
+  function logAnswer(correct, prog, opts) {
+    opts = opts || {};
+    const k = dayKey(opts.now);
+    const d = save.daily[k] || (save.daily[k] = { c: 0, w: 0, rc: 0, rw: 0, n: 0, unk: 0 });
+    SRS.applyDailyAnswer(d, prog, Object.assign({ correct: !!correct }, opts));
   }
 
   function activeStreak() {
@@ -1856,7 +1899,7 @@
     for (let i = n - 1; i >= 0; i--) {
       const x = new Date(t); x.setDate(t.getDate() - i);
       const k = dayKey(x.getTime());
-      out.push(Object.assign({ day: k }, save.daily[k] || { c: 0, w: 0, rc: 0, rw: 0, n: 0 }));
+      out.push(Object.assign({ day: k }, save.daily[k] || { c: 0, w: 0, rc: 0, rw: 0, n: 0, unk: 0 }));
     }
     return out;
   }
@@ -1869,7 +1912,7 @@
         for (const w of words) {
           total++;
           const p = save.cards[cardKey(li, w.word)];
-          if (p && !isNewCard(p) && p.state === "review") learned++;
+          if (p && SRS.isMasteredCard(p)) learned++;
         }
         if (clearReadyPure(li, words)) cleared.push(li + 1);
       });
@@ -1909,12 +1952,13 @@
     let learned = 0;
     for (const t of TRACKS) { tracks[t.id] = trackSummary(t.id); learned += tracks[t.id].learned; }
     const rc7 = sum(d7, "rc"), rw7 = sum(d7, "rw"), c7 = sum(d7, "c"), w7 = sum(d7, "w");
+    const guessed = sum(all, "c") + sum(all, "w");
     return {
       streak: activeStreak(),
       activeDays: Object.keys(save.daily).length,
       learned,
-      answers: sum(all, "c") + sum(all, "w"),
-      acc: (sum(all, "c") + sum(all, "w")) ? sum(all, "c") / (sum(all, "c") + sum(all, "w")) : null,
+      answers: guessed + sum(all, "unk"),
+      acc: guessed ? sum(all, "c") / guessed : null,
       acc7: (c7 + w7) ? c7 / (c7 + w7) : null,
       ret7: (rc7 + rw7) ? rc7 / (rc7 + rw7) : null,
       tracks,
@@ -1928,15 +1972,16 @@
     if (!box) return;
     const st = computeStats();
     const days = lastDays(14);
-    const maxN = Math.max(1, ...days.map((d) => d.c + d.w));
+    const maxN = Math.max(1, ...days.map((d) => d.c + d.w + (d.unk || 0)));
     const W = 300, H = 110, bw = W / days.length;
     let bars = "", line = "";
     days.forEach((d, i) => {
-      const n = d.c + d.w;
+      const guessed = d.c + d.w;
+      const n = guessed + (d.unk || 0);
       const h = (n / maxN) * (H - 20);
       bars += '<rect x="' + (i * bw + 3) + '" y="' + (H - 14 - h) + '" width="' + (bw - 6) + '" height="' + h + '" rx="2" fill="rgba(61,231,255,.55)"><title>' + d.day + " 答题 " + n + "</title></rect>";
-      if (n) {
-        const y = H - 14 - (d.c / n) * (H - 20);
+      if (guessed) {
+        const y = H - 14 - (d.c / guessed) * (H - 20);
         line += (line ? " L" : "M") + (i * bw + bw / 2).toFixed(1) + " " + y.toFixed(1);
       }
       if (i % 2 === 0) bars += '<text x="' + (i * bw + bw / 2) + '" y="' + (H - 2) + '" font-size="8" text-anchor="middle" fill="#aaa">' + d.day.slice(5) + "</text>";
@@ -1957,6 +2002,7 @@
       "<div><b>" + pct(st.ret7) + "</b>近7天复习保持率</div>" +
       "</div>" + svg +
       '<p class="stats-legend">柱：每日答题量 · 黄线：每日正确率 · 累计答题 ' + st.answers + " 次 · 学习 " + st.activeDays + " 天</p>" +
+      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。</p>' +
       '<ul class="stats-tracks">' + tr + "</ul>";
   }
 
@@ -1973,7 +2019,7 @@
       at: new Date().toISOString(),
       s: st.streak, ad: st.activeDays, a: st.answers, acc: st.acc, a7: st.acc7, r7: st.ret7,
       tr,
-      d: lastDays(30).filter((d) => d.c + d.w).map((d) => [d.day, d.c, d.w, d.rc, d.rw, d.n]),
+      d: lastDays(30).filter((d) => d.c + d.w + (d.unk || 0)).map((d) => [d.day, d.c, d.w, d.rc, d.rw, d.n, d.unk || 0]),
       wk: weakWords(12),
     };
   }
@@ -2083,6 +2129,7 @@
 
   // --- Wire UI ---
 
+  if ($("btn-unknown")) $("btn-unknown").addEventListener("click", () => grade(false, false, "", "unknown"));
   if ($("btn-export")) $("btn-export").addEventListener("click", exportProgressFile);
   if ($("btn-import")) $("btn-import").addEventListener("click", () => $("import-file").click());
   if ($("import-file")) $("import-file").addEventListener("change", (e) => {
@@ -2111,17 +2158,20 @@
     return window.QuizMarioLearnerEvents || null;
   }
 
-  function emitLearnerAnswer(correct, card, chosen) {
+  function emitLearnerAnswer(correct, card, chosen, outcome) {
     const LE = learnerEvents();
     if (!LE || !card || typeof LE.record !== "function") return;
+    const kind = outcome || (correct ? "correct" : "wrong");
+    const type = kind === "unknown" && LE.TYPES.UNKNOWN ? LE.TYPES.UNKNOWN : (correct ? LE.TYPES.CORRECT : LE.TYPES.WRONG);
     const input = {
-      event_type: correct ? LE.TYPES.CORRECT : LE.TYPES.WRONG,
+      event_type: type,
       headword: card.word,
       item_id: card.key,
       track: currentTrack,
       gloss_zh: card.meaning_zh || "",
+      outcome: kind,
     };
-    if (!correct && chosen) input.answer = chosen;
+    if (kind === "wrong" && chosen) input.answer = chosen;
     try { LE.record(input); } catch (_) {}
   }
 
@@ -2488,6 +2538,12 @@
   document.addEventListener("keydown", (e) => {
     const play = $("screen-play");
     if (!play || !play.classList.contains("active")) return;
+    const cont = $("btn-feedback-continue");
+    if (cont && e.key === "Enter") {
+      e.preventDefault();
+      cont.click();
+      return;
+    }
     if (pendingRate) {
       if (e.key === "1" || e.key.toLowerCase() === "g") {
         e.preventDefault();

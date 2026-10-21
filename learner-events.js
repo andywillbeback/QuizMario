@@ -18,6 +18,7 @@
   var TYPES = {
     CORRECT: "vocab.answer_correct",
     WRONG: "vocab.answer_wrong",
+    UNKNOWN: "vocab.answer_unknown",
     DUE: "vocab.due_review",
     WRONG_BOOK: "vocab.wrong_book_add",
   };
@@ -73,6 +74,7 @@
     if (gloss) payload.gloss_zh = gloss;
     if (type === TYPES.DUE) payload.due_at = normalizeIso(input.due_at) || dueAtIso(input.due_ms != null ? input.due_ms : input.dueAt) || created;
     if (type === TYPES.WRONG && input.answer) payload.answer = String(input.answer).trim();
+    if (input.outcome && type !== TYPES.DUE) payload.outcome = String(input.outcome);
     var ev = {
       event_id: input.event_id || newId(),
       learner_id: learner,

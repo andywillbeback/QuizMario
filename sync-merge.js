@@ -21,7 +21,7 @@
     for (var i = 0; i < keys.length; i++) {
       var p = save.cards[keys[i]];
       if (!p || typeof p !== "object") continue;
-      if ((p.reps || 0) > 0 || (p.correct || 0) > 0 || (p.wrong || 0) > 0 || (p.mastery || 0) > 0) n++;
+      if ((p.reps || 0) > 0 || (p.correct || 0) > 0 || (p.wrong || 0) > 0 || (p.unknown || 0) > 0 || (p.mastery || 0) > 0) n++;
     }
     return n;
   }
