@@ -429,6 +429,34 @@
     font-weight: 600;
     color: #fff;
   }
+  .must-reminder {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    margin: 0 0 12px;
+    padding: 8px 10px 8px 12px;
+    text-align: left;
+    border-radius: 12px;
+    background: rgba(226, 177, 67, 0.14);
+    border: 1px solid rgba(230, 201, 138, 0.5);
+  }
+  .must-reminder[hidden] { display: none !important; }
+  .must-reminder-copy {
+    margin: 0;
+    flex: 1 1 12rem;
+    font-size: .92rem;
+    font-weight: 700;
+    line-height: 1.4;
+    color: #fff;
+  }
+  .must-reminder button {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    font-size: .85rem;
+    white-space: nowrap;
+  }
   button.is-hero {
     font-size: 1.08rem;
     padding: 14px 28px;
@@ -1242,6 +1270,10 @@
           <p class="today-narrative-kicker">进度</p>
           <ul id="today-narrative-lines" class="today-narrative-lines"></ul>
         </section>
+        <div id="must-reminder" class="must-reminder" hidden>
+          <p id="must-reminder-copy" class="must-reminder-copy">今天还有 0 道今日必练</p>
+          <button id="btn-must-remind" type="button">开始今日必练</button>
+        </div>
         <div id="track-panel">
           <label for="track-select"><b>词库</b></label>
           <select id="track-select" aria-label="选择词库"></select>
@@ -1408,6 +1440,7 @@
   <script src="feedback.js"></script>
   <script src="error-types.js"></script>
   <script src="progress-narrative.js"></script>
+  <script src="practice-reminder.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>

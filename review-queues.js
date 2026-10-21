@@ -20,7 +20,8 @@
  *   on the student home (after an exam track is chosen, opts.onHome),
  *   while the combined count is at least 1 and they have neither
  *   dismissed nor started 今日必练 that day. It must not cover the
- *   exam picker.
+ *   exam picker. 稍后 only sets dismissed. The later once-per-day tip
+ *   (practice-reminder.js) is a separate local { day, shown } flag.
  *
  * 继续闯关
  *   Always "latest" (the frontier group, English → meaning). Due and
