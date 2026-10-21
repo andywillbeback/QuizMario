@@ -110,7 +110,8 @@
   },
   "chat": {
     "example_en": "My friends and I chat on the bus ride home.",
-    "example_zh": "我和朋友们在回家的公交车上聊天。"
+    "example_zh": "我和朋友们在回家的公交车上聊天。",
+    "meaning_zh": "聊天"
   },
   "check": {
     "example_en": "Check your answers before you hand in the paper.",

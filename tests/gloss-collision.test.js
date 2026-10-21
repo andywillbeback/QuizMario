@@ -80,11 +80,13 @@ assert.strictEqual(gloss("eighteenth"), "第十八");
 assert.strictEqual(cards(tracks, "eighteenth")[0].example_en, "Her birthday is on the eighteenth of June.");
 
 const repairs = loadRepairs();
-for (const word of ["exit", "export", "anybody", "anyone", "their", "theirs", "advice", "advise", "attraction", "claim", "army", "badminton"]) {
+for (const word of ["exit", "export", "anybody", "anyone", "their", "theirs", "advice", "advise", "attraction", "claim", "army", "badminton", "get", "dress", "trouble", "decent", "chat", "pair"]) {
   const fix = repairs.get(word);
   assert.ok(fix, "repair missing for " + word);
   assert.strictEqual(fix.meaning_zh, gloss(word), "repair gloss drifted for " + word);
 }
+assert.strictEqual(repairs.get("get").example_en, "You get one point for each correct answer.");
+assert.ok(!/get up/i.test(repairs.get("get").example_en));
 const communicateRepair = repairs.get("communicate");
 assert.ok(!communicateRepair || communicateRepair.meaning_zh === "沟通；交流", "communicate repair");
 for (const word of ["chip", "eighteenth"]) {

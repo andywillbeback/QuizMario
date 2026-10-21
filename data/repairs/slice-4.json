@@ -515,7 +515,8 @@
   },
   "dress": {
     "example_en": "The red dress in the window was the one she wore to the concert.",
-    "example_zh": "橱窗里的那条红裙子，就是她去音乐会时穿的。"
+    "example_zh": "橱窗里的那条红连衣裙，就是她去音乐会时穿的。",
+    "meaning_zh": "连衣裙"
   },
   "drink": {
     "example_en": "A cold drink from the machine cost more than my bus fare.",

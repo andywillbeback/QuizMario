@@ -15,5 +15,10 @@
   },
   "nothing": {
     "meaning_zh": "没有什么"
+  },
+  "get": {
+    "meaning_zh": "得到；变得",
+    "example_en": "You get one point for each correct answer.",
+    "example_zh": "每答对一题，你就得到一分。"
   }
 }

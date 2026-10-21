@@ -498,7 +498,8 @@
   },
   "decent": {
     "example_en": "He made a decent apology and his friend accepted it.",
-    "example_zh": "他得体地道了歉，朋友接受了。"
+    "example_zh": "他得体地道了歉，朋友接受了。",
+    "meaning_zh": "得体的"
   },
   "deep": {
     "example_en": "The pond is deep at the far end, so swimming is banned there.",
