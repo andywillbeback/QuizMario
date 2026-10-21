@@ -49,6 +49,13 @@
     }
     if (save.daily && Object.keys(save.daily).length) return false;
     if (studiedCount(save) > 0) return false;
+    if (save.placement && typeof save.placement === "object") {
+      var placed = Object.keys(save.placement);
+      for (var p = 0; p < placed.length; p++) {
+        var row = save.placement[placed[p]];
+        if (row && row.done) return false;
+      }
+    }
     if (save.wrongBook && typeof save.wrongBook === "object") {
       var lemmas = Object.keys(save.wrongBook);
       for (var w = 0; w < lemmas.length; w++) {
