@@ -123,6 +123,11 @@ function staticGuards() {
   assert.ok(index.includes('id="today-narrative"') && index.includes('id="today-narrative-lines"'), "progress narrative sits on the home");
   assert.ok(index.includes('src="progress-narrative.js"'), "progress narrative loads with the game");
   assert.ok(game.includes("renderTodayNarrative"), "home paints the progress narrative");
+  assert.ok(index.includes('id="must-reminder"') && index.includes('id="btn-must-remind"'), "once-per-day reminder sits on the home");
+  assert.ok(index.includes("今天还有") && index.includes("开始今日必练"), "reminder copy and CTA");
+  assert.ok(index.indexOf('id="today-narrative"') < index.indexOf('id="must-reminder"'), "the tip sits under the progress narrative");
+  assert.ok(index.includes('src="practice-reminder.js"'), "practice reminder loads with the game");
+  assert.ok(game.includes("renderPracticeReminder") && game.includes("practiceReminderArmed = false"), "稍后 does not count as a new home entry");
   assert.ok(index.includes("其他/未归类"), "the four buckets are named in the student UI");
   assert.ok(game.includes("recordMissReason") && game.includes("renderMissReasons") && game.includes("renderClearReasons"),
     "wrong picks are classified and shown on the student path");
@@ -640,6 +645,7 @@ async function main() {
         reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
         narrativeHidden: !!(document.getElementById("today-narrative") || {}).hidden,
         narrative: (document.getElementById("today-narrative") || {}).textContent || "",
+        remindHidden: !!(document.getElementById("must-reminder") || {}).hidden,
         fakeAls: /ALS 补了|回流词/.test(document.body.innerText || "")
       };
     })()`), 15000, "signed-in home strip");
@@ -657,6 +663,7 @@ async function main() {
     assert.strictEqual(emptyQueues.reasonsHidden, true, "no wrong picks means no 错因 strip");
     assert.strictEqual(emptyQueues.narrativeHidden, false, "signed-in home shows the progress narrative");
     assert.ok(emptyQueues.narrative.indexOf("今天没有必练") !== -1, emptyQueues.narrative);
+    assert.strictEqual(emptyQueues.remindHidden, true, "a zero count does not raise the daily reminder");
     assert.ok(emptyQueues.narrative.indexOf("摸底做完了，从第 1 组开始") !== -1, emptyQueues.narrative);
     assert.strictEqual(emptyQueues.mode, "weak");
     assert.strictEqual(emptyQueues.fakeAls, false, "the strip must not invent ALS 补了 / 回流词");
@@ -920,6 +927,7 @@ async function main() {
         home: document.getElementById("screen-home").classList.contains("active"),
         softHidden: !soft || soft.hidden,
         stripHidden: !strip || strip.hidden,
+        remindHidden: !document.getElementById("must-reminder") || document.getElementById("must-reminder").hidden,
         zk: (document.getElementById("btn-gate-zhongkao") || {}).textContent || "",
         gk: (document.getElementById("btn-gate-gaokao") || {}).textContent || ""
       };
@@ -928,6 +936,7 @@ async function main() {
     assert.strictEqual(examOnly.home, false);
     assert.strictEqual(examOnly.softHidden, true, "cloud apply must not cover 中考/高考 with the soft gate");
     assert.strictEqual(examOnly.stripHidden, true, "the loop strip stays on the student home");
+    assert.strictEqual(examOnly.remindHidden, true, "the daily reminder stays off the exam picker");
     assert.ok(examOnly.zk.indexOf("中考") !== -1 && examOnly.gk.indexOf("高考") !== -1);
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const dueHome = await waitFor(async () => evalRetry(`(() => {
@@ -950,7 +959,8 @@ async function main() {
         detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
         stripHidden: !!(document.getElementById("home-loop") || {}).hidden,
         action: (document.getElementById("home-loop") || {}).getAttribute ? document.getElementById("home-loop").getAttribute("data-action") : "",
-        reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden
+        reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
+        remindHidden: !!(document.getElementById("must-reminder") || {}).hidden
       };
     })()`), 15000, "soft gate");
     assert.strictEqual(dueHome.play, false, "the soft gate does not auto-open cards");
@@ -965,22 +975,96 @@ async function main() {
     assert.strictEqual(dueHome.detail, "今日必练 3 道");
     assert.strictEqual(dueHome.action, "must");
     assert.strictEqual(dueHome.reasonsHidden, true, "a wrong-book row without a recorded pick is not a 错因 bucket");
+    assert.strictEqual(dueHome.remindHidden, true, "the reminder stays hidden while the soft gate is up");
 
     await evalRetry(`document.getElementById("btn-must-later").click()`);
     const later = await evalRetry(`(() => {
       const gate = document.getElementById("must-gate");
       const home = document.getElementById("screen-home");
+      const tip = document.getElementById("must-reminder");
       return {
         gateHidden: !gate || gate.hidden,
         home: !!(home && home.classList.contains("active")),
         play: document.getElementById("screen-play").classList.contains("active"),
-        primacy: home.getAttribute("data-review-primacy")
+        primacy: home.getAttribute("data-review-primacy"),
+        remindHidden: !tip || tip.hidden
       };
     })()`);
     assert.strictEqual(later.gateHidden, true, "稍后 closes the gate");
     assert.strictEqual(later.home, true);
     assert.strictEqual(later.play, false, "稍后 does not enter the queue");
     assert.strictEqual(later.primacy, "primary", "稍后 leaves 今日必练 as the primary button");
+    assert.strictEqual(later.remindHidden, true, "稍后 does not replace the gate with the tip");
+
+    await evalRetry(`document.getElementById("btn-levels").click()`);
+    await waitFor(async () => evalRetry(`(() => {
+      const levels = document.getElementById("screen-levels");
+      return levels && levels.classList.contains("active") ? true : null;
+    })()`), 8000, "level list after 稍后");
+    await evalRetry(`document.getElementById("btn-back-home").click()`);
+    const reminded = await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const gate = document.getElementById("must-gate");
+      const tip = document.getElementById("must-reminder");
+      const narr = document.getElementById("today-narrative");
+      const loop = document.getElementById("home-loop");
+      const copy = document.getElementById("must-reminder-copy");
+      if (!home || !home.classList.contains("active") || !tip || tip.hidden || !copy) return null;
+      if (!gate || !gate.hidden) return null;
+      const FOLLOWING = 4;
+      let stored = null;
+      try { stored = JSON.parse(localStorage.getItem("vocabSpotlight_mustRemind_v1") || "null"); } catch (e) { stored = null; }
+      let save = null;
+      try { save = JSON.parse(localStorage.getItem("vocabSpotlight_v1") || "null"); } catch (e) { save = null; }
+      return {
+        copy: copy.textContent,
+        cta: (document.getElementById("btn-must-remind") || {}).textContent || "",
+        position: window.getComputedStyle(tip).position,
+        afterLoop: !!(loop && (loop.compareDocumentPosition(tip) & FOLLOWING)),
+        afterNarrative: !!(narr && (narr.compareDocumentPosition(tip) & FOLLOWING)),
+        narrativeHidden: !narr || narr.hidden,
+        modal: tip.getAttribute("aria-modal"),
+        play: document.getElementById("screen-play").classList.contains("active"),
+        shown: !!(stored && stored.shown),
+        day: stored && stored.day,
+        today: window.QuizMarioSRS.calendarDay(Date.now()),
+        inSave: !!(save && (save.mustRemind || (save.mustPractice && save.mustPractice.shown)))
+      };
+    })()`), 8000, "later home entry shows the reminder");
+    assert.strictEqual(reminded.copy, "今天还有 3 道今日必练");
+    assert.strictEqual(reminded.cta.trim(), "开始今日必练");
+    assert.notStrictEqual(reminded.position, "fixed", "the tip does not cover the page");
+    assert.strictEqual(reminded.afterLoop, true);
+    assert.strictEqual(reminded.afterNarrative, true);
+    assert.strictEqual(reminded.narrativeHidden, false, "the tip sits under the progress narrative");
+    assert.strictEqual(reminded.modal, null);
+    assert.strictEqual(reminded.play, false, "the tip does not auto-open cards");
+    assert.strictEqual(reminded.shown, true, "showing the tip stores today's local flag");
+    assert.strictEqual(reminded.day, reminded.today);
+    assert.strictEqual(reminded.inSave, false, "the once-per-day flag stays out of the cloud save");
+
+    await evalRetry(`document.getElementById("btn-must-remind").click()`);
+    const fromTip = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      return {
+        title: (document.getElementById("play-level") || {}).textContent || "",
+        label: (document.getElementById("prompt-label") || {}).textContent || ""
+      };
+    })()`), 10000, "reminder CTA starts 今日必练");
+    assert.strictEqual(fromTip.title, "今日必练");
+    assert.ok(fromTip.label.indexOf("英文单词") !== -1, "the reminder opens ZH → EN: " + fromTip.label);
+    await evalRetry(`document.getElementById("btn-quit").click()`);
+    const tipDone = await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const gate = document.getElementById("must-gate");
+      const tip = document.getElementById("must-reminder");
+      if (!home || !home.classList.contains("active") || !gate || !gate.hidden) return null;
+      if (!tip || !tip.hidden) return null;
+      return true;
+    })()`), 8000, "home after the reminder CTA");
+    assert.strictEqual(tipDone, true, "the tip does not come back after it has been shown");
 
     await reloadToGate("gate after 稍后");
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
@@ -988,12 +1072,14 @@ async function main() {
       const home = document.getElementById("screen-home");
       const gate = document.getElementById("must-gate");
       const badge = document.getElementById("must-badge");
+      const tip = document.getElementById("must-reminder");
       const logged = window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn();
       if (!home || !home.classList.contains("active") || !logged || !badge || badge.hidden) return null;
       if (!gate || !gate.hidden) return null;
+      if (!tip || !tip.hidden) return null;
       return badge.textContent;
     })()`), 15000, "home without a second gate");
-    assert.strictEqual(noSpam, "3", "稍后 lasts the rest of the day");
+    assert.strictEqual(noSpam, "3", "稍后 lasts the rest of the day, and the tip does not repeat");
 
     await evalRetry(`document.getElementById("btn-continue").click()`);
     const study = await waitFor(async () => evalRetry(`(() => {
@@ -1232,12 +1318,14 @@ async function main() {
       return {
         gate: !!(gate && gate.classList.contains("active")),
         hidden: !box || box.hidden,
-        narrativeHidden: !document.getElementById("today-narrative") || document.getElementById("today-narrative").hidden
+        narrativeHidden: !document.getElementById("today-narrative") || document.getElementById("today-narrative").hidden,
+        remindHidden: !document.getElementById("must-reminder") || document.getElementById("must-reminder").hidden
       };
     })()`);
     assert.strictEqual(gateReasons.gate, true);
     assert.strictEqual(gateReasons.hidden, true, "错因 stays off the exam picker");
     assert.strictEqual(gateReasons.narrativeHidden, true, "the progress narrative stays off the exam picker");
+    assert.strictEqual(gateReasons.remindHidden, true, "the daily reminder stays off the exam picker");
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const loopHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
@@ -1250,7 +1338,9 @@ async function main() {
         reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
         reasons: (document.getElementById("miss-reasons") || {}).textContent || "",
         narrativeHidden: !!(document.getElementById("today-narrative") || {}).hidden,
-        narrative: Array.from(document.querySelectorAll("#today-narrative-lines li")).map((li) => li.textContent)
+        narrative: Array.from(document.querySelectorAll("#today-narrative-lines li")).map((li) => li.textContent),
+        remindHidden: !!(document.getElementById("must-reminder") || {}).hidden,
+        gateHidden: !document.getElementById("must-gate") || document.getElementById("must-gate").hidden
       };
     })()`), 15000, "strip into 今日必练");
     assert.strictEqual(loopHome.detail, "今日必练 1 道");
@@ -1259,6 +1349,8 @@ async function main() {
     assert.ok(loopHome.narrative.indexOf("今日必练还剩 1 道。") !== -1, JSON.stringify(loopHome.narrative));
     assert.ok(loopHome.narrative.indexOf("现在在第 4 组。") !== -1, JSON.stringify(loopHome.narrative));
     assert.ok(loopHome.narrative.indexOf("最近错过的，主要是形近。") !== -1, JSON.stringify(loopHome.narrative));
+    assert.strictEqual(loopHome.remindHidden, true, "the reminder does not stack on the soft gate");
+    assert.strictEqual(loopHome.gateHidden, false, "a fresh day still raises the soft gate");
     assert.strictEqual(loopHome.reasonsHidden, false, "home lists the saved 错因 next to 今日必练");
     assert.ok(loopHome.reasons.indexOf("形近 2") !== -1, loopHome.reasons);
     assert.ok(loopHome.reasons.indexOf("义近 1") !== -1, loopHome.reasons);

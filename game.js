@@ -17,6 +17,9 @@
  * and summed on the student home and the 今日必练 clear screen.
  * Progress story (progress-narrative.js): signed-in home adds 1–3 plain
  * lines from the must queue, frontier, placement, and the top miss.
+ * Practice reminder (practice-reminder.js): after 稍后, the next home
+ * entry can show one compact tip, once per day on this device. It stays
+ * hidden while the soft gate is up. No push and no SMS.
  */
 (function () {
   "use strict";
@@ -51,6 +54,8 @@
   if (!ET) throw new Error("error-types.js must load before game.js");
   const PN = window.QuizMarioProgressNarrative;
   if (!PN) throw new Error("progress-narrative.js must load before game.js");
+  const PR = window.QuizMarioPracticeReminder;
+  if (!PR) throw new Error("practice-reminder.js must load before game.js");
   const SenseExamples = window.QuizMarioSenseExamples;
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
@@ -83,6 +88,10 @@
   let sessionMode = "study";
   /** "meaning" is EN→ZH and counts toward 通关. "form" is the ZH→EN review used by 今日必练. "spelling" does not. */
   let sessionDirection = "meaning";
+  /** True only when the student home is being opened, not on the 稍后 refresh. */
+  let practiceReminderArmed = false;
+  /** Keeps today's tip on screen after the local flag is stored, until home is left. */
+  let practiceReminderHeld = false;
   /** Headwords missed in this visit, for the concrete feedback line. */
   let sessionWrongs = [];
   let levelClearing = false;
@@ -319,8 +328,16 @@
     for (const el of document.querySelectorAll(".screen")) el.classList.remove("active");
     const s = $("screen-" + name);
     if (s) s.classList.add("active");
-    if (name === "home") refreshHomeQueues();
-    else dismissMustGate();
+    if (name === "home") {
+      practiceReminderArmed = true;
+      refreshHomeQueues();
+    } else {
+      practiceReminderArmed = false;
+      practiceReminderHeld = false;
+      dismissMustGate();
+      const tip = $("must-reminder");
+      if (tip) tip.hidden = true;
+    }
     // Level select is much taller than play. Leaving the old scroll offset
     // (especially with overflow-x:hidden on iOS) shows empty space instead of the word.
     try { window.scrollTo(0, 0); } catch (_) {}
@@ -3037,7 +3054,67 @@
       }
     }
     maybeShowMustGate(merged.length);
+    renderPracticeReminder(merged.length);
     if (added > 0) persist();
+  }
+
+  function loadPracticeReminder() {
+    try {
+      const raw = localStorage.getItem(PR.STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      return data && typeof data === "object" ? data : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function storePracticeReminder(row) {
+    try {
+      localStorage.setItem(PR.STORAGE_KEY, JSON.stringify(row));
+    } catch (_) {}
+  }
+
+  function renderPracticeReminder(count) {
+    const el = $("must-reminder");
+    if (!el) return;
+    const gateEl = $("must-gate");
+    const softGateVisible = !!(gateEl && !gateEl.hidden);
+    const day = todayKey();
+    const gate = RQ.freshDailyGate(save.mustPractice, day);
+    const dismissed = !!(gate && gate.dismissed);
+    const opts = {
+      signedIn: signedIn(),
+      onHome: studentHomeActive(),
+      enteringHome: practiceReminderArmed,
+      count: count,
+      day: day,
+      dismissed: dismissed,
+      softGateVisible: softGateVisible,
+      reminder: loadPracticeReminder(),
+    };
+    const show = PR.shouldShowPracticeReminder(opts);
+    const keep = practiceReminderHeld
+      && opts.signedIn
+      && opts.onHome
+      && opts.enteringHome
+      && !softGateVisible
+      && dismissed
+      && (Number(count) || 0) >= 1;
+    if (!show && !keep) {
+      el.hidden = true;
+      if (!opts.onHome || !opts.enteringHome || softGateVisible || (Number(count) || 0) < 1) {
+        practiceReminderHeld = false;
+      }
+      return;
+    }
+    const copy = $("must-reminder-copy");
+    if (copy) copy.textContent = PR.practiceReminderLine(count);
+    el.hidden = false;
+    if (!practiceReminderHeld) {
+      practiceReminderHeld = true;
+      storePracticeReminder(PR.markPracticeReminder(opts.reminder, day));
+    }
   }
 
   window.__QM.onSessionReady = function () {
@@ -3075,6 +3152,9 @@
   function laterMustPractice() {
     markMust("dismiss");
     dismissMustGate();
+    // This paint is the dismiss itself, not a new home entry.
+    practiceReminderArmed = false;
+    practiceReminderHeld = false;
     refreshHomeQueues();
   }
 
@@ -3370,6 +3450,7 @@
   });
   if ($("btn-spelling")) $("btn-spelling").addEventListener("click", () => startSpellingSession());
   if ($("btn-must-practice")) $("btn-must-practice").addEventListener("click", () => startMustPractice());
+  if ($("btn-must-remind")) $("btn-must-remind").addEventListener("click", () => startMustPractice());
   if ($("btn-must-start")) $("btn-must-start").addEventListener("click", () => startMustPractice());
   if ($("btn-must-later")) $("btn-must-later").addEventListener("click", () => laterMustPractice());
   if ($("home-loop")) $("home-loop").addEventListener("click", () => {
@@ -3390,6 +3471,8 @@
       : "";
     if (confirm("Reset all Vocab Spotlight progress on this browser?" + cloudNote)) {
       localStorage.removeItem(STORAGE_KEY);
+      try { localStorage.removeItem(PR.STORAGE_KEY); } catch (_) {}
+      practiceReminderHeld = false;
       if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.clear === "function") {
         window.QuizMarioLearnerEvents.clear();
       }
