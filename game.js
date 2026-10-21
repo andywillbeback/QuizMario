@@ -6,6 +6,7 @@
  * 今日到期: one SM-2 queue of due cards across opened groups (review-queues.js).
  * 错词本: misses and cumulative wrong >= 2; two correct ratings in that mode graduate.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
+ * learner-events.js emits quizmario signals only. schedule() remains the only SRS clock.
  */
 (function () {
   "use strict";
@@ -1291,7 +1292,7 @@
     return false;
   }
 
-  function grade(correct, easy) {
+  function grade(correct, easy, chosen) {
     if (awaiting || !currentCard || pendingRate) return;
     awaiting = true;
     const prog = getProg(currentCard.key);
@@ -1301,6 +1302,7 @@
 
     logAnswer(correct, prog);
     if (correct) {
+      emitLearnerAnswer(true, currentCard, "");
       // Hype first; SRS waits for Good / Easy
       save.streak += 1;
       killStreak += 1;
@@ -1345,6 +1347,7 @@
     } else {
       schedule(prog, 0, nowMs);
       rememberMiss(currentCard, prog);
+      emitLearnerAnswer(false, currentCard, chosen);
       save.streak = 0;
       const brokenStreak = killStreak;
       killStreak = 0;
@@ -1542,11 +1545,11 @@
       b.type = "button";
       b.className = "choice";
       b.textContent = i + 1 + ".  " + opt;
-      b.addEventListener("click", () => {
+        b.addEventListener("click", () => {
         if (awaiting) return;
         const ok = answersMatch(opt, correct);
         b.classList.add(ok ? "ok" : "bad");
-        grade(ok, false);
+        grade(ok, false, opt);
       });
       box.appendChild(b);
     });
@@ -2104,9 +2107,62 @@
     return Math.min(LEVELS.length, Math.max(1, save.unlockedLevel || 1));
   }
 
+  function learnerEvents() {
+    return window.QuizMarioLearnerEvents || null;
+  }
+
+  function emitLearnerAnswer(correct, card, chosen) {
+    const LE = learnerEvents();
+    if (!LE || !card || typeof LE.record !== "function") return;
+    const input = {
+      event_type: correct ? LE.TYPES.CORRECT : LE.TYPES.WRONG,
+      headword: card.word,
+      item_id: card.key,
+      track: currentTrack,
+      gloss_zh: card.meaning_zh || "",
+    };
+    if (!correct && chosen) input.answer = chosen;
+    try { LE.record(input); } catch (_) {}
+  }
+
+  function emitWrongBook(card) {
+    const LE = learnerEvents();
+    if (!LE || !card || typeof LE.record !== "function") return;
+    try {
+      LE.record({
+        event_type: LE.TYPES.WRONG_BOOK,
+        headword: card.word || card.lemma,
+        item_id: card.key || card.cardKey || "",
+        track: card.track || currentTrack,
+        gloss_zh: card.meaning_zh || "",
+      });
+    } catch (_) {}
+  }
+
+  function glossAt(levelIdx, lemma) {
+    const words = LEVELS[levelIdx] || [];
+    const want = String(lemma || "").toLowerCase();
+    const w = words.find((x) => String(x.word).toLowerCase() === want);
+    return w ? (w.meaning_zh || "") : "";
+  }
+
+  function signalDueItems(items) {
+    const LE = learnerEvents();
+    if (!LE || typeof LE.recordDue !== "function" || !items || !items.length) return;
+    try {
+      LE.recordDue(items.map((it) => ({
+        headword: it.word,
+        item_id: it.key,
+        track: currentTrack,
+        gloss_zh: it.meaning_zh || "",
+        due_ms: it.dueAt || 0,
+      })));
+    } catch (_) {}
+  }
+
   function rememberMiss(card, prog) {
-    if (!card || !card.word) return;
-    RQ.touchWrongBook(ensureWrongBook(), {
+    if (!card || !card.word) return null;
+    const res = RQ.touchWrongBook(ensureWrongBook(), {
       lemmaKey: RQ.lemmaKey(currentTrack, card.word),
       lemma: card.word,
       track: currentTrack,
@@ -2114,10 +2170,16 @@
       cardKey: card.key,
       now: Date.now(),
     }, prog, "miss");
+    if (res && res.entered) emitWrongBook(card);
+    return res;
   }
 
   function scanWrongBook() {
     const book = ensureWrongBook();
+    const before = new Set();
+    for (const k of Object.keys(book)) {
+      if (book[k] && book[k].active) before.add(k);
+    }
     const entries = [];
     const limit = openedGroupLimit();
     for (let li = 0; li < limit; li++) {
@@ -2137,7 +2199,20 @@
         });
       }
     }
-    return RQ.scanCumulative(book, entries);
+    const added = RQ.scanCumulative(book, entries);
+    if (added > 0) {
+      for (const entry of entries) {
+        const row = book[entry.lemmaKey];
+        if (!row || !row.active || before.has(entry.lemmaKey)) continue;
+        emitWrongBook({
+          word: entry.lemma,
+          key: entry.cardKey,
+          track: entry.track,
+          meaning_zh: glossAt(entry.levelIdx, entry.lemma),
+        });
+      }
+    }
+    return added;
   }
 
   function dueQueueItems(now) {
@@ -2205,6 +2280,7 @@
     hideQueueEmpty();
     const added = scanWrongBook();
     const dueItems = dueQueueItems();
+    signalDueItems(dueItems);
     const wrongItems = wrongBookQueueItems();
     setCountBadge("due-badge", dueItems.length);
     setCountBadge("wrong-badge", wrongItems.length);
@@ -2216,6 +2292,11 @@
         : "";
     }
     if (added > 0) persist();
+  }
+
+  function startDueSession(items) {
+    signalDueItems(items);
+    startQueueSession("due", items);
   }
 
   function startQueueSession(kind, items) {
@@ -2298,7 +2379,7 @@
     const dueItems = dueQueueItems();
     if (RQ.continueTarget(dueItems.length) === "due") {
       hideQueueEmpty();
-      startQueueSession("due", dueItems);
+      startDueSession(dueItems);
       return;
     }
     const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
@@ -2311,7 +2392,7 @@
       return;
     }
     hideQueueEmpty();
-    startQueueSession("due", dueItems);
+    startDueSession(dueItems);
   });
   if ($("btn-wrong-book")) $("btn-wrong-book").addEventListener("click", () => {
     const items = wrongBookQueueItems();
@@ -2333,6 +2414,9 @@
       : "";
     if (confirm("Reset all Vocab Spotlight progress on this browser?" + cloudNote)) {
       localStorage.removeItem(STORAGE_KEY);
+      if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.clear === "function") {
+        window.QuizMarioLearnerEvents.clear();
+      }
       save = loadSave();
       sortMode = "default";
       voiceOn = true;

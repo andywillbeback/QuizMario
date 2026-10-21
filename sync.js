@@ -139,6 +139,9 @@
     try { localStorage.removeItem("quizmario-auth"); } catch (_) {}
     if (opts.wipe) {
       try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+      if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.clear === "function") {
+        try { window.QuizMarioLearnerEvents.clear(); } catch (_) {}
+      }
     }
     location.replace("login.html");
   }
@@ -195,6 +198,9 @@
       else sendToLogin();
     } finally {
       holdUploads = false;
+      if (user && window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.bindUser === "function") {
+        try { window.QuizMarioLearnerEvents.bindUser(user); } catch (_) {}
+      }
       if (pendingDuringBoot && user) {
         pendingDuringBoot = false;
         enqueueUpload();
