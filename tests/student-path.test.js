@@ -100,17 +100,20 @@ function staticGuards() {
   assert.ok(!index.includes(">场景<") && !index.includes(">默认<"), "sort labels are gone");
   assert.ok(!game.includes("btn-sort-scene") && !game.includes('sortMode === "scene"'), "scene sort path is gone");
   assert.ok(game.includes('return "default"'), "saved sort mode collapses to default");
-  assert.ok(index.includes('id="btn-due-today"') && index.includes("今日到期"), "今日到期 entry");
-  assert.ok(index.includes('id="btn-wrong-book"') && index.includes("错词本"), "错词本 entry");
+  assert.ok(index.includes('id="btn-must-practice"') && index.includes("今日必练"), "今日必练 entry");
+  assert.ok(index.includes('id="must-gate"') && index.includes("先清掉"), "daily soft gate copy");
+  assert.ok(!index.includes('id="btn-due-today"') && !index.includes('id="btn-wrong-book"'), "separate due and wrong-book CTAs are gone");
   assert.ok(index.includes('src="review-queues.js"'), "queue rules load with the game");
   assert.ok(index.includes('src="learner-events.js"'), "learner event emitter loads with the game");
   assert.ok(index.includes('id="btn-export-learner-events"'), "JSONL export is on the home screen");
   assert.ok(game.includes("emitLearnerAnswer") && game.includes("signalDueItems") && game.includes("emitWrongBook"),
     "answers, due queue, and wrong-book entry emit learner events");
   assert.ok(!/已同步到\s*ALS/.test(index + game + sync), "no fake ALS sync banner");
-  assert.ok(game.includes("今天没有到期的单词"), "due empty copy");
-  assert.ok(game.includes("错词本还是空的"), "wrong-book empty copy");
-  assert.ok(game.includes('sessionKind === "wrongbook"'), "wrong book is its own practice mode");
+  assert.ok(game.includes("今天没有到期或错词"), "empty 今日必练 copy");
+  assert.ok(game.includes('sessionKind === "wrongbook"'), "wrong-book graduation still checks that session");
+  assert.ok(game.includes('sessionKind === "must"'), "今日必练 is its own practice mode");
+  assert.ok(game.includes("mergePracticeQueue"), "home builds the combined queue");
+  assert.ok(!game.includes("继续闯关会先练今日到期"), "继续闯关 no longer prefers the due queue");
   assert.ok(!game.includes("btn-rate-again"), "no third Again button");
   const rules = read("srs-rules.js");
   assert.ok(rules.includes("12 * 60 * 1000"), "challenge length constant is 12 minutes");
@@ -511,35 +514,31 @@ async function main() {
     assert.ok(home.text.includes("继续闯关"), "continue practice is on the student home");
     assert.ok(home.text.includes("12分钟挑战"), "timed challenge is separate from regular study");
     assert.ok(home.text.includes("拼写"), "spelling is its own entry");
-    assert.ok(home.text.includes("今日到期"), "今日到期 is on the student home");
-    assert.ok(home.text.includes("错词本"), "错词本 is on the student home");
+    assert.ok(home.text.includes("今日必练"), "今日必练 is explained on the student home");
+    assert.ok(!home.html.includes("btn-due-today") && !home.html.includes("btn-wrong-book"), "due and wrong-book are not separate buttons");
 
     const emptyQueues = await evalRetry(`(() => {
-      document.getElementById("btn-due-today").click();
-      const due = document.getElementById("queue-empty");
-      const dueSnap = {
-        text: due ? due.textContent : "",
+      const must = document.getElementById("btn-must-practice");
+      const gate = document.getElementById("must-gate");
+      const hint = document.getElementById("continue-hint");
+      return {
         home: document.getElementById("screen-home").classList.contains("active"),
         play: document.getElementById("screen-play").classList.contains("active"),
-        clear: document.getElementById("screen-clear").classList.contains("active")
-      };
-      document.getElementById("btn-wrong-book").click();
-      const wrong = document.getElementById("queue-empty");
-      return {
-        due: dueSnap,
-        wrongText: wrong ? wrong.textContent : "",
-        wrongHome: document.getElementById("screen-home").classList.contains("active"),
-        wrongPlay: document.getElementById("screen-play").classList.contains("active"),
+        mustHidden: !must || must.hidden,
+        gateHidden: !gate || gate.hidden,
+        primacy: document.getElementById("screen-home").getAttribute("data-review-primacy"),
+        continueSecondary: document.getElementById("btn-continue").classList.contains("secondary"),
+        hint: hint ? hint.textContent : "",
         again: !!document.getElementById("btn-rate-again")
       };
     })()`);
-    assert.strictEqual(emptyQueues.due.home, true, "empty 今日到期 stays on the homepage");
-    assert.strictEqual(emptyQueues.due.play, false);
-    assert.strictEqual(emptyQueues.due.clear, false);
-    assert.ok(emptyQueues.due.text.includes("没有到期"), emptyQueues.due.text);
-    assert.strictEqual(emptyQueues.wrongHome, true);
-    assert.strictEqual(emptyQueues.wrongPlay, false);
-    assert.ok(emptyQueues.wrongText.includes("错词本还是空的"), emptyQueues.wrongText);
+    assert.strictEqual(emptyQueues.home, true, "empty 今日必练 stays on the homepage");
+    assert.strictEqual(emptyQueues.play, false);
+    assert.strictEqual(emptyQueues.mustHidden, true, "a zero count hides 今日必练");
+    assert.strictEqual(emptyQueues.gateHidden, true, "a zero count does not raise the soft gate");
+    assert.strictEqual(emptyQueues.primacy, "hidden");
+    assert.strictEqual(emptyQueues.continueSecondary, false, "继续闯关 stays the primary button when nothing is due");
+    assert.ok(emptyQueues.hint.includes("没有到期或错词"), emptyQueues.hint);
     assert.strictEqual(emptyQueues.again, false);
 
     await evalRetry(`document.getElementById("btn-continue").click()`);
@@ -792,21 +791,84 @@ async function main() {
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const dueHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
-      const due = document.getElementById("due-badge");
-      const wrong = document.getElementById("wrong-badge");
+      const badge = document.getElementById("must-badge");
+      const gate = document.getElementById("must-gate");
       const hint = document.getElementById("continue-hint");
-      if (!home || !home.classList.contains("active") || !due || due.hidden) return null;
+      const logged = window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn();
+      if (!home || !home.classList.contains("active") || !logged) return null;
+      if (!gate || gate.hidden || !badge || badge.hidden) return null;
       return {
-        due: due.textContent,
-        wrong: wrong && !wrong.hidden ? wrong.textContent : "0",
+        count: badge.textContent,
+        copy: (document.getElementById("must-gate-copy") || {}).textContent || "",
+        primacy: home.getAttribute("data-review-primacy"),
+        mustSecondary: document.getElementById("btn-must-practice").classList.contains("secondary"),
+        continueSecondary: document.getElementById("btn-continue").classList.contains("secondary"),
+        play: document.getElementById("screen-play").classList.contains("active"),
         hint: hint && !hint.hidden ? hint.textContent : ""
       };
-    })()`), 10000, "home with dues");
-    assert.strictEqual(dueHome.due, "2", "opened groups share one due count, locked and new cards stay out");
-    assert.ok(Number(dueHome.wrong) >= 1, "cumulative wrong >= 2 is already in 错词本");
-    assert.ok(dueHome.hint.includes("今日到期"), dueHome.hint);
+    })()`), 15000, "soft gate");
+    assert.strictEqual(dueHome.play, false, "the soft gate does not auto-open cards");
+    assert.strictEqual(dueHome.count, "3", "due cards first, then the wrong-book card, with no double count");
+    assert.strictEqual(dueHome.copy, "今天有 3 道到期/错词，先清掉？");
+    assert.strictEqual(dueHome.primacy, "primary");
+    assert.strictEqual(dueHome.mustSecondary, false);
+    assert.strictEqual(dueHome.continueSecondary, true, "今日必练 is more prominent than 继续闯关");
+    assert.ok(dueHome.hint.includes("今日必练"), dueHome.hint);
+
+    await evalRetry(`document.getElementById("btn-must-later").click()`);
+    const later = await evalRetry(`(() => {
+      const gate = document.getElementById("must-gate");
+      const home = document.getElementById("screen-home");
+      return {
+        gateHidden: !gate || gate.hidden,
+        home: !!(home && home.classList.contains("active")),
+        play: document.getElementById("screen-play").classList.contains("active"),
+        primacy: home.getAttribute("data-review-primacy")
+      };
+    })()`);
+    assert.strictEqual(later.gateHidden, true, "稍后 closes the gate");
+    assert.strictEqual(later.home, true);
+    assert.strictEqual(later.play, false, "稍后 does not enter the queue");
+    assert.strictEqual(later.primacy, "primary", "稍后 leaves 今日必练 as the primary button");
+
+    await reloadToGate("gate after 稍后");
+    await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
+    const noSpam = await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const gate = document.getElementById("must-gate");
+      const badge = document.getElementById("must-badge");
+      const logged = window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn();
+      if (!home || !home.classList.contains("active") || !logged || !badge || badge.hidden) return null;
+      if (!gate || !gate.hidden) return null;
+      return badge.textContent;
+    })()`), 15000, "home without a second gate");
+    assert.strictEqual(noSpam, "3", "稍后 lasts the rest of the day");
 
     await evalRetry(`document.getElementById("btn-continue").click()`);
+    const study = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      const clock = document.getElementById("challenge-clock");
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      return {
+        title: document.getElementById("play-level").textContent,
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
+        choice: (document.querySelector("#choices .choice") || {}).textContent || "",
+        clockHidden: !clock || clock.hidden
+      };
+    })()`), 10000, "continue stays meaning study");
+    assert.notStrictEqual(study.title, "今日必练");
+    assert.ok(study.label.indexOf("中文意思") !== -1, "继续闯关 is English → meaning: " + study.label);
+    assert.ok(/[\u4e00-\u9fff]/.test(study.choice), "继续闯关 choices stay Chinese");
+    assert.strictEqual(study.clockHidden, true, "继续闯关 still does not start the challenge clock");
+
+    await evalRetry(`document.getElementById("btn-quit").click()`);
+    await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const gate = document.getElementById("must-gate");
+      return home && home.classList.contains("active") && gate && gate.hidden ? true : null;
+    })()`), 8000, "home after continue");
+    await evalRetry(`document.getElementById("btn-must-practice").click()`);
     const duePlay = await waitFor(async () => evalRetry(`(() => {
       const play = document.getElementById("screen-play");
       const n = document.querySelectorAll("#choices .choice").length;
@@ -814,7 +876,9 @@ async function main() {
       if (!(play && play.classList.contains("active")) || n !== 4) return null;
       return {
         title: document.getElementById("play-level").textContent,
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
         prompt: document.getElementById("prompt-main").textContent.trim(),
+        choice: (document.querySelector("#choices .choice") || {}).textContent || "",
         clockHidden: !clock || clock.hidden,
         again: !!document.getElementById("btn-rate-again"),
         unknown: (() => {
@@ -822,10 +886,12 @@ async function main() {
           return !!(b && !b.hidden && b.textContent.indexOf("不会") !== -1);
         })()
       };
-    })()`), 10000, "due queue");
-    assert.strictEqual(duePlay.title, "今日到期");
+    })()`), 10000, "今日必练 queue");
+    assert.strictEqual(duePlay.title, "今日必练");
+    assert.ok(duePlay.label.indexOf("英文单词") !== -1, "今日必练 stays ZH → EN: " + duePlay.label);
     assert.strictEqual(duePlay.prompt, planted.meaning, "earliest due card is first");
-    assert.strictEqual(duePlay.clockHidden, true, "a due queue is not a 12-minute set challenge");
+    assert.ok(!/[\u4e00-\u9fff]/.test(duePlay.choice.replace(/^\\d+\\.\\s*/, "")), "今日必练 choices are English");
+    assert.strictEqual(duePlay.clockHidden, true, "今日必练 is not a 12-minute set challenge");
     assert.strictEqual(duePlay.again, false);
     assert.strictEqual(duePlay.unknown, true, "不会 is available instead of forcing a guess");
 
@@ -927,13 +993,19 @@ async function main() {
     await evalRetry(`document.getElementById("btn-quit").click()`);
     const wrongHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
-      const wrong = document.getElementById("wrong-badge");
-      if (!home || !home.classList.contains("active") || !wrong || wrong.hidden) return null;
-      return wrong.textContent;
+      const badge = document.getElementById("must-badge");
+      const gate = document.getElementById("must-gate");
+      if (!home || !home.classList.contains("active") || !badge || badge.hidden) return null;
+      if (!gate || !gate.hidden) return null;
+      return {
+        count: badge.textContent,
+        primacy: home.getAttribute("data-review-primacy")
+      };
     })()`), 8000, "home after a miss");
-    assert.ok(Number(wrongHome) >= 2, "miss plus the older wrong>=2 card are both listed");
+    assert.ok(Number(wrongHome.count) >= 3, "the miss stays in 今日必练 with the other due and wrong-book cards");
+    assert.strictEqual(wrongHome.primacy, "secondary", "starting 今日必练 demotes it for the rest of the day");
 
-    await evalRetry(`document.getElementById("btn-wrong-book").click()`);
+    await evalRetry(`document.getElementById("btn-must-practice").click()`);
     const wrongPlay = await waitFor(async () => evalRetry(`(() => {
       const play = document.getElementById("screen-play");
       const n = document.querySelectorAll("#choices .choice").length;
@@ -943,8 +1015,8 @@ async function main() {
         again: !!document.getElementById("btn-rate-again"),
         typed: !!document.getElementById("answer-input")
       };
-    })()`), 10000, "错词本 practice");
-    assert.strictEqual(wrongPlay.title, "错词本");
+    })()`), 10000, "今日必练 again");
+    assert.strictEqual(wrongPlay.title, "今日必练");
     assert.strictEqual(wrongPlay.again, false);
     assert.strictEqual(wrongPlay.typed, false);
 

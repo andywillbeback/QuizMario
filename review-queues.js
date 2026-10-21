@@ -7,16 +7,32 @@
  *   A card is included only when it is not pure-new and due <= now
  *   (the same isNewCard / isDue predicates as srs-rules.js).
  *   One queue, earliest due first, across those groups.
- *   Continue preference: dueCount > 0 → "due", else "latest" (the frontier group).
+ *
+ * 今日必练
+ *   One practice queue: due cards first, then active 错词本 rows that are
+ *   not already in that due list (same card key is kept once, in the due slot).
+ *   Storage stays split: SM-2 due is still collectDue; the book is still
+ *   touchWrongBook / noteWrongBookCorrect.
+ *   Home primacy: count >= 1 and not started today → "primary";
+ *   count >= 1 and started today → "secondary"; count 0 → "hidden".
+ *   Dismissing the daily soft gate does not count as starting.
+ *   The soft gate shows once per calendar day for a signed-in student
+ *   while the combined count is at least 1 and they have neither
+ *   dismissed nor started 今日必练 that day.
+ *
+ * 继续闯关
+ *   Always "latest" (the frontier group, English → meaning). Due and
+ *   wrong-book review belong to 今日必练, not to continue.
  *
  * 错词本
  *   A lemma enters when a review is quality 0 (wrong answer / Again),
  *   or when cumulative prog.wrong >= 2 and it is not already graduated
  *   at that same wrong count.
- *   Graduation: two consecutive correct ratings inside 错词本 practice
- *   set active=false and snapshot wrongAtGrad. The lemma leaves the book.
+ *   Graduation: two consecutive correct ratings while that lemma is practiced
+ *   inside 错词本 or 今日必练 (the caller decides). That sets active=false
+ *   and snapshots wrongAtGrad. The lemma leaves the book.
  *   A later miss (or a higher wrong count) puts it back with streak 0.
- *   Correct ratings outside 错词本 do not advance the streak.
+ *   Correct ratings in 继续闯关 do not advance the streak.
  *   Inactive rows are kept so a later scan does not re-collect a graduate
  *   whose cumulative wrong is still >= 2.
  */
@@ -38,9 +54,113 @@
     return levelIdx >= 0 && levelIdx < unlocked;
   }
 
-  /** Continue opens the due queue when anything is due; otherwise the latest group. */
-  function continueTarget(dueCount) {
-    return (Number(dueCount) || 0) > 0 ? "due" : "latest";
+  /** 继续闯关 is the frontier study group. dueCount is ignored; review is 今日必练. */
+  function continueTarget(_dueCount) {
+    return "latest";
+  }
+
+  function itemId(item) {
+    if (!item || typeof item !== "object") return "";
+    if (item.key) return String(item.key);
+    if (item.cardKey) return String(item.cardKey);
+    return "";
+  }
+
+  function copyItem(item) {
+    var copy = {};
+    var keys = Object.keys(item);
+    for (var i = 0; i < keys.length; i++) copy[keys[i]] = item[keys[i]];
+    return copy;
+  }
+
+  /**
+   * Due cards first (caller order, earliest due already sorted), then
+   * wrong-book rows whose card is not already in the due list.
+   * A shared card stays in the due position and is marked fromWrong too.
+   */
+  function mergePracticeQueue(dueItems, wrongItems) {
+    var due = dueItems || [];
+    var wrong = wrongItems || [];
+    var out = [];
+    var indexById = {};
+    var i;
+    for (i = 0; i < due.length; i++) {
+      var item = due[i];
+      var id = itemId(item);
+      if (!item || !id || indexById[id] != null) continue;
+      var copy = copyItem(item);
+      copy.fromDue = true;
+      copy.fromWrong = false;
+      indexById[id] = out.length;
+      out.push(copy);
+    }
+    for (i = 0; i < wrong.length; i++) {
+      var row = wrong[i];
+      var wid = itemId(row);
+      if (!row || !wid) continue;
+      if (indexById[wid] != null) {
+        out[indexById[wid]].fromWrong = true;
+        continue;
+      }
+      var wcopy = copyItem(row);
+      wcopy.fromDue = false;
+      wcopy.fromWrong = true;
+      indexById[wid] = out.length;
+      out.push(wcopy);
+    }
+    return out;
+  }
+
+  function combinedCount(dueItems, wrongItems) {
+    return mergePracticeQueue(dueItems, wrongItems).length;
+  }
+
+  /** Today's gate row. A different calendar day clears started and dismissed. */
+  function freshDailyGate(record, day) {
+    var row = record && typeof record === "object" ? record : {};
+    var today = String(day || "");
+    if (row.day !== today) {
+      return { day: today, started: false, dismissed: false };
+    }
+    return {
+      day: today,
+      started: !!row.started,
+      dismissed: !!row.dismissed,
+    };
+  }
+
+  function markDailyGate(record, day, action) {
+    var next = freshDailyGate(record, day);
+    if (action === "start") next.started = true;
+    else if (action === "dismiss") next.dismissed = true;
+    return next;
+  }
+
+  /**
+   * Soft gate: signed in, combined count >= 1, and this calendar day has
+   * neither a dismiss (稍后) nor a start (开始 / 今日必练). Not a redirect.
+   */
+  function shouldShowSoftGate(opts) {
+    opts = opts || {};
+    if (!opts.signedIn) return false;
+    if ((Number(opts.count) || 0) < 1) return false;
+    var row = freshDailyGate(opts.record, opts.day);
+    if (row.started || row.dismissed) return false;
+    return true;
+  }
+
+  /**
+   * primary: 今日必练 is the first, more prominent home button.
+   * secondary: still listed, after the student has started the queue today.
+   * hidden: nothing to review. Dismiss alone does not demote the button.
+   */
+  function homePrimacy(opts) {
+    opts = opts || {};
+    var count = Number(opts.count) || 0;
+    if (count < 1) return "hidden";
+    var row = freshDailyGate(opts.record, opts.day);
+    if (row.started) return "secondary";
+    return "primary";
   }
 
   /**
@@ -203,6 +323,13 @@
     lemmaKey: lemmaKey,
     isOpenedGroup: isOpenedGroup,
     continueTarget: continueTarget,
+    itemId: itemId,
+    mergePracticeQueue: mergePracticeQueue,
+    combinedCount: combinedCount,
+    freshDailyGate: freshDailyGate,
+    markDailyGate: markDailyGate,
+    shouldShowSoftGate: shouldShowSoftGate,
+    homePrimacy: homePrimacy,
     collectDue: collectDue,
     touchWrongBook: touchWrongBook,
     scanCumulative: scanCumulative,

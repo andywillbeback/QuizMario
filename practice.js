@@ -2,8 +2,8 @@
  * Loaded before game.js. Also require()-able from node tests.
  *
  * 通关 still comes from srs-rules.js (solid = review and interval >= 1 day).
- * Only meaning practice (看英文选中文) and the existing 今日到期 / 错词本
- * reviews call schedule(). 拼写 is a separate record and cannot block a set.
+ * Only meaning practice (看英文选中文) and 今日必练 (到期 + 错词本, 看中文选英文)
+ * call schedule(). 拼写 is a separate record and cannot block a set.
  *
  * Regular study has no clock. 12分钟挑战 is the only mode that starts one.
  * Beginners get a small new-word batch. A heavy due pile shrinks that batch.

@@ -5,8 +5,9 @@
  * 已学会 is a later-day clean recall, not the same thing as 通关 or 保持率.
  * 继续闯关 is regular study with no clock. 12分钟挑战 is the only timed mode (CHALLENGE_MS).
  * 通关 is 看英文选中文. 拼写 is tracked separately and does not block the first 通关.
- * 今日到期: one SM-2 queue of due cards across opened groups (review-queues.js).
- * 错词本: misses and cumulative wrong >= 2; two correct ratings in that mode graduate.
+ * 今日必练: due cards first, then 错词本 fill-in (review-queues.js). ZH→EN, still schedule().
+ * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
+ * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  * learner-events.js emits quizmario signals only. schedule() remains the only SRS clock.
  */
@@ -58,11 +59,11 @@
   let playGen = 0;
   /** True when this visit opened a set that had already cleared. Review, not a challenge. */
   let sessionStartedClear = false;
-  /** "level" keeps the set flow. "due", "wrongbook", and "spelling" are other queues. */
+  /** "level" keeps the set flow. "must" is 今日必练. "due" / "wrongbook" remain for older sessions. "spelling" does not count. */
   let sessionKind = "level";
   /** "study" has no clock. "challenge" is the 12-minute set. */
   let sessionMode = "study";
-  /** "meaning" is EN→ZH and counts toward 通关. "form" is the ZH→EN review used by 今日到期 and 错词本. "spelling" does not. */
+  /** "meaning" is EN→ZH and counts toward 通关. "form" is the ZH→EN review used by 今日必练. "spelling" does not. */
   let sessionDirection = "meaning";
   /** Headwords missed in this visit, for the concrete feedback line. */
   let sessionWrongs = [];
@@ -143,6 +144,7 @@
         ? data.wrongBook
         : {}
     );
+    sv.mustPractice = normalizeMustPractice(data.mustPractice);
     const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
     sv.practice = {
       meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
@@ -298,6 +300,7 @@
     const s = $("screen-" + name);
     if (s) s.classList.add("active");
     if (name === "home") refreshHomeQueues();
+    else dismissMustGate();
     // Level select is much taller than play. Leaving the old scroll offset
     // (especially with overflow-x:hidden on iOS) shows empty space instead of the word.
     try { window.scrollTo(0, 0); } catch (_) {}
@@ -1338,12 +1341,12 @@
   }
 
   function updateProgress() {
-    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "spelling") {
+    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "must" || sessionKind === "spelling") {
       const left = queue.length + requeueSoon.length + (currentCard ? 1 : 0);
       const total = Math.max(sessionTarget, left, 1);
       const done = Math.max(0, Math.min(total, total - left));
       const pct = Math.round((done / total) * 100);
-      const modeLabel = sessionKind === "due" ? "今日到期" : (sessionKind === "spelling" ? "拼写" : "错词本");
+      const modeLabel = queueModeLabel(sessionKind);
       const bar = $("play-progress");
       if (bar) bar.style.width = pct + "%";
       const pctEl = $("set-progress-pct");
@@ -1577,7 +1580,7 @@
       } else {
         why += '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
       }
-      if (sessionKind === "wrongbook") {
+      if (sessionKind === "wrongbook" || (sessionKind === "must" && cardInWrongBook(currentCard))) {
         why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
       }
       why += feedbackHtml(viewFor(kind, chosen, "约 10 分钟后", ""));
@@ -1624,7 +1627,7 @@
     const nowMs = opts.now || Date.now();
     schedule(prog, quality === 2 ? 2 : 1, nowMs, opts);
     let bookNote = "";
-    if (sessionKind === "wrongbook" && currentCard) {
+    if ((sessionKind === "wrongbook" || (sessionKind === "must" && cardInWrongBook(currentCard))) && currentCard) {
       const res = RQ.noteWrongBookCorrect(
         ensureWrongBook(),
         RQ.lemmaKey(currentTrack, currentCard.word),
@@ -1934,6 +1937,7 @@
       updatedAt: payload.updatedAt,
       wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
       practice: payload.practice && typeof payload.practice === "object" ? payload.practice : {},
+      mustPractice: payload.mustPractice,
     });
   }
 
@@ -2404,8 +2408,16 @@
   if ($("btn-copy-code")) $("btn-copy-code").addEventListener("click", copyBackupCode);
   if ($("btn-paste-code")) $("btn-paste-code").addEventListener("click", importFromBackupCode);
 
-  const DUE_EMPTY = "今天没有到期的单词。先去闯关，到时间的词会出现在这里。";
-  const WRONG_EMPTY = "错词本还是空的。选错的词，或者累计错过两次的词，会自动收进来。";
+  const MUST_EMPTY = "今天没有到期或错词。先去闯关，到时间的词和错过的词会进今日必练。";
+
+  function normalizeMustPractice(raw) {
+    const row = raw && typeof raw === "object" ? raw : {};
+    return {
+      day: typeof row.day === "string" ? row.day : "",
+      started: !!row.started,
+      dismissed: !!row.dismissed,
+    };
+  }
 
   function ensureWrongBook() {
     if (!save.wrongBook || typeof save.wrongBook !== "object" || Array.isArray(save.wrongBook)) {
@@ -2573,6 +2585,31 @@
     return items;
   }
 
+  function cardInWrongBook(card) {
+    if (!card || !card.word) return false;
+    const row = ensureWrongBook()[RQ.lemmaKey(currentTrack, card.word)];
+    return !!(row && row.active);
+  }
+
+  function mustPracticeItems(now) {
+    return RQ.mergePracticeQueue(dueQueueItems(now), wrongBookQueueItems());
+  }
+
+  function queueModeLabel(kind) {
+    if (kind === "must") return "今日必练";
+    if (kind === "due") return "今日到期";
+    if (kind === "spelling") return "拼写";
+    return "错词本";
+  }
+
+  function todayKey(now) {
+    return SRS.calendarDay(now || Date.now());
+  }
+
+  function signedIn() {
+    return !!(window.QuizMarioCloud && typeof window.QuizMarioCloud.loggedIn === "function" && window.QuizMarioCloud.loggedIn());
+  }
+
   function setCountBadge(id, n) {
     const el = $(id);
     if (!el) return;
@@ -2592,28 +2629,123 @@
     if (el) el.hidden = true;
   }
 
+  function applyHomePrimacy(mode) {
+    const must = $("btn-must-practice");
+    const cont = $("btn-continue");
+    const queues = $("home-queues");
+    const home = $("screen-home");
+    if (home) home.setAttribute("data-review-primacy", mode);
+    if (!must || !cont) return;
+    if (mode === "hidden") {
+      must.hidden = true;
+      must.classList.remove("is-hero");
+      cont.classList.remove("secondary");
+      if (queues) queues.hidden = true;
+      return;
+    }
+    must.hidden = false;
+    if (mode === "primary") {
+      if (queues) {
+        queues.hidden = false;
+        queues.appendChild(must);
+      }
+      must.classList.remove("secondary");
+      must.classList.add("is-hero");
+      cont.classList.add("secondary");
+      return;
+    }
+    must.classList.add("secondary");
+    must.classList.remove("is-hero");
+    cont.classList.remove("secondary");
+    cont.insertAdjacentElement("afterend", must);
+    if (queues) queues.hidden = true;
+  }
+
+  function dismissMustGate() {
+    const gate = $("must-gate");
+    if (gate) gate.hidden = true;
+  }
+
+  function maybeShowMustGate(count) {
+    const gate = $("must-gate");
+    if (!gate) return;
+    const show = RQ.shouldShowSoftGate({
+      signedIn: signedIn(),
+      count: count,
+      day: todayKey(),
+      record: save.mustPractice,
+    });
+    if (!show) {
+      gate.hidden = true;
+      return;
+    }
+    const copy = $("must-gate-copy");
+    if (copy) copy.textContent = "今天有 " + count + " 道到期/错词，先清掉？";
+    const wasHidden = gate.hidden;
+    gate.hidden = false;
+    if (wasHidden) {
+      const start = $("btn-must-start");
+      if (start && typeof start.focus === "function") start.focus();
+    }
+  }
+
   function refreshHomeQueues() {
-    if (!$("btn-due-today") && !$("btn-wrong-book")) return;
+    if (!$("btn-must-practice")) return;
     hideQueueEmpty();
     const added = scanWrongBook();
     const dueItems = dueQueueItems();
     signalDueItems(dueItems);
-    const wrongItems = wrongBookQueueItems();
-    setCountBadge("due-badge", dueItems.length);
-    setCountBadge("wrong-badge", wrongItems.length);
+    const merged = RQ.mergePracticeQueue(dueItems, wrongBookQueueItems());
+    setCountBadge("must-badge", merged.length);
+    const mode = RQ.homePrimacy({
+      count: merged.length,
+      day: todayKey(),
+      record: save.mustPractice,
+    });
+    applyHomePrimacy(mode);
     const hint = $("continue-hint");
     if (hint) {
-      hint.hidden = dueItems.length <= 0;
-      hint.textContent = dueItems.length > 0
-        ? ("有 " + dueItems.length + " 个词到期了，继续闯关会先练今日到期。")
-        : "";
+      hint.hidden = false;
+      if (merged.length > 0 && mode === "primary") {
+        hint.textContent = "今天有 " + merged.length + " 道到期/错词，先做今日必练。";
+      } else if (merged.length > 0) {
+        hint.textContent = "今日必练还剩 " + merged.length + " 道。继续闯关是看英文选中文。";
+      } else {
+        hint.textContent = "今天没有到期或错词。继续闯关是看英文选中文。";
+      }
     }
+    maybeShowMustGate(merged.length);
     if (added > 0) persist();
   }
 
-  function startDueSession(items) {
-    signalDueItems(items);
-    startQueueSession("due", items);
+  window.__QM.onSessionReady = function () {
+    const home = $("screen-home");
+    if (home && home.classList.contains("active")) refreshHomeQueues();
+  };
+
+  function markMust(action) {
+    save.mustPractice = RQ.markDailyGate(save.mustPractice, todayKey(), action);
+    persist();
+  }
+
+  function startMustPractice() {
+    const items = mustPracticeItems();
+    markMust("start");
+    dismissMustGate();
+    if (!items.length) {
+      showQueueEmpty(MUST_EMPTY);
+      refreshHomeQueues();
+      return;
+    }
+    hideQueueEmpty();
+    signalDueItems(items.filter((it) => it.fromDue));
+    startQueueSession("must", items);
+  }
+
+  function laterMustPractice() {
+    markMust("dismiss");
+    dismissMustGate();
+    refreshHomeQueues();
   }
 
   function startSpellingSession() {
@@ -2675,7 +2807,7 @@
     hideQueueEmpty();
     showScreen("play");
     const playLevel = $("play-level");
-    const modeLabel = kind === "due" ? "今日到期" : (kind === "spelling" ? "拼写" : "错词本");
+    const modeLabel = queueModeLabel(kind);
     if (playLevel) playLevel.textContent = modeLabel;
     const progressLabel = $("set-progress-label");
     if (progressLabel) progressLabel.textContent = modeLabel;
@@ -2703,7 +2835,13 @@
     if (nextBtn) nextBtn.hidden = true;
     const title = $("clear-title");
     const msg = $("clear-msg");
-    if (kind === "due") {
+    if (kind === "must") {
+      const left = mustPracticeItems().length;
+      if (title) title.textContent = left ? "这轮今日必练练完了" : "今日必练清空了";
+      if (msg) msg.textContent = left
+        ? ("还剩 " + left + " 道。到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。")
+        : "这批到期的词都见过了。错词本里连续答对两次的已经离开。";
+    } else if (kind === "due") {
       if (title) title.textContent = "今日到期练完了";
       if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
     } else if (kind === "spelling") {
@@ -2731,12 +2869,7 @@
   if ($("btn-back-gate")) $("btn-back-gate").addEventListener("click", () => showScreen("gate"));
 
   $("btn-continue").addEventListener("click", () => {
-    const dueItems = dueQueueItems();
-    if (RQ.continueTarget(dueItems.length) === "due") {
-      hideQueueEmpty();
-      startDueSession(dueItems);
-      return;
-    }
+    hideQueueEmpty();
     const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
     startLevel(lvl);
   });
@@ -2746,24 +2879,9 @@
     startLevel(lvl, { mode: "challenge" });
   });
   if ($("btn-spelling")) $("btn-spelling").addEventListener("click", () => startSpellingSession());
-  if ($("btn-due-today")) $("btn-due-today").addEventListener("click", () => {
-    const dueItems = dueQueueItems();
-    if (!dueItems.length) {
-      showQueueEmpty(DUE_EMPTY);
-      return;
-    }
-    hideQueueEmpty();
-    startDueSession(dueItems);
-  });
-  if ($("btn-wrong-book")) $("btn-wrong-book").addEventListener("click", () => {
-    const items = wrongBookQueueItems();
-    if (!items.length) {
-      showQueueEmpty(WRONG_EMPTY);
-      return;
-    }
-    hideQueueEmpty();
-    startQueueSession("wrongbook", items);
-  });
+  if ($("btn-must-practice")) $("btn-must-practice").addEventListener("click", () => startMustPractice());
+  if ($("btn-must-start")) $("btn-must-start").addEventListener("click", () => startMustPractice());
+  if ($("btn-must-later")) $("btn-must-later").addEventListener("click", () => laterMustPractice());
   $("btn-levels").addEventListener("click", () => {
     renderLevels();
     showScreen("levels");
