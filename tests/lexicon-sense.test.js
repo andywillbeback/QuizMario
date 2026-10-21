@@ -51,6 +51,19 @@ assert.strictEqual(coreOne("rail").meaning_zh, "铁轨");
 assert.strictEqual(coreOne("mummy").meaning_zh, "妈妈");
 assert.strictEqual(coreOne("communicate").meaning_zh, "沟通；交流");
 
+assert.strictEqual(coreOne("get").meaning_zh, "得到；变得");
+assert.strictEqual(coreOne("get").example_en, "You get one point for each correct answer.");
+assert.ok(coreOne("get").example_zh.includes("得到"));
+assert.ok(!/get up/i.test(coreOne("get").example_en));
+assert.strictEqual(coreOne("dress").meaning_zh, "连衣裙");
+assert.ok(coreOne("dress").example_zh.includes("连衣裙"));
+assert.strictEqual(coreOne("trouble").meaning_zh, "麻烦；困境");
+assert.ok(coreOne("trouble").example_zh.includes("麻烦"));
+assert.strictEqual(coreOne("decent").meaning_zh, "得体的");
+assert.ok(/得体/.test(coreOne("decent").example_zh));
+assert.strictEqual(coreOne("chat").meaning_zh, "聊天");
+assert.strictEqual(coreOne("pair").meaning_zh, "一双");
+
 // Exam tracks use the curriculum-frequency gloss from the same-set disambiguation.
 // The core bank assertions above keep 引力 / 认领.
 const expect = {
@@ -61,6 +74,12 @@ const expect = {
   rail: "铁轨",
   mummy: "妈妈",
   communicate: "沟通；交流",
+  get: "得到；变得",
+  dress: "连衣裙",
+  trouble: "麻烦；困境",
+  decent: "得体的",
+  chat: "聊天",
+  pair: "一双",
 };
 for (const word of Object.keys(expect)) {
   const hits = cardsOf(tracks, word);
@@ -78,19 +97,39 @@ for (const hit of cardsOf(tracks, "claim")) {
   assert.strictEqual(hit.example_en, "Some students claim that the test was too hard.", hit.track);
   assert.strictEqual(hit.example_zh, "有些学生声称这次考试太难了。", hit.track);
 }
-
-const repairMeaning = {
-  "slice-2.json": ["attraction", "景点；吸引力"],
-  "slice-3.json": ["boom", "轰鸣"],
-  "slice-6.json": ["mummy", "妈妈"],
-  "slice-7.json": ["rail", "铁轨"],
-  "slice-8.json": ["story", "故事"],
-  "slice-10.json": ["claim", "声称；宣称"],
-};
-for (const file of Object.keys(repairMeaning)) {
-  const data = JSON.parse(fs.readFileSync(path.join(root, "data/repairs", file), "utf8"));
-  const [word, meaning] = repairMeaning[file];
-  assert.strictEqual(data[word].meaning_zh, meaning, file);
+for (const hit of cardsOf(tracks, "get")) {
+  assert.strictEqual(hit.example_en, "You get one point for each correct answer.", hit.track);
+  assert.strictEqual(hit.example_zh, "每答对一题，你就得到一分。", hit.track);
+  assert.ok(!/get up|起床/.test(hit.example_en + hit.example_zh), hit.track);
 }
+for (const hit of cardsOf(tracks, "dress")) {
+  assert.ok(hit.example_zh.includes("连衣裙"), hit.track);
+}
+for (const hit of cardsOf(tracks, "trouble")) {
+  assert.ok(/in trouble/i.test(hit.example_en) && hit.example_zh.includes("麻烦"), hit.track);
+}
+assert.strictEqual(cardsOf(tracks, "decent").length, 1, "decent is a gaokao-only headword");
+
+const repairMeaning = [
+  ["slice-2.json", "attraction", "景点；吸引力"],
+  ["slice-3.json", "boom", "轰鸣"],
+  ["slice-6.json", "mummy", "妈妈"],
+  ["slice-6.json", "pair", "一双"],
+  ["slice-7.json", "rail", "铁轨"],
+  ["slice-8.json", "story", "故事"],
+  ["slice-10.json", "claim", "声称；宣称"],
+  ["slice-10.json", "chat", "聊天"],
+  ["slice-0.json", "decent", "得体的"],
+  ["slice-4.json", "dress", "连衣裙"],
+  ["slice-9.json", "trouble", "麻烦；困境"],
+];
+for (const [file, word, meaning] of repairMeaning) {
+  const data = JSON.parse(fs.readFileSync(path.join(root, "data/repairs", file), "utf8"));
+  assert.strictEqual(data[word].meaning_zh, meaning, file + " " + word);
+}
+const getRepair = JSON.parse(fs.readFileSync(path.join(root, "data/repairs/gloss-only.json"), "utf8")).get;
+assert.strictEqual(getRepair.meaning_zh, "得到；变得");
+assert.strictEqual(getRepair.example_en, "You get one point for each correct answer.");
+assert.ok(!/get up/i.test(getRepair.example_en));
 
 console.log("lexicon-sense ok");

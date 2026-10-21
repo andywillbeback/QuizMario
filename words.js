@@ -4732,8 +4732,8 @@ window.VOCAB_LEVELS = [
       scene: "日常活动 · Daily Routine",
       explain_zh: "中考/CEFR 常用词：得到；变得",
       root_group: "基础词 · base",
-      example_en: "I get up at seven every day.",
-      example_zh: "我每天七点起床。"
+      example_en: "You get one point for each correct answer.",
+      example_zh: "每答对一题，你就得到一分。"
     }
   ],
   [
@@ -13983,15 +13983,15 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "dress",
-      meaning_zh: "服装",
+      meaning_zh: "连衣裙",
       pos: "n.",
       roots: "dress",
       affix: "基础词 · base",
       scene: "健康医疗 · Health and Medicine",
-      explain_zh: "中考/CEFR 常用词：服装",
+      explain_zh: "中考/CEFR 常用词：连衣裙",
       root_group: "基础词 · base",
       example_en: "The red dress in the window was the one she wore to the concert.",
-      example_zh: "橱窗里的那条红裙子，就是她去音乐会时穿的。"
+      example_zh: "橱窗里的那条红连衣裙，就是她去音乐会时穿的。"
     },
     {
       word: "equivalent",
@@ -19783,12 +19783,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "chat",
-      meaning_zh: "对谈",
+      meaning_zh: "聊天",
       pos: "v.",
       roots: "chat",
       affix: "基础词 · base",
       scene: "通讯媒体 · Communications and Media",
-      explain_zh: "中考/CEFR 常用词：对谈",
+      explain_zh: "中考/CEFR 常用词：聊天",
       root_group: "基础词 · base",
       example_en: "My friends and I chat on the bus ride home.",
       example_zh: "我和朋友们在回家的公交车上聊天。"
@@ -22053,12 +22053,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "trouble",
-      meaning_zh: "难处",
+      meaning_zh: "麻烦；困境",
       pos: "n.",
       roots: "trouble",
       affix: "基础词 · base",
       scene: "科学技术 · Science and Technology",
-      explain_zh: "中考/CEFR 常用词：难处",
+      explain_zh: "中考/CEFR 常用词：麻烦；困境",
       root_group: "基础词 · base",
       example_en: "Tom was in trouble after he broke the window.",
       example_zh: "汤姆打破窗户之后惹上了麻烦。"
@@ -30279,12 +30279,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "decent",
-      meaning_zh: "有分寸的",
+      meaning_zh: "得体的",
       pos: "adj.",
       roots: "decent",
       affix: "基础词 · base",
       scene: "自然环境 · Environment and Nature",
-      explain_zh: "中考/CEFR 常用词：有分寸的",
+      explain_zh: "中考/CEFR 常用词：得体的",
       root_group: "基础词 · base",
       example_en: "He made a decent apology and his friend accepted it.",
       example_zh: "他得体地道了歉，朋友接受了。"
@@ -33639,12 +33639,12 @@ window.VOCAB_LEVELS = [
     },
     {
       word: "pair",
-      meaning_zh: "一对",
+      meaning_zh: "一双",
       pos: "n.",
       roots: "pair",
       affix: "基础词 · base",
       scene: "时间数字 · Time Numbers and Quantity",
-      explain_zh: "中考/CEFR 常用词：一对",
+      explain_zh: "中考/CEFR 常用词：一双",
       root_group: "基础词 · base",
       example_en: "I need a new pair of trainers before basketball season starts.",
       example_zh: "篮球赛季开始前，我需要一双新运动鞋。"
