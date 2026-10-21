@@ -1825,12 +1825,15 @@
     setTimeout(nextCard, 700);
   }
 
-  /** Hard MC distractors: same POS / scene / root_group / similar length·spelling */
+  /** Hard MC distractors: same POS / scene / root_group / similar length·spelling.
+   *  Same meaning_zh is excluded: ZH→EN grading is an exact lemma match, so a
+   *  synonym option would be marked wrong. */
   function scoreDistractor(candidate, target, levelWords) {
     let score = 0;
     const cw = candidate.word;
     const tw = target.word;
     if (normalizeAnswer(cw) === normalizeAnswer(tw)) return -1e9;
+    if (sameGloss(candidate.meaning_zh, target.meaning_zh)) return -1e9;
 
     if (candidate.pos && target.pos && candidate.pos === target.pos) score += 40;
     // Compatible POS families
@@ -1876,6 +1879,7 @@
     const add = (w, levelIdx) => {
       const k = normalizeAnswer(w.word);
       if (seen.has(k) || k === normalizeAnswer(target.word)) return;
+      if (sameGloss(w.meaning_zh, target.meaning_zh)) return;
       seen.add(k);
       pool.push({ ...w, _levelIdx: levelIdx });
     };
@@ -1908,6 +1912,7 @@
       for (const w of shuffle(levelWords.slice())) {
         if (picks.length >= count) break;
         if (normalizeAnswer(w.word) === normalizeAnswer(target.word)) continue;
+        if (sameGloss(w.meaning_zh, target.meaning_zh)) continue;
         if (picks.some((p) => normalizeAnswer(p) === normalizeAnswer(w.word))) continue;
         picks.push(w.word);
       }
@@ -1917,6 +1922,11 @@
 
   function meaningsMatch(a, b) {
     return String(a || "").trim() === String(b || "").trim();
+  }
+
+  /** Identical non-empty gloss. Blank glosses are not treated as synonyms. */
+  function sameGloss(a, b) {
+    return meaningsMatch(a, b) && String(a || "").trim().length > 0;
   }
 
   function pickMeaningDistractors(target, count) {
@@ -2603,6 +2613,40 @@
         choices: choiceText,
         clockHidden: !!($("challenge-clock") && $("challenge-clock").hidden),
       };
+    },
+    /** ZH→EN hard options for one headword. Optional levels replace the active track for the call. */
+    debugHardDistractors(word, count, levels) {
+      const n = count == null ? 3 : count;
+      const prevLevels = LEVELS;
+      const prevCount = LEVEL_COUNT;
+      const prevLevel = currentLevel;
+      if (Array.isArray(levels)) {
+        LEVELS = levels;
+        LEVEL_COUNT = levels.length;
+      }
+      try {
+        const want = String(word || "");
+        let found = null;
+        let levelIdx = 0;
+        for (let li = 0; li < LEVELS.length; li++) {
+          const set = LEVELS[li] || [];
+          for (let i = 0; i < set.length; i++) {
+            if (set[i] && set[i].word === want) {
+              found = set[i];
+              levelIdx = li;
+              break;
+            }
+          }
+          if (found) break;
+        }
+        if (!found) return [];
+        currentLevel = levelIdx + 1;
+        return pickHardDistractors(found, n);
+      } finally {
+        LEVELS = prevLevels;
+        LEVEL_COUNT = prevCount;
+        currentLevel = prevLevel;
+      }
     },
     debugFinishPlacement(correct) {
       if (sessionKind !== "placement") return false;

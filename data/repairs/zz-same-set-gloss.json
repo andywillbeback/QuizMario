@@ -202,5 +202,122 @@
   "background": {
     "example_en": "Tell me about your family background in a few sentences.",
     "example_zh": "用几句话介绍一下你的家庭背景。"
+  },
+  "mine": {
+    "meaning_zh": "我的（单独使用，不加名词）"
+  },
+  "my": {
+    "meaning_zh": "我的（后接名词）"
+  },
+  "till": {
+    "example_en": "The bakery stays open till six on Saturday evenings.",
+    "example_zh": "这家面包店周六晚上一直开到六点。",
+    "meaning_zh": "直到（口语）"
+  },
+  "until": {
+    "meaning_zh": "直到（较正式）"
+  },
+  "while": {
+    "meaning_zh": "当……时；而（通用）"
+  },
+  "whilst": {
+    "example_en": "Please stay quiet whilst the baby is sleeping.",
+    "example_zh": "宝宝睡觉时请保持安静。",
+    "meaning_zh": "当……时；而（英式书面）"
+  },
+  "shop": {
+    "example_en": "That corner shop sells bread, milk, and cheap pens.",
+    "example_zh": "拐角那家商店卖面包、牛奶和便宜的笔。",
+    "meaning_zh": "商店（英式，店铺）"
+  },
+  "store": {
+    "example_en": "I bought eggs at the store before it closed.",
+    "example_zh": "商店关门之前，我买了鸡蛋。",
+    "meaning_zh": "商店（美式说法）"
+  },
+  "perform": {
+    "example_en": "The drama club will perform a short play on Friday.",
+    "example_zh": "戏剧社星期五将表演一个短剧。",
+    "meaning_zh": "表演；表现（动词）"
+  },
+  "performance": {
+    "meaning_zh": "表演；表现（名词）"
+  },
+  "amusement": {
+    "example_en": "We spent the afternoon at the amusement park.",
+    "example_zh": "我们在游乐园里度过了那个下午。",
+    "meaning_zh": "娱乐（游乐）"
+  },
+  "entertainment": {
+    "meaning_zh": "娱乐（文娱活动）"
+  },
+  "story": {
+    "example_en": "Grandma's story about the lost dog made us laugh.",
+    "example_zh": "奶奶讲的那只走失小狗的故事把我们逗笑了。",
+    "meaning_zh": "故事（记叙）"
+  },
+  "tale": {
+    "example_en": "Dad's tale about a brave mouse lasted until bedtime.",
+    "example_zh": "爸爸讲的勇敢小老鼠的故事一直讲到睡觉。",
+    "meaning_zh": "故事（讲述）"
+  },
+  "ad": {
+    "example_en": "I saw an ad for cheap trainers in the shop window.",
+    "example_zh": "我在商店橱窗里看到一则便宜运动鞋的广告。",
+    "meaning_zh": "广告（缩写）"
+  },
+  "occupation": {
+    "example_en": "Nursing became her occupation after years of hospital work.",
+    "example_zh": "在医院工作多年以后，护理成了她的职业。",
+    "meaning_zh": "职业（工作，可泛指）"
+  },
+  "profession": {
+    "example_en": "Teaching is the profession she chose after college.",
+    "example_zh": "教书是她大学毕业后选择的职业。",
+    "meaning_zh": "职业（专业工作）"
+  },
+  "bicycle": {
+    "example_en": "I ride my bicycle to school when the weather is fine.",
+    "example_zh": "天气好的时候，我骑自行车去上学。",
+    "meaning_zh": "自行车（全称）"
+  },
+  "bike": {
+    "example_en": "His new bike has a bright red basket.",
+    "example_zh": "他的新自行车上装着一个鲜红的车筐。",
+    "meaning_zh": "自行车（口语）"
+  },
+  "protect": {
+    "example_en": "Thick coats protect us from the wind at the bus stop.",
+    "example_zh": "在公交车站，厚外套保护我们免受风吹。",
+    "meaning_zh": "保护（动词）"
+  },
+  "protection": {
+    "example_en": "Sunscreen gives protection on a bright sports afternoon.",
+    "example_zh": "晴朗的运动日下午，防晒霜能提供保护。",
+    "meaning_zh": "保护（名词）"
+  },
+  "completely": {
+    "example_en": "I completely forgot my homework.",
+    "example_zh": "我把作业忘得干干净净。",
+    "meaning_zh": "完全地（彻底）"
+  },
+  "entirely": {
+    "example_en": "That story is entirely true.",
+    "example_zh": "那个故事完全是真的。",
+    "meaning_zh": "完全地（全部）"
+  },
+  "generally": {
+    "meaning_zh": "通常（一般说来）"
+  },
+  "normally": {
+    "meaning_zh": "通常（正常情况下）"
+  },
+  "fine": {
+    "example_en": "The weather stayed fine, so our picnic blankets remained outside.",
+    "example_zh": "天气一直很好，所以我们的野餐垫就留在外面。",
+    "meaning_zh": "好的（天气或身体）"
+  },
+  "good": {
+    "meaning_zh": "好的（泛指）"
   }
 }
