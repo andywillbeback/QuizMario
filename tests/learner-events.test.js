@@ -32,6 +32,7 @@ function wrong(extra) {
   assert.strictEqual(ev.payload.track, "zhongkao");
   assert.strictEqual(ev.payload.gloss_zh, "交流");
   assert.strictEqual(ev.payload.answer, "community");
+  assert.ok(!ev.payload.reason, "a wrong pick without a class does not invent one");
   assert.strictEqual(ev.item_id, "zhongkao|0::communicate");
   assert.ok(!ev.cefr_level, "zhongkao is not given a guessed CEFR");
   const line = JSON.parse(le.toJsonl([ev]).trim());
@@ -54,6 +55,26 @@ function wrong(extra) {
   assert.strictEqual(le.cefrForTrack("pet"), "B1");
   assert.strictEqual(le.cefrForTrack("cet4"), "");
   assert.ok(!ket.payload.answer, "a correct signal does not invent an answer");
+}
+
+{
+  const tagged = wrong({ reason: "form", reason_zh: "形近" });
+  assert.strictEqual(tagged.payload.reason, "form");
+  assert.strictEqual(tagged.payload.reason_zh, "形近");
+  assert.strictEqual(tagged.payload.answer, "community");
+  const ignored = le.buildEvent({
+    event_type: le.TYPES.UNKNOWN,
+    learner_id: UID,
+    headword: "communicate",
+    track: "zhongkao",
+    outcome: "unknown",
+    reason: "form",
+    reason_zh: "形近",
+    created_at: NOW,
+  }, NOW);
+  assert.ok(!ignored.payload.reason, "不会 does not carry a miss bucket");
+  const junk = wrong({ reason: "llm" });
+  assert.ok(!junk.payload.reason, "only the four buckets are stored");
 }
 
 {
@@ -179,6 +200,7 @@ function wrong(extra) {
   assert.ok(doc.includes("ingest_learner_events.py"));
   assert.ok(doc.includes("vocab.due_review") && doc.includes("vocab.wrong_book_add"));
   assert.ok(doc.includes("vocab.answer_unknown"), "不会 is its own event, not a wrong pick");
+  assert.ok(doc.includes("payload") && doc.includes("`reason`"), "wrong picks may carry a reason tag");
   assert.ok(!/已同步到\s*ALS/.test(doc + sql));
 }
 

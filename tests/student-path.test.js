@@ -118,6 +118,11 @@ function staticGuards() {
   assert.ok(index.includes('id="btn-clear-continue"') && index.includes("继续闯关第"), "must-clear frontier CTA");
   assert.ok(index.includes('id="btn-clear-als"') && index.includes("去 ALS 修语法"), "must-clear ALS CTA");
   assert.ok(index.includes('src="home-loop.js"'), "home loop rules load with the game");
+  assert.ok(index.includes('src="error-types.js"'), "miss-reason rules load with the game");
+  assert.ok(index.includes('id="miss-reasons"') && index.includes('id="clear-reasons"'), "错因 sits on home and the clear screen");
+  assert.ok(index.includes("其他/未归类"), "the four buckets are named in the student UI");
+  assert.ok(game.includes("recordMissReason") && game.includes("renderMissReasons") && game.includes("renderClearReasons"),
+    "wrong picks are classified and shown on the student path");
   assert.ok(game.includes("onHome: studentHomeActive()"), "soft gate checks the student home");
   assert.ok(index.includes('src="placement.js"'), "placement rules load with the game");
   assert.ok(index.includes('id="placement-note"'), "placement copy sits on the card");
@@ -629,6 +634,7 @@ async function main() {
         detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
         action: strip.getAttribute("data-action"),
         mode: strip.getAttribute("data-mode"),
+        reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
         fakeAls: /ALS 补了|回流词/.test(document.body.innerText || "")
       };
     })()`), 15000, "signed-in home strip");
@@ -643,6 +649,7 @@ async function main() {
     assert.strictEqual(emptyQueues.strip, "薄弱点 → 今日必练");
     assert.strictEqual(emptyQueues.detail, "今日必练 0 道，继续闯关");
     assert.strictEqual(emptyQueues.action, "continue", "a zero count links the strip into 继续闯关");
+    assert.strictEqual(emptyQueues.reasonsHidden, true, "no wrong picks means no 错因 strip");
     assert.strictEqual(emptyQueues.mode, "weak");
     assert.strictEqual(emptyQueues.fakeAls, false, "the strip must not invent ALS 补了 / 回流词");
 
@@ -934,7 +941,8 @@ async function main() {
         strip: (document.getElementById("home-loop-title") || {}).textContent || "",
         detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
         stripHidden: !!(document.getElementById("home-loop") || {}).hidden,
-        action: (document.getElementById("home-loop") || {}).getAttribute ? document.getElementById("home-loop").getAttribute("data-action") : ""
+        action: (document.getElementById("home-loop") || {}).getAttribute ? document.getElementById("home-loop").getAttribute("data-action") : "",
+        reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden
       };
     })()`), 15000, "soft gate");
     assert.strictEqual(dueHome.play, false, "the soft gate does not auto-open cards");
@@ -948,6 +956,7 @@ async function main() {
     assert.strictEqual(dueHome.strip, "薄弱点 → 今日必练");
     assert.strictEqual(dueHome.detail, "今日必练 3 道");
     assert.strictEqual(dueHome.action, "must");
+    assert.strictEqual(dueHome.reasonsHidden, true, "a wrong-book row without a recorded pick is not a 错因 bucket");
 
     await evalRetry(`document.getElementById("btn-must-later").click()`);
     const later = await evalRetry(`(() => {
@@ -1054,6 +1063,19 @@ async function main() {
     })()`);
     assert.strictEqual(still.prompt, heldPrompt, "wrong-answer explanation stays until Continue");
     assert.strictEqual(still.continue, true, "Continue is still on screen after the old 2.6s timer");
+    const reasonLine = await evalRetry(`(() => {
+      const save = window.__QM.getSave();
+      const recent = (save.missReasons && save.missReasons.recent) || [];
+      const last = recent[recent.length - 1] || null;
+      return {
+        fb: document.getElementById("feedback").textContent || "",
+        bucket: last && last.bucket,
+        n: recent.length
+      };
+    })()`);
+    assert.ok(reasonLine.fb.indexOf("错因") !== -1, reasonLine.fb);
+    assert.ok(reasonLine.n >= 1, "the wrong pick was stored");
+    assert.ok(["form", "sense", "pos", "other"].indexOf(reasonLine.bucket) !== -1, reasonLine.bucket);
     const booked = await evalRetry(`(() => {
       const save = window.__QM.getSave();
       const word = ${JSON.stringify(planted && planted.word)};
@@ -1077,6 +1099,7 @@ async function main() {
       const due = events.filter((e) => e.event_type === "vocab.due_review");
       return {
         localWrong: events.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word).length,
+        localReason: events.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word && e.payload && ["form", "sense", "pos", "other"].indexOf(e.payload.reason) !== -1).length,
         localBook: events.filter((e) => e.event_type === "vocab.wrong_book_add" && e.headword === word).length,
         localCorrect: events.filter((e) => e.event_type === "vocab.answer_correct").length,
         localDue: due.length,
@@ -1092,6 +1115,7 @@ async function main() {
     })()`);
     assert.ok(signals, "learner events api loaded");
     assert.ok(signals.localWrong >= 1, "wrong answer stored vocab.answer_wrong");
+    assert.ok(signals.localReason >= 1, "wrong answer stored a reason bucket");
     assert.ok(signals.localBook >= 1, "wrong-book add stored vocab.wrong_book_add");
     assert.ok(signals.localDue >= 2, "due queue stored vocab.due_review");
     assert.strictEqual(signals.dueAt, true, "due signals include payload.due_at");
@@ -1133,11 +1157,18 @@ async function main() {
       if (!gate || !gate.hidden) return null;
       return {
         count: badge.textContent,
-        primacy: home.getAttribute("data-review-primacy")
+        primacy: home.getAttribute("data-review-primacy"),
+        reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
+        reasons: (document.getElementById("miss-reasons") || {}).textContent || "",
+        strip: (document.getElementById("home-loop-title") || {}).textContent || ""
       };
     })()`), 8000, "home after a miss");
     assert.ok(Number(wrongHome.count) >= 3, "the miss stays in 今日必练 with the other due and wrong-book cards");
     assert.strictEqual(wrongHome.primacy, "secondary", "starting 今日必练 demotes it for the rest of the day");
+    assert.strictEqual(wrongHome.reasonsHidden, false, "home shows the grouped 错因");
+    assert.ok(wrongHome.reasons.indexOf("错因") !== -1, wrongHome.reasons);
+    assert.ok(/形近|义近|词性|其他/.test(wrongHome.reasons), wrongHome.reasons);
+    assert.strictEqual(wrongHome.strip, "薄弱点 → 今日必练");
 
     await evalRetry(`document.getElementById("btn-must-practice").click()`);
     const wrongPlay = await waitFor(async () => evalRetry(`(() => {
@@ -1173,11 +1204,30 @@ async function main() {
         trackStars: { zhongkao: {} },
         daily: {},
         profile: { name: "", cls: "" },
+        missReasons: {
+          recent: [
+            { bucket: "other", lemma: "apple", gloss: "苹果", chosen: "banana", chosenLemma: "banana", track: "zhongkao", at: 1 },
+            { bucket: "pos", lemma: "run", gloss: "跑", chosen: "runner", chosenLemma: "runner", track: "zhongkao", at: 2 },
+            { bucket: "sense", lemma: "big", gloss: "大的", chosen: "large", chosenLemma: "large", track: "zhongkao", at: 3 },
+            { bucket: "form", lemma: "affect", gloss: "影响", chosen: "effect", chosenLemma: "effect", track: "zhongkao", at: 4 },
+            { bucket: "form", lemma: "accept", gloss: "接受", chosen: "except", chosenLemma: "except", track: "zhongkao", at: 5 }
+          ]
+        },
         updatedAt: "2020-01-01T00:00:00.000Z"
       }));
       return word.meaning_zh;
     })()`);
     await reloadToGate("gate before must clear");
+    const gateReasons = await evalRetry(`(() => {
+      const gate = document.getElementById("screen-gate");
+      const box = document.getElementById("miss-reasons");
+      return {
+        gate: !!(gate && gate.classList.contains("active")),
+        hidden: !box || box.hidden
+      };
+    })()`);
+    assert.strictEqual(gateReasons.gate, true);
+    assert.strictEqual(gateReasons.hidden, true, "错因 stays off the exam picker");
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const loopHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
@@ -1186,10 +1236,18 @@ async function main() {
       if (!home || !home.classList.contains("active") || !logged || !strip || strip.hidden) return null;
       if (strip.getAttribute("data-action") !== "must") return null;
       return {
-        detail: (document.getElementById("home-loop-detail") || {}).textContent || ""
+        detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
+        reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
+        reasons: (document.getElementById("miss-reasons") || {}).textContent || ""
       };
     })()`), 15000, "strip into 今日必练");
     assert.strictEqual(loopHome.detail, "今日必练 1 道");
+    assert.strictEqual(loopHome.reasonsHidden, false, "home lists the saved 错因 next to 今日必练");
+    assert.ok(loopHome.reasons.indexOf("形近 2") !== -1, loopHome.reasons);
+    assert.ok(loopHome.reasons.indexOf("义近 1") !== -1, loopHome.reasons);
+    assert.ok(loopHome.reasons.indexOf("词性 1") !== -1, loopHome.reasons);
+    assert.ok(loopHome.reasons.indexOf("其他 1") !== -1, loopHome.reasons);
+    assert.ok(loopHome.reasons.indexOf("其他/未归类") !== -1, loopHome.reasons);
     await evalRetry(`(() => {
       const soft = document.getElementById("must-gate");
       if (soft && !soft.hidden) document.getElementById("btn-must-later").click();
@@ -1237,12 +1295,17 @@ async function main() {
         als: als && !als.hidden ? als.textContent.trim() : "",
         alsHref: als ? als.getAttribute("href") : "",
         placeholder: als ? als.getAttribute("data-als-placeholder") : "",
-        nextHidden: !next || next.hidden
+        nextHidden: !next || next.hidden,
+        reasonsHidden: !document.getElementById("clear-reasons") || document.getElementById("clear-reasons").hidden,
+        reasons: (document.getElementById("clear-reasons") || {}).textContent || ""
       };
     })()`), 8000, "今日必练 clear next step");
     assert.ok(mustClear.msg.indexOf("练完了，然后继续闯关第 4 组。") !== -1, mustClear.msg);
     assert.strictEqual(mustClear.primary, "继续闯关第 4 组");
     assert.strictEqual(mustClear.als, "去 ALS 修语法");
+    assert.strictEqual(mustClear.reasonsHidden, false, "今日必练 clear shows the grouped 错因");
+    assert.ok(mustClear.reasons.indexOf("最近错过的词，主要是形近") !== -1, mustClear.reasons);
+    assert.ok(mustClear.reasons.indexOf("accept → except") !== -1, mustClear.reasons);
     assert.strictEqual(mustClear.alsHref, "https://andywillbeback.github.io/#als-placeholder");
     assert.strictEqual(mustClear.placeholder, "true");
     assert.strictEqual(mustClear.nextHidden, true, "the vague Next set button stays hidden");
