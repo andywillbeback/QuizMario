@@ -26,7 +26,8 @@
   },
   "fee": {
     "example_en": "The zoo charges a small fee for students on weekends.",
-    "example_zh": "动物园在周末向学生收取少量费用。"
+    "example_zh": "动物园在周末向学生收取少量费用。",
+    "meaning_zh": "费用；酬金（学费/门票等）"
   },
   "feedback": {
     "example_en": "The coach gave me useful feedback after the race.",
@@ -34,7 +35,9 @@
   },
   "feeling": {
     "example_en": "A warm feeling spread through me when I saw Dad.",
-    "example_zh": "见到爸爸时，一股温暖的感觉涌遍了全身。"
+    "example_zh": "见到爸爸时，一股温暖的感觉涌遍了全身。",
+    "meaning_zh": "感觉（名词）",
+    "pos": "n."
   },
   "fence": {
     "example_en": "The dog squeezed through a gap in the garden fence.",

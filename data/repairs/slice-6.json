@@ -80,11 +80,13 @@
   },
   "leader": {
     "example_en": "The group leader checked that everyone had a torch.",
-    "example_zh": "组长检查了每个人是否都带了手电筒。"
+    "example_zh": "组长检查了每个人是否都带了手电筒。",
+    "meaning_zh": "领导；领袖"
   },
   "leadership": {
     "example_en": "Her leadership kept the team calm during the close final.",
-    "example_zh": "比分接近的决赛里，她的领导让全队保持冷静。"
+    "example_zh": "比分接近的决赛里，她的领导让全队保持冷静。",
+    "meaning_zh": "领导力；领导"
   },
   "leaf": {
     "example_en": "I pressed a red leaf inside my diary from the hike.",
@@ -496,7 +498,8 @@
   },
   "motion": {
     "example_en": "The gentle motion of the train soon put the baby to sleep.",
-    "example_zh": "火车轻轻的晃动很快让宝宝睡着了。"
+    "example_zh": "火车轻轻的晃动很快让宝宝睡着了。",
+    "meaning_zh": "运动；动议"
   },
   "motor": {
     "example_en": "Salt water damaged the motor of our small fishing boat.",
@@ -517,7 +520,8 @@
   },
   "movement": {
     "example_en": "Any movement in the bushes made the rabbits run away.",
-    "example_zh": "灌木丛里只要有动静，兔子就跑开了。"
+    "example_zh": "灌木丛里只要有动静，兔子就跑开了。",
+    "meaning_zh": "运动；移动"
   },
   "movie": {
     "example_en": "The movie ended so late that we missed the last bus.",
@@ -791,12 +795,14 @@
     "example_zh": "我用纸把玻璃杯包好，免得它碎掉。"
   },
   "paragraph": {
-    "example_en": "Delete the second paragraph if the essay is over the limit.",
-    "example_zh": "如果作文超过字数，就删掉第二段。"
+    "example_en": "Delete the second paragraph if the essay is too long.",
+    "example_zh": "如果作文太长，就删掉第二段。",
+    "meaning_zh": "段落"
   },
   "parcel": {
     "example_en": "The parcel was damaged, but the books inside were fine.",
-    "example_zh": "包裹破损了，不过里面的书还是完好的。"
+    "example_zh": "包裹破损了，不过里面的书还是完好的。",
+    "meaning_zh": "包裹（邮包）"
   },
   "parent": {
     "example_en": "Ask a parent to sign the form before Friday's museum visit.",

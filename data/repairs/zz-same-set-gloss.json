@@ -1,0 +1,206 @@
+{
+  "anybody": {
+    "meaning_zh": "任何人（口语，多用于疑问/否定）",
+    "example_en": "Is anybody at home right now?",
+    "example_zh": "现在有没有人在家？"
+  },
+  "anyone": {
+    "meaning_zh": "任何人（较正式，也可用在肯定句）",
+    "example_en": "Anyone can join the school club.",
+    "example_zh": "任何人都可以加入学校社团。"
+  },
+  "somebody": {
+    "meaning_zh": "某人（口语）",
+    "example_en": "Somebody left a note on my desk.",
+    "example_zh": "有人在我课桌上留了一张纸条。"
+  },
+  "someone": {
+    "meaning_zh": "某人（较正式）",
+    "example_en": "Someone is waiting for you at the gate.",
+    "example_zh": "有人在门口等你。"
+  },
+  "everybody": {
+    "meaning_zh": "每个人（口语）",
+    "example_en": "Everybody enjoyed the class party.",
+    "example_zh": "每个人都很喜欢这次班级聚会。"
+  },
+  "everyone": {
+    "meaning_zh": "每个人（较正式）",
+    "example_en": "Everyone must bring a pencil tomorrow.",
+    "example_zh": "每个人明天都必须带一支铅笔。"
+  },
+  "their": {
+    "meaning_zh": "他们的（后接名词）",
+    "example_en": "Their house is next to the park.",
+    "example_zh": "他们的房子在公园旁边。"
+  },
+  "theirs": {
+    "meaning_zh": "他们的（单独使用，不加名词）",
+    "example_en": "Those bags are theirs, not ours.",
+    "example_zh": "那些包是他们的，不是我们的。"
+  },
+  "they": {
+    "meaning_zh": "他们（主格）",
+    "example_en": "They play tennis every weekend.",
+    "example_zh": "他们每个周末打网球。"
+  },
+  "them": {
+    "meaning_zh": "他们（宾格）",
+    "example_en": "I saw them at the sports centre.",
+    "example_zh": "我在体育中心看见他们了。"
+  },
+  "our": {
+    "meaning_zh": "我们的（后接名词）",
+    "example_en": "Our classroom is on the second floor.",
+    "example_zh": "我们的教室在二楼。"
+  },
+  "ours": {
+    "meaning_zh": "我们的（单独使用）",
+    "example_en": "This football is ours.",
+    "example_zh": "这个足球是我们的。"
+  },
+  "succeed": {
+    "meaning_zh": "成功（动词）",
+    "pos": "v."
+  },
+  "born": {
+    "meaning_zh": "出生（be born）",
+    "pos": "v."
+  },
+  "many": {
+    "meaning_zh": "许多（后接可数名词复数）",
+    "example_en": "Many students joined the sports club.",
+    "example_zh": "许多学生加入了体育俱乐部。"
+  },
+  "lot": {
+    "meaning_zh": "许多（a lot of）",
+    "example_en": "We had a lot of fun at the park.",
+    "example_zh": "我们在公园玩得很开心。"
+  },
+  "pretty": {
+    "meaning_zh": "相当（口语，修饰形容词）",
+    "example_en": "The maths quiz was pretty easy.",
+    "example_zh": "这次数学小测相当容易。"
+  },
+  "quite": {
+    "meaning_zh": "相当；很",
+    "example_en": "It was quite cold on the morning bus.",
+    "example_zh": "早上坐公交时天气相当冷。"
+  },
+  "headmaster": {
+    "meaning_zh": "校长（传统说法）"
+  },
+  "headteacher": {
+    "meaning_zh": "校长（通用说法）"
+  },
+  "telegram": {
+    "meaning_zh": "电报（电文）"
+  },
+  "telegraph": {
+    "meaning_zh": "电报（通讯方式）"
+  },
+  "advertisement": {
+    "meaning_zh": "广告（一则）"
+  },
+  "calculation": {
+    "meaning_zh": "计算（名词）",
+    "pos": "n."
+  },
+  "super": {
+    "meaning_zh": "极好的（口语）"
+  },
+  "terrific": {
+    "meaning_zh": "极好的；了不起的"
+  },
+  "worthwhile": {
+    "meaning_zh": "值得的（值得花时间）",
+    "example_en": "The long trip was worthwhile.",
+    "example_zh": "这次长途旅行值得。"
+  },
+  "worthy": {
+    "meaning_zh": "值得的（worthy of）",
+    "example_en": "The cause is worthy of support.",
+    "example_zh": "这项事业值得支持。"
+  },
+  "exit": {
+    "meaning_zh": "出口（离开的门）",
+    "pos": "n.",
+    "example_en": "The exit is at the back of the hall.",
+    "example_zh": "出口在大厅后面。"
+  },
+  "export": {
+    "meaning_zh": "出口（对外贸易）",
+    "pos": "v.",
+    "example_en": "The region will export tea this year.",
+    "example_zh": "这个地区今年将出口茶叶。"
+  },
+  "package": {
+    "meaning_zh": "包裹；一揽子计划"
+  },
+  "react": {
+    "meaning_zh": "反应（动词）",
+    "pos": "v."
+  },
+  "vary": {
+    "meaning_zh": "变化（动词）",
+    "pos": "v."
+  },
+  "complex": {
+    "meaning_zh": "复杂的（结构复杂）"
+  },
+  "complicated": {
+    "meaning_zh": "复杂的（难懂、麻烦）"
+  },
+  "actually": {
+    "example_en": "I actually finished my homework before dinner.",
+    "example_zh": "我实际上在晚饭前就做完了作业。"
+  },
+  "bathroom": {
+    "example_en": "The bathroom is upstairs next to my bedroom.",
+    "example_zh": "浴室在楼上，紧挨着我的卧室。"
+  },
+  "bedroom": {
+    "example_en": "My bedroom faces the school playground.",
+    "example_zh": "我的卧室正对学校操场。"
+  },
+  "beside": {
+    "example_en": "Please sit beside me at the front desk.",
+    "example_zh": "请坐在前台我的旁边。"
+  },
+  "together": {
+    "example_en": "We study English together after school.",
+    "example_zh": "我们放学后一起学英语。"
+  },
+  "admire": {
+    "example_en": "I really admire my grandmother for her patience.",
+    "example_zh": "我真的很钦佩奶奶的耐心。"
+  },
+  "after": {
+    "example_en": "We play football after school every day.",
+    "example_zh": "我们每天放学后踢足球。"
+  },
+  "again": {
+    "example_en": "Please say that new word again more slowly.",
+    "example_zh": "请把那个生词再慢一点说一遍。"
+  },
+  "ago": {
+    "example_en": "We met two years ago at the school fair.",
+    "example_zh": "我们两年前在学校游园会上认识。"
+  },
+  "ahead": {
+    "example_en": "The library is just ahead on the left.",
+    "example_zh": "图书馆就在前面左侧。"
+  },
+  "always": {
+    "example_en": "She always arrives on time for morning class.",
+    "example_zh": "她早上上课总是准时到。"
+  },
+  "back": {
+    "example_en": "Please come back before dinner tonight.",
+    "example_zh": "请今晚晚饭前回来。"
+  },
+  "background": {
+    "example_en": "Tell me about your family background in a few sentences.",
+    "example_zh": "用几句话介绍一下你的家庭背景。"
+  }
+}

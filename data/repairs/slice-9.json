@@ -1,7 +1,9 @@
 {
   "training": {
-    "example_en": "Football training starts on the field after school today.",
-    "example_zh": "足球训练今天下课后在球场开始。"
+    "example_en": "Football training starts after school today.",
+    "example_zh": "足球训练今天下课后开始。",
+    "meaning_zh": "训练（名词）",
+    "pos": "n."
   },
   "transaction": {
     "example_en": "The bank stopped the strange transaction on Dad's card.",
@@ -116,7 +118,8 @@
   "variation": {
     "example_en": "There is a small variation in temperature between the rooms.",
     "example_zh": "这几个房间之间的温度有一点小变化。",
-    "meaning_zh": "变化"
+    "meaning_zh": "变化；变体（名词）",
+    "pos": "n."
   },
   "vegetable": {
     "example_en": "I added one carrot, my favorite vegetable, to the soup.",
@@ -617,9 +620,9 @@
     "example_zh": "如果汤太淡，就再加一点盐。"
   },
   "address": {
-    "example_en": "Remember to address every envelope before the post office closes.",
-    "example_zh": "邮局关门之前，记得给每个信封写上地址。",
-    "meaning_zh": "写上地址；处理"
+    "example_en": "Remember to address every envelope before you post it.",
+    "example_zh": "寄出之前记得给每个信封写上地址。",
+    "meaning_zh": "写上地址；（正式）处理"
   },
   "admit": {
     "example_en": "You should admit breaking the window to your parents.",
@@ -639,7 +642,9 @@
   },
   "advise": {
     "example_en": "Doctors advise children to sleep eight hours a night.",
-    "example_zh": "医生建议孩子们每晚睡八个小时。"
+    "example_zh": "医生建议孩子们每晚睡八个小时。",
+    "meaning_zh": "劝告；建议（动词）",
+    "pos": "v."
   },
   "affect": {
     "example_en": "Loud noise can affect your hearing at the concert.",
@@ -676,7 +681,9 @@
   },
   "apologise": {
     "example_en": "You should apologise to her for spilling the juice.",
-    "example_zh": "你应该为洒了果汁向她道歉。"
+    "example_zh": "你应该为洒了果汁向她道歉。",
+    "meaning_zh": "道歉（动词）",
+    "pos": "v."
   },
   "apologize": {
     "example_en": "I will apologize to the neighbor for the loud music.",
@@ -744,7 +751,9 @@
   },
   "attract": {
     "example_en": "Bright colors attract bees to the flowers by the wall.",
-    "example_zh": "鲜艳的颜色把蜜蜂吸引到墙边的花上。"
+    "example_zh": "鲜艳的颜色把蜜蜂吸引到墙边的花上。",
+    "meaning_zh": "吸引",
+    "pos": "v."
   },
   "babysit": {
     "example_en": "I sometimes babysit my cousin when Aunt works late.",

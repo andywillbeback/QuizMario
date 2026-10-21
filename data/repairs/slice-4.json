@@ -744,7 +744,7 @@
   "expense": {
     "example_en": "The club covered the expense of the minibus for the away match.",
     "example_zh": "客场比赛的小巴费用由社团承担。",
-    "meaning_zh": "费用"
+    "meaning_zh": "费用；开支"
   },
   "experience": {
     "example_en": "Camping in the rain was a miserable experience, but we still laugh about it.",
@@ -772,7 +772,8 @@
   "extension": {
     "example_en": "The referee allowed a short extension after the injury stoppage.",
     "example_zh": "受伤暂停之后，裁判允许比赛短暂延长。",
-    "meaning_zh": "延长"
+    "meaning_zh": "延长；延期（名词）",
+    "pos": "n."
   },
   "extent": {
     "example_en": "We did not see the full extent of the leak until we moved the fridge.",

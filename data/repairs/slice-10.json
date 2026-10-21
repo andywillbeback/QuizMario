@@ -73,7 +73,9 @@
   },
   "calculate": {
     "example_en": "Calculate the total cost before you pay the cashier.",
-    "example_zh": "付给收银员之前，先把总价算清楚。"
+    "example_zh": "付给收银员之前，先把总价算清楚。",
+    "meaning_zh": "计算（动词）",
+    "pos": "v."
   },
   "call": {
     "example_en": "I will call my grandma after I get home.",
@@ -120,7 +122,9 @@
   },
   "choose": {
     "example_en": "Choose a story you really want to read tonight.",
-    "example_zh": "选一个你今晚真正想读的故事。"
+    "example_zh": "选一个你今晚真正想读的故事。",
+    "meaning_zh": "选择（动词）",
+    "pos": "v."
   },
   "chuck": {
     "example_en": "The boys chuck waste paper into the bin after art class.",
@@ -128,9 +132,9 @@
     "meaning_zh": "扔掉"
   },
   "claim": {
-    "example_en": "She can claim her lost bag at the school office.",
-    "example_zh": "她可以到学校办公室认领丢失的书包。",
-    "meaning_zh": "认领"
+    "example_en": "Some students claim that the test was too hard.",
+    "example_zh": "有些学生声称这次考试太难了。",
+    "meaning_zh": "声称；宣称"
   },
   "climb": {
     "example_en": "The children climb the hill behind our school.",
@@ -445,7 +449,9 @@
   },
   "extend": {
     "example_en": "The school may extend the holiday if snow continues.",
-    "example_zh": "如果雪继续下，学校可能会延长假期。"
+    "example_zh": "如果雪继续下，学校可能会延长假期。",
+    "meaning_zh": "延长（动词）",
+    "pos": "v."
   },
   "face": {
     "example_en": "Young athletes face strong rivals in the city final.",
@@ -467,7 +473,9 @@
   },
   "feel": {
     "example_en": "I feel cold when the classroom windows stay open.",
-    "example_zh": "教室窗户开着的时候，我觉得冷。"
+    "example_zh": "教室窗户开着的时候，我觉得冷。",
+    "meaning_zh": "感觉（动词）",
+    "pos": "v."
   },
   "fetch": {
     "example_en": "Could you fetch a clean towel from the bathroom?",

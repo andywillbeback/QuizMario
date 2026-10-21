@@ -4,6 +4,7 @@ const assert = require("assert");
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
+const { loadRepairs } = require("../tools/apply-example-repairs");
 
 const root = path.join(__dirname, "..");
 
@@ -77,6 +78,19 @@ assert.strictEqual(gloss("chip"), "薯片；芯片");
 assert.strictEqual(cards(tracks, "chip")[0].example_en, "He ate a bag of chips at lunch.");
 assert.strictEqual(gloss("eighteenth"), "第十八");
 assert.strictEqual(cards(tracks, "eighteenth")[0].example_en, "Her birthday is on the eighteenth of June.");
+
+const repairs = loadRepairs();
+for (const word of ["exit", "export", "anybody", "anyone", "their", "theirs", "advice", "advise", "attraction", "claim", "army", "badminton"]) {
+  const fix = repairs.get(word);
+  assert.ok(fix, "repair missing for " + word);
+  assert.strictEqual(fix.meaning_zh, gloss(word), "repair gloss drifted for " + word);
+}
+const communicateRepair = repairs.get("communicate");
+assert.ok(!communicateRepair || communicateRepair.meaning_zh === "沟通；交流", "communicate repair");
+for (const word of ["chip", "eighteenth"]) {
+  const fix = repairs.get(word);
+  if (fix && fix.meaning_zh) assert.strictEqual(fix.meaning_zh, gloss(word), word);
+}
 
 console.log("gloss-collision ok", {
   zhongkaoSets: byId.zhongkao.sets.length,

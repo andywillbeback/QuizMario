@@ -80,12 +80,12 @@ for (const hit of cardsOf(tracks, "claim")) {
 }
 
 const repairMeaning = {
-  "slice-2.json": ["attraction", "引力"],
+  "slice-2.json": ["attraction", "景点；吸引力"],
   "slice-3.json": ["boom", "轰鸣"],
   "slice-6.json": ["mummy", "妈妈"],
   "slice-7.json": ["rail", "铁轨"],
   "slice-8.json": ["story", "故事"],
-  "slice-10.json": ["claim", "认领"],
+  "slice-10.json": ["claim", "声称；宣称"],
 };
 for (const file of Object.keys(repairMeaning)) {
   const data = JSON.parse(fs.readFileSync(path.join(root, "data/repairs", file), "utf8"));

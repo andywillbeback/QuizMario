@@ -5,7 +5,9 @@
   },
   "tidy": {
     "meaning_zh": "整洁的",
-    "pos": "adj."
+    "pos": "adj.",
+    "example_en": "Please keep your desk tidy before the exam.",
+    "example_zh": "考试前请保持课桌整洁。"
   },
   "kind": {
     "meaning_zh": "善良的；种类",
