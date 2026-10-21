@@ -33,6 +33,14 @@ assert.strictEqual(m.isBlank(studied(1)), false);
 assert.strictEqual(m.isBlank({ unlockedLevel: 2, cards: {} }), false);
 assert.strictEqual(m.studiedCount(studied(3)), 3);
 assert.strictEqual(m.studiedCount(blank), 0);
+assert.strictEqual(m.studiedCount({
+  cards: { "0::may": { reps: 0, correct: 0, wrong: 0, mastery: 0, spelling: { correct: 0, wrong: 2, unknown: 0 } } },
+}), 1, "spelling practice is real progress and must not look like an empty save");
+assert.strictEqual(m.isBlank({
+  points: 0,
+  unlockedLevel: 1,
+  cards: { "0::may": { reps: 0, correct: 0, wrong: 0, mastery: 0, state: "new", spelling: { correct: 1, wrong: 0 } } },
+}), false);
 
 assert.strictEqual(m.isCloudConfigured({
   SUPABASE_URL: "https://YOUR_PROJECT_REF.supabase.co",

@@ -340,6 +340,11 @@
   .level-card.locked { opacity: .45; cursor: not-allowed; }
   .level-card .ln { font-size: 1.05rem; color: var(--gold); font-weight: 700; }
   .level-card .meta { font-size: .78rem; opacity: .75; margin-top: 4px; }
+  .level-card .set-challenge {
+    margin-top: 8px; padding: 6px 10px; font-size: .75rem;
+    box-shadow: none; border-radius: 8px;
+  }
+  .stats-radar { width: 220px; max-width: 100%; height: auto; display: block; margin: 8px auto; }
   .stars { color: var(--gold); letter-spacing: 2px; margin-top: 6px; font-size: .95rem; }
   .stars.star-pop span {
     display: inline-block;
@@ -1083,6 +1088,8 @@
         <p id="queue-empty" class="queue-empty" hidden></p>
         <div class="btn-row">
           <button id="btn-continue" type="button">继续闯关</button>
+          <button id="btn-challenge" class="secondary" type="button">12分钟挑战</button>
+          <button id="btn-spelling" class="secondary" type="button">拼写</button>
           <button id="btn-levels" class="secondary" type="button">选择关卡</button>
           <a id="login-cta" class="btn secondary" href="login.html">登录 / 注册</a>
           <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
@@ -1090,7 +1097,7 @@
         </div>
         <p id="continue-hint" class="sub continue-hint" hidden></p>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
-          Tip: 点选英文单词 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd> · 看完解析后 <kbd>Enter</kbd>=继续
+          Tip: 继续闯关是看英文选中文，用来通关 · 拼写另算，不挡住第一次通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd> · 看完解析后 <kbd>Enter</kbd>=继续
         </p>
 
         <div id="stats-panel" class="panel">
@@ -1115,7 +1122,7 @@
     <section id="screen-levels" class="screen">
       <div class="title-card">
         <h2>选择关卡 Word sets</h2>
-        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set clears when 80% of its cards are in review with an interval of at least 1 day. Missed cards come back; they do not block the set. An uncleared set is a 12-minute challenge.</p>
+        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；拼写单独记。</p>
         <div id="level-grid" class="level-grid"></div>
         <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
       </div>
@@ -1137,6 +1144,7 @@
         </div>
       </div>
       <div id="prompt-box">
+        <div id="prompt-label">英文 → 中文意思</div>
         <div id="prompt-main">—</div>
         <div id="prompt-hint"></div>
       </div>
@@ -1200,10 +1208,14 @@
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
+  <script src="sense-id.js"></script>
   <script src="srs-rules.js"></script>
   <script src="review-queues.js"></script>
   <script src="learner-events.js"></script>
   <script src="cloze.js"></script>
+  <script src="sense-examples.js"></script>
+  <script src="practice.js"></script>
+  <script src="feedback.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
 </body>

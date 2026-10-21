@@ -509,6 +509,8 @@ async function main() {
       assert.ok(!home.html.includes(needle) && !home.text.includes(needle), "student home still shows " + needle);
     }
     assert.ok(home.text.includes("继续闯关"), "continue practice is on the student home");
+    assert.ok(home.text.includes("12分钟挑战"), "timed challenge is separate from regular study");
+    assert.ok(home.text.includes("拼写"), "spelling is its own entry");
     assert.ok(home.text.includes("今日到期"), "今日到期 is on the student home");
     assert.ok(home.text.includes("错词本"), "错词本 is on the student home");
 
@@ -554,6 +556,9 @@ async function main() {
         prompt: document.getElementById("prompt-main").textContent,
         hint: document.getElementById("prompt-hint").textContent,
         clock: (document.getElementById("challenge-timer") || {}).textContent || "",
+        clockHidden: !!(document.getElementById("challenge-clock") || {}).hidden,
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
+        choiceText: (document.querySelector("#choices .choice") || {}).textContent || "",
         sceneSort: !!document.getElementById("btn-sort-scene"),
         defaultSort: !!document.getElementById("btn-sort-default"),
         challengeMs: window.__QM && window.__QM.challengeMs,
@@ -569,11 +574,26 @@ async function main() {
     assert.ok(fresh.queue >= 1, "the queue is not empty after the first card");
     assert.strictEqual(fresh.typed, false);
     assert.strictEqual(fresh.due, false);
-    assert.strictEqual(fresh.challengeMs, 12 * 60 * 1000, "training challenge is 12 minutes");
-    assert.ok(fresh.clock === "12:00" || fresh.clock === "11:59", "clock reads " + fresh.clock);
+    assert.strictEqual(fresh.challengeMs, 12 * 60 * 1000, "challenge length is still 12 minutes");
+    assert.strictEqual(fresh.clockHidden, true, "继续闯关 is regular study and does not start the 12-minute clock");
+    assert.ok(fresh.label.indexOf("中文意思") !== -1, "study prompt is English → meaning: " + fresh.label);
+    assert.ok(/[\u4e00-\u9fff]/.test(fresh.choiceText), "study choices are Chinese meanings");
     assert.ok(fresh.hint.indexOf("hint:") !== -1 || fresh.hint.indexOf("例") !== -1, "hint stays on the card: " + fresh.hint);
     assert.strictEqual(fresh.sceneSort, false, "play screen has no 场景 sort button");
     assert.strictEqual(fresh.defaultSort, false, "play screen has no 默认 sort button");
+
+    await evalRetry(`document.getElementById("btn-quit").click()`);
+    await waitFor(async () => evalRetry(`document.getElementById("screen-home").classList.contains("active") ? true : null`), 8000, "home before challenge");
+    await evalRetry(`document.getElementById("btn-challenge").click()`);
+    const timed = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const clock = document.getElementById("challenge-clock");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      if (!clock || clock.hidden) return null;
+      return (document.getElementById("challenge-timer") || {}).textContent || "";
+    })()`), 10000, "12-minute challenge");
+    assert.ok(timed === "12:00" || timed === "11:59", "clock reads " + timed);
 
     const won = await evalRetry(`window.__QM.debugCelebrateChallenge()`);
     assert.strictEqual(won, true, "an active 12-minute challenge can be won");
@@ -594,7 +614,7 @@ async function main() {
 
     await evalRetry(`document.getElementById("btn-clear-home").click()`);
     await waitFor(async () => evalRetry(`document.getElementById("screen-home").classList.contains("active") ? true : null`), 8000, "home after win");
-    await evalRetry(`document.getElementById("btn-continue").click()`);
+    await evalRetry(`document.getElementById("btn-challenge").click()`);
     await waitFor(async () => evalRetry(`(() => {
       const play = document.getElementById("screen-play");
       const n = document.querySelectorAll("#choices .choice").length;
@@ -647,26 +667,24 @@ async function main() {
     await evalRetry(`document.getElementById("btn-continue").click()`);
 
     const answerOne = `(() => {
-      const meaning = document.getElementById("prompt-main").textContent.trim();
-      const hint = document.getElementById("prompt-hint").textContent;
+      const prompt = document.getElementById("prompt-main").textContent.trim();
       const track = (window.VOCAB_EXAM_TRACKS || []).find((t) => t.id === "zhongkao");
-      let word = "";
+      let card = null;
       if (track) {
         for (const set of track.sets) {
-          const hits = set.filter((w) => w.meaning_zh === meaning && w.example_zh && hint.indexOf(w.example_zh) !== -1);
-          const loose = set.filter((w) => w.meaning_zh === meaning);
-          const pick = hits.length ? hits : loose;
-          if (pick.length === 1) { word = pick[0].word; break; }
+          const hit = set.find((w) => w.word === prompt || w.meaning_zh === prompt);
+          if (hit) { card = hit; break; }
         }
       }
+      const want = card ? (card.word === prompt ? card.meaning_zh : card.word) : "";
       const buttons = Array.from(document.querySelectorAll("#choices .choice"));
-      const btn = buttons.find((b) => b.textContent.replace(/^\\d+\\.\\s*/, "").trim().toLowerCase() === String(word).toLowerCase());
-      if (!btn) return { ok: false, meaning: meaning, word: word, labels: buttons.map((b) => b.textContent) };
+      const btn = buttons.find((b) => b.textContent.replace(/^\\d+\\.\\s*/, "").trim() === String(want));
+      if (!btn) return { ok: false, prompt: prompt, want: want, labels: buttons.map((b) => b.textContent) };
       btn.click();
       const good = document.getElementById("btn-rate-good");
-      if (!good) return { ok: false, meaning: meaning, word: word, labels: ["no good button"] };
+      if (!good) return { ok: false, prompt: prompt, want: want, labels: ["no good button"] };
       good.click();
-      return { ok: true, word: word, meaning: meaning };
+      return { ok: true, prompt: prompt, want: want };
     })()`;
 
     let cleared = false;

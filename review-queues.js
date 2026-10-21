@@ -28,6 +28,8 @@
   var WRONG_BOOK_GRADUATE = 2;
 
   function lemmaKey(track, word) {
+    var api = typeof globalThis !== "undefined" ? globalThis.QuizMarioSense : null;
+    if (api && typeof api.lemmaKey === "function") return api.lemmaKey(track, word);
     return String(track || "core") + "::" + String(word || "").trim().toLowerCase();
   }
 
