@@ -15,6 +15,8 @@
  * 今日必练 clear pushes 继续闯关第 N 组, then 去 ALS 修语法.
  * Wrong MC picks are tagged 形近 / 义近 / 词性 / 其他 (error-types.js)
  * and summed on the student home and the 今日必练 clear screen.
+ * Progress story (progress-narrative.js): signed-in home adds 1–3 plain
+ * lines from the must queue, frontier, placement, and the top miss.
  */
 (function () {
   "use strict";
@@ -47,6 +49,8 @@
   if (!Placement) throw new Error("placement.js must load before game.js");
   const ET = window.QuizMarioErrorTypes;
   if (!ET) throw new Error("error-types.js must load before game.js");
+  const PN = window.QuizMarioProgressNarrative;
+  if (!PN) throw new Error("progress-narrative.js must load before game.js");
   const SenseExamples = window.QuizMarioSenseExamples;
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
@@ -2897,6 +2901,39 @@
     paintReasonBox($("miss-reasons"), view);
   }
 
+  function renderTodayNarrative(mustCount) {
+    const el = $("today-narrative");
+    if (!el) return;
+    const reasons = ET.present(save.missReasons);
+    const gate = RQ.freshDailyGate(save.mustPractice, todayKey());
+    let cleared = 0;
+    try {
+      const summary = trackSummary(currentTrack);
+      cleared = summary && summary.cleared ? summary.cleared.length : 0;
+    } catch (_) {}
+    const placed = save.placement && save.placement[currentTrack];
+    const view = PN.todayNarrative({
+      signedIn: signedIn(),
+      onHome: studentHomeActive(),
+      mustCount: mustCount,
+      mustStarted: !!(gate && gate.started),
+      frontier: frontierLevelNumber(),
+      setsCleared: cleared,
+      placement: placed || null,
+      topMiss: reasons.visible ? reasons.leadBucket : "",
+    });
+    el.hidden = !view.visible;
+    const list = $("today-narrative-lines");
+    if (!list) return;
+    list.textContent = "";
+    if (!view.visible) return;
+    for (let i = 0; i < view.lines.length; i++) {
+      const li = document.createElement("li");
+      li.textContent = view.lines[i];
+      list.appendChild(li);
+    }
+  }
+
   function renderClearReasons() {
     paintReasonBox($("clear-reasons"), ET.present(save.missReasons));
   }
@@ -2987,6 +3024,7 @@
     applyHomePrimacy(mode);
     renderHomeLoop(merged.length);
     renderMissReasons();
+    renderTodayNarrative(merged.length);
     const hint = $("continue-hint");
     if (hint) {
       hint.hidden = false;

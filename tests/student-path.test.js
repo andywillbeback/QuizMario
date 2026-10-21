@@ -120,6 +120,9 @@ function staticGuards() {
   assert.ok(index.includes('src="home-loop.js"'), "home loop rules load with the game");
   assert.ok(index.includes('src="error-types.js"'), "miss-reason rules load with the game");
   assert.ok(index.includes('id="miss-reasons"') && index.includes('id="clear-reasons"'), "错因 sits on home and the clear screen");
+  assert.ok(index.includes('id="today-narrative"') && index.includes('id="today-narrative-lines"'), "progress narrative sits on the home");
+  assert.ok(index.includes('src="progress-narrative.js"'), "progress narrative loads with the game");
+  assert.ok(game.includes("renderTodayNarrative"), "home paints the progress narrative");
   assert.ok(index.includes("其他/未归类"), "the four buckets are named in the student UI");
   assert.ok(game.includes("recordMissReason") && game.includes("renderMissReasons") && game.includes("renderClearReasons"),
     "wrong picks are classified and shown on the student path");
@@ -635,6 +638,8 @@ async function main() {
         action: strip.getAttribute("data-action"),
         mode: strip.getAttribute("data-mode"),
         reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
+        narrativeHidden: !!(document.getElementById("today-narrative") || {}).hidden,
+        narrative: (document.getElementById("today-narrative") || {}).textContent || "",
         fakeAls: /ALS 补了|回流词/.test(document.body.innerText || "")
       };
     })()`), 15000, "signed-in home strip");
@@ -650,6 +655,9 @@ async function main() {
     assert.strictEqual(emptyQueues.detail, "今日必练 0 道，继续闯关");
     assert.strictEqual(emptyQueues.action, "continue", "a zero count links the strip into 继续闯关");
     assert.strictEqual(emptyQueues.reasonsHidden, true, "no wrong picks means no 错因 strip");
+    assert.strictEqual(emptyQueues.narrativeHidden, false, "signed-in home shows the progress narrative");
+    assert.ok(emptyQueues.narrative.indexOf("今天没有必练") !== -1, emptyQueues.narrative);
+    assert.ok(emptyQueues.narrative.indexOf("摸底做完了，从第 1 组开始") !== -1, emptyQueues.narrative);
     assert.strictEqual(emptyQueues.mode, "weak");
     assert.strictEqual(emptyQueues.fakeAls, false, "the strip must not invent ALS 补了 / 回流词");
 
@@ -1223,11 +1231,13 @@ async function main() {
       const box = document.getElementById("miss-reasons");
       return {
         gate: !!(gate && gate.classList.contains("active")),
-        hidden: !box || box.hidden
+        hidden: !box || box.hidden,
+        narrativeHidden: !document.getElementById("today-narrative") || document.getElementById("today-narrative").hidden
       };
     })()`);
     assert.strictEqual(gateReasons.gate, true);
     assert.strictEqual(gateReasons.hidden, true, "错因 stays off the exam picker");
+    assert.strictEqual(gateReasons.narrativeHidden, true, "the progress narrative stays off the exam picker");
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const loopHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
@@ -1238,10 +1248,17 @@ async function main() {
       return {
         detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
         reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
-        reasons: (document.getElementById("miss-reasons") || {}).textContent || ""
+        reasons: (document.getElementById("miss-reasons") || {}).textContent || "",
+        narrativeHidden: !!(document.getElementById("today-narrative") || {}).hidden,
+        narrative: Array.from(document.querySelectorAll("#today-narrative-lines li")).map((li) => li.textContent)
       };
     })()`), 15000, "strip into 今日必练");
     assert.strictEqual(loopHome.detail, "今日必练 1 道");
+    assert.strictEqual(loopHome.narrativeHidden, false, "planted progress shows the narrative");
+    assert.ok(loopHome.narrative.length >= 1 && loopHome.narrative.length <= 3, JSON.stringify(loopHome.narrative));
+    assert.ok(loopHome.narrative.indexOf("今日必练还剩 1 道。") !== -1, JSON.stringify(loopHome.narrative));
+    assert.ok(loopHome.narrative.indexOf("现在在第 4 组。") !== -1, JSON.stringify(loopHome.narrative));
+    assert.ok(loopHome.narrative.indexOf("最近错过的，主要是形近。") !== -1, JSON.stringify(loopHome.narrative));
     assert.strictEqual(loopHome.reasonsHidden, false, "home lists the saved 错因 next to 今日必练");
     assert.ok(loopHome.reasons.indexOf("形近 2") !== -1, loopHome.reasons);
     assert.ok(loopHome.reasons.indexOf("义近 1") !== -1, loopHome.reasons);
