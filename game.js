@@ -3,7 +3,8 @@
  * v8: Good/Easy · 100×30 as Part A/B (15) · gloss+example fix · speech freeze guard · 本组进度
  * Clearance (通关): ≥80% of the set in review with interval ≥1 day (srs-rules.js).
  * 已学会 is a later-day clean recall, not the same thing as 通关 or 保持率.
- * Uncleared sets run a 12-minute challenge (CHALLENGE_MS).
+ * 继续闯关 is regular study with no clock. 12分钟挑战 is the only timed mode (CHALLENGE_MS).
+ * 通关 is 看英文选中文. 拼写 is tracked separately and does not block the first 通关.
  * 今日到期: one SM-2 queue of due cards across opened groups (review-queues.js).
  * 错词本: misses and cumulative wrong >= 2; two correct ratings in that mode graduate.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
@@ -28,10 +29,17 @@
   if (!SRS) throw new Error("srs-rules.js must load before game.js");
   const RQ = window.QuizMarioQueues;
   if (!RQ) throw new Error("review-queues.js must load before game.js");
+  const Practice = window.QuizMarioPractice;
+  if (!Practice) throw new Error("practice.js must load before game.js");
+  const FB = window.QuizMarioFeedback;
+  if (!FB) throw new Error("feedback.js must load before game.js");
+  const Sense = window.QuizMarioSense;
+  if (!Sense) throw new Error("sense-id.js must load before game.js");
+  const SenseExamples = window.QuizMarioSenseExamples;
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
-  /** Max new cards introduced per level session (Anki-like) */
-  const NEW_PER_SESSION = 12;
+  /** Fallback when practice.js is bypassed. Live sessions use Practice.newWordBudget. */
+  const NEW_PER_SESSION = Practice.STUDY_NEW;
 
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
   /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, updatedAt?:string}} SaveData */
@@ -50,8 +58,14 @@
   let playGen = 0;
   /** True when this visit opened a set that had already cleared. Review, not a challenge. */
   let sessionStartedClear = false;
-  /** "level" keeps the set flow. "due" and "wrongbook" are cross-group MC queues. */
+  /** "level" keeps the set flow. "due", "wrongbook", and "spelling" are other queues. */
   let sessionKind = "level";
+  /** "study" has no clock. "challenge" is the 12-minute set. */
+  let sessionMode = "study";
+  /** "meaning" is EN→ZH and counts toward 通关. "form" is the ZH→EN review used by 今日到期 and 错词本. "spelling" does not. */
+  let sessionDirection = "meaning";
+  /** Headwords missed in this visit, for the concrete feedback line. */
+  let sessionWrongs = [];
   let levelClearing = false;
   let challengeActive = false;
   let challengeFailed = false;
@@ -91,8 +105,29 @@
   const $ = (id) => document.getElementById(id);
 
   function cardKey(levelIdx, word) {
-    // core track keeps legacy keys so old backups stay valid
-    return (currentTrack === "core" ? "" : currentTrack + "|") + levelIdx + "::" + word.toLowerCase();
+    // Ordinary words keep the lowercased key so old backups stay valid.
+    // may/May and the other case splits use a sense token instead.
+    return Sense.cardKeyFor(currentTrack, levelIdx, word);
+  }
+
+  function catalogGroups() {
+    const groups = [];
+    const push = (track, sets) => {
+      (sets || []).forEach((words, li) => {
+        for (const w of words || []) {
+          if (w && w.word) groups.push({ track: track, levelIdx: li, word: w.word });
+        }
+      });
+    };
+    push("core", window.VOCAB_LEVELS || []);
+    const exams = window.VOCAB_EXAM_TRACKS || [];
+    for (const t of exams) push(t.id, t.sets);
+    for (const t of window.VOCAB_TRACKS || []) {
+      if (!t || t.id === "core") continue;
+      if (exams.some((e) => e.id === t.id)) continue;
+      push(t.id, t.sets);
+    }
+    return groups;
   }
 
   /** Add v6 fields (tracks, learning log, profile) to a save object. */
@@ -103,9 +138,17 @@
     sv.trackStars = data.trackStars || {};
     sv.daily = data.daily || {};
     sv.profile = data.profile || { name: "", cls: "" };
-    sv.wrongBook = (data.wrongBook && typeof data.wrongBook === "object" && !Array.isArray(data.wrongBook))
-      ? data.wrongBook
-      : {};
+    sv.wrongBook = Sense.migrateWrongBook(
+      (data.wrongBook && typeof data.wrongBook === "object" && !Array.isArray(data.wrongBook))
+        ? data.wrongBook
+        : {}
+    );
+    const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
+    sv.practice = {
+      meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
+      spelling: Object.assign({ n: 0, good: 0 }, practice.spelling || {}),
+      hint: Object.assign({ n: 0, good: 0 }, practice.hint || {}),
+    };
     if (data.updatedAt) sv.updatedAt = data.updatedAt;
     return sv;
   }
@@ -136,7 +179,7 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const data = JSON.parse(raw);
-        const cards = data.cards || {};
+        const cards = Sense.migrateCards(data.cards || {}, catalogGroups());
         for (const k of Object.keys(cards)) cards[k] = migrateCard(cards[k]);
         return extendSave({
           points: data.points || 0,
@@ -304,15 +347,23 @@
         "</div>" +
         '<div class="stars">' + "★".repeat(stars) + "☆".repeat(3 - stars) + "</div>";
       if (!locked) {
+        card.insertAdjacentHTML("beforeend", '<button type="button" class="ghost set-challenge">12分钟挑战</button>');
         card.addEventListener("click", () => startLevel(i));
+        const challengeBtn = card.querySelector(".set-challenge");
+        if (challengeBtn) {
+          challengeBtn.addEventListener("click", (event) => {
+            event.stopPropagation();
+            startLevel(i, { mode: "challenge" });
+          });
+        }
       }
       grid.appendChild(card);
     }
   }
 
-  /** Anki-lite / SM-2. quality: 0 Again, 1 Good, 2 Easy. */
-  function schedule(prog, quality, nowMs) {
-    return SRS.schedule(prog, quality, nowMs);
+  /** Anki-lite / SM-2. quality: 0 Again, 1 Good, 2 Easy. opts carries 不会 / hintSeen. */
+  function schedule(prog, quality, nowMs, opts) {
+    return SRS.schedule(prog, quality, nowMs, opts);
   }
 
   function formatDue(p) {
@@ -368,6 +419,18 @@
     };
   }
 
+  function countSeenCards() {
+    let n = 0;
+    const cards = save.cards || {};
+    for (const k of Object.keys(cards)) {
+      const p = cards[k];
+      if (!p) continue;
+      const spell = p.spelling || {};
+      if ((p.correct || 0) + (p.wrong || 0) + (p.unknown || 0) + (spell.correct || 0) + (spell.wrong || 0) + (spell.unknown || 0) > 0) n++;
+    }
+    return n;
+  }
+
   function buildQueue(levelNum) {
     const words = LEVELS[levelNum - 1] || [];
     const items = words.map((w, idx) => enrichItem(w, levelNum - 1, idx));
@@ -395,7 +458,13 @@
     }
 
     const q = [...due, ...learning.filter((it) => !due.some((d) => d.key === it.key))];
-    q.push(...neu.slice(0, NEW_PER_SESSION));
+    const budget = Practice.newWordBudget({
+      beginner: Practice.isBeginner(countSeenCards()),
+      dueCount: due.length,
+      mode: sessionMode,
+      newAvailable: neu.length,
+    });
+    q.push(...neu.slice(0, budget));
     // Nothing due, learning, or new: a short early review so a finished set can still be opened.
     if (!q.length) {
       later.sort((a, b) => (a.dueAt || 0) - (b.dueAt || 0));
@@ -415,10 +484,14 @@
       .replace(/"/g, "&quot;");
   }
 
-  function startLevel(levelNum) {
+  function startLevel(levelNum, opts) {
+    opts = opts || {};
     playGen += 1;
     levelClearing = false;
     sessionKind = "level";
+    sessionMode = opts.mode === "challenge" ? "challenge" : "study";
+    sessionDirection = "meaning";
+    sessionWrongs = [];
     currentLevel = levelNum;
     const progressLabel = $("set-progress-label");
     if (progressLabel) progressLabel.textContent = "本组进度";
@@ -441,9 +514,13 @@
     }
     showScreen("play");
     const playLevel = $("play-level");
-    if (playLevel) playLevel.textContent = setTitle(levelNum);
+    if (playLevel) {
+      const title = setTitle(levelNum);
+      playLevel.textContent = sessionMode === "challenge" ? (title + " · 挑战") : title;
+    }
     refreshHud();
-    beginChallenge();
+    if (Practice.usesChallengeClock(sessionMode)) beginChallenge();
+    else stopChallenge();
     nextCard();
   }
 
@@ -968,10 +1045,15 @@
   }
 
   function fillCardContent() {
+    const meaningMode = sessionDirection === "meaning";
     const promptLabel = $("prompt-label");
-    if (promptLabel) promptLabel.textContent = "Chinese meaning → English word";
+    if (promptLabel) {
+      promptLabel.textContent = meaningMode
+        ? "英文 → 中文意思"
+        : (sessionDirection === "spelling" ? "拼写 · 中文 → 英文" : "中文意思 → 英文单词");
+    }
     const promptMain = $("prompt-main");
-    if (promptMain) promptMain.textContent = currentCard.meaning_zh || "";
+    if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
     const prog = getProg(currentCard.key);
     const filled = Math.floor(prog.mastery || 0);
     const starsHtml =
@@ -989,8 +1071,17 @@
     else if (isLearning(prog)) srsTag = "学习中 Learning";
     else srsTag = formatDue(prog);
     metaBits.unshift(srsTag);
-    const hint = hintForCard(currentCard);
-    const exampleZh = currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
+    if (currentCard.pos) metaBits.push(currentCard.pos);
+    if (sessionDirection === "spelling") metaBits.push("拼写不计入通关");
+    let hint = "";
+    if (meaningMode) {
+      if (currentCard.example_en && !isPlaceholderExample(currentCard.example_en)) {
+        hint = softenHint(currentCard.example_en, currentCard.word);
+      }
+    } else {
+      hint = hintForCard(currentCard);
+    }
+    const exampleZh = !meaningMode && currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
     const hintEl = $("prompt-hint");
     if (hintEl) {
       hintEl.innerHTML =
@@ -1164,8 +1255,14 @@
             // Do not call onLevelClear here. 巩固 0/40 is not a pass, and that
             // screen's Next set / Home loop never deals another question.
             const pool = words.map((w, idx) => enrichItem(w, currentLevel - 1, idx));
-            const fresh = pool.filter((it) => isNewCard(getProg(it.key))).slice(0, NEW_PER_SESSION);
-            queue = fresh.length ? fresh : pool.slice(0, NEW_PER_SESSION);
+            const fallbackBudget = Math.max(1, Practice.newWordBudget({
+              beginner: Practice.isBeginner(countSeenCards()),
+              dueCount: 0,
+              mode: sessionMode,
+              newAvailable: pool.length,
+            }));
+            const fresh = pool.filter((it) => isNewCard(getProg(it.key))).slice(0, fallbackBudget);
+            queue = fresh.length ? fresh : pool.slice(0, fallbackBudget);
             if (!queue.length) {
               showScreen("home");
               return;
@@ -1241,12 +1338,12 @@
   }
 
   function updateProgress() {
-    if (sessionKind === "due" || sessionKind === "wrongbook") {
+    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "spelling") {
       const left = queue.length + requeueSoon.length + (currentCard ? 1 : 0);
       const total = Math.max(sessionTarget, left, 1);
       const done = Math.max(0, Math.min(total, total - left));
       const pct = Math.round((done / total) * 100);
-      const modeLabel = sessionKind === "due" ? "今日到期" : "错词本";
+      const modeLabel = sessionKind === "due" ? "今日到期" : (sessionKind === "spelling" ? "拼写" : "错词本");
       const bar = $("play-progress");
       if (bar) bar.style.width = pct + "%";
       const pctEl = $("set-progress-pct");
@@ -1311,8 +1408,84 @@
     b.hidden = !on;
   }
 
+  function bumpPractice(bucket, good) {
+    if (!save.practice || typeof save.practice !== "object") {
+      save.practice = { meaning: { n: 0, good: 0 }, spelling: { n: 0, good: 0 }, hint: { n: 0, good: 0 } };
+    }
+    const row = save.practice[bucket] || (save.practice[bucket] = { n: 0, good: 0 });
+    row.n += 1;
+    if (good) row.good += 1;
+  }
+
+  function rememberWrongWord(word) {
+    if (!word || sessionWrongs.indexOf(word) !== -1) return;
+    sessionWrongs.push(word);
+  }
+
+  function feedbackHtml(view) {
+    return (view && view.lines || []).map((line) => '<div class="fb-meta">' + escapeHtml(line) + "</div>").join("");
+  }
+
+  function extraExampleHtml(card) {
+    if (!SenseExamples || !card || typeof SenseExamples.extrasFor !== "function") return "";
+    const rows = SenseExamples.extrasFor(card.word);
+    if (!rows || !rows.length) return "";
+    const row = rows[0];
+    return '<div class="fb-ex">补充例句：' + escapeHtml(row.example_en || "") + " " + escapeHtml(row.example_zh || "") + "</div>";
+  }
+
+  function viewFor(outcome, chosen, dueLabel, signal) {
+    return FB.describeAttempt({
+      word: currentCard.word,
+      meaning: currentCard.meaning_zh,
+      direction: sessionDirection,
+      outcome: outcome,
+      picked: chosen || "",
+      hintSeen: !!(currentCard && currentCard._hintSeen),
+      dueLabel: dueLabel,
+      spellingSignal: signal,
+      recentWrongs: sessionWrongs.slice(),
+    });
+  }
+
+  function gradeSpelling(correct, chosen, outcome) {
+    awaiting = true;
+    setUnknownVisible(false);
+    const kind = outcome || (correct ? "correct" : "wrong");
+    const prog = getProg(currentCard.key);
+    const noted = Practice.noteSpelling(prog, kind, Date.now());
+    bumpPractice("spelling", kind === "correct");
+    if (kind !== "correct") rememberWrongWord(currentCard.word);
+    const fb = $("feedback");
+    const view = viewFor(kind, chosen, "", noted.signal);
+    const title = kind === "correct" ? "拼写对了" : (kind === "unknown" ? "不会 · 先看答案" : "拼写再想想");
+    if (fb) {
+      fb.innerHTML =
+        '<div class="fb-title">' + title + "</div>" +
+        '<div class="fb-answer">' + escapeHtml(currentCard.word) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
+        feedbackHtml(view) +
+        extraExampleHtml(currentCard) +
+        '<div class="rate-row"><button type="button" class="rate-btn good" id="btn-feedback-continue">' +
+        '<span class="rate-zh">继续</span><span class="rate-sub">Continue</span></button></div>';
+      fb.className = (kind === "correct" ? "ok" : "bad") + " show";
+    }
+    persist();
+    const cont = $("btn-feedback-continue");
+    if (cont) cont.addEventListener("click", () => {
+      if ($("btn-feedback-continue") !== cont) return;
+      nextCard();
+    });
+    const queueEl = $("play-queue");
+    if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
+    updateProgress();
+  }
+
   function grade(correct, easy, chosen, outcome) {
     if (awaiting || !currentCard || pendingRate) return;
+    if (sessionKind === "spelling") {
+      gradeSpelling(correct, chosen, outcome);
+      return;
+    }
     awaiting = true;
     setUnknownVisible(false);
     const kind = outcome || (correct ? "correct" : "wrong");
@@ -1321,6 +1494,9 @@
     const fb = $("feedback");
     const opts = attemptOpts(currentCard, { outcome: kind, correct: kind === "correct" });
     const nowMs = opts.now;
+    if (kind !== "correct") rememberWrongWord(currentCard.word);
+    if (sessionDirection === "meaning") bumpPractice("meaning", kind === "correct");
+    bumpPractice("hint", kind === "correct" && !(currentCard && currentCard._hintSeen));
 
     logAnswer(kind === "correct", prog, opts);
     if (kind === "correct") {
@@ -1343,6 +1519,7 @@
       fb.innerHTML =
         '<div class="fb-title">Correct! +' + bonus + "</div>" +
         '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+        feedbackHtml(viewFor("correct", "", "答对后选「记住了」或「太简单」", "")) +
         '<div class="fb-meta">选下次再练的时间</div>' +
         '<div class="rate-row">' +
         rateBtn("btn-rate-good", "good", "记住了", "Good", goodLabel) +
@@ -1403,6 +1580,8 @@
       if (sessionKind === "wrongbook") {
         why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
       }
+      why += feedbackHtml(viewFor(kind, chosen, "约 10 分钟后", ""));
+      why += extraExampleHtml(currentCard);
       why += '<div class="rate-row"><button type="button" class="rate-btn good" id="btn-feedback-continue">' +
         '<span class="rate-zh">继续</span><span class="rate-sub">Continue</span></button></div>';
       const title = kind === "unknown" ? "不会 · 先看答案" : "再想想 Not yet";
@@ -1460,7 +1639,9 @@
     fb.innerHTML =
       '<div class="fb-title">Correct · ' + qName + "</div>" +
       '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+      feedbackHtml(viewFor("correct", "", formatDue(prog), "")) +
       '<div class="fb-meta">下次见 · ' + escapeHtml(formatDue(prog)) + "</div>" +
+      extraExampleHtml(currentCard) +
       bookNote;
     fb.className = "ok show";
 
@@ -1573,30 +1754,74 @@
     return picks.slice(0, count);
   }
 
-  function renderChoices() {
-    if (!currentCard) return;
-    const correct = currentCard.word;
-    const distractors = pickHardDistractors(currentCard, 3);
-    const opts = [correct, ...distractors].filter((opt) => opt);
-    shuffle(opts);
+  function meaningsMatch(a, b) {
+    return String(a || "").trim() === String(b || "").trim();
+  }
+
+  function pickMeaningDistractors(target, count) {
+    const correct = String(target.meaning_zh || "").trim();
+    const pool = [];
+    const seen = new Set();
+    if (correct) seen.add(correct);
+    const add = (w) => {
+      if (!w || w.word === target.word) return;
+      const gloss = String(w.meaning_zh || "").trim();
+      if (!gloss || seen.has(gloss)) return;
+      seen.add(gloss);
+      pool.push(w);
+    };
+    const levelWords = LEVELS[currentLevel - 1] || [];
+    levelWords.forEach(add);
+    for (let li = 0; li < LEVELS.length; li++) {
+      if (li === currentLevel - 1) continue;
+      (LEVELS[li] || []).forEach(add);
+    }
+    const samePos = pool.filter((w) => w.pos && target.pos && w.pos === target.pos);
+    const usePool = samePos.length >= count ? samePos : pool;
+    const top = usePool.slice(0, Math.max(count * 4, count));
+    shuffle(top);
+    return top.slice(0, count).map((w) => w.meaning_zh);
+  }
+
+  function paintChoices(opts, correct, match) {
     const box = $("choices");
     if (!box) return;
+    shuffle(opts);
     box.hidden = false;
+    box.setAttribute("aria-label", sessionDirection === "meaning" ? "选择中文意思" : "选择英文单词");
     box.innerHTML = "";
     opts.forEach((opt, i) => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "choice";
       b.textContent = i + 1 + ".  " + opt;
-        b.addEventListener("click", () => {
+      b.addEventListener("click", () => {
         if (awaiting) return;
-        const ok = answersMatch(opt, correct);
+        const ok = match(opt, correct);
         b.classList.add(ok ? "ok" : "bad");
         grade(ok, false, opt, ok ? "correct" : "wrong");
       });
       box.appendChild(b);
     });
     setUnknownVisible(true);
+  }
+
+  function renderChoices() {
+    if (!currentCard) return;
+    if (sessionDirection === "meaning") {
+      const correct = currentCard.meaning_zh || "";
+      const opts = [correct, ...pickMeaningDistractors(currentCard, 3)].filter((opt) => String(opt || "").trim());
+      while (opts.length < 4) {
+        const filler = "（其他义项 " + opts.length + "）";
+        if (opts.indexOf(filler) === -1) opts.push(filler);
+        else break;
+      }
+      paintChoices(opts, correct, meaningsMatch);
+      return;
+    }
+    const correct = currentCard.word;
+    const opts = [correct, ...pickHardDistractors(currentCard, 3)].filter((opt) => opt);
+    paintChoices(opts, correct, answersMatch);
   }
 
   function shuffle(arr) {
@@ -1688,8 +1913,8 @@
   }
 
   function snapshotToSave(payload) {
+    const src = Sense.migrateCards(payload.cards || {}, catalogGroups());
     const cards = {};
-    const src = payload.cards || {};
     for (const k of Object.keys(src)) cards[k] = migrateCard(Object.assign({}, src[k]));
     return extendSave({
       points: payload.points || 0,
@@ -1708,6 +1933,7 @@
       profile: Object.assign({ name: "", cls: "" }, payload.profile || {}),
       updatedAt: payload.updatedAt,
       wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
+      practice: payload.practice && typeof payload.practice === "object" ? payload.practice : {},
     });
   }
 
@@ -1994,6 +2220,14 @@
       tr += "<li>" + escapeHtml(t.name) + "：已学会 " + s.learned + "/" + s.total + " · 通关 " + s.cleared.length + "/" + s.sets + " 组</li>";
     }
     refreshHomeQueues();
+    const spellLine = spellingLine();
+    const axes = FB.radarFromEvidence({
+      meaning: save.practice && save.practice.meaning,
+      spelling: save.practice && save.practice.spelling,
+      retention: retentionEvidence(),
+      hint: save.practice && save.practice.hint,
+    });
+    const radar = axes ? ('<div class="stats-radar-wrap">' + FB.radarSvg(axes) + "</div>") : "";
     box.innerHTML =
       '<div class="stats-grid">' +
       "<div><b>" + st.streak + "</b>连续打卡(天)</div>" +
@@ -2002,8 +2236,38 @@
       "<div><b>" + pct(st.ret7) + "</b>近7天复习保持率</div>" +
       "</div>" + svg +
       '<p class="stats-legend">柱：每日答题量 · 黄线：每日正确率 · 累计答题 ' + st.answers + " 次 · 学习 " + st.activeDays + " 天</p>" +
-      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。</p>' +
+      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。拼写单独记，不挡住第一次通关。</p>' +
+      spellLine +
+      radar +
       '<ul class="stats-tracks">' + tr + "</ul>";
+  }
+
+  function retentionEvidence() {
+    let n = 0;
+    let good = 0;
+    const daily = save.daily || {};
+    for (const k of Object.keys(daily)) {
+      const d = daily[k] || {};
+      n += (d.rc || 0) + (d.rw || 0);
+      good += d.rc || 0;
+    }
+    return { n: n, good: good };
+  }
+
+  function spellingLine() {
+    let cards = 0;
+    let correct = 0;
+    let wrong = 0;
+    for (const p of Object.values(save.cards || {})) {
+      const s = p && p.spelling;
+      if (!s) continue;
+      if ((s.correct || 0) + (s.wrong || 0) + (s.unknown || 0) === 0) continue;
+      cards++;
+      correct += s.correct || 0;
+      wrong += s.wrong || 0;
+    }
+    if (!cards) return "";
+    return '<p class="stats-legend">拼写 ' + cards + " 词 · 对 " + correct + " · 错 " + wrong + " · 不计入通关</p>";
   }
 
   // ---- report code for teacher (compact, no full card dump) ----
@@ -2189,10 +2453,14 @@
     } catch (_) {}
   }
 
+  function findSurface(words, lemma) {
+    const id = Sense.senseId(lemma);
+    return words.find((x) => Sense.senseId(x.word) === id)
+      || words.find((x) => String(x.word).toLowerCase() === String(lemma || "").trim().toLowerCase());
+  }
+
   function glossAt(levelIdx, lemma) {
-    const words = LEVELS[levelIdx] || [];
-    const want = String(lemma || "").toLowerCase();
-    const w = words.find((x) => String(x.word).toLowerCase() === want);
+    const w = findSurface(LEVELS[levelIdx] || [], lemma);
     return w ? (w.meaning_zh || "") : "";
   }
 
@@ -2292,8 +2560,7 @@
     for (const row of rows) {
       const li = row.levelIdx || 0;
       const words = LEVELS[li] || [];
-      const lemma = String(row.lemma || "").toLowerCase();
-      const w = words.find((x) => String(x.word).toLowerCase() === lemma);
+      const w = findSurface(words, row.lemma || "");
       if (!w) continue;
       const it = enrichItem(w, li, 0);
       it.levelIdx = li;
@@ -2349,10 +2616,45 @@
     startQueueSession("due", items);
   }
 
+  function startSpellingSession() {
+    const lvl = Math.min(Math.max(1, save.unlockedLevel || 1), LEVEL_COUNT);
+    currentLevel = lvl;
+    const words = LEVELS[lvl - 1] || [];
+    const items = words.map((w, idx) => enrichItem(w, lvl - 1, idx));
+    const now = Date.now();
+    const due = [];
+    const neu = [];
+    const rest = [];
+    for (const it of items) {
+      const p = getProg(it.key);
+      if (isNewCard(p)) neu.push(it);
+      else if (isDue(p, now)) due.push(it);
+      else rest.push(it);
+    }
+    const budget = Practice.newWordBudget({
+      beginner: Practice.isBeginner(countSeenCards()),
+      dueCount: due.length,
+      mode: "spelling",
+      newAvailable: neu.length,
+    });
+    const q = due.slice();
+    q.push(...neu.slice(0, budget));
+    const batch = q.length ? q : (rest.length ? rest.slice(0, Practice.BEGINNER_NEW) : items.slice(0, Practice.BEGINNER_NEW));
+    if (!batch.length) {
+      showQueueEmpty("这一组还没有可以拼写的词。");
+      return;
+    }
+    hideQueueEmpty();
+    startQueueSession("spelling", batch);
+  }
+
   function startQueueSession(kind, items) {
     playGen += 1;
     levelClearing = false;
     sessionKind = kind;
+    sessionDirection = kind === "spelling" ? "spelling" : "form";
+    sessionMode = "study";
+    sessionWrongs = [];
     sessionStartedClear = true;
     queue = items.slice();
     requeueSoon.length = 0;
@@ -2373,7 +2675,7 @@
     hideQueueEmpty();
     showScreen("play");
     const playLevel = $("play-level");
-    const modeLabel = kind === "due" ? "今日到期" : "错词本";
+    const modeLabel = kind === "due" ? "今日到期" : (kind === "spelling" ? "拼写" : "错词本");
     if (playLevel) playLevel.textContent = modeLabel;
     const progressLabel = $("set-progress-label");
     if (progressLabel) progressLabel.textContent = modeLabel;
@@ -2404,6 +2706,9 @@
     if (kind === "due") {
       if (title) title.textContent = "今日到期练完了";
       if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
+    } else if (kind === "spelling") {
+      if (title) title.textContent = "这轮拼写练完了";
+      if (msg) msg.textContent = "拼写单独记，不改变本组通关。";
     } else {
       const left = wrongBookQueueItems().length;
       if (title) title.textContent = left ? "这轮错词练完了" : "错词本清空了";
@@ -2435,6 +2740,12 @@
     const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
     startLevel(lvl);
   });
+  if ($("btn-challenge")) $("btn-challenge").addEventListener("click", () => {
+    const lvl = Math.min(Math.max(1, save.unlockedLevel || 1), LEVEL_COUNT);
+    hideQueueEmpty();
+    startLevel(lvl, { mode: "challenge" });
+  });
+  if ($("btn-spelling")) $("btn-spelling").addEventListener("click", () => startSpellingSession());
   if ($("btn-due-today")) $("btn-due-today").addEventListener("click", () => {
     const dueItems = dueQueueItems();
     if (!dueItems.length) {
@@ -2489,7 +2800,7 @@
   });
   if ($("btn-fail-retry")) $("btn-fail-retry").addEventListener("click", () => {
     challengeFailed = false;
-    startLevel(currentLevel);
+    startLevel(currentLevel, { mode: "challenge" });
   });
   if ($("btn-fail-home")) $("btn-fail-home").addEventListener("click", () => {
     playGen += 1;
