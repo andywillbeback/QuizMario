@@ -51,11 +51,13 @@ assert.strictEqual(coreOne("rail").meaning_zh, "铁轨");
 assert.strictEqual(coreOne("mummy").meaning_zh, "妈妈");
 assert.strictEqual(coreOne("communicate").meaning_zh, "沟通；交流");
 
+// Exam tracks use the curriculum-frequency gloss from the same-set disambiguation.
+// The core bank assertions above keep 引力 / 认领.
 const expect = {
   story: "故事",
-  attraction: "引力",
+  attraction: "景点；吸引力",
   boom: "轰鸣",
-  claim: "认领",
+  claim: "声称；宣称",
   rail: "铁轨",
   mummy: "妈妈",
   communicate: "沟通；交流",
@@ -68,6 +70,14 @@ for (const word of Object.keys(expect)) {
   }
 }
 assert.strictEqual(cardsOf(tracks, "mummy").length, 1, "only the gaokao mummy card");
+for (const hit of cardsOf(tracks, "attraction")) {
+  assert.strictEqual(hit.example_en, "The Great Wall is a famous attraction for visitors.", hit.track);
+  assert.strictEqual(hit.example_zh, "长城对游客来说是著名的景点。", hit.track);
+}
+for (const hit of cardsOf(tracks, "claim")) {
+  assert.strictEqual(hit.example_en, "Some students claim that the test was too hard.", hit.track);
+  assert.strictEqual(hit.example_zh, "有些学生声称这次考试太难了。", hit.track);
+}
 
 const repairMeaning = {
   "slice-2.json": ["attraction", "引力"],
