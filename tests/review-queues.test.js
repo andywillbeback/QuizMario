@@ -176,20 +176,24 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
 {
   const day = "2026-10-21";
   const next = "2026-10-22";
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 3, day: day, record: null }), true);
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: false, count: 3, day: day, record: null }), false);
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 0, day: day, record: null }), false);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: true, count: 3, day: day, record: null }), true);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: false, count: 3, day: day, record: null }), false,
+    "the exam picker is not the student home");
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 3, day: day, record: null }), false,
+    "omitting onHome must not cover 中考/高考");
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: false, onHome: true, count: 3, day: day, record: null }), false);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: true, count: 0, day: day, record: null }), false);
   assert.strictEqual(rq.homePrimacy({ count: 0, day: day, record: null }), "hidden");
   assert.strictEqual(rq.homePrimacy({ count: 3, day: day, record: null }), "primary");
 
   const yesterday = { day: "2026-10-20", started: true, dismissed: true };
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 2, day: day, record: yesterday }), true,
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: true, count: 2, day: day, record: yesterday }), true,
     "a previous day does not suppress today's gate");
   assert.strictEqual(rq.homePrimacy({ count: 2, day: day, record: yesterday }), "primary");
 
   const dismissed = rq.markDailyGate(null, day, "dismiss");
   assert.deepStrictEqual(dismissed, { day: day, started: false, dismissed: true });
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 5, day: day, record: dismissed }), false,
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: true, count: 5, day: day, record: dismissed }), false,
     "稍后 suppresses the gate for the rest of the day");
   assert.strictEqual(rq.homePrimacy({ count: 5, day: day, record: dismissed }), "primary",
     "稍后 does not demote 今日必练");
@@ -198,9 +202,9 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
   const started = rq.markDailyGate(dismissed, day, "start");
   assert.strictEqual(started.started, true);
   assert.strictEqual(started.dismissed, true);
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 5, day: day, record: started }), false);
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: true, count: 5, day: day, record: started }), false);
   assert.strictEqual(rq.homePrimacy({ count: 5, day: day, record: started }), "secondary");
-  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 5, day: next, record: started }), true,
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, onHome: true, count: 5, day: next, record: started }), true,
     "the next calendar day asks again");
   assert.strictEqual(rq.homePrimacy({ count: 5, day: next, record: started }), "primary");
   assert.strictEqual(rq.homePrimacy({ count: 0, day: next, record: started }), "hidden");
@@ -221,6 +225,7 @@ assert.ok(game.includes("rememberMiss"));
 assert.ok(game.includes("noteWrongBookCorrect"));
 assert.ok(game.includes("mergePracticeQueue"));
 assert.ok(game.includes("shouldShowSoftGate"));
+assert.ok(game.includes("onHome: studentHomeActive()"), "soft gate is tied to the student home");
 assert.ok(game.includes("homePrimacy"));
 assert.ok(game.includes('startQueueSession("must"'));
 assert.ok(!game.includes("继续闯关会先练今日到期"));

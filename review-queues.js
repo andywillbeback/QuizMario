@@ -17,8 +17,10 @@
  *   count >= 1 and started today → "secondary"; count 0 → "hidden".
  *   Dismissing the daily soft gate does not count as starting.
  *   The soft gate shows once per calendar day for a signed-in student
+ *   on the student home (after an exam track is chosen, opts.onHome),
  *   while the combined count is at least 1 and they have neither
- *   dismissed nor started 今日必练 that day.
+ *   dismissed nor started 今日必练 that day. It must not cover the
+ *   exam picker.
  *
  * 继续闯关
  *   Always "latest" (the frontier group, English → meaning). Due and
@@ -137,12 +139,15 @@
   }
 
   /**
-   * Soft gate: signed in, combined count >= 1, and this calendar day has
-   * neither a dismiss (稍后) nor a start (开始 / 今日必练). Not a redirect.
+   * Soft gate: signed in, student home is showing (an exam track was
+   * chosen), combined count >= 1, and this calendar day has neither a
+   * dismiss (稍后) nor a start (开始 / 今日必练). Not a redirect.
+   * onHome false (exam picker, or the flag omitted) stays hidden.
    */
   function shouldShowSoftGate(opts) {
     opts = opts || {};
     if (!opts.signedIn) return false;
+    if (!opts.onHome) return false;
     if ((Number(opts.count) || 0) < 1) return false;
     var row = freshDailyGate(opts.record, opts.day);
     if (row.started || row.dismissed) return false;

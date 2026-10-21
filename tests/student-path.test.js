@@ -113,6 +113,11 @@ function staticGuards() {
   assert.ok(game.includes('sessionKind === "wrongbook"'), "wrong-book graduation still checks that session");
   assert.ok(game.includes('sessionKind === "must"'), "今日必练 is its own practice mode");
   assert.ok(game.includes("mergePracticeQueue"), "home builds the combined queue");
+  assert.ok(index.includes('id="home-loop"') && index.includes("薄弱点 → 今日必练"), "home loop strip");
+  assert.ok(index.includes('id="btn-clear-continue"') && index.includes("继续闯关第"), "must-clear frontier CTA");
+  assert.ok(index.includes('id="btn-clear-als"') && index.includes("去 ALS 修语法"), "must-clear ALS CTA");
+  assert.ok(index.includes('src="home-loop.js"'), "home loop rules load with the game");
+  assert.ok(game.includes("onHome: studentHomeActive()"), "soft gate checks the student home");
   assert.ok(!game.includes("继续闯关会先练今日到期"), "继续闯关 no longer prefers the due queue");
   assert.ok(!game.includes("btn-rate-again"), "no third Again button");
   const rules = read("srs-rules.js");
@@ -517,10 +522,14 @@ async function main() {
     assert.ok(home.text.includes("今日必练"), "今日必练 is explained on the student home");
     assert.ok(!home.html.includes("btn-due-today") && !home.html.includes("btn-wrong-book"), "due and wrong-book are not separate buttons");
 
-    const emptyQueues = await evalRetry(`(() => {
+    const emptyQueues = await waitFor(async () => evalRetry(`(() => {
+      const logged = window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn();
       const must = document.getElementById("btn-must-practice");
       const gate = document.getElementById("must-gate");
       const hint = document.getElementById("continue-hint");
+      const strip = document.getElementById("home-loop");
+      const title = (document.getElementById("home-loop-title") || {}).textContent || "";
+      if (!logged || !strip || strip.hidden || title.indexOf("薄弱点") === -1) return null;
       return {
         home: document.getElementById("screen-home").classList.contains("active"),
         play: document.getElementById("screen-play").classList.contains("active"),
@@ -529,9 +538,14 @@ async function main() {
         primacy: document.getElementById("screen-home").getAttribute("data-review-primacy"),
         continueSecondary: document.getElementById("btn-continue").classList.contains("secondary"),
         hint: hint ? hint.textContent : "",
-        again: !!document.getElementById("btn-rate-again")
+        again: !!document.getElementById("btn-rate-again"),
+        strip: title,
+        detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
+        action: strip.getAttribute("data-action"),
+        mode: strip.getAttribute("data-mode"),
+        fakeAls: /ALS 补了|回流词/.test(document.body.innerText || "")
       };
-    })()`);
+    })()`), 15000, "signed-in home strip");
     assert.strictEqual(emptyQueues.home, true, "empty 今日必练 stays on the homepage");
     assert.strictEqual(emptyQueues.play, false);
     assert.strictEqual(emptyQueues.mustHidden, true, "a zero count hides 今日必练");
@@ -540,6 +554,11 @@ async function main() {
     assert.strictEqual(emptyQueues.continueSecondary, false, "继续闯关 stays the primary button when nothing is due");
     assert.ok(emptyQueues.hint.includes("没有到期或错词"), emptyQueues.hint);
     assert.strictEqual(emptyQueues.again, false);
+    assert.strictEqual(emptyQueues.strip, "薄弱点 → 今日必练");
+    assert.strictEqual(emptyQueues.detail, "今日必练 0 道，继续闯关");
+    assert.strictEqual(emptyQueues.action, "continue", "a zero count links the strip into 继续闯关");
+    assert.strictEqual(emptyQueues.mode, "weak");
+    assert.strictEqual(emptyQueues.fakeAls, false, "the strip must not invent ALS 补了 / 回流词");
 
     await evalRetry(`document.getElementById("btn-continue").click()`);
     const fresh = await waitFor(async () => evalRetry(`(() => {
@@ -788,6 +807,27 @@ async function main() {
       return { word: a.word, meaning: a.meaning_zh, other: b.word, locked: locked.word, weak: weak.word };
     })()`);
     await reloadToGate("gate before due aggregation");
+    const examOnly = await waitFor(async () => evalRetry(`(() => {
+      const exam = document.getElementById("screen-gate");
+      const logged = window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn();
+      if (!exam || !exam.classList.contains("active") || !logged || !window.__QM) return null;
+      window.__QM.applyCloudSave(window.__QM.getSave());
+      const soft = document.getElementById("must-gate");
+      const strip = document.getElementById("home-loop");
+      return {
+        exam: exam.classList.contains("active"),
+        home: document.getElementById("screen-home").classList.contains("active"),
+        softHidden: !soft || soft.hidden,
+        stripHidden: !strip || strip.hidden,
+        zk: (document.getElementById("btn-gate-zhongkao") || {}).textContent || "",
+        gk: (document.getElementById("btn-gate-gaokao") || {}).textContent || ""
+      };
+    })()`), 15000, "exam gate without soft overlay");
+    assert.strictEqual(examOnly.exam, true);
+    assert.strictEqual(examOnly.home, false);
+    assert.strictEqual(examOnly.softHidden, true, "cloud apply must not cover 中考/高考 with the soft gate");
+    assert.strictEqual(examOnly.stripHidden, true, "the loop strip stays on the student home");
+    assert.ok(examOnly.zk.indexOf("中考") !== -1 && examOnly.gk.indexOf("高考") !== -1);
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const dueHome = await waitFor(async () => evalRetry(`(() => {
       const home = document.getElementById("screen-home");
@@ -804,7 +844,11 @@ async function main() {
         mustSecondary: document.getElementById("btn-must-practice").classList.contains("secondary"),
         continueSecondary: document.getElementById("btn-continue").classList.contains("secondary"),
         play: document.getElementById("screen-play").classList.contains("active"),
-        hint: hint && !hint.hidden ? hint.textContent : ""
+        hint: hint && !hint.hidden ? hint.textContent : "",
+        strip: (document.getElementById("home-loop-title") || {}).textContent || "",
+        detail: (document.getElementById("home-loop-detail") || {}).textContent || "",
+        stripHidden: !!(document.getElementById("home-loop") || {}).hidden,
+        action: (document.getElementById("home-loop") || {}).getAttribute ? document.getElementById("home-loop").getAttribute("data-action") : ""
       };
     })()`), 15000, "soft gate");
     assert.strictEqual(dueHome.play, false, "the soft gate does not auto-open cards");
@@ -814,6 +858,10 @@ async function main() {
     assert.strictEqual(dueHome.mustSecondary, false);
     assert.strictEqual(dueHome.continueSecondary, true, "今日必练 is more prominent than 继续闯关");
     assert.ok(dueHome.hint.includes("今日必练"), dueHome.hint);
+    assert.strictEqual(dueHome.stripHidden, false, "the loop strip is on the signed-in home");
+    assert.strictEqual(dueHome.strip, "薄弱点 → 今日必练");
+    assert.strictEqual(dueHome.detail, "今日必练 3 道");
+    assert.strictEqual(dueHome.action, "must");
 
     await evalRetry(`document.getElementById("btn-must-later").click()`);
     const later = await evalRetry(`(() => {
@@ -1019,6 +1067,116 @@ async function main() {
     assert.strictEqual(wrongPlay.title, "今日必练");
     assert.strictEqual(wrongPlay.again, false);
     assert.strictEqual(wrongPlay.typed, false);
+
+    await evalRetry(`document.getElementById("btn-quit").click()`);
+    await evalRetry(`(() => {
+      const track = (window.VOCAB_EXAM_TRACKS || []).find((t) => t.id === "zhongkao");
+      if (!track || !track.sets[3]) throw new Error("中考 track has no frontier set");
+      const word = track.sets[0][0];
+      const now = Date.now();
+      const cards = {};
+      cards["zhongkao|0::" + String(word.word).toLowerCase()] = {
+        ef: 2.5, interval: 3, reps: 4, lapses: 0, due: now - 1000,
+        correct: 4, wrong: 0, mastery: 2, state: "review"
+      };
+      localStorage.setItem("vocabSpotlight_v1", JSON.stringify({
+        points: 10, streak: 0, bestStreak: 1, unlockedLevel: 4,
+        cards: cards, levelStars: {}, sortMode: "default", voiceOn: false,
+        track: "zhongkao",
+        trackUnlock: { zhongkao: 4 },
+        trackStars: { zhongkao: {} },
+        daily: {},
+        profile: { name: "", cls: "" },
+        updatedAt: "2020-01-01T00:00:00.000Z"
+      }));
+      return word.meaning_zh;
+    })()`);
+    await reloadToGate("gate before must clear");
+    await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
+    const loopHome = await waitFor(async () => evalRetry(`(() => {
+      const home = document.getElementById("screen-home");
+      const strip = document.getElementById("home-loop");
+      const logged = window.QuizMarioCloud && window.QuizMarioCloud.loggedIn && window.QuizMarioCloud.loggedIn();
+      if (!home || !home.classList.contains("active") || !logged || !strip || strip.hidden) return null;
+      if (strip.getAttribute("data-action") !== "must") return null;
+      return {
+        detail: (document.getElementById("home-loop-detail") || {}).textContent || ""
+      };
+    })()`), 15000, "strip into 今日必练");
+    assert.strictEqual(loopHome.detail, "今日必练 1 道");
+    await evalRetry(`(() => {
+      const soft = document.getElementById("must-gate");
+      if (soft && !soft.hidden) document.getElementById("btn-must-later").click();
+      document.getElementById("home-loop").click();
+      return true;
+    })()`);
+    await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      if ((document.getElementById("play-level") || {}).textContent !== "今日必练") return null;
+      return true;
+    })()`), 10000, "strip opened 今日必练");
+    const answeredMust = await evalRetry(`(() => {
+      const prompt = document.getElementById("prompt-main").textContent.trim();
+      const track = (window.VOCAB_EXAM_TRACKS || []).find((t) => t.id === "zhongkao");
+      let card = null;
+      if (track) {
+        for (const set of track.sets) {
+          const hit = set.find((w) => w.word === prompt || w.meaning_zh === prompt);
+          if (hit) { card = hit; break; }
+        }
+      }
+      const want = card ? (card.word === prompt ? card.meaning_zh : card.word) : "";
+      const buttons = Array.from(document.querySelectorAll("#choices .choice"));
+      const btn = buttons.find((b) => b.textContent.replace(/^\\d+\\.\\s*/, "").trim() === String(want));
+      if (!btn) return { ok: false, prompt: prompt, want: want };
+      btn.click();
+      const good = document.getElementById("btn-rate-good");
+      if (!good) return { ok: false, prompt: prompt, want: want, labels: ["no good button"] };
+      good.click();
+      return { ok: true };
+    })()`);
+    assert.strictEqual(answeredMust.ok, true, "the single 今日必练 card was rated Good");
+    const mustClear = await waitFor(async () => evalRetry(`(() => {
+      const clear = document.getElementById("screen-clear");
+      const cont = document.getElementById("btn-clear-continue");
+      const als = document.getElementById("btn-clear-als");
+      const next = document.getElementById("btn-next-level");
+      if (!clear || !clear.classList.contains("active") || !cont || cont.hidden) return null;
+      return {
+        title: (document.getElementById("clear-title") || {}).textContent || "",
+        msg: (document.getElementById("clear-msg") || {}).textContent || "",
+        primary: cont.textContent.trim(),
+        als: als && !als.hidden ? als.textContent.trim() : "",
+        alsHref: als ? als.getAttribute("href") : "",
+        placeholder: als ? als.getAttribute("data-als-placeholder") : "",
+        nextHidden: !next || next.hidden
+      };
+    })()`), 8000, "今日必练 clear next step");
+    assert.ok(mustClear.msg.indexOf("练完了，然后继续闯关第 4 组。") !== -1, mustClear.msg);
+    assert.strictEqual(mustClear.primary, "继续闯关第 4 组");
+    assert.strictEqual(mustClear.als, "去 ALS 修语法");
+    assert.strictEqual(mustClear.alsHref, "https://andywillbeback.github.io/#als-placeholder");
+    assert.strictEqual(mustClear.placeholder, "true");
+    assert.strictEqual(mustClear.nextHidden, true, "the vague Next set button stays hidden");
+
+    await evalRetry(`document.getElementById("btn-clear-continue").click()`);
+    const frontier = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || n !== 4) return null;
+      return {
+        level: (document.getElementById("play-level") || {}).textContent || "",
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
+        choice: (document.querySelector("#choices .choice") || {}).textContent || "",
+        clockHidden: !!(document.getElementById("challenge-clock") || {}).hidden
+      };
+    })()`), 10000, "frontier set from the clear CTA");
+    assert.ok(frontier.level.indexOf("第4组") !== -1, frontier.level);
+    assert.ok(frontier.label.indexOf("中文意思") !== -1, "frontier set stays English → meaning: " + frontier.label);
+    assert.ok(/[\u4e00-\u9fff]/.test(frontier.choice), "frontier choices stay Chinese");
+    assert.strictEqual(frontier.clockHidden, true);
 
     console.log("student-path ok");
   } catch (err) {

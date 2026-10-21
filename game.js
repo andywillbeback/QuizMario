@@ -10,6 +10,9 @@
  * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  * learner-events.js emits quizmario signals only. schedule() remains the only SRS clock.
+ * Home loop strip (home-loop.js): signed-in home shows 薄弱点 → 今日必练.
+ * ALS 补了 / 回流词 stays unimplemented until source=als rows are readable.
+ * 今日必练 clear pushes 继续闯关第 N 组, then 去 ALS 修语法.
  */
 (function () {
   "use strict";
@@ -30,6 +33,8 @@
   if (!SRS) throw new Error("srs-rules.js must load before game.js");
   const RQ = window.QuizMarioQueues;
   if (!RQ) throw new Error("review-queues.js must load before game.js");
+  const HL = window.QuizMarioHomeLoop;
+  if (!HL) throw new Error("home-loop.js must load before game.js");
   const Practice = window.QuizMarioPractice;
   if (!Practice) throw new Error("practice.js must load before game.js");
   const FB = window.QuizMarioFeedback;
@@ -1886,6 +1891,7 @@
     }
     const clearScreen = $("screen-clear");
     if (clearScreen) clearScreen.classList.toggle("challenge-win", !!challengeWon);
+    resetClearActions();
     const nextBtn = $("btn-next-level");
     if (nextBtn) nextBtn.hidden = false;
     showScreen("clear");
@@ -2661,6 +2667,76 @@
     if (queues) queues.hidden = true;
   }
 
+  function studentHomeActive() {
+    const home = $("screen-home");
+    return !!(home && home.classList.contains("active"));
+  }
+
+  function frontierLevelNumber() {
+    return HL.frontierGroup(save.unlockedLevel, LEVEL_COUNT);
+  }
+
+  function startFrontierLevel() {
+    hideQueueEmpty();
+    startLevel(frontierLevelNumber());
+  }
+
+  function renderHomeLoop(count) {
+    const strip = $("home-loop");
+    if (!strip) return;
+    const LE = learnerEvents();
+    const events = LE && typeof LE.list === "function" ? LE.list() : [];
+    const view = HL.homeLoopStrip({
+      signedIn: signedIn(),
+      onHome: studentHomeActive(),
+      mustCount: count,
+      als: HL.alsReturnCounts(events),
+    });
+    strip.hidden = !view.visible;
+    strip.setAttribute("data-action", view.action || "");
+    strip.setAttribute("data-mode", view.mode || "hidden");
+    const title = $("home-loop-title");
+    const detail = $("home-loop-detail");
+    if (title) title.textContent = view.text || "";
+    if (detail) detail.textContent = view.detail || "";
+  }
+
+  function resetClearActions() {
+    const cont = $("btn-clear-continue");
+    const als = $("btn-clear-als");
+    const home = $("btn-clear-home");
+    if (cont) cont.hidden = true;
+    if (als) als.hidden = true;
+    if (home) {
+      home.classList.add("secondary");
+      home.classList.remove("ghost");
+    }
+  }
+
+  function showMustClearActions(plan) {
+    resetClearActions();
+    const nextBtn = $("btn-next-level");
+    if (nextBtn) nextBtn.hidden = true;
+    const cont = $("btn-clear-continue");
+    if (cont) {
+      cont.hidden = false;
+      cont.textContent = plan.primaryLabel;
+    }
+    const als = $("btn-clear-als");
+    if (als && plan.showAls) {
+      als.hidden = false;
+      als.textContent = plan.alsLabel;
+      als.href = plan.alsHref;
+      if (plan.alsPlaceholder) als.setAttribute("data-als-placeholder", "true");
+      else als.removeAttribute("data-als-placeholder");
+    }
+    const home = $("btn-clear-home");
+    if (home) {
+      home.classList.remove("secondary");
+      home.classList.add("ghost");
+    }
+  }
+
   function dismissMustGate() {
     const gate = $("must-gate");
     if (gate) gate.hidden = true;
@@ -2671,6 +2747,7 @@
     if (!gate) return;
     const show = RQ.shouldShowSoftGate({
       signedIn: signedIn(),
+      onHome: studentHomeActive(),
       count: count,
       day: todayKey(),
       record: save.mustPractice,
@@ -2703,6 +2780,7 @@
       record: save.mustPractice,
     });
     applyHomePrimacy(mode);
+    renderHomeLoop(merged.length);
     const hint = $("continue-hint");
     if (hint) {
       hint.hidden = false;
@@ -2721,6 +2799,7 @@
   window.__QM.onSessionReady = function () {
     const home = $("screen-home");
     if (home && home.classList.contains("active")) refreshHomeQueues();
+    else dismissMustGate();
   };
 
   function markMust(action) {
@@ -2833,14 +2912,23 @@
     if (clearScreen) clearScreen.classList.remove("challenge-win");
     const nextBtn = $("btn-next-level");
     if (nextBtn) nextBtn.hidden = true;
+    resetClearActions();
     const title = $("clear-title");
     const msg = $("clear-msg");
     if (kind === "must") {
       const left = mustPracticeItems().length;
+      const plan = HL.clearNextActions({
+        kind: "must",
+        unlockedLevel: save.unlockedLevel,
+        levelCount: LEVEL_COUNT,
+        left: left,
+      });
       if (title) title.textContent = left ? "这轮今日必练练完了" : "今日必练清空了";
-      if (msg) msg.textContent = left
+      const rest = left
         ? ("还剩 " + left + " 道。到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。")
         : "这批到期的词都见过了。错词本里连续答对两次的已经离开。";
+      if (msg) msg.textContent = plan.nextLine + rest;
+      showMustClearActions(plan);
     } else if (kind === "due") {
       if (title) title.textContent = "今日到期练完了";
       if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
@@ -2868,11 +2956,7 @@
   if ($("btn-gate-gaokao")) $("btn-gate-gaokao").addEventListener("click", () => enterExam("gaokao"));
   if ($("btn-back-gate")) $("btn-back-gate").addEventListener("click", () => showScreen("gate"));
 
-  $("btn-continue").addEventListener("click", () => {
-    hideQueueEmpty();
-    const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
-    startLevel(lvl);
-  });
+  $("btn-continue").addEventListener("click", () => startFrontierLevel());
   if ($("btn-challenge")) $("btn-challenge").addEventListener("click", () => {
     const lvl = Math.min(Math.max(1, save.unlockedLevel || 1), LEVEL_COUNT);
     hideQueueEmpty();
@@ -2882,6 +2966,12 @@
   if ($("btn-must-practice")) $("btn-must-practice").addEventListener("click", () => startMustPractice());
   if ($("btn-must-start")) $("btn-must-start").addEventListener("click", () => startMustPractice());
   if ($("btn-must-later")) $("btn-must-later").addEventListener("click", () => laterMustPractice());
+  if ($("home-loop")) $("home-loop").addEventListener("click", () => {
+    const action = $("home-loop").getAttribute("data-action");
+    if (action === "must") startMustPractice();
+    else if (action === "continue") startFrontierLevel();
+  });
+  if ($("btn-clear-continue")) $("btn-clear-continue").addEventListener("click", () => startFrontierLevel());
   $("btn-levels").addEventListener("click", () => {
     renderLevels();
     showScreen("levels");
