@@ -107,8 +107,123 @@ assert.strictEqual(loop.frontierGroup(99, 3), 3);
   const level = loop.clearNextActions({ kind: "level", unlockedLevel: 4, levelCount: 20 });
   assert.strictEqual(level.showFrontier, false);
   assert.strictEqual(level.showAls, false, "ALS grammar is not the next step after a normal 通关");
+  assert.strictEqual(level.showDeep, false);
   const spelling = loop.clearNextActions({ kind: "spelling", unlockedLevel: 2, levelCount: 10 });
   assert.strictEqual(spelling.showAls, false);
+  assert.strictEqual(spelling.showDeep, false);
+}
+
+const openBook = [
+  { active: true, lemma: "ability", gloss_zh: "能力", pos: "n.", track: "zhongkao" },
+  { active: true, lemma: "accept", gloss_zh: "接受", pos: "v.", track: "zhongkao", sense_id: "accept.v.接受" },
+];
+const mixedBook = openBook.concat([
+  { active: false, lemma: "gone", gloss_zh: "离开", pos: "v.", track: "zhongkao" },
+  { active: true, lemma: "done", gloss_zh: "完成", pos: "v.", track: "zhongkao", sense_id: "done.v.完成", alsDeepDone: true },
+]);
+
+{
+  const debt = loop.deepTrainDebt(mixedBook);
+  assert.strictEqual(debt.length, 2, "inactive and already-qualified senses are not debt");
+  assert.deepStrictEqual(debt.map((row) => row.headword), ["ability", "accept"]);
+  assert.strictEqual(debt[0].sense_id, "ability.n.能力");
+  assert.strictEqual(loop.provisionalSenseId("ability", "n.", "能力"), "ability.n.能力");
+}
+
+{
+  const still = loop.deepTrainDebt(openBook, [
+    { source: "quizmario", event_type: "vocab.wrong_book_add", sense_id: "ability.n.能力" },
+    { source: "als", event_type: "als.session_end", sense_id: "ability.n.能力" },
+  ]);
+  assert.strictEqual(still.length, 2, "quizmario rows and unmapped ALS rows do not clear deep-train debt");
+  assert.strictEqual(loop.alsReturnCounts([
+    { source: "als", event_type: "sense_return", sense_id: "accept.v.接受" },
+  ]), null, "a sense_return is not ALS 补了 / 回流词");
+  const left = loop.deepTrainDebt(openBook, [
+    { source: "als", event_type: "sense_return", sense_id: "accept.v.接受" },
+  ]);
+  assert.deepStrictEqual(left.map((row) => row.headword), ["ability"]);
+  assert.deepStrictEqual(loop.alsDeepQualifiedIds([
+    { source: "als", event_type: "vocab.sense_return", payload: { sense_id: "ability.n.能力" } },
+    { source: "als", event_type: "als.session_end", sense_id: "accept.v.接受" },
+  ]), ["ability.n.能力"]);
+}
+
+{
+  const home = loop.homeDeepTrain({
+    signedIn: true,
+    onHome: true,
+    mustCount: 5,
+    items: mixedBook,
+  });
+  assert.strictEqual(home.visible, true, "deep-train CTA stays up while 今日必练 is non-empty");
+  assert.strictEqual(home.count, 2);
+  assert.strictEqual(home.mustCount, 5);
+  assert.strictEqual(home.text, "2 个错词待 ALS 深练");
+  assert.ok(home.detail.indexOf("今日必练还没做完") !== -1, home.detail);
+  assert.strictEqual(home.primaryLabel, "去 ALS 深练这 2 个错词");
+  assert.ok(home.href.indexOf("http://127.0.0.1:8501/") === 0, home.href);
+  assert.ok(home.href.indexOf("qm_deep=1") !== -1, home.href);
+  assert.ok(home.href.indexOf("deep_train=1") !== -1, home.href);
+  assert.ok(home.href.indexOf("sense_ids=") !== -1, home.href);
+  {
+    const q = home.href.split("?")[1] || "";
+    const raw = q.split("&").find((part) => part.indexOf("sense_ids=") === 0);
+    assert.ok(raw, home.href);
+    assert.strictEqual(decodeURIComponent(raw.slice("sense_ids=".length)), "ability.n.能力,accept.v.接受");
+  }
+  assert.ok(home.href.indexOf("sense_id=" + encodeURIComponent("ability.n.能力")) !== -1, home.href);
+  assert.ok(home.href.indexOf("sense_id=" + encodeURIComponent("accept.v.接受")) !== -1, home.href);
+  assert.ok(home.href.indexOf("headword=ability") !== -1, home.href);
+  assert.ok(home.href.indexOf("gloss_zh=" + encodeURIComponent("能力")) !== -1, home.href);
+  assert.ok(home.href.indexOf("track=zhongkao") !== -1, home.href);
+  assert.ok(!/JSONL|ingest|learner_events|schema_version/.test(home.text + home.detail + home.primaryLabel + home.saveLabel),
+    "student copy stays human");
+  const file = home.handoff;
+  assert.strictEqual(file.count, 2);
+  assert.ok(file.filename.endsWith(".jsonl"));
+  const lines = file.jsonl.trim().split("\n").map((line) => JSON.parse(line));
+  assert.strictEqual(lines.length, 2);
+  assert.ok(lines.every((row) => row.source === "quizmario" && row.event_type === "vocab.wrong_book_add"));
+  assert.ok(lines.every((row) => row.schema_version === 2 && row.run_purpose === "als_deep_train"));
+  assert.deepStrictEqual(lines.map((row) => row.headword), ["ability", "accept"]);
+  assert.ok(lines.every((row) => row.payload && row.payload.gloss_zh && row.payload.track && row.payload.sense_id));
+  assert.ok(!lines.some((row) => row.headword === "done" || row.headword === "gone"));
+}
+
+{
+  const idle = loop.homeDeepTrain({ signedIn: true, onHome: true, mustCount: 5, items: [] });
+  assert.strictEqual(idle.visible, false, "a non-empty 今日必练 queue alone does not show the deep CTA");
+  assert.strictEqual(idle.href, "http://127.0.0.1:8501/");
+  const loggedOut = loop.homeDeepTrain({ signedIn: false, onHome: true, mustCount: 0, items: openBook });
+  assert.strictEqual(loggedOut.visible, false);
+  const exam = loop.homeDeepTrain({ signedIn: true, onHome: false, mustCount: 3, items: openBook });
+  assert.strictEqual(exam.visible, false, "the exam picker does not show the deep CTA");
+  const clearBook = loop.homeDeepTrain({ signedIn: true, onHome: true, mustCount: 0, items: openBook });
+  assert.strictEqual(clearBook.visible, true);
+  assert.strictEqual(clearBook.text, "2 个错词待 ALS 深练");
+  assert.ok(clearBook.detail.indexOf("今日必练还没做完") === -1, clearBook.detail);
+}
+
+{
+  const both = loop.clearNextActions({
+    kind: "must",
+    unlockedLevel: 4,
+    levelCount: 20,
+    left: 3,
+    deepItems: mixedBook,
+  });
+  assert.strictEqual(both.showAls, true, "the grammar side door stays after 今日必练");
+  assert.strictEqual(both.alsLabel, "去 ALS 修语法");
+  assert.strictEqual(both.alsHref, "http://127.0.0.1:8501/");
+  assert.strictEqual(both.showDeep, true, "deep train is offered even though 今日必练 still has 3");
+  assert.strictEqual(both.deepText, "2 个错词待 ALS 深练");
+  assert.ok(both.deepHref.indexOf("http://127.0.0.1:8501/") === 0, both.deepHref);
+  assert.ok(both.deepHref.indexOf("qm_deep=1") !== -1, both.deepHref);
+  assert.ok(both.deepHref.indexOf("deep_train=1") !== -1, both.deepHref);
+  assert.ok(both.deepHref.indexOf("sense_ids=") !== -1, both.deepHref);
+  assert.ok(both.message.indexOf("还有 2 个错词待 ALS 深练") !== -1, both.message);
+  assert.ok(both.primaryLabel.indexOf("继续闯关") !== -1);
 }
 
 const root = path.join(__dirname, "..");
@@ -120,6 +235,10 @@ assert.ok(index.includes("ALS ↔ QuizMario"));
 assert.ok(index.includes('id="btn-clear-continue"'));
 assert.ok(index.includes('id="btn-clear-als"'));
 assert.ok(index.includes("去 ALS 修语法"));
+assert.ok(index.includes('id="als-deep"') && index.includes('id="btn-als-deep"'), "home deep-train CTA");
+assert.ok(index.includes('id="btn-must-gate-als"'), "soft gate keeps a deep-train path");
+assert.ok(index.includes('id="btn-clear-deep"'), "must-clear can open deep train too");
+assert.ok(!index.includes("下载 JSONL") && !index.includes("复制 JSONL"), "home HTML does not dump JSONL");
 assert.ok(index.includes(loop.ALS_GRAMMAR_HREF));
 const alsAt = index.indexOf('id="btn-clear-als"');
 const alsTag = index.slice(alsAt, index.indexOf("</a>", alsAt));
@@ -132,6 +251,8 @@ assert.ok(!index.includes("andywillbeback.github.io/#als"));
 assert.ok(!game.includes("als-placeholder"));
 assert.ok(index.includes('src="home-loop.js"'));
 assert.ok(game.includes("alsReturnCounts"));
+assert.ok(game.includes("homeDeepTrain"));
+assert.ok(game.includes("renderAlsDeep"));
 assert.ok(game.includes("clearNextActions"));
 assert.ok(game.includes("plan.title"));
 assert.ok(game.includes("plan.message"));

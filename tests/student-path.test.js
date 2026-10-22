@@ -124,6 +124,31 @@ function staticGuards() {
   assert.ok(index.includes('id="home-loop"') && index.includes("薄弱点 → 今日必练"), "home loop strip");
   assert.ok(index.includes('id="btn-clear-continue"') && index.includes("继续闯关第"), "must-clear frontier CTA");
   assert.ok(index.includes('id="btn-clear-als"') && index.includes("去 ALS 修语法"), "must-clear ALS CTA");
+  assert.ok(index.includes('id="als-deep"') && index.includes('id="btn-als-deep"'), "home deep-train CTA");
+  assert.ok(index.includes('id="btn-must-gate-als"'), "soft gate can open ALS deep train");
+  assert.ok(index.includes('href="http://127.0.0.1:8501/"'), "ALS links stay on local 8501");
+  assert.ok(game.includes("renderAlsDeep") && game.includes("homeDeepTrain"), "home paints deep-train debt");
+  assert.ok(!index.includes("下载 JSONL") && !index.includes("复制 JSONL"), "student home does not dump JSONL");
+  const loop = require("../home-loop.js");
+  const owed = loop.homeDeepTrain({
+    signedIn: true,
+    onHome: true,
+    mustCount: 3,
+    items: [
+      { active: true, lemma: "ability", gloss_zh: "能力", pos: "n.", track: "zhongkao" },
+      { active: true, lemma: "quiet", gloss_zh: "安静", pos: "adj.", track: "zhongkao", alsDeepDone: true },
+    ],
+  });
+  assert.strictEqual(owed.visible, true, "non-empty 错词本 and non-empty 今日必练 still show the CTA");
+  assert.strictEqual(owed.count, 1);
+  assert.strictEqual(owed.text, "1 个错词待 ALS 深练");
+  assert.ok(owed.href.indexOf("http://127.0.0.1:8501/") === 0, owed.href);
+  assert.ok(owed.href.indexOf("qm_deep=1") !== -1, owed.href);
+  assert.ok(owed.href.indexOf("deep_train=1") !== -1, owed.href);
+  assert.ok(owed.href.indexOf("sense_ids=") !== -1, owed.href);
+  assert.strictEqual(loop.homeDeepTrain({
+    signedIn: true, onHome: true, mustCount: 3, items: [],
+  }).visible, false, "must queue alone is not deep-train debt");
   assert.ok(index.includes('src="home-loop.js"'), "home loop rules load with the game");
   assert.ok(index.includes('src="error-types.js"'), "miss-reason rules load with the game");
   assert.ok(index.includes('id="miss-reasons"') && index.includes('id="clear-reasons"'), "错因 sits on home and the clear screen");
@@ -657,7 +682,8 @@ async function main() {
         narrativeHidden: !!(document.getElementById("today-narrative") || {}).hidden,
         narrative: (document.getElementById("today-narrative") || {}).textContent || "",
         remindHidden: !!(document.getElementById("must-reminder") || {}).hidden,
-        fakeAls: /ALS 补了|回流词/.test(document.body.innerText || "")
+        fakeAls: /ALS 补了|回流词/.test(document.body.innerText || ""),
+        deepHidden: !document.getElementById("als-deep") || document.getElementById("als-deep").hidden
       };
     })()`), 15000, "signed-in home strip");
     assert.strictEqual(emptyQueues.home, true, "empty 今日必练 stays on the homepage");
@@ -678,6 +704,7 @@ async function main() {
     assert.ok(emptyQueues.narrative.indexOf("摸底做完了，从第 1 组开始") !== -1, emptyQueues.narrative);
     assert.strictEqual(emptyQueues.mode, "weak");
     assert.strictEqual(emptyQueues.fakeAls, false, "the strip must not invent ALS 补了 / 回流词");
+    assert.strictEqual(emptyQueues.deepHidden, true, "an empty 错词本 does not show the deep-train CTA");
 
     await evalRetry(`document.getElementById("btn-continue").click()`);
     const fresh = await waitFor(async () => evalRetry(`(() => {
@@ -941,6 +968,7 @@ async function main() {
         home: document.getElementById("screen-home").classList.contains("active"),
         softHidden: !soft || soft.hidden,
         stripHidden: !strip || strip.hidden,
+        deepHidden: !document.getElementById("als-deep") || document.getElementById("als-deep").hidden,
         remindHidden: !document.getElementById("must-reminder") || document.getElementById("must-reminder").hidden,
         zk: (document.getElementById("btn-gate-zhongkao") || {}).textContent || "",
         gk: (document.getElementById("btn-gate-gaokao") || {}).textContent || ""
@@ -950,6 +978,7 @@ async function main() {
     assert.strictEqual(examOnly.home, false);
     assert.strictEqual(examOnly.softHidden, true, "cloud apply must not cover 中考/高考 with the soft gate");
     assert.strictEqual(examOnly.stripHidden, true, "the loop strip stays on the student home");
+    assert.strictEqual(examOnly.deepHidden, true, "deep-train CTA stays off the exam picker");
     assert.strictEqual(examOnly.remindHidden, true, "the daily reminder stays off the exam picker");
     assert.ok(examOnly.zk.indexOf("中考") !== -1 && examOnly.gk.indexOf("高考") !== -1);
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
@@ -974,7 +1003,13 @@ async function main() {
         stripHidden: !!(document.getElementById("home-loop") || {}).hidden,
         action: (document.getElementById("home-loop") || {}).getAttribute ? document.getElementById("home-loop").getAttribute("data-action") : "",
         reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
-        remindHidden: !!(document.getElementById("must-reminder") || {}).hidden
+        remindHidden: !!(document.getElementById("must-reminder") || {}).hidden,
+        deepHidden: !!(document.getElementById("als-deep") || {}).hidden,
+        deepText: (document.getElementById("als-deep-title") || {}).textContent || "",
+        deepHref: (document.getElementById("btn-als-deep") || {}).getAttribute ? document.getElementById("btn-als-deep").getAttribute("href") : "",
+        gateDeepHidden: !!(document.getElementById("btn-must-gate-als") || {}).hidden,
+        gateDeepHref: (document.getElementById("btn-must-gate-als") || {}).getAttribute ? document.getElementById("btn-must-gate-als").getAttribute("href") : "",
+        gateDeepText: (document.getElementById("must-gate-deep") || {}).textContent || ""
       };
     })()`), 15000, "soft gate");
     assert.strictEqual(dueHome.play, false, "the soft gate does not auto-open cards");
@@ -990,6 +1025,16 @@ async function main() {
     assert.strictEqual(dueHome.action, "must");
     assert.strictEqual(dueHome.reasonsHidden, true, "a wrong-book row without a recorded pick is not a 错因 bucket");
     assert.strictEqual(dueHome.remindHidden, true, "the reminder stays hidden while the soft gate is up");
+    assert.strictEqual(dueHome.deepHidden, false, "错词本 debt shows the ALS deep CTA while 今日必练 is still full");
+    assert.ok(dueHome.deepText.indexOf("个错词待 ALS 深练") !== -1, dueHome.deepText);
+    assert.ok(dueHome.deepHref.indexOf("http://127.0.0.1:8501/") === 0, dueHome.deepHref);
+    assert.ok(dueHome.deepHref.indexOf("qm_deep=1") !== -1, dueHome.deepHref);
+    assert.ok(dueHome.deepHref.indexOf("deep_train=1") !== -1, dueHome.deepHref);
+    assert.ok(dueHome.deepHref.indexOf("sense_ids=") !== -1, dueHome.deepHref);
+    assert.ok(dueHome.deepHref.toLowerCase().indexOf(String(planted.weak).toLowerCase()) !== -1, dueHome.deepHref);
+    assert.strictEqual(dueHome.gateDeepHidden, false, "the soft gate does not cover the only deep-train path");
+    assert.ok(dueHome.gateDeepHref.indexOf("http://127.0.0.1:8501/") === 0, dueHome.gateDeepHref);
+    assert.ok(dueHome.gateDeepText.indexOf("个错词待 ALS 深练") !== -1, dueHome.gateDeepText);
 
     await evalRetry(`document.getElementById("btn-must-later").click()`);
     const later = await evalRetry(`(() => {
@@ -1307,10 +1352,16 @@ async function main() {
         primacy: home.getAttribute("data-review-primacy"),
         reasonsHidden: !!(document.getElementById("miss-reasons") || {}).hidden,
         reasons: (document.getElementById("miss-reasons") || {}).textContent || "",
-        strip: (document.getElementById("home-loop-title") || {}).textContent || ""
+        strip: (document.getElementById("home-loop-title") || {}).textContent || "",
+        deepHidden: !!(document.getElementById("als-deep") || {}).hidden,
+        deepText: (document.getElementById("als-deep-title") || {}).textContent || "",
+        deepHref: (document.getElementById("btn-als-deep") || {}).getAttribute ? document.getElementById("btn-als-deep").getAttribute("href") : ""
       };
     })()`), 8000, "home after a miss");
     assert.ok(Number(wrongHome.count) >= 3, "the miss stays in 今日必练 with the other due and wrong-book cards");
+    assert.strictEqual(wrongHome.deepHidden, false, "a fresh miss keeps the deep-train CTA while 今日必练 remains");
+    assert.ok(wrongHome.deepText.indexOf("个错词待 ALS 深练") !== -1, wrongHome.deepText);
+    assert.ok(wrongHome.deepHref.indexOf("http://127.0.0.1:8501/") === 0, wrongHome.deepHref);
     assert.strictEqual(wrongHome.primacy, "secondary", "starting 今日必练 demotes it for the rest of the day");
     assert.strictEqual(wrongHome.reasonsHidden, false, "home shows the grouped 错因");
     assert.ok(wrongHome.reasons.indexOf("错因") !== -1, wrongHome.reasons);

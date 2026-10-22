@@ -12,7 +12,12 @@
  * learner-events.js emits quizmario signals only. schedule() remains the only SRS clock.
  * Home loop strip (home-loop.js): signed-in home shows 薄弱点 → 今日必练.
  * ALS 补了 / 回流词 stays unimplemented until source=als rows are readable.
- * 今日必练 clear pushes 继续闯关第 N 组, then 去 ALS 修语法.
+ * 错词本 deep-train debt is separate. While any active book sense still
+ * owes ALS deep practice, the signed-in home shows 「N 个错词待 ALS 深练」
+ * and a primary CTA to local :8501, even if 今日必练 is not empty.
+ * 今日必练 clear still pushes 继续闯关第 N 组, then 去 ALS 修语法.
+ * That grammar link stays the side door. It does not gate the deep CTA.
+ * schedule() is still the only recognition clock. An ALS pass does not extend it.
  * Wrong MC picks are tagged 形近 / 义近 / 词性 / 其他 (error-types.js)
  * and summed on the student home and the 今日必练 clear screen.
  * Progress story (progress-narrative.js): signed-in home adds 1–3 plain
@@ -2905,6 +2910,9 @@
       levelIdx: card.levelIdx != null ? card.levelIdx : (currentLevel - 1),
       cardKey: card.key,
       now: Date.now(),
+      sense_id: card.sense_id || "",
+      gloss_zh: card.meaning_zh || "",
+      pos: card.pos || "",
     }, prog, "miss");
     if (res && res.entered) emitWrongBook(card, intervalDays);
     return res;
@@ -2932,6 +2940,9 @@
           cardKey: key,
           prog: prog,
           now: Date.now(),
+          sense_id: w.sense_id || "",
+          gloss_zh: w.meaning_zh || "",
+          pos: w.pos || "",
         });
       }
     }
@@ -3130,6 +3141,142 @@
     if (detail) detail.textContent = view.detail || "";
   }
 
+  let deepView = null;
+
+  function learnerEventList() {
+    const LE = learnerEvents();
+    return LE && typeof LE.list === "function" ? LE.list() : [];
+  }
+
+  function learnerIdForHandoff() {
+    const events = learnerEventList();
+    for (let i = 0; i < events.length; i++) {
+      if (events[i] && events[i].learner_id) return String(events[i].learner_id);
+    }
+    return "";
+  }
+
+  /** Active 错词本 rows for this track, with bank gloss filled in when the row is thin. */
+  function deepTrainSourceRows() {
+    const book = ensureWrongBook();
+    const rows = RQ.activeWrongEntries(book, currentTrack);
+    const out = [];
+    let changed = false;
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const li = row.levelIdx || 0;
+      const surface = findSurface(LEVELS[li] || [], row.lemma || "");
+      if (!row.pos && surface && surface.pos) {
+        row.pos = surface.pos;
+        changed = true;
+      }
+      if (!row.gloss_zh && surface && surface.meaning_zh) {
+        row.gloss_zh = surface.meaning_zh;
+        changed = true;
+      }
+      if (!row.sense_id && surface && surface.sense_id) {
+        row.sense_id = surface.sense_id;
+        changed = true;
+      }
+      if (row.alsDeepDone == null) {
+        row.alsDeepDone = false;
+        changed = true;
+      }
+      out.push({
+        active: row.active !== false,
+        alsDeepDone: row.alsDeepDone === true,
+        lemma: row.lemma,
+        lemmaKey: row.lemmaKey,
+        track: row.track || currentTrack,
+        pos: row.pos || "",
+        gloss_zh: row.gloss_zh || "",
+        sense_id: row.sense_id || "",
+        cardKey: row.cardKey || "",
+      });
+    }
+    return { items: out, changed: changed };
+  }
+
+  /**
+   * A source=als sense_return marks that sense's deep-train debt done.
+   * Recognition graduation does not. QuizMario rows do not.
+   */
+  function applyAlsQualifications(events) {
+    const ids = HL.alsDeepQualifiedIds(events);
+    if (!ids.length) return false;
+    const book = ensureWrongBook();
+    const keys = Object.keys(book);
+    let changed = false;
+    for (let i = 0; i < keys.length; i++) {
+      const row = book[keys[i]];
+      if (!row || row.alsDeepDone === true) continue;
+      const sense = row.sense_id || HL.provisionalSenseId(row.lemma, row.pos, row.gloss_zh);
+      if (sense && ids.indexOf(sense) !== -1) {
+        row.alsDeepDone = true;
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  function paintDeepLink(el, view) {
+    if (!el) return;
+    el.hidden = !view.visible;
+    if (!view.visible) return;
+    el.href = view.href || HL.ALS_GRAMMAR_HREF;
+    el.textContent = view.primaryLabel || "去 ALS 深练";
+  }
+
+  function renderAlsDeep(mustCount) {
+    const events = learnerEventList();
+    const hydrated = deepTrainSourceRows();
+    const qualified = applyAlsQualifications(events);
+    const source = qualified ? deepTrainSourceRows() : hydrated;
+    const view = HL.homeDeepTrain({
+      signedIn: signedIn(),
+      onHome: studentHomeActive(),
+      mustCount: mustCount,
+      items: source.items,
+      events: events,
+      learnerId: learnerIdForHandoff(),
+    });
+    deepView = view;
+    const box = $("als-deep");
+    if (box) box.hidden = !view.visible;
+    const title = $("als-deep-title");
+    const detail = $("als-deep-detail");
+    if (title) title.textContent = view.visible ? view.text : "";
+    if (detail) detail.textContent = view.visible ? view.detail : "";
+    paintDeepLink($("btn-als-deep"), view);
+    const saveBtn = $("btn-als-deep-save");
+    if (saveBtn) saveBtn.hidden = !view.visible;
+    const note = $("als-deep-note");
+    if (note && !view.visible) note.textContent = "";
+    const gateLine = $("must-gate-deep");
+    if (gateLine) {
+      gateLine.hidden = !view.visible;
+      gateLine.textContent = view.visible ? view.text : "";
+    }
+    paintDeepLink($("btn-must-gate-als"), view);
+    if (qualified || source.changed) persist();
+  }
+
+  function downloadDeepHandoff() {
+    const handoff = deepView && deepView.handoff;
+    if (!handoff || !handoff.jsonl) return;
+    const blob = new Blob([handoff.jsonl], { type: "application/x-ndjson" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = handoff.filename || "quizmario-als-deep-train.jsonl";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    const note = $("als-deep-note");
+    if (note) note.textContent = "已保存这批错词。本机 ALS 打开后，可以把这份清单交给它。";
+  }
+
   function paintReasonBox(el, view) {
     if (!el) return;
     view = view || { visible: false };
@@ -3203,6 +3350,8 @@
     const placed = $("btn-placement-enter");
     if (placed) placed.hidden = true;
     if (cont) cont.hidden = true;
+    const deep = $("btn-clear-deep");
+    if (deep) deep.hidden = true;
     if (als) als.hidden = true;
     if (home) {
       home.classList.add("secondary");
@@ -3220,6 +3369,12 @@
     if (cont) {
       cont.hidden = false;
       cont.textContent = plan.primaryLabel;
+    }
+    const deep = $("btn-clear-deep");
+    if (deep && plan.showDeep) {
+      deep.hidden = false;
+      deep.textContent = plan.deepLabel;
+      deep.href = plan.deepHref;
     }
     const als = $("btn-clear-als");
     if (als && plan.showAls) {
@@ -3279,6 +3434,7 @@
     });
     applyHomePrimacy(mode);
     renderHomeLoop(count);
+    renderAlsDeep(count);
     renderMissReasons();
     renderTodayNarrative(count);
     const hint = $("continue-hint");
@@ -3646,6 +3802,8 @@
         unlockedLevel: save.unlockedLevel,
         levelCount: LEVEL_COUNT,
         left: left,
+        deepItems: deepTrainSourceRows().items,
+        events: learnerEventList(),
       });
       if (title) title.textContent = plan.title;
       if (msg) msg.textContent = plan.message;
@@ -3695,6 +3853,7 @@
     else if (action === "continue") startFrontierLevel();
   });
   if ($("btn-clear-continue")) $("btn-clear-continue").addEventListener("click", () => startFrontierLevel());
+  if ($("btn-als-deep-save")) $("btn-als-deep-save").addEventListener("click", () => downloadDeepHandoff());
   if ($("btn-placement-enter")) $("btn-placement-enter").addEventListener("click", () => enterStarterSet());
   $("btn-levels").addEventListener("click", () => {
     renderLevels();

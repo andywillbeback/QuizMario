@@ -457,10 +457,46 @@
     font-size: .85rem;
     white-space: nowrap;
   }
-  button.is-hero {
+  button.is-hero, a.btn.is-hero {
     font-size: 1.08rem;
     padding: 14px 28px;
     box-shadow: 0 10px 28px rgba(226, 177, 67, 0.35);
+  }
+  .als-deep {
+    margin: 8px 0 14px;
+    padding: 12px 14px 10px;
+    text-align: left;
+    border-radius: 14px;
+    background: linear-gradient(90deg, rgba(226, 177, 67, 0.3), rgba(190, 214, 255, 0.12));
+    box-shadow: inset 0 0 0 1px rgba(230, 201, 138, 0.72);
+  }
+  .als-deep[hidden] { display: none !important; }
+  .als-deep-kicker {
+    margin: 0;
+    font-size: .72rem;
+    letter-spacing: .08em;
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .als-deep-title {
+    margin: 2px 0 0;
+    font-size: 1.12rem;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.35;
+  }
+  .als-deep-detail,
+  .als-deep-note {
+    margin: 6px 0 0;
+    font-size: .88rem;
+    line-height: 1.45;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .als-deep .btn-row { justify-content: flex-start; }
+  #must-gate-deep {
+    color: #fff;
+    font-weight: 700;
   }
   .must-gate {
     position: fixed;
@@ -1269,6 +1305,16 @@
           <strong id="home-loop-title" class="home-loop-title">薄弱点 → 今日必练</strong>
           <span id="home-loop-detail" class="home-loop-detail"></span>
         </button>
+        <section id="als-deep" class="als-deep" hidden aria-label="错词深练">
+          <p class="als-deep-kicker">错词深练</p>
+          <p id="als-deep-title" class="als-deep-title"></p>
+          <p id="als-deep-detail" class="als-deep-detail"></p>
+          <div class="btn-row">
+            <a id="btn-als-deep" class="btn is-hero" href="http://127.0.0.1:8501/" target="_blank" rel="noopener noreferrer">去 ALS 深练</a>
+            <button id="btn-als-deep-save" class="secondary" type="button">ALS 没打开？先保存这批错词</button>
+          </div>
+          <p id="als-deep-note" class="als-deep-note"></p>
+        </section>
         <section id="miss-reasons" class="miss-reasons" hidden aria-label="错因">
           <p class="miss-reasons-kicker">错因</p>
           <p class="miss-reasons-taxonomy" data-reason-taxonomy>形近 · 义近 · 词性 · 其他/未归类</p>
@@ -1372,8 +1418,9 @@
         <div class="btn-row">
           <button id="btn-placement-enter" type="button" hidden>进入起始组</button>
           <button id="btn-next-level" type="button">Next set</button>
+          <a id="btn-clear-deep" class="btn" href="http://127.0.0.1:8501/" target="_blank" rel="noopener noreferrer" hidden>去 ALS 深练</a>
           <button id="btn-clear-continue" type="button" hidden>继续闯关第 1 组</button>
-          <!-- Mac-local Streamlit ALS. Opens only while ALS is running on this machine. -->
+          <!-- Mac-local Streamlit ALS. Grammar side door. Deep train uses the same origin with sense query params. -->
           <a id="btn-clear-als" class="btn secondary" href="http://127.0.0.1:8501/" target="_blank" rel="noopener noreferrer" hidden>去 ALS 修语法</a>
           <button id="btn-clear-home" class="secondary" type="button">Home</button>
         </div>
@@ -1413,8 +1460,10 @@
 <div id="must-gate" class="must-gate" hidden>
   <div class="must-gate-card" role="dialog" aria-modal="true" aria-labelledby="must-gate-copy">
     <h2 id="must-gate-copy">今天有 0 道到期/错词，先清掉？</h2>
+    <p id="must-gate-deep" class="sub" hidden></p>
     <p class="sub">开始进入今日必练。稍后留在首页，今天不再弹出。</p>
     <div class="btn-row">
+      <a id="btn-must-gate-als" class="btn is-hero" href="http://127.0.0.1:8501/" target="_blank" rel="noopener noreferrer" hidden>去 ALS 深练</a>
       <button id="btn-must-start" type="button">开始</button>
       <button id="btn-must-later" class="secondary" type="button">稍后</button>
     </div>
