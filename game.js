@@ -1722,7 +1722,7 @@
       return;
     }
     if (awaiting || !currentCard || pendingRate) return;
-    if (sessionKind === "spelling") {
+    if (Practice.sessionAnswerMode(sessionKind, sessionDirection).typed) {
       gradeSpelling(correct, chosen, outcome);
       return;
     }
@@ -2099,7 +2099,8 @@
 
   function renderChoices() {
     if (!currentCard) return;
-    if (sessionDirection === "spelling" || sessionKind === "spelling") {
+    const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
+    if (mode.typed) {
       renderTypedSpelling();
       return;
     }
@@ -2556,28 +2557,17 @@
   }
 
   function spellingLine() {
-    let cards = 0;
-    let correct = 0;
-    let wrong = 0;
-    let mcOnly = 0;
-    for (const p of Object.values(save.cards || {})) {
-      const raw = p && p.spelling;
-      if (!raw) continue;
-      const s = Practice.ensureSpellingShape ? Practice.ensureSpellingShape(raw) : raw;
-      const typedN = ((s.typed && (s.typed.correct || 0)) || 0) + ((s.typed && (s.typed.wrong || 0)) || 0) + ((s.typed && (s.typed.unknown || 0)) || 0);
-      const mcN = ((s.mc && (s.mc.correct || 0)) || 0) + ((s.mc && (s.mc.wrong || 0)) || 0) + ((s.mc && (s.mc.unknown || 0)) || 0);
-      if (typedN === 0 && mcN === 0 && (s.correct || 0) + (s.wrong || 0) + (s.unknown || 0) === 0) continue;
-      cards++;
-      if (typedN > 0) {
-        correct += (s.typed && s.typed.correct) || 0;
-        wrong += (s.typed && s.typed.wrong) || 0;
-      } else {
-        mcOnly++;
-      }
+    const sum = Practice.summarizeSpelling(save.cards || {});
+    if (!sum.typedCards && !sum.mcOnly) return "";
+    let line = "";
+    if (sum.typedCards) {
+      line = "拼写(键入) " + sum.typedCards + " 词 · 对 " + sum.correct + " · 错 " + sum.wrong + " · 不计入通关";
     }
-    if (!cards) return "";
-    const mcNote = mcOnly ? (" · 旧选择 " + mcOnly + " 词不计独立") : "";
-    return '<p class="stats-legend">拼写(键入) ' + cards + " 词 · 对 " + correct + " · 错 " + wrong + " · 不计入通关" + mcNote + "</p>";
+    if (sum.mcOnly) {
+      const note = "旧选择 " + sum.mcOnly + " 词不计独立";
+      line = line ? (line + " · " + note) : ("拼写 · " + note);
+    }
+    return '<p class="stats-legend">' + line + "</p>";
   }
 
   // ---- report code for teacher (compact, no full card dump) ----
@@ -2891,14 +2881,11 @@
       first_attempt: !(card && card._repeat),
       answer_exposed: !!(card && card._hintSeen),
     });
-    if (sessionDirection === "spelling" || sessionKind === "spelling") {
-      input.evidence_kind = "typed_spelling";
+    const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
+    if (mode.evidence_kind) input.evidence_kind = mode.evidence_kind;
+    if (mode.typed) {
       const prog = card && card.key ? getProg(card.key) : null;
       input.independent = !!(prog && Practice.isIndependentSpelling && Practice.isIndependentSpelling(prog.spelling));
-    } else if (sessionDirection === "meaning") {
-      input.evidence_kind = "mc_recognition";
-    } else if (sessionDirection === "form") {
-      input.evidence_kind = "mc_production";
     }
     if (card && card._answerExposedAt) input.answer_exposed_at = card._answerExposedAt;
     if (intervalDays != null) input.review_interval_days = intervalDays;

@@ -198,6 +198,58 @@
       (shaped.correct || 0) + (shaped.wrong || 0) + (shaped.unknown || 0) > 0;
   }
 
+  /**
+   * How this session collects an answer.
+   * 拼写 is typed. Meaning and 今日必练 (form) stay multiple choice.
+   * Direction wins over kind when they disagree, except spelling, which is always typed.
+   */
+  function sessionAnswerMode(sessionKind, sessionDirection) {
+    if (sessionKind === "spelling" || sessionDirection === "spelling") {
+      return { typed: true, evidence_kind: "typed_spelling" };
+    }
+    if (sessionDirection === "meaning") {
+      return { typed: false, evidence_kind: "mc_recognition" };
+    }
+    if (sessionDirection === "form" || sessionKind === "must" || sessionKind === "due" || sessionKind === "wrongbook") {
+      return { typed: false, evidence_kind: "mc_production" };
+    }
+    return { typed: false, evidence_kind: "" };
+  }
+
+  /**
+   * Stats for the spelling line. Typed cards report typed correct/wrong only.
+   * MC-only cards stay in mcOnly and are not counted as 键入 words.
+   * Mutates each spelling object through ensureSpellingShape.
+   */
+  function summarizeSpelling(cards) {
+    var typedCards = 0;
+    var correct = 0;
+    var wrong = 0;
+    var mcOnly = 0;
+    if (!cards || typeof cards !== "object") {
+      return { typedCards: 0, correct: 0, wrong: 0, mcOnly: 0 };
+    }
+    var keys = Object.keys(cards);
+    for (var i = 0; i < keys.length; i++) {
+      var p = cards[keys[i]];
+      var raw = p && p.spelling;
+      if (!raw || typeof raw !== "object") continue;
+      var s = ensureSpellingShape(raw);
+      var typedN = bucketTotals(s.typed);
+      var mcN = bucketTotals(s.mc);
+      var topN = (s.correct || 0) + (s.wrong || 0) + (s.unknown || 0);
+      if (typedN === 0 && mcN === 0 && topN === 0) continue;
+      if (typedN > 0) {
+        typedCards += 1;
+        correct += s.typed.correct || 0;
+        wrong += s.typed.wrong || 0;
+      } else {
+        mcOnly += 1;
+      }
+    }
+    return { typedCards: typedCards, correct: correct, wrong: wrong, mcOnly: mcOnly };
+  }
+
   return {
     STUDY_NEW: STUDY_NEW,
     BEGINNER_NEW: BEGINNER_NEW,
@@ -214,5 +266,7 @@
     isIndependentSpelling: isIndependentSpelling,
     noteSpelling: noteSpelling,
     hasSpellingPractice: hasSpellingPractice,
+    sessionAnswerMode: sessionAnswerMode,
+    summarizeSpelling: summarizeSpelling,
   };
 });

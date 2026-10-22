@@ -52,7 +52,13 @@
     "review_interval_days", "review_interval_ms",
     "content_version", "bank_version",
     "grade_status", "score",
+    "evidence_kind", "independent",
   ];
+  var EVIDENCE_KIND = {
+    typed_spelling: true,
+    mc_recognition: true,
+    mc_production: true,
+  };
 
   function emptyStore() {
     return { v: 1, learner_id: "", events: [], uploaded: {} };
@@ -293,6 +299,10 @@
       ev.grade_status = grade.grade_status;
       if (grade.score != null) ev.score = grade.score;
     }
+    if (input.evidence_kind != null && EVIDENCE_KIND[String(input.evidence_kind).trim()]) {
+      ev.evidence_kind = String(input.evidence_kind).trim();
+    }
+    if (input.independent === true || input.independent === false) ev.independent = input.independent;
     stampPayload(ev);
     return ev;
   }

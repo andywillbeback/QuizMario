@@ -312,7 +312,8 @@ function findCard(tracks, id, word) {
   assert.ok(index.includes('id="answer-input"'), "Q1 typed spelling input");
   assert.ok(index.includes('id="type-row"') && index.includes('id="btn-check-spelling"'));
   assert.ok(game.includes("renderTypedSpelling") && game.includes('mode: "typed"'));
-  assert.ok(game.includes("evidence_kind") && game.includes("typed_spelling"));
+  assert.ok(game.includes("input.evidence_kind = mode.evidence_kind"));
+  assert.ok(read("practice.js").includes('evidence_kind: "typed_spelling"'));
   assert.ok(!index.includes('id="btn-mc-toggle"'), "no typed/MC toggle — spelling is always typed");
 }
 

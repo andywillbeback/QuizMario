@@ -10,8 +10,9 @@
 
 1. **UI** (`index.html` + `game.js`): 拼写 session shows `#type-row` / `#answer-input` / `#btn-check-spelling`. Meaning and 今日必练 (form) stay multiple-choice. Enter submits typed spelling; keys 1–4 ignored while typing.
 2. **Progress** (`practice.js`): `spelling.typed` vs `spelling.mc`. `spellingSignal` / `isIndependentSpelling` read **typed only**. Pre-Q1 top-level correct/wrong/unknown migrate into `.mc` on first shape.
-3. **Events**: spelling answers emit `evidence_kind=typed_spelling` and `independent` from typed stability.
-4. **Feedback**: spelling copy says 键入 / 输入了; notes 旧选择不算独立.
+3. **Events**: spelling answers emit `evidence_kind=typed_spelling` and `independent` from typed stability. `learner-events.js` keeps both on the row and inside `payload` (`false` included). Meaning stays `mc_recognition`; 今日必练 stays `mc_production`.
+4. **Sync**: after legacy MC scores move into `spelling.mc`, that save is still real progress. It must not look blank.
+5. **Feedback**: spelling copy says 键入 / 输入了; notes 旧选择不算独立.
 
 ## Tests
 
