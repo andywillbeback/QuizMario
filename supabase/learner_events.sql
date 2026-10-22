@@ -32,7 +32,7 @@ comment on column public.learner_events.learner_id is 'Supabase auth.uid(). ALS 
 comment on column public.learner_events.user_id is 'Same uuid as learner_id. Accepted as learner_id on ALS ingest.';
 comment on column public.learner_events.headword is 'Lemma, already lowercased by QuizMario.';
 comment on column public.learner_events.payload is
-  'Small JSON. due_at (ISO-8601) lives here for vocab.due_review. Not an SM-2 state.';
+  'Small JSON. due_at (ISO-8601) lives here for vocab.due_review. Schema v2 also stores sense_id, lemma, pos, task_direction, attempt, answer_exposed, review_interval_days, content_version, grade_status, and score when QuizMario knows them. Not an SM-2 clock. No new columns: a pre-v2 table still accepts the insert.';
 
 create index if not exists learner_events_learner_created_idx
   on public.learner_events (learner_id, created_at desc);

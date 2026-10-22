@@ -481,6 +481,7 @@
       example_en: w.example_en || "",
       example_zh: w.example_zh || "",
       pos: w.pos || "",
+      sense_id: w.sense_id || "",
       roots: w.roots || "",
       affix: w.affix || "",
       root_group: w.root_group || "",
@@ -1664,9 +1665,10 @@
     bumpPractice("hint", kind === "correct" && !(currentCard && currentCard._hintSeen));
 
     logAnswer(kind === "correct", prog, opts);
+    const reviewedDays = (prog && !SRS.isNewCard(prog) && prog.interval != null) ? prog.interval : null;
     if (kind === "correct") {
       pendingAttempt = opts;
-      emitLearnerAnswer(true, currentCard, "", "correct");
+      emitLearnerAnswer(true, currentCard, "", "correct", null, reviewedDays);
       // Hype first; SRS waits for Good / Easy
       save.streak += 1;
       killStreak += 1;
@@ -1711,9 +1713,9 @@
       bindRate("btn-rate-easy", 2);
     } else {
       schedule(prog, 0, nowMs, opts);
-      rememberMiss(currentCard, prog);
+      rememberMiss(currentCard, prog, reviewedDays);
       const reason = kind === "wrong" ? recordMissReason(currentCard, chosen) : null;
-      emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind, reason);
+      emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind, reason, reviewedDays);
       save.streak = 0;
       const brokenStreak = killStreak;
       killStreak = 0;
@@ -1768,7 +1770,12 @@
         const delay = 1 + Math.floor(Math.random() * 2);
         requeueSoon.push({
           appearAt: stepCounter + delay,
-          card: { ...currentCard, _repeat: true, _hintSeen: true },
+          card: {
+            ...currentCard,
+            _repeat: true,
+            _hintSeen: true,
+            _answerExposedAt: new Date(nowMs).toISOString(),
+          },
         });
       }
       persist();
@@ -1787,6 +1794,16 @@
   function confirmCorrect(quality, prevMastery) {
     if (!pendingRate || !currentCard) return;
     pendingRate = false;
+    const LE = learnerEvents();
+    if (LE && typeof LE.noteGrade === "function") {
+      try {
+        LE.noteGrade({
+          item_id: currentCard.key,
+          headword: currentCard.word,
+          event_type: LE.TYPES.CORRECT,
+        }, quality === 2 ? "easy" : "good");
+      } catch (_) {}
+    }
     const prog = getProg(currentCard.key);
     const opts = pendingAttempt || attemptOpts(currentCard, { outcome: "correct", correct: true });
     pendingAttempt = null;
@@ -2721,19 +2738,53 @@
     return window.QuizMarioLearnerEvents || null;
   }
 
-  function emitLearnerAnswer(correct, card, chosen, outcome, reason) {
+  /** Core bank stamps words.js. Exam tracks have no separate content hash. */
+  function contentVersionForTrack(track) {
+    const id = track || currentTrack || "core";
+    if (id === "core") return window.QUIZMARIO_CONTENT_VERSION || "words-v12";
+    return "exam-tracks:" + id;
+  }
+
+  function reviewIntervalDays(card) {
+    if (!card || !card.key || !save.cards) return null;
+    const prog = save.cards[card.key];
+    if (!prog || SRS.isNewCard(prog) || prog.interval == null) return null;
+    return prog.interval;
+  }
+
+  function learnerSenseInput(card) {
+    const track = (card && card.track) || currentTrack;
+    const input = {
+      lemma: (card && (card.word || card.lemma)) || "",
+      pos: (card && card.pos) || "",
+      gloss_zh: (card && (card.meaning_zh || card.gloss_zh)) || "",
+      content_version: contentVersionForTrack(track),
+      bank_version: contentVersionForTrack(track),
+    };
+    if (card && card.sense_id) input.sense_id = card.sense_id;
+    const days = reviewIntervalDays(card);
+    if (days != null) input.review_interval_days = days;
+    return input;
+  }
+
+  function emitLearnerAnswer(correct, card, chosen, outcome, reason, intervalDays) {
     const LE = learnerEvents();
     if (!LE || !card || typeof LE.record !== "function") return;
     const kind = outcome || (correct ? "correct" : "wrong");
     const type = kind === "unknown" && LE.TYPES.UNKNOWN ? LE.TYPES.UNKNOWN : (correct ? LE.TYPES.CORRECT : LE.TYPES.WRONG);
-    const input = {
+    const input = Object.assign(learnerSenseInput(card), {
       event_type: type,
       headword: card.word,
       item_id: card.key,
       track: currentTrack,
       gloss_zh: card.meaning_zh || "",
       outcome: kind,
-    };
+      task_direction: sessionDirection,
+      first_attempt: !(card && card._repeat),
+      answer_exposed: !!(card && card._hintSeen),
+    });
+    if (card && card._answerExposedAt) input.answer_exposed_at = card._answerExposedAt;
+    if (intervalDays != null) input.review_interval_days = intervalDays;
     if (kind === "wrong" && chosen) input.answer = chosen;
     if (kind === "wrong" && reason && reason.bucket && ET.LABELS[reason.bucket]) {
       input.reason = reason.bucket;
@@ -2742,17 +2793,19 @@
     try { LE.record(input); } catch (_) {}
   }
 
-  function emitWrongBook(card) {
+  function emitWrongBook(card, intervalDays) {
     const LE = learnerEvents();
     if (!LE || !card || typeof LE.record !== "function") return;
     try {
-      LE.record({
+      const input = Object.assign(learnerSenseInput(card), {
         event_type: LE.TYPES.WRONG_BOOK,
         headword: card.word || card.lemma,
         item_id: card.key || card.cardKey || "",
         track: card.track || currentTrack,
-        gloss_zh: card.meaning_zh || "",
+        gloss_zh: card.meaning_zh || card.gloss_zh || "",
       });
+      if (intervalDays != null) input.review_interval_days = intervalDays;
+      LE.record(input);
     } catch (_) {}
   }
 
@@ -2823,17 +2876,27 @@
     const LE = learnerEvents();
     if (!LE || typeof LE.recordDue !== "function" || !items || !items.length) return;
     try {
-      LE.recordDue(items.map((it) => ({
-        headword: it.word,
-        item_id: it.key,
-        track: currentTrack,
-        gloss_zh: it.meaning_zh || "",
-        due_ms: it.dueAt || 0,
-      })));
+      LE.recordDue(items.map((it) => {
+        const row = {
+          headword: it.word,
+          lemma: it.word,
+          pos: it.pos || "",
+          item_id: it.key,
+          track: currentTrack,
+          gloss_zh: it.meaning_zh || "",
+          due_ms: it.dueAt || 0,
+          content_version: contentVersionForTrack(currentTrack),
+          bank_version: contentVersionForTrack(currentTrack),
+        };
+        if (it.sense_id) row.sense_id = it.sense_id;
+        const days = reviewIntervalDays(it);
+        if (days != null) row.review_interval_days = days;
+        return row;
+      }));
     } catch (_) {}
   }
 
-  function rememberMiss(card, prog) {
+  function rememberMiss(card, prog, intervalDays) {
     if (!card || !card.word) return null;
     const res = RQ.touchWrongBook(ensureWrongBook(), {
       lemmaKey: RQ.lemmaKey(currentTrack, card.word),
@@ -2843,7 +2906,7 @@
       cardKey: card.key,
       now: Date.now(),
     }, prog, "miss");
-    if (res && res.entered) emitWrongBook(card);
+    if (res && res.entered) emitWrongBook(card, intervalDays);
     return res;
   }
 
@@ -2877,11 +2940,14 @@
       for (const entry of entries) {
         const row = book[entry.lemmaKey];
         if (!row || !row.active || before.has(entry.lemmaKey)) continue;
+        const surface = findSurface(LEVELS[entry.levelIdx] || [], entry.lemma);
         emitWrongBook({
           word: entry.lemma,
           key: entry.cardKey,
           track: entry.track,
-          meaning_zh: glossAt(entry.levelIdx, entry.lemma),
+          meaning_zh: surface ? (surface.meaning_zh || "") : glossAt(entry.levelIdx, entry.lemma),
+          pos: surface ? (surface.pos || "") : "",
+          sense_id: surface && surface.sense_id ? surface.sense_id : "",
         });
       }
     }

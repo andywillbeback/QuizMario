@@ -1198,6 +1198,8 @@ async function main() {
       const events = LE.list();
       const posted = window.__QM_LEARNER_EVENTS || [];
       const due = events.filter((e) => e.event_type === "vocab.due_review");
+      const wrongEv = events.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word)[0] || null;
+      const postedWrong = posted.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word)[0] || null;
       return {
         localWrong: events.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word).length,
         localReason: events.filter((e) => e.event_type === "vocab.answer_wrong" && e.headword === word && e.payload && ["form", "sense", "pos", "other"].indexOf(e.payload.reason) !== -1).length,
@@ -1211,7 +1213,23 @@ async function main() {
         posted: posted.length,
         postedSource: posted.length > 0 && posted.every((e) => e.source === "quizmario"),
         postedLearner: posted[0] && posted[0].learner_id,
-        fakeAls: /已同步到\\s*ALS/.test(document.body.innerText || "")
+        fakeAls: /已同步到\\s*ALS/.test(document.body.innerText || ""),
+        wrongSchema: wrongEv && wrongEv.schema_version,
+        wrongSense: wrongEv && wrongEv.sense_id,
+        wrongDir: wrongEv && wrongEv.task_direction,
+        wrongDetail: wrongEv && wrongEv.task_direction_detail,
+        wrongAttempt: wrongEv && wrongEv.attempt,
+        wrongExposed: wrongEv && wrongEv.answer_exposed,
+        wrongGrade: wrongEv && wrongEv.grade_status,
+        wrongScore: wrongEv && wrongEv.score,
+        wrongInterval: wrongEv && wrongEv.review_interval_days,
+        wrongBank: wrongEv && wrongEv.bank_version,
+        wrongCanonical: wrongEv && wrongEv.canonical_learner_id,
+        wrongSourceEvent: !!(wrongEv && wrongEv.source_event_id && wrongEv.source_event_id === wrongEv.event_id),
+        dueSchema: due.length > 0 && due.every((e) => e.schema_version === 2 && e.payload && e.payload.due_at),
+        postedHasSchemaColumn: posted.some((e) => Object.prototype.hasOwnProperty.call(e, "schema_version")),
+        postedPayloadSchema: postedWrong && postedWrong.payload && postedWrong.payload.schema_version,
+        postedPayloadSense: postedWrong && postedWrong.payload && postedWrong.payload.sense_id
       };
     })()`);
     assert.ok(signals, "learner events api loaded");
@@ -1227,6 +1245,22 @@ async function main() {
     assert.strictEqual(signals.postedSource, true);
     assert.strictEqual(signals.postedLearner, SESSION.user.id);
     assert.strictEqual(signals.fakeAls, false, "the page must not claim an ALS sync");
+    assert.strictEqual(signals.wrongSchema, 2, "the wrong answer is schema v2");
+    assert.ok(signals.wrongSense && signals.wrongSense.indexOf(String(planted.word).toLowerCase()) === 0, signals.wrongSense);
+    assert.strictEqual(signals.wrongDir, "production", "今日必练 is ZH → EN");
+    assert.strictEqual(signals.wrongDetail, "form");
+    assert.strictEqual(signals.wrongAttempt, "first_attempt");
+    assert.strictEqual(signals.wrongExposed, false);
+    assert.strictEqual(signals.wrongGrade, "again");
+    assert.strictEqual(signals.wrongScore, 0);
+    assert.strictEqual(signals.wrongInterval, 3, "the planted review interval is forwarded");
+    assert.strictEqual(signals.wrongBank, "exam-tracks:zhongkao");
+    assert.strictEqual(signals.wrongCanonical, SESSION.user.id);
+    assert.strictEqual(signals.wrongSourceEvent, true);
+    assert.strictEqual(signals.dueSchema, true, "due rows stay v2 and keep payload.due_at");
+    assert.strictEqual(signals.postedHasSchemaColumn, false, "Supabase upsert does not send v2 keys as columns");
+    assert.strictEqual(signals.postedPayloadSchema, 2);
+    assert.strictEqual(signals.postedPayloadSense, signals.wrongSense);
 
     const exported = await evalRetry(`(() => {
       const body = window.QuizMarioLearnerEvents.toJsonl();
