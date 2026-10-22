@@ -81,8 +81,8 @@ assert.strictEqual(loop.frontierGroup(99, 3), 3);
   assert.strictEqual(plan.primaryLabel, "继续闯关第 4 组");
   assert.strictEqual(plan.alsLabel, "去 ALS 修语法");
   assert.strictEqual(plan.nextLine, "练完了，然后继续闯关第 4 组。");
-  assert.strictEqual(plan.alsHref, "https://andywillbeback.github.io/#als-placeholder");
-  assert.strictEqual(plan.alsPlaceholder, true);
+  assert.strictEqual(plan.alsHref, "http://127.0.0.1:8501/");
+  assert.strictEqual(loop.ALS_GRAMMAR_HREF, "http://127.0.0.1:8501/");
 }
 
 {
@@ -103,7 +103,15 @@ assert.ok(index.includes('id="btn-clear-continue"'));
 assert.ok(index.includes('id="btn-clear-als"'));
 assert.ok(index.includes("去 ALS 修语法"));
 assert.ok(index.includes(loop.ALS_GRAMMAR_HREF));
-assert.ok(index.includes('data-als-placeholder="true"'));
+const alsAt = index.indexOf('id="btn-clear-als"');
+const alsTag = index.slice(alsAt, index.indexOf("</a>", alsAt));
+assert.ok(alsTag.includes('href="http://127.0.0.1:8501/"'), alsTag);
+assert.ok(alsTag.includes('target="_blank"'), alsTag);
+assert.ok(alsTag.includes('rel="noopener noreferrer"'), alsTag);
+assert.ok(!alsTag.includes("als-placeholder"));
+assert.ok(!index.includes("als-placeholder"));
+assert.ok(!index.includes("andywillbeback.github.io/#als"));
+assert.ok(!game.includes("als-placeholder"));
 assert.ok(index.includes('src="home-loop.js"'));
 assert.ok(game.includes("alsReturnCounts"));
 assert.ok(game.includes("clearNextActions"));

@@ -12,17 +12,16 @@
  * 「ALS 补了 X / 回流词 Y」. Until then it stays null and the strip
  * says 「薄弱点 → 今日必练」.
  *
- * The public ALS site is not referenced anywhere in this repo (docs
- * describe a Mac ingest, not a URL). ALS_GRAMMAR_HREF is a labeled
- * placeholder on Andy's GitHub Pages root until that URL exists.
+ * There is still no public ALS site. ALS_GRAMMAR_HREF opens the
+ * Mac-local Streamlit practice app at http://127.0.0.1:8501/.
+ * The link only works when ALS is already running on the student's Mac.
  */
 (function (root, factory) {
   var api = factory();
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.QuizMarioHomeLoop = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  var ALS_GRAMMAR_HREF = "https://andywillbeback.github.io/#als-placeholder";
-  var ALS_GRAMMAR_PLACEHOLDER = true;
+  var ALS_GRAMMAR_HREF = "http://127.0.0.1:8501/";
 
   /** Always null until real ALS rows can be mapped. See the file comment. */
   function alsReturnCounts(events) {
@@ -114,7 +113,6 @@
       primaryLabel: "",
       alsLabel: "",
       alsHref: "",
-      alsPlaceholder: false,
       nextLine: "",
     };
     if (opts.kind !== "must") return empty;
@@ -127,14 +125,12 @@
       primaryLabel: "继续闯关第 " + n + " 组",
       alsLabel: "去 ALS 修语法",
       alsHref: ALS_GRAMMAR_HREF,
-      alsPlaceholder: ALS_GRAMMAR_PLACEHOLDER,
       nextLine: "练完了，然后继续闯关第 " + n + " 组。",
     };
   }
 
   return {
     ALS_GRAMMAR_HREF: ALS_GRAMMAR_HREF,
-    ALS_GRAMMAR_PLACEHOLDER: ALS_GRAMMAR_PLACEHOLDER,
     alsReturnCounts: alsReturnCounts,
     homeLoopStrip: homeLoopStrip,
     frontierGroup: frontierGroup,

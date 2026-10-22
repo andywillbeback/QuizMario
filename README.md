@@ -67,3 +67,5 @@
 ```
 
 `learner_id` 和 `user_id` 都是 Supabase 用户 id。`vocab.due_review` 的到期时间在 `payload.due_at`。站点不会显示「已同步到 ALS」：ALS Mac 入库要跑上面的 ingest，或以后自己读这张表。字段说明见 `docs/learner-events.md`。
+
+今日必练练完后的「去 ALS 修语法」打开本机 Streamlit `http://127.0.0.1:8501/`。只有这台 Mac 上 ALS 已经在跑时才能打开；还没有公开的 ALS 网址。

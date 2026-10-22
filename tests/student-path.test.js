@@ -1410,6 +1410,8 @@ async function main() {
         primary: cont.textContent.trim(),
         als: als && !als.hidden ? als.textContent.trim() : "",
         alsHref: als ? als.getAttribute("href") : "",
+        alsTarget: als ? als.getAttribute("target") : "",
+        alsRel: als ? als.getAttribute("rel") : "",
         placeholder: als ? als.getAttribute("data-als-placeholder") : "",
         nextHidden: !next || next.hidden,
         reasonsHidden: !document.getElementById("clear-reasons") || document.getElementById("clear-reasons").hidden,
@@ -1422,8 +1424,10 @@ async function main() {
     assert.strictEqual(mustClear.reasonsHidden, false, "今日必练 clear shows the grouped 错因");
     assert.ok(mustClear.reasons.indexOf("最近错过的词，主要是形近") !== -1, mustClear.reasons);
     assert.ok(mustClear.reasons.indexOf("accept → except") !== -1, mustClear.reasons);
-    assert.strictEqual(mustClear.alsHref, "https://andywillbeback.github.io/#als-placeholder");
-    assert.strictEqual(mustClear.placeholder, "true");
+    assert.strictEqual(mustClear.alsHref, "http://127.0.0.1:8501/");
+    assert.strictEqual(mustClear.alsTarget, "_blank");
+    assert.strictEqual(mustClear.alsRel, "noopener noreferrer");
+    assert.strictEqual(mustClear.placeholder, null);
     assert.strictEqual(mustClear.nextHidden, true, "the vague Next set button stays hidden");
 
     await evalRetry(`document.getElementById("btn-clear-continue").click()`);
