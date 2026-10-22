@@ -55,6 +55,27 @@ const coreLevels = load("words.js", "VOCAB_LEVELS");
 const coreDupes = sameSetGlossDupes({ sets: coreLevels });
 assert.deepStrictEqual(coreDupes, [], "core same-set meaning_zh duplicates: " + JSON.stringify(coreDupes.slice(0, 5)));
 
+const practiceTracks = load("tracks.js", "VOCAB_TRACKS");
+const practiceById = Object.fromEntries(practiceTracks.filter((t) => t.sets).map((t) => [t.id, t]));
+for (const id of ["ket", "pet", "cet4"]) {
+  assert.ok(practiceById[id], id);
+  const dupes = sameSetGlossDupes(practiceById[id]);
+  assert.deepStrictEqual(dupes, [], id + " same-set meaning_zh duplicates: " + JSON.stringify(dupes.slice(0, 5)));
+}
+
+function trackGloss(id, word) {
+  const hits = practiceById[id].sets.flat().filter((card) => card.word === word);
+  assert.strictEqual(hits.length, 1, id + " " + word);
+  return hits[0].meaning_zh;
+}
+
+assert.strictEqual(trackGloss("pet", "landscape"), "风景（大地风光）");
+assert.strictEqual(trackGloss("pet", "scenery"), "风景（自然景色）");
+assert.notStrictEqual(trackGloss("pet", "landscape"), trackGloss("pet", "scenery"));
+assert.strictEqual(trackGloss("cet4", "apparent"), "明显的（看得出来）");
+assert.strictEqual(trackGloss("cet4", "evident"), "明显的（毫无疑问）");
+assert.notStrictEqual(trackGloss("cet4", "apparent"), trackGloss("cet4", "evident"));
+
 function coreGloss(word) {
   const hits = coreLevels.flat().filter((card) => card.word === word);
   assert.strictEqual(hits.length, 1, "core card " + word);

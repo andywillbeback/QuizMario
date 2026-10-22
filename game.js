@@ -1856,8 +1856,9 @@
   }
 
   /** Hard MC distractors: same POS / scene / root_group / similar length·spelling.
-   *  Same meaning_zh is excluded: ZH→EN grading is an exact lemma match, so a
-   *  synonym option would be marked wrong. */
+   *  sameGloss drops a synonym: ZH→EN grading is an exact lemma match, so
+   *  picking it would be marked wrong. A bare gloss and that same base plus
+   *  a parenthetical note count as one meaning. */
   function scoreDistractor(candidate, target, levelWords) {
     let score = 0;
     const cw = candidate.word;
@@ -1954,9 +1955,29 @@
     return String(a || "").trim() === String(b || "").trim();
   }
 
-  /** Identical non-empty gloss. Blank glosses are not treated as synonyms. */
+  /** Gloss with learner notes in fullwidth or ASCII parentheses removed. */
+  function glossBase(gloss) {
+    return String(gloss || "")
+      .replace(/（[^）]*）/g, "")
+      .replace(/\([^)]*\)/g, "")
+      .trim();
+  }
+
+  /** Same gloss for a ZH→EN distractor.
+   *  Exact trim match, or a bare gloss that is the other card's base once
+   *  （…） / (...) notes are removed. 我们 vs 我们（宾格） is one meaning: the
+   *  bare prompt does not tell them apart. Both-noted pairs stay distinct
+   *  (任何人（口语…） vs 任何人（较正式…）): each prompt already separates them.
+   *  Blank glosses are not synonyms. */
   function sameGloss(a, b) {
-    return meaningsMatch(a, b) && String(a || "").trim().length > 0;
+    const left = String(a || "").trim();
+    const right = String(b || "").trim();
+    if (!left || !right) return false;
+    if (meaningsMatch(left, right)) return true;
+    const baseLeft = glossBase(left);
+    const baseRight = glossBase(right);
+    if (!baseLeft || !baseRight || baseLeft !== baseRight) return false;
+    return baseLeft === left || baseRight === right;
   }
 
   function pickMeaningDistractors(target, count) {

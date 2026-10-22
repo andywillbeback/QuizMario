@@ -6,6 +6,10 @@
  * still be marked wrong. pickHardDistractors must drop that card on every
  * track, including one that sits in another set of the same track.
  *
+ * A bare gloss and the same Chinese plus a （…） note are the same trap:
+ * 谁 vs 谁（宾格） does not tell the student who and whom apart. Both cards
+ * already carrying different notes stay legal near-misses.
+ *
  * Run: node tests/hard-distractors.test.js
  */
 
@@ -174,6 +178,64 @@ for (let i = 0; i < 15; i++) {
   const picks = hostList(qm.debugHardDistractors("anybody", 3, noted));
   assert.ok(picks.includes("anyone"), "disambiguated anyone should remain a distractor: " + picks.join(","));
   assert.ok(!picks.includes("anybody"));
+}
+
+/* Bare gloss vs the same base plus a note. The bare prompt is the whole
+   choice, so the noted synonym must not be offered in either direction.
+   ASCII parentheses count the same as （…）. */
+const bareNoted = [
+  ["who", "谁", "whom", "谁（宾格）", "which", "哪一个"],
+  ["we", "我们", "us", "我们(宾格)", "which", "哪一个"],
+  ["your", "你的", "yours", "你的（名词性）", "you", "你"],
+];
+for (const [bareWord, bareGloss, notedWord, notedGloss, otherWord, otherGloss] of bareNoted) {
+  const level = [[
+    card(bareWord, bareGloss, "pron."),
+    card(notedWord, notedGloss, "pron."),
+    card(otherWord, otherGloss, "pron."),
+    card("what", "什么", "pron."),
+  ]];
+  for (let i = 0; i < 20; i++) {
+    const fromBare = hostList(qm.debugHardDistractors(bareWord, 3, level));
+    assert.ok(!fromBare.includes(notedWord), bareWord + " offered " + notedWord + ": " + fromBare.join(","));
+    assert.ok(fromBare.includes(otherWord), bareWord + " dropped a different gloss: " + fromBare.join(","));
+    const fromNoted = hostList(qm.debugHardDistractors(notedWord, 3, level));
+    assert.ok(!fromNoted.includes(bareWord), notedWord + " offered " + bareWord + ": " + fromNoted.join(","));
+    assert.ok(fromNoted.includes(otherWord), notedWord + " dropped a different gloss: " + fromNoted.join(","));
+  }
+}
+
+function loadWindow(file, name) {
+  const ctx = { window: {} };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(root, file), "utf8"), ctx);
+  return ctx.window[name];
+}
+
+/* Live banks named in the fairness hunt: zhongkao who/whom, plus the
+   same bare/noted pairs on 高考 and the core sets. */
+const examTracks = loadWindow("exam-tracks.js", "VOCAB_EXAM_TRACKS");
+const coreLevels = loadWindow("words.js", "VOCAB_LEVELS");
+const livePairs = [
+  ["zhongkao", examTracks.find((t) => t.id === "zhongkao").sets, "who", "whom"],
+  ["zhongkao", examTracks.find((t) => t.id === "zhongkao").sets, "your", "yours"],
+  ["zhongkao", examTracks.find((t) => t.id === "zhongkao").sets, "we", "us"],
+  ["gaokao", examTracks.find((t) => t.id === "gaokao").sets, "who", "whom"],
+  ["gaokao", examTracks.find((t) => t.id === "gaokao").sets, "your", "yours"],
+  ["gaokao", examTracks.find((t) => t.id === "gaokao").sets, "we", "us"],
+  ["core", coreLevels, "who", "whom"],
+  ["core", coreLevels, "your", "yours"],
+  ["core", coreLevels, "we", "us"],
+];
+for (const [trackId, levels, left, right] of livePairs) {
+  for (let i = 0; i < 15; i++) {
+    const lr = hostList(qm.debugHardDistractors(left, 3, levels));
+    assert.ok(!lr.includes(right), trackId + " " + left + " offered " + right + ": " + lr.join(","));
+    assert.strictEqual(lr.length, 3, trackId + " " + left + " short list: " + lr.join(","));
+    const rl = hostList(qm.debugHardDistractors(right, 3, levels));
+    assert.ok(!rl.includes(left), trackId + " " + right + " offered " + left + ": " + rl.join(","));
+    assert.strictEqual(rl.length, 3, trackId + " " + right + " short list: " + rl.join(","));
+  }
 }
 
 assert.strictEqual(qm.levels.length, levelCount, "debug hook restored the live track");
