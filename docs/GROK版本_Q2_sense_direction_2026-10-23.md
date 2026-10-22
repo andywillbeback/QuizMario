@@ -4,7 +4,7 @@
 **Branch:** `grok/q2-sense-direction`  
 **Base:** `main` @ `692387e` (#41)  
 **Rebase note:** Branched from `main` (same tip as #43/#44 bases). Does **not** include PR #44 Q1 typed spelling. After #44 merges, rebase this branch — `practice.noteSpelling` / typed·mc shape from Q1 should compose with `noteDirection`; session `form` bucket and `task_direction=spelling` are additive.  
-**PR:** (filled after open)  
+**PR:** https://github.com/andywillbeback/QuizMario/pull/45 (draft) @ `13dae7c`  
 **Not Andy-done / not live.** Leave draft; do not merge. PR #43 / #44 left alone.
 
 ## Checklist
