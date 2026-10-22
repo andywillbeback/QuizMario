@@ -32,7 +32,11 @@
    */
   function describeAttempt(attempt) {
     var a = attempt || {};
-    var direction = a.direction === "meaning" ? "meaning" : (a.direction === "spelling" ? "spelling" : "form");
+    var raw = a.direction;
+    // Q2 canonical keys must not fall through to the ZH→EN label.
+    var direction = (raw === "meaning" || raw === "en_zh")
+      ? "meaning"
+      : ((raw === "spelling" || raw === "typed") ? "spelling" : "form");
     var outcome = a.outcome || "wrong";
     var word = a.word || "";
     var meaning = a.meaning || "";

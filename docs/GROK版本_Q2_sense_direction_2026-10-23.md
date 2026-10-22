@@ -4,7 +4,7 @@
 **Branch:** `grok/q2-sense-direction`  
 **Base:** `main` @ `692387e` (#41)  
 **Rebase note:** Branched from `main` (same tip as #43/#44 bases). Does **not** include PR #44 Q1 typed spelling. After #44 merges, rebase this branch — `practice.noteSpelling` / typed·mc shape from Q1 should compose with `noteDirection`; session `form` bucket and `task_direction=spelling` are additive.  
-**PR:** https://github.com/andywillbeback/QuizMario/pull/45 (draft) @ `13dae7c`  
+**PR:** https://github.com/andywillbeback/QuizMario/pull/45 (draft). Tip after `8d48cc8`: feedback `en_zh` stays 英文→词义; 今日必练 detail is `zh_en` (student-path lock updated).  
 **Not Andy-done / not live.** Leave draft; do not merge. PR #43 / #44 left alone.
 
 ## Checklist
@@ -36,7 +36,7 @@
 3. **`sense-id.js`**: `provisionalSenseId`, `resolveSenseKey`, `sameSenseId`, `posToken`.
 4. **`home-loop.js`**: uses Sense provisional helper when available.
 5. **`game.js`**: bumps `form` for zh→en; records `noteDirection` on grade.
-6. **`feedback.js`**: direction labels accept `en_zh` / spelling.
+6. **`feedback.js`**: direction labels accept `en_zh` / spelling. `describeAttempt` maps `en_zh` to 看英文选中文 (it must not fall through to 看中文选英文).
 7. **Docs**: `docs/GROK版本_sense_id_contract_Q2.md` + learner-events.md Q2 table.
 8. **Tests**: `tests/sense-direction.test.js` + learner-events expectations.
 

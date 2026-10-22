@@ -5,6 +5,7 @@ const practice = require("../practice");
 const Sense = require("../sense-id");
 const le = require("../learner-events");
 const loop = require("../home-loop");
+const feedback = require("../feedback");
 
 /* Q2: three directions record separately on one card. */
 {
@@ -111,6 +112,29 @@ const loop = require("../home-loop");
   assert.ok(Sense.sameSenseId("communicate.v.交流", "communicate.v.交流"));
   assert.ok(!Sense.sameSenseId("communicate.v.交流", "communicate:social"));
   assert.ok(!Sense.sameSenseId("", "communicate.v.交流"));
+}
+
+/* Feedback labels: en_zh is 英文→词义, not the ZH→EN fallback. */
+{
+  const en = feedback.describeAttempt({
+    word: "adult",
+    meaning: "成年人",
+    direction: "en_zh",
+    outcome: "wrong",
+    picked: "小孩",
+  });
+  const enText = en.lines.join("\n");
+  assert.ok(enText.includes("看英文选中文"), enText);
+  assert.ok(!enText.includes("看中文选英文"), enText);
+
+  const zh = feedback.describeAttempt({
+    word: "adult",
+    meaning: "成年人",
+    direction: "zh_en",
+    outcome: "wrong",
+    picked: "child",
+  });
+  assert.ok(zh.lines.join("\n").includes("看中文选英文"));
 }
 
 console.log("sense-direction ok");
