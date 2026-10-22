@@ -51,6 +51,59 @@ for (const id of ["zhongkao", "gaokao"]) {
   assert.deepStrictEqual(dupes, [], id + " same-set meaning_zh duplicates: " + JSON.stringify(dupes.slice(0, 5)));
 }
 
+const coreLevels = load("words.js", "VOCAB_LEVELS");
+const coreDupes = sameSetGlossDupes({ sets: coreLevels });
+assert.deepStrictEqual(coreDupes, [], "core same-set meaning_zh duplicates: " + JSON.stringify(coreDupes.slice(0, 5)));
+
+function coreGloss(word) {
+  const hits = coreLevels.flat().filter((card) => card.word === word);
+  assert.strictEqual(hits.length, 1, "core card " + word);
+  return hits[0].meaning_zh;
+}
+
+const coreNotes = {
+  anybody: "任何人（口语，多用于疑问/否定）",
+  anyone: "任何人（较正式，也可用在肯定句）",
+  everybody: "每个人（口语）",
+  everyone: "每个人（较正式）",
+  mine: "我的（单独使用，不加名词）",
+  my: "我的（后接名词）",
+  somebody: "某人（口语）",
+  someone: "某人（较正式）",
+  them: "他们（宾格）",
+  they: "他们（主格）",
+  till: "直到（口语）",
+  until: "直到（较正式）",
+  while: "当……时；而（通用）",
+  whilst: "当……时；而（英式书面）",
+  shop: "商店（英式，店铺）",
+  store: "商店（美式说法）",
+  perform: "表演；表现（动词）",
+  performance: "表演；表现（名词）",
+  amusement: "娱乐（游乐）",
+  entertainment: "娱乐（文娱活动）",
+  story: "故事（记叙）",
+  tale: "故事（讲述）",
+  advertisement: "广告（一则）",
+  ad: "广告（缩写）",
+  occupation: "职业（工作，可泛指）",
+  profession: "职业（专业工作）",
+  bicycle: "自行车（全称）",
+  bike: "自行车（口语）",
+  protect: "保护（动词）",
+  protection: "保护（名词）",
+  completely: "完全地（彻底）",
+  entirely: "完全地（全部）",
+  generally: "通常（一般说来）",
+  normally: "通常（正常情况下）",
+  fine: "好的（天气或身体）",
+  good: "好的（泛指）",
+};
+for (const [word, meaning] of Object.entries(coreNotes)) {
+  assert.strictEqual(coreGloss(word), meaning, "core " + word);
+  assert.strictEqual(coreLevels.flat().find((card) => card.word === word).explain_zh, "中考/CEFR 常用词：" + meaning, "core explain " + word);
+}
+
 function gloss(word) {
   const hits = cards(tracks, word);
   assert.ok(hits.length >= 1, word);
@@ -80,6 +133,10 @@ assert.strictEqual(gloss("eighteenth"), "第十八");
 assert.strictEqual(cards(tracks, "eighteenth")[0].example_en, "Her birthday is on the eighteenth of June.");
 
 const repairs = loadRepairs();
+for (const [word, meaning] of Object.entries(coreNotes)) {
+  const fix = repairs.get(word);
+  assert.ok(fix && fix.meaning_zh === meaning, "repair gloss for core pair " + word + " " + (fix && fix.meaning_zh));
+}
 for (const word of ["exit", "export", "anybody", "anyone", "their", "theirs", "advice", "advise", "attraction", "claim", "army", "badminton", "get", "dress", "trouble", "decent", "chat", "pair"]) {
   const fix = repairs.get(word);
   assert.ok(fix, "repair missing for " + word);

@@ -44,7 +44,7 @@ const boom = coreOne("boom");
 assert.strictEqual(boom.meaning_zh, "轰鸣");
 assert.strictEqual(boom.explain_zh, "中考/CEFR 常用词：轰鸣");
 assert.ok(boom.example_zh.includes("轰鸣"));
-assert.strictEqual(coreOne("story").meaning_zh, "故事");
+assert.strictEqual(coreOne("story").meaning_zh, "故事（记叙）");
 assert.strictEqual(coreOne("storey").meaning_zh, "楼层");
 assert.strictEqual(coreOne("attraction").meaning_zh, "引力");
 assert.strictEqual(coreOne("rail").meaning_zh, "铁轨");
