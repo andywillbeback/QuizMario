@@ -30,7 +30,7 @@ Example:
 
 ## Where the rows live
 
-1. **This browser:** `localStorage` key `quizmario_learner_events_v1` (latest 800). Home → **ALS 学习信号** → 下载 JSONL or 复制 JSONL.
+1. **This browser:** `localStorage` key `quizmario_learner_events_v1` (latest 800). The student login page and home do not show an ingest panel. On the game page console, call `QuizMarioLearnerEvents.download()` or `QuizMarioLearnerEvents.copyJsonl()`. `?alsDebug=1` (or `localStorage.quizmario_als_debug = "1"`) mounts the panel on the game home only, never on login.
 2. **Supabase** `public.learner_events`, after you run `supabase/learner_events.sql` in the SQL editor. Logged-in inserts use the anon key and RLS (`auth.uid() = learner_id`, `source = 'quizmario'`). The table is append-only for the browser role (no update/delete policy). A missing table or a failed insert leaves the local outbox intact and does **not** change `user_progress` sync.
 3. **ALS SQLite** only after the Mac ingest below. The site never says the events were synced to ALS.
 
@@ -58,7 +58,7 @@ In the Dashboard SQL editor, run `supabase/learner_events.sql` once (same projec
 
 1. Open the Pages preview, log in with the shared student account.
 2. Pick 中考, answer one card wrong. 错词本 should gain that word.
-3. Home → **ALS 学习信号**. The count includes `vocab.answer_wrong` and, if the word newly entered the book, `vocab.wrong_book_add`. It must not say the rows were synced to ALS.
-4. If today's due queue is non-empty, the same panel includes `vocab.due_review` rows with `payload.due_at`. Opening 今日必练 again does not duplicate the same `due_at`.
-5. Download JSONL. Each line parses as JSON, `source` is `quizmario`, and `learner_id` is the Supabase uid.
-6. In Supabase, the same `event_id`s are rows in `learner_events`. If the SQL has not been run, the panel says the table is missing and the JSONL download still works. Progress sync (`已登录 · 已同步`) still refers only to `user_progress`.
+3. Login and the home do not show 「ALS 学习信号」, 「下载 JSONL」, or a learner_events ingest note. In the console, `QuizMarioLearnerEvents.list()` includes `vocab.answer_wrong` and, if the word newly entered the book, `vocab.wrong_book_add`. It must not say the rows were synced to ALS.
+4. If today's due queue is non-empty, `list()` includes `vocab.due_review` rows with `payload.due_at`. Opening 今日必练 again does not duplicate the same `due_at`.
+5. `QuizMarioLearnerEvents.download()` saves JSONL. Each line parses as JSON, `source` is `quizmario`, and `learner_id` is the Supabase uid.
+6. In Supabase, the same `event_id`s are rows in `learner_events`. If the SQL has not been run, the console export still returns JSONL. Progress sync (`已登录 · 已同步`) still refers only to `user_progress`. With `?alsDebug=1` the game home can show that the table is missing; that panel is not on the login page.

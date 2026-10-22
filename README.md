@@ -58,7 +58,7 @@
 
 ## 学习信号（ALS）
 
-间隔重复仍在本机 `srs-rules.js`。登录后，答对、答错、错词本收录、今日到期会写入 Supabase `learner_events`（`source=quizmario`），并留一份本机 JSONL。首页「ALS 学习信号」可以下载或复制，交给 ALS：
+间隔重复仍在本机 `srs-rules.js`。登录后，答对、答错、错词本收录、今日到期会写入 Supabase `learner_events`（`source=quizmario`），并留一份本机 JSONL。登录页和首页不显示「ALS 学习信号」。在游戏页控制台调用 `QuizMarioLearnerEvents.download()` 或 `copyJsonl()`，或打开 `?alsDebug=1`，再把 JSONL 交给 ALS：
 
 ```bash
 .venv/bin/python scripts/ingest_learner_events.py \

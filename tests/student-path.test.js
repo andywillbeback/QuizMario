@@ -110,7 +110,10 @@ function staticGuards() {
   assert.ok(!index.includes('id="btn-due-today"') && !index.includes('id="btn-wrong-book"'), "separate due and wrong-book CTAs are gone");
   assert.ok(index.includes('src="review-queues.js"'), "queue rules load with the game");
   assert.ok(index.includes('src="learner-events.js"'), "learner event emitter loads with the game");
-  assert.ok(index.includes('id="btn-export-learner-events"'), "JSONL export is on the home screen");
+  assert.ok(!index.includes('id="learner-events-panel"') && !index.includes('id="btn-export-learner-events"'),
+    "JSONL ingest panel is not on the student home");
+  assert.ok(!index.includes("ALS 学习信号") && !index.includes("下载 JSONL") && !index.includes("复制 JSONL"),
+    "home HTML does not show the ALS ingest copy");
   assert.ok(game.includes("emitLearnerAnswer") && game.includes("signalDueItems") && game.includes("emitWrongBook"),
     "answers, due queue, and wrong-book entry emit learner events");
   assert.ok(!/已同步到\s*ALS/.test(index + game + sync), "no fake ALS sync banner");
@@ -412,7 +415,9 @@ async function main() {
           confirmHidden: !!(document.getElementById("confirm-label") || {}).hidden,
           formHidden: !!form.hidden,
           banner: banner && !banner.hidden ? banner.textContent : "",
-          credit: ((document.querySelector(".credit") || document.querySelector(".gold-footer")) || {}).textContent || ""
+          credit: ((document.querySelector(".credit") || document.querySelector(".gold-footer")) || {}).textContent || "",
+          alsPanel: !!document.getElementById("learner-events-panel") || !!document.getElementById("btn-export-learner-events"),
+          alsCopy: /ALS 学习信号|下载 JSONL|复制 JSONL|已写入 Supabase learner_events|ingest_learner_events/.test(document.documentElement.innerHTML || "")
         };
       })()`);
       return snap;
@@ -424,6 +429,8 @@ async function main() {
     assert.strictEqual(login.formHidden, false, "a stored session must not skip the form");
     assert.strictEqual(login.banner, "", login.banner);
     assert.ok(login.credit.includes("Doctoral product powered by Pu Jin"));
+    assert.strictEqual(login.alsPanel, false, "login/register has no ALS learning-signal panel");
+    assert.strictEqual(login.alsCopy, false, "login HTML does not expose ALS ingest copy");
 
     const loginTab = await evalRetry(`(() => {
       document.getElementById("mode-login").click();
@@ -1229,25 +1236,30 @@ async function main() {
     assert.strictEqual(signals.fakeAls, false, "the page must not claim an ALS sync");
 
     const exported = await evalRetry(`(() => {
-      const body = window.QuizMarioLearnerEvents.toJsonl();
-      document.getElementById("btn-export-learner-events").click();
+      const body = window.QuizMarioLearnerEvents.download() || "";
       const lines = body.trim().split("\\n").filter(Boolean);
       let parsed = true;
       try { lines.forEach((line) => JSON.parse(line)); } catch (e) { parsed = false; }
+      const text = document.body.innerText || "";
       return {
         lines: lines.length,
         parsed: parsed,
-        note: (document.getElementById("learner-events-note") || {}).textContent || "",
         hasDue: body.indexOf("vocab.due_review") !== -1,
         hasWrong: body.indexOf("vocab.answer_wrong") !== -1,
-        hasBook: body.indexOf("vocab.wrong_book_add") !== -1
+        hasBook: body.indexOf("vocab.wrong_book_add") !== -1,
+        panel: !!document.getElementById("learner-events-panel"),
+        exportBtn: !!document.getElementById("btn-export-learner-events"),
+        studentCopy: /ALS 学习信号|下载 JSONL|复制 JSONL|已写入 Supabase learner_events/.test(text),
+        fakeAls: /已同步到\\s*ALS/.test(text)
       };
     })()`);
     assert.ok(exported.lines >= 3, "JSONL export contains the due, wrong, and wrong-book signals");
     assert.strictEqual(exported.parsed, true, "each JSONL line parses");
     assert.ok(exported.hasDue && exported.hasWrong && exported.hasBook, JSON.stringify(exported));
-    assert.ok(exported.note.includes("已下载 JSONL"), exported.note);
-    assert.ok(!exported.note.includes("已同步到 ALS"), exported.note);
+    assert.strictEqual(exported.panel, false, "the student home has no ALS ingest panel");
+    assert.strictEqual(exported.exportBtn, false, "JSONL download is not a student button");
+    assert.strictEqual(exported.studentCopy, false, "ingest copy is not shown to students");
+    assert.strictEqual(exported.fakeAls, false, "download must not claim an ALS sync");
 
     await evalRetry(`document.getElementById("btn-quit").click()`);
     const wrongHome = await waitFor(async () => evalRetry(`(() => {
