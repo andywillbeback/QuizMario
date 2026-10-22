@@ -114,8 +114,39 @@
     return out;
   }
 
-  function combinedCount(dueItems, wrongItems) {
+  /**
+   * Today's 今日必练 remaining count: due cards and active 错词本 rows,
+   * one row per card. A miss that leaves 今日到期 (due moves about 10
+   * minutes out) and stays in the wrong book is still one row, not two.
+   * Home badge, soft gate, reminder, loop strip, progress narrative,
+   * and the in-session chrome all display this number.
+   */
+  function mustRemainingCount(dueItems, wrongItems) {
     return mergePracticeQueue(dueItems, wrongItems).length;
+  }
+
+  function combinedCount(dueItems, wrongItems) {
+    return mustRemainingCount(dueItems, wrongItems);
+  }
+
+  /**
+   * In-session chrome. The badge and 「剩 N」 are the same count, so a
+   * requeue of the open card cannot push 「剩」 one ahead of the badge.
+   */
+  function mustRemainReadout(count) {
+    var n = Math.floor(Number(count));
+    if (!isFinite(n) || n < 0) n = 0;
+    return {
+      count: n,
+      badge: String(n),
+      leftLabel: "剩 " + n,
+    };
+  }
+
+  function softGateLine(count) {
+    var n = Math.floor(Number(count));
+    if (!isFinite(n) || n < 0) n = 0;
+    return "今天有 " + n + " 道到期/错词，先清掉？";
   }
 
   /** Today's gate row. A different calendar day clears started and dismissed. */
@@ -331,6 +362,9 @@
     continueTarget: continueTarget,
     itemId: itemId,
     mergePracticeQueue: mergePracticeQueue,
+    mustRemainingCount: mustRemainingCount,
+    mustRemainReadout: mustRemainReadout,
+    softGateLine: softGateLine,
     combinedCount: combinedCount,
     freshDailyGate: freshDailyGate,
     markDailyGate: markDailyGate,

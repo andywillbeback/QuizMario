@@ -98,10 +98,20 @@
     return n;
   }
 
+  function wholeCount(value) {
+    var n = Math.floor(Number(value));
+    if (!isFinite(n) || n < 0) return 0;
+    return n;
+  }
+
   /**
    * Next step after a finished queue. The frontier CTA and the ALS
    * grammar link are relevant only when sessionKind is "must"
    * (今日必练 clear). Other clears keep their own buttons.
+   * opts.left is today's must queue (due + wrong book), not how many
+   * cards this sitting still had on screen. 「练完了」 is only for an
+   * empty queue. A round can end while a card is still due later today
+   * (rescheduled about 10 minutes out, or still in 错词本).
    */
   function clearNextActions(opts) {
     opts = opts || {};
@@ -110,22 +120,38 @@
       showAls: false,
       alsRelevant: false,
       frontier: 0,
+      left: 0,
+      title: "",
       primaryLabel: "",
       alsLabel: "",
       alsHref: "",
       nextLine: "",
+      detail: "",
+      message: "",
     };
     if (opts.kind !== "must") return empty;
     var n = frontierGroup(opts.unlockedLevel, opts.levelCount);
+    var left = wholeCount(opts.left);
+    var cleared = left === 0;
+    var nextLine = cleared
+      ? ("练完了，然后继续闯关第 " + n + " 组。")
+      : ("这轮做完了，今天还剩 " + left + " 道，稍后还会再出现。");
+    var detail = cleared
+      ? "这批到期的词都见过了。错词本里连续答对两次的已经离开。"
+      : "到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。";
     return {
       showFrontier: true,
       showAls: true,
       alsRelevant: true,
       frontier: n,
+      left: left,
+      title: cleared ? "今日必练清空了" : "这轮先到这里",
       primaryLabel: "继续闯关第 " + n + " 组",
       alsLabel: "去 ALS 修语法",
       alsHref: ALS_GRAMMAR_HREF,
-      nextLine: "练完了，然后继续闯关第 " + n + " 组。",
+      nextLine: nextLine,
+      detail: detail,
+      message: nextLine + detail,
     };
   }
 
