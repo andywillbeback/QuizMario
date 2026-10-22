@@ -80,9 +80,27 @@ assert.strictEqual(loop.frontierGroup(99, 3), 3);
   assert.strictEqual(plan.frontier, 4);
   assert.strictEqual(plan.primaryLabel, "继续闯关第 4 组");
   assert.strictEqual(plan.alsLabel, "去 ALS 修语法");
+  assert.strictEqual(plan.title, "今日必练清空了");
   assert.strictEqual(plan.nextLine, "练完了，然后继续闯关第 4 组。");
+  assert.ok(plan.message.indexOf(plan.nextLine) === 0, plan.message);
+  assert.ok(plan.message.indexOf("这批到期的词都见过了") !== -1, plan.message);
   assert.strictEqual(plan.alsHref, "http://127.0.0.1:8501/");
   assert.strictEqual(loop.ALS_GRAMMAR_HREF, "http://127.0.0.1:8501/");
+}
+
+{
+  const pending = loop.clearNextActions({ kind: "must", unlockedLevel: 4, levelCount: 20, left: 1 });
+  assert.strictEqual(pending.left, 1);
+  assert.strictEqual(pending.showFrontier, true, "the frontier button stays while cards remain");
+  assert.strictEqual(pending.title, "这轮先到这里");
+  assert.ok(pending.nextLine.indexOf("这轮做完了") !== -1, pending.nextLine);
+  assert.ok(pending.nextLine.indexOf("今天还剩 1 道") !== -1, pending.nextLine);
+  assert.ok(pending.message.indexOf("今天还剩 1 道") !== -1, pending.message);
+  const said = pending.title + pending.nextLine + pending.message;
+  assert.ok(said.indexOf("练完了") === -1, said);
+  assert.ok(said.indexOf("清空") === -1, said);
+  assert.ok(pending.primaryLabel.indexOf("继续闯关第 4 组") !== -1);
+  assert.strictEqual(pending.alsHref, "http://127.0.0.1:8501/");
 }
 
 {
@@ -115,6 +133,9 @@ assert.ok(!game.includes("als-placeholder"));
 assert.ok(index.includes('src="home-loop.js"'));
 assert.ok(game.includes("alsReturnCounts"));
 assert.ok(game.includes("clearNextActions"));
+assert.ok(game.includes("plan.title"));
+assert.ok(game.includes("plan.message"));
+assert.ok(!game.includes("这轮今日必练练完了"), "a round with cards left must not say the day is finished");
 assert.ok(game.includes("startFrontierLevel"));
 assert.ok(!/ALS 补了 \d/.test(game), "game.js must not hardcode an ALS filled count");
 

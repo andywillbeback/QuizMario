@@ -1217,8 +1217,10 @@
         exampleZh;
     }
     paintSenseCue(currentCard);
-    const queueEl = $("play-queue");
-    if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
+    if (sessionKind !== "must") {
+      const queueEl = $("play-queue");
+      if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
+    }
     updateProgress();
     renderChoices();
   }
@@ -1465,7 +1467,11 @@
   }
 
   function updateProgress() {
-    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "must" || sessionKind === "spelling" || sessionKind === "placement") {
+    if (sessionKind === "must") {
+      paintMustRemaining(mustRemainingCount());
+      return;
+    }
+    if (sessionKind === "due" || sessionKind === "wrongbook" || sessionKind === "spelling" || sessionKind === "placement") {
       const left = queue.length + requeueSoon.length + (currentCard ? 1 : 0);
       const total = Math.max(sessionTarget, left, 1);
       const done = Math.max(0, Math.min(total, total - left));
@@ -1772,7 +1778,9 @@
         nextCard();
       });
     }
-    $("play-queue").textContent = String(queue.length + requeueSoon.length);
+    if (sessionKind !== "must") {
+      $("play-queue").textContent = String(queue.length + requeueSoon.length);
+    }
     updateProgress();
   }
 
@@ -2886,6 +2894,31 @@
     return RQ.mergePracticeQueue(dueQueueItems(now), wrongBookQueueItems());
   }
 
+  /** Same merged due + wrong-book queue the home surfaces count. */
+  function mustRemainingCount(now) {
+    return RQ.mustRemainingCount(dueQueueItems(now), wrongBookQueueItems());
+  }
+
+  function paintMustRemaining(count) {
+    const view = RQ.mustRemainReadout(count);
+    const queueEl = $("play-queue");
+    if (queueEl) queueEl.textContent = view.badge;
+    const total = Math.max(sessionTarget, view.count, 1);
+    const done = Math.max(0, Math.min(total, total - view.count));
+    const pct = Math.round((done / total) * 100);
+    const bar = $("play-progress");
+    if (bar) bar.style.width = pct + "%";
+    const pctEl = $("set-progress-pct");
+    if (pctEl) pctEl.textContent = view.leftLabel;
+    const barWrap = $("set-progress-bar");
+    if (barWrap) {
+      barWrap.setAttribute("aria-valuenow", String(pct));
+      barWrap.setAttribute("aria-valuetext", "今日必练 剩余 " + view.count);
+    }
+    const label = $("set-progress-label");
+    if (label) label.textContent = "今日必练";
+  }
+
   function queueModeLabel(kind) {
     if (kind === "placement") return "摸底";
     if (kind === "must") return "今日必练";
@@ -3112,7 +3145,7 @@
       return;
     }
     const copy = $("must-gate-copy");
-    if (copy) copy.textContent = "今天有 " + count + " 道到期/错词，先清掉？";
+    if (copy) copy.textContent = RQ.softGateLine(count);
     const wasHidden = gate.hidden;
     gate.hidden = false;
     if (wasHidden) {
@@ -3127,30 +3160,30 @@
     const added = scanWrongBook();
     const dueItems = dueQueueItems();
     signalDueItems(dueItems);
-    const merged = RQ.mergePracticeQueue(dueItems, wrongBookQueueItems());
-    setCountBadge("must-badge", merged.length);
+    const count = RQ.mustRemainingCount(dueItems, wrongBookQueueItems());
+    setCountBadge("must-badge", count);
     const mode = RQ.homePrimacy({
-      count: merged.length,
+      count: count,
       day: todayKey(),
       record: save.mustPractice,
     });
     applyHomePrimacy(mode);
-    renderHomeLoop(merged.length);
+    renderHomeLoop(count);
     renderMissReasons();
-    renderTodayNarrative(merged.length);
+    renderTodayNarrative(count);
     const hint = $("continue-hint");
     if (hint) {
       hint.hidden = false;
-      if (merged.length > 0 && mode === "primary") {
-        hint.textContent = "今天有 " + merged.length + " 道到期/错词，先做今日必练。";
-      } else if (merged.length > 0) {
-        hint.textContent = "今日必练还剩 " + merged.length + " 道。继续闯关是看英文选中文。";
+      if (count > 0 && mode === "primary") {
+        hint.textContent = "今天有 " + count + " 道到期/错词，先做今日必练。";
+      } else if (count > 0) {
+        hint.textContent = "今日必练还剩 " + count + " 道。继续闯关是看英文选中文。";
       } else {
         hint.textContent = "今天没有到期或错词。继续闯关是看英文选中文。";
       }
     }
-    maybeShowMustGate(merged.length);
-    renderPracticeReminder(merged.length);
+    maybeShowMustGate(count);
+    renderPracticeReminder(count);
     if (added > 0) persist();
   }
 
@@ -3497,18 +3530,15 @@
     const title = $("clear-title");
     const msg = $("clear-msg");
     if (kind === "must") {
-      const left = mustPracticeItems().length;
+      const left = mustRemainingCount();
       const plan = HL.clearNextActions({
         kind: "must",
         unlockedLevel: save.unlockedLevel,
         levelCount: LEVEL_COUNT,
         left: left,
       });
-      if (title) title.textContent = left ? "这轮今日必练练完了" : "今日必练清空了";
-      const rest = left
-        ? ("还剩 " + left + " 道。到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。")
-        : "这批到期的词都见过了。错词本里连续答对两次的已经离开。";
-      if (msg) msg.textContent = plan.nextLine + rest;
+      if (title) title.textContent = plan.title;
+      if (msg) msg.textContent = plan.message;
       showMustClearActions(plan);
     } else if (kind === "due") {
       if (title) title.textContent = "今日到期练完了";
