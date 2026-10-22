@@ -14,7 +14,9 @@
   var RADAR_MIN = 8;
 
   function directionLabel(direction) {
-    return direction === "meaning" ? "看英文选中文" : "看中文选英文";
+    if (direction === "meaning" || direction === "en_zh") return "看英文选中文";
+    if (direction === "spelling") return "独立拼写";
+    return "看中文选英文";
   }
 
   function hintLine(outcome, hintSeen) {

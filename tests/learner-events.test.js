@@ -232,7 +232,7 @@ function wrong(extra) {
   assert.strictEqual(ev.lemma, "communicate");
   assert.strictEqual(ev.pos, "v.");
   assert.strictEqual(ev.task_direction, "recognition");
-  assert.strictEqual(ev.task_direction_detail, "meaning");
+  assert.strictEqual(ev.task_direction_detail, "en_zh");
   assert.strictEqual(ev.attempt, "first_attempt");
   assert.strictEqual(ev.answer_exposed, false);
   assert.strictEqual(ev.review_interval_days, 3);
@@ -294,7 +294,7 @@ function wrong(extra) {
     hint_exposed_at: "2026-10-22T01:00:00.000Z",
     created_at: NOW,
   }, NOW);
-  assert.strictEqual(produced.task_direction, "production");
+  assert.strictEqual(produced.task_direction, "spelling");
   assert.strictEqual(produced.task_direction_detail, "spelling");
   assert.strictEqual(produced.attempt, "retry");
   assert.strictEqual(produced.answer_exposed, true);
