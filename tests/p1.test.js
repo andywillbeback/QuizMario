@@ -309,7 +309,39 @@ function findCard(tracks, id, word) {
   assert.ok(game.includes('title.textContent = challengeWon ? "挑战成功" : "通关"'));
   assert.ok(game.includes("不计入通关"));
   assert.ok(!game.includes("mcMode"));
-  assert.ok(!index.includes('id="answer-input"'));
+  assert.ok(index.includes('id="answer-input"'), "Q1 typed spelling input");
+  assert.ok(index.includes('id="type-row"') && index.includes('id="btn-check-spelling"'));
+  assert.ok(game.includes("renderTypedSpelling") && game.includes('mode: "typed"'));
+  assert.ok(game.includes("evidence_kind") && game.includes("typed_spelling"));
+  assert.ok(!index.includes('id="btn-mc-toggle"'), "no typed/MC toggle — spelling is always typed");
+}
+
+/* Q1. Typed spelling can reach 稳定; legacy MC scores cannot. */
+{
+  const now = Date.UTC(2026, 9, 23, 2, 0, 0);
+  const mcOnly = srs.defaultCardProg();
+  practice.noteSpelling(mcOnly, "correct", now, { mode: "mc" });
+  practice.noteSpelling(mcOnly, "correct", now + 1, { mode: "mc" });
+  practice.noteSpelling(mcOnly, "correct", now + 2, { mode: "mc" });
+  assert.strictEqual(practice.spellingSignal(mcOnly.spelling), "未练", "MC streak is not independent");
+  assert.strictEqual(practice.isIndependentSpelling(mcOnly.spelling), false);
+  assert.strictEqual(practice.mcSpellingSignal(mcOnly.spelling), "稳定");
+  assert.ok((mcOnly.spelling.mc.correct || 0) >= 3);
+  assert.strictEqual(mcOnly.spelling.typed.correct || 0, 0);
+
+  const legacy = srs.defaultCardProg();
+  legacy.spelling = { correct: 5, wrong: 0, unknown: 0, streak: 5, best: 5, lastAt: now };
+  assert.strictEqual(practice.spellingSignal(legacy.spelling), "未练", "pre-Q1 MC top-level migrates out of typed");
+  assert.strictEqual(practice.isIndependentSpelling(legacy.spelling), false);
+  assert.ok((legacy.spelling.mc.correct || 0) >= 5);
+  assert.strictEqual(practice.hasSpellingPractice(legacy.spelling), true);
+
+  const typed = srs.defaultCardProg();
+  practice.noteSpelling(typed, "correct", now);
+  practice.noteSpelling(typed, "correct", now + 1);
+  assert.strictEqual(practice.spellingSignal(typed.spelling), "稳定");
+  assert.strictEqual(practice.isIndependentSpelling(typed.spelling), true);
+  assert.ok((typed.spelling.typed.correct || 0) >= 2);
 }
 
 console.log("p1 ok");

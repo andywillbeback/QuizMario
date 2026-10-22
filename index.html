@@ -1350,7 +1350,7 @@
         </div>
         <p id="continue-hint" class="sub continue-hint" hidden></p>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
-          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 拼写另算，不挡住第一次通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd> · 看完解析后 <kbd>Enter</kbd>=继续
+          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 拼写改为键入英文，旧选择成绩不算独立拼写；拼写另算，不挡住第一次通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd> · 看完解析后 <kbd>Enter</kbd>=继续
         </p>
 
         <div id="stats-panel" class="panel">
@@ -1394,6 +1394,10 @@
         <div id="prompt-hint"></div>
       </div>
       <div id="answer-area">
+        <div id="type-row" hidden>
+          <input id="answer-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="输入英文拼写" placeholder="输入英文单词">
+          <button id="btn-check-spelling" class="secondary" type="button">检查</button>
+        </div>
         <div id="choices" role="group" aria-label="选择英文单词" hidden></div>
         <button id="btn-unknown" class="ghost" type="button" hidden>不会</button>
       </div>

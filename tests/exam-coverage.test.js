@@ -229,11 +229,14 @@ assert.ok(!/报告码|备份|学习数据|KET|PET|四级/.test(gate), "gate has 
 assert.ok(html.includes('id="btn-continue"'), "home still has continue");
 assert.ok(html.includes('id="choices"'), "practice has a choice list");
 assert.ok(!html.includes('id="btn-mc-toggle"'), "typed/MC toggle is gone");
-assert.ok(!html.includes('id="answer-input"'), "typed answer field is gone");
-assert.ok(!html.includes("Type the English"), "no type-the-word prompt");
+assert.ok(html.includes('id="answer-input"'), "Q1 spelling uses a typed answer field");
+assert.ok(html.includes('id="type-row"'), "typed row wraps the spelling input");
+assert.ok(!html.includes("Type the English"), "no English type-the-word prompt copy");
 const gameSrc = fs.readFileSync(path.join(root, "game.js"), "utf8");
-assert.ok(!gameSrc.includes("answer-input"), "game does not focus a text answer");
+assert.ok(gameSrc.includes("renderTypedSpelling"), "spelling session renders typed input");
+assert.ok(gameSrc.includes("answer-input"), "game focuses the spelling text answer");
 assert.ok(!gameSrc.includes("btn-mc-toggle"), "game does not bind the MC toggle");
+assert.ok(gameSrc.includes('sessionDirection === "spelling"') || gameSrc.includes('sessionKind === "spelling"'));
 assert.ok(gameSrc.includes("window.scrollTo(0, 0)"), "screen changes reset scroll");
 
 console.log("exam-coverage ok", {

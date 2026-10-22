@@ -80,7 +80,6 @@ function staticGuards() {
     ["id=\"about-panel\"", "about panel"],
     ["id=\"homescreen-tip\"", "homescreen tip"],
     ["id=\"btn-due-only\"", "只练到期 button"],
-    ["id=\"answer-input\"", "typed answer field"],
     ["id=\"btn-mc-toggle\"", "typed/MC toggle"],
     ["只练到期", "只练到期 label"],
     ["学习报告码", "report copy"],
@@ -89,8 +88,9 @@ function staticGuards() {
   for (const [needle, why] of banned) {
     assert.ok(!index.includes(needle), "index.html brought back " + why);
   }
+  assert.ok(index.includes('id="answer-input"'), "Q1 typed spelling input is present");
   assert.ok(!game.includes("let dueOnly") && !game.includes("if (dueOnly") && !game.includes("mcMode"),
-    "game.js must not filter the queue with dueOnly or a typed-answer mode");
+    "game.js must not filter the queue with dueOnly or a typed-answer mode toggle");
   assert.ok(game.includes("delete save.dueOnly"), "a leftover dueOnly flag is still stripped from the save");
   assert.ok(sync.includes("sendToLogin"), "sync.js still sends a missing session to login");
   assert.ok(index.includes('src="srs-rules.js"'), "clearance rules load with the game");
@@ -729,7 +729,7 @@ async function main() {
         defaultSort: !!document.getElementById("btn-sort-default"),
         challengeMs: window.__QM && window.__QM.challengeMs,
         queue: Number(document.getElementById("play-queue").textContent),
-        typed: !!document.getElementById("answer-input"),
+        typed: (() => { const row = document.getElementById("type-row"); return !!(row && !row.hidden); })(),
         due: !!document.getElementById("btn-due-only")
       };
     })()`), 10000, "first practice card");
@@ -1376,7 +1376,7 @@ async function main() {
       return {
         title: document.getElementById("play-level").textContent,
         again: !!document.getElementById("btn-rate-again"),
-        typed: !!document.getElementById("answer-input")
+        typed: (() => { const row = document.getElementById("type-row"); return !!(row && !row.hidden); })()
       };
     })()`), 10000, "今日必练 again");
     assert.strictEqual(wrongPlay.title, "今日必练");
