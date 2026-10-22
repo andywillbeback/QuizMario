@@ -13,8 +13,11 @@
  *
  * Deep-train debt is a different number. An active 错词本 sense owes
  * ALS deep practice (Repair → Rebuild → Vary → Transfer) until a real
- * source=als sense_return qualifies that sense_id. That debt is not
- * alsReturnCounts, and it is not the 今日必练 count. The signed-in home
+ * source=als sense_return qualifies that sense_id. The return counts
+ * only when its created_at is newer than that row's last miss. A later
+ * miss clears alsDeepDone, and the stored return does not close the
+ * debt again. That debt is not alsReturnCounts, and it is not the
+ * 今日必练 count. The signed-in home
  * shows 「N 个错词待 ALS 深练」 whenever the debt is above zero, including
  * while 今日必练 still has cards. This slice does not auto-open ALS
  * after each miss.
@@ -75,10 +78,28 @@
     return l;
   }
 
+  function isAlsSenseReturn(ev) {
+    if (!ev || ev.source !== "als") return false;
+    var type = String(ev.event_type || "");
+    return type === "sense_return" || type === "vocab.sense_return" || type === "als.sense_return";
+  }
+
+  function eventSenseId(ev) {
+    var id = ev.sense_id || (ev.payload && ev.payload.sense_id) || "";
+    return String(id).trim();
+  }
+
+  function returnTimeMs(ev) {
+    var raw = ev.created_at || (ev.payload && ev.payload.created_at) || "";
+    var t = Date.parse(String(raw));
+    return isFinite(t) ? t : 0;
+  }
+
   /**
    * source=als sense_return qualifies one sense. Unknown ALS rows,
    * including session summaries, do not. QuizMario signals never do.
-   * This does not feed alsReturnCounts.
+   * This does not feed alsReturnCounts. Callers compare the time
+   * against the row's last miss before closing debt.
    */
   function alsDeepQualifiedIds(events) {
     var ids = [];
@@ -86,11 +107,8 @@
     var list = events || [];
     for (var i = 0; i < list.length; i++) {
       var ev = list[i];
-      if (!ev || ev.source !== "als") continue;
-      var type = String(ev.event_type || "");
-      if (type !== "sense_return" && type !== "vocab.sense_return" && type !== "als.sense_return") continue;
-      var id = ev.sense_id || (ev.payload && ev.payload.sense_id) || "";
-      id = String(id).trim();
+      if (!isAlsSenseReturn(ev)) continue;
+      var id = eventSenseId(ev);
       if (!id || seen[id]) continue;
       seen[id] = true;
       ids.push(id);
@@ -98,27 +116,52 @@
     return ids;
   }
 
+  /** sense_id → newest matching return, in ms. 0 means that return has no created_at. */
+  function latestAlsReturnMs(events) {
+    var best = {};
+    var list = events || [];
+    for (var i = 0; i < list.length; i++) {
+      var ev = list[i];
+      if (!isAlsSenseReturn(ev)) continue;
+      var id = eventSenseId(ev);
+      if (!id) continue;
+      var t = returnTimeMs(ev);
+      if (best[id] == null || t > best[id]) best[id] = t;
+    }
+    return best;
+  }
+
+  /**
+   * No miss clock: any matching return still qualifies.
+   * A known last miss: only a strictly newer return closes the debt.
+   * An undated return does not override that miss.
+   */
+  function returnClearsMiss(returnMs, lastMissAt) {
+    var miss = Number(lastMissAt);
+    if (!isFinite(miss) || miss <= 0) return true;
+    return returnMs > miss;
+  }
+
   /**
    * Sets alsDeepDone on wrong-book rows whose sense_id matches a
-   * source=als sense_return. Recognition graduation does not call this.
+   * source=als sense_return newer than that row's last miss.
+   * Recognition graduation does not call this.
    * Mutates the book map. Returns whether any row changed.
    */
   function markDeepQualified(book, events) {
-    var ids = alsDeepQualifiedIds(events);
+    var best = latestAlsReturnMs(events);
+    var ids = Object.keys(best);
     if (!ids.length || !book) return false;
-    var want = {};
-    var q;
-    for (q = 0; q < ids.length; q++) want[ids[q]] = true;
     var keys = Object.keys(book);
     var changed = false;
     for (var i = 0; i < keys.length; i++) {
       var row = book[keys[i]];
       if (!row || row.alsDeepDone === true) continue;
       var sense = String(row.sense_id || "").trim() || provisionalSenseId(row.lemma, row.pos, row.gloss_zh);
-      if (sense && want[sense]) {
-        row.alsDeepDone = true;
-        changed = true;
-      }
+      if (!sense || best[sense] == null) continue;
+      if (!returnClearsMiss(best[sense], row.lastMissAt)) continue;
+      row.alsDeepDone = true;
+      changed = true;
     }
     return changed;
   }
@@ -144,26 +187,25 @@
       sense_id: sense,
       cardKey: raw.cardKey || raw.key || "",
       lemmaKey: raw.lemmaKey || "",
+      lastMissAt: isFinite(Number(raw.lastMissAt)) ? Number(raw.lastMissAt) : 0,
     };
   }
 
   /**
    * Active 错词本 senses that still owe ALS deep practice.
    * Inactive rows and senses already marked alsDeepDone are out.
-   * A matching source=als sense_return also drops the sense.
-   * One sense_id counts once.
+   * A matching source=als sense_return drops the sense only when that
+   * return is newer than the item's last miss. One sense_id counts once.
    */
   function deepTrainDebt(items, events) {
-    var qualified = {};
-    var ids = alsDeepQualifiedIds(events);
-    var q;
-    for (q = 0; q < ids.length; q++) qualified[ids[q]] = true;
+    var best = latestAlsReturnMs(events);
     var list = items || [];
     var out = [];
     var seen = {};
     for (var i = 0; i < list.length; i++) {
       var item = normalizeDebtItem(list[i]);
-      if (!item || item.alsDeepDone || qualified[item.sense_id] || seen[item.sense_id]) continue;
+      if (!item || item.alsDeepDone || seen[item.sense_id]) continue;
+      if (best[item.sense_id] != null && returnClearsMiss(best[item.sense_id], item.lastMissAt)) continue;
       seen[item.sense_id] = true;
       out.push(item);
     }

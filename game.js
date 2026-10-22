@@ -3193,13 +3193,15 @@
         gloss_zh: row.gloss_zh || "",
         sense_id: row.sense_id || "",
         cardKey: row.cardKey || "",
+        lastMissAt: row.lastMissAt || 0,
       });
     }
     return { items: out, changed: changed };
   }
 
   /**
-   * A source=als sense_return marks that sense's deep-train debt done.
+   * A source=als sense_return newer than the row's last miss marks that
+   * sense's deep-train debt done. An older stored return does not.
    * Recognition graduation does not. QuizMario rows do not.
    */
   function applyAlsQualifications(events) {

@@ -39,8 +39,10 @@
  *   Inactive rows are kept so a later scan does not re-collect a graduate
  *   whose cumulative wrong is still >= 2.
  *   sense_id / gloss_zh / pos ride along when the caller has them.
- *   A new miss clears alsDeepDone. Two correct recognition ratings do not
- *   set it: ALS deep practice is a separate debt from graduating the book.
+ *   A new miss clears alsDeepDone and stamps lastMissAt. Two correct
+ *   recognition ratings do not set the flag: ALS deep practice is a
+ *   separate debt from graduating the book. Home paint may set the flag
+ *   again only from a sense_return newer than that miss.
  */
 (function (root, factory) {
   var api = factory();

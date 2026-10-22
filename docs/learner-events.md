@@ -92,7 +92,7 @@ Field names the ingester should read: `event_id`, `learner_id` (or `user_id`), `
 
 Recognition SRS stays in QuizMario. `schedule()` does not move because an ALS sentence pass happened. Deep-train debt is also not 「ALS 补了 / 回流词」: that strip stays empty until real `source=als` outcome rows can be mapped.
 
-An active 错词本 row owes deep practice until `alsDeepDone` is set, or until a later readable event has `source=als` and `event_type` of `sense_return`, `vocab.sense_return`, or `als.sense_return` for that `sense_id`. A QuizMario `vocab.wrong_book_add` does not clear the debt. Two correct ratings inside 今日必练 graduate the book row and do not mark the debt done by themselves. A new miss clears `alsDeepDone`.
+An active 错词本 row owes deep practice until `alsDeepDone` is set. A readable event sets that flag when `source=als` and `event_type` is `sense_return`, `vocab.sense_return`, or `als.sense_return` for that `sense_id`, and `created_at` is newer than the row's last miss. A return already in the local store does not close the debt again after a later miss. The next return after that miss does. A QuizMario `vocab.wrong_book_add` does not clear the debt. Two correct ratings inside 今日必练 graduate the book row and do not mark the debt done by themselves. A new miss clears `alsDeepDone`.
 
 When that debt is above zero, the signed-in student home shows 「N 个错词待 ALS 深练」 and a primary link, including while 今日必练 still has cards. The daily soft gate shows the same link so it is not buried. 「去 ALS 修语法」 remains the bare side door after 今日必练. The student home does not show an ingest panel or claim that ALS already stored the rows.
 
