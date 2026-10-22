@@ -6,7 +6,9 @@
 -- learner_id and user_id are both the signed-in auth.uid() (ALS accepts either).
 -- SM-2 clocks stay in the QuizMario save. This table does not store intervals.
 -- ALS Mac ingest is still JSONL → SQLite until ALS reads this table itself.
--- The anon key is public. RLS blocks cross-user reads and forged ALS rows.
+-- The anon key is public. RLS blocks cross-user reads and forged ALS inserts.
+-- SELECT of the signed-in learner's own rows includes source=als. QuizMario
+-- reads sense_return from those rows. INSERT still requires source=quizmario.
 
 create table if not exists public.learner_events (
   event_id uuid primary key,
@@ -43,6 +45,8 @@ revoke all on table public.learner_events from anon;
 revoke all on table public.learner_events from authenticated;
 grant select, insert on table public.learner_events to authenticated;
 
+-- Own rows, any source. The browser reads source=als sense_return here.
+-- It cannot insert those rows: learner_events_insert_own requires quizmario.
 drop policy if exists learner_events_select_own on public.learner_events;
 create policy learner_events_select_own
   on public.learner_events

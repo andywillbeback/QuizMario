@@ -226,6 +226,147 @@ const mixedBook = openBook.concat([
   assert.ok(both.primaryLabel.indexOf("继续闯关") !== -1);
 }
 
+{
+  const le = require("../learner-events");
+  const rq = require("../review-queues");
+  const ability = le.publicEvent(le.fromRemote({
+    event_id: "50000000-0000-4000-8000-000000000001",
+    learner_id: "11111111-1111-4111-8111-111111111111",
+    user_id: "11111111-1111-4111-8111-111111111111",
+    source: "als",
+    event_type: "sense_return",
+    payload: { sense_id: "ability.n.能力" },
+    created_at: "2026-10-22T00:00:00.000Z",
+  }));
+  assert.strictEqual(ability.source, "als");
+  const before = loop.homeDeepTrain({ signedIn: true, onHome: true, mustCount: 5, items: openBook });
+  assert.strictEqual(before.count, 2);
+  const after = loop.homeDeepTrain({
+    signedIn: true,
+    onHome: true,
+    mustCount: 5,
+    items: openBook,
+    events: [ability],
+  });
+  assert.strictEqual(after.visible, true);
+  assert.strictEqual(after.count, 1, "one matching sense_return drops the deep CTA count");
+  assert.strictEqual(after.text, "1 个错词待 ALS 深练");
+  assert.deepStrictEqual(after.items.map((row) => row.headword), ["accept"]);
+  const book = {};
+  const entry = {
+    lemmaKey: rq.lemmaKey("zhongkao", "ability"),
+    lemma: "ability",
+    track: "zhongkao",
+    levelIdx: 0,
+    cardKey: "zhongkao|0::ability",
+    sense_id: "ability.n.能力",
+    gloss_zh: "能力",
+    pos: "n.",
+    now: 1700000000000,
+  };
+  rq.touchWrongBook(book, entry, { wrong: 1 }, "miss");
+  assert.strictEqual(loop.markDeepQualified(book, [ability]), true);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, true);
+  rq.touchWrongBook(book, { ...entry, now: 1700000005000 }, { wrong: 2 }, "miss");
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "a new miss clears alsDeepDone again");
+  const accept = le.publicEvent(le.fromRemote({
+    event_id: "50000000-0000-4000-8000-000000000002",
+    learner_id: "11111111-1111-4111-8111-111111111111",
+    user_id: "11111111-1111-4111-8111-111111111111",
+    source: "als",
+    event_type: "als.sense_return",
+    payload: { sense_id: "accept.v.接受" },
+    created_at: "2026-10-22T01:00:00.000Z",
+  }));
+  const both = loop.homeDeepTrain({
+    signedIn: true,
+    onHome: true,
+    mustCount: 5,
+    items: openBook,
+    events: [
+      ability,
+      accept,
+      { source: "als", event_type: "vocab.sense_return", payload: { sense_id: "ability.n.能力" } },
+    ],
+  });
+  assert.strictEqual(both.visible, false, "empty debt hides the deep CTA");
+  assert.strictEqual(both.count, 0);
+  assert.strictEqual(loop.alsReturnCounts([ability, accept]), null);
+}
+
+{
+  const le = require("../learner-events");
+  const rq = require("../review-queues");
+  const missBefore = Date.parse("2026-10-22T01:00:00.000Z");
+  const missAfter = Date.parse("2026-10-22T03:00:00.000Z");
+  const returned = le.publicEvent(le.fromRemote({
+    event_id: "50000000-0000-4000-8000-000000000011",
+    learner_id: "11111111-1111-4111-8111-111111111111",
+    user_id: "11111111-1111-4111-8111-111111111111",
+    source: "als",
+    event_type: "sense_return",
+    payload: { sense_id: "ability.n.能力" },
+    created_at: "2026-10-22T02:00:00.000Z",
+  }));
+  const entry = {
+    lemmaKey: rq.lemmaKey("zhongkao", "ability"),
+    lemma: "ability",
+    track: "zhongkao",
+    levelIdx: 0,
+    cardKey: "zhongkao|0::ability",
+    sense_id: "ability.n.能力",
+    gloss_zh: "能力",
+    pos: "n.",
+    now: missBefore,
+  };
+  const book = {};
+  rq.touchWrongBook(book, entry, { wrong: 1 }, "miss");
+  function paint(events) {
+    loop.markDeepQualified(book, events);
+    return loop.homeDeepTrain({
+      signedIn: true,
+      onHome: true,
+      mustCount: 1,
+      items: [book[entry.lemmaKey]],
+      events: events,
+    });
+  }
+  const cleared = paint([returned]);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, true, "a return newer than the miss sets alsDeepDone");
+  assert.strictEqual(cleared.visible, false, "pull + apply still hides the deep CTA");
+  rq.touchWrongBook(book, { ...entry, now: missAfter }, { wrong: 2 }, "miss");
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "a new miss clears alsDeepDone");
+  const owed = loop.deepTrainDebt([book[entry.lemmaKey]], [returned]);
+  assert.strictEqual(owed.length, 1, "a return older than the miss is not live debt clearance");
+  assert.strictEqual(owed[0].headword, "ability");
+  const plan = loop.clearNextActions({
+    kind: "must",
+    unlockedLevel: 2,
+    levelCount: 10,
+    left: 0,
+    deepItems: [book[entry.lemmaKey]],
+    events: [returned],
+  });
+  assert.strictEqual(plan.showDeep, true, "今日必练 clear still offers deep train after the new miss");
+  const reopened = paint([returned]);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "home repaint does not reapply the old sense_return");
+  assert.strictEqual(reopened.visible, true, "the deep CTA comes back after the new miss");
+  assert.strictEqual(reopened.count, 1);
+  assert.deepStrictEqual(reopened.items.map((row) => row.headword), ["ability"]);
+  const again = le.publicEvent(le.fromRemote({
+    event_id: "50000000-0000-4000-8000-000000000012",
+    learner_id: "11111111-1111-4111-8111-111111111111",
+    user_id: "11111111-1111-4111-8111-111111111111",
+    source: "als",
+    event_type: "vocab.sense_return",
+    payload: { sense_id: "ability.n.能力" },
+    created_at: "2026-10-22T04:00:00.000Z",
+  }));
+  const closed = paint([returned, again]);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, true, "a return newer than the latest miss qualifies again");
+  assert.strictEqual(closed.visible, false, "the new qualification hides the deep CTA");
+}
+
 const root = path.join(__dirname, "..");
 const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
@@ -253,6 +394,11 @@ assert.ok(index.includes('src="home-loop.js"'));
 assert.ok(game.includes("alsReturnCounts"));
 assert.ok(game.includes("homeDeepTrain"));
 assert.ok(game.includes("renderAlsDeep"));
+assert.ok(game.includes("markDeepQualified"), "home applies pulled sense_return onto alsDeepDone");
+assert.ok(
+  /function deepTrainSourceRows[\s\S]*lastMissAt:\s*row\.lastMissAt/.test(game),
+  "home paint carries lastMissAt so an older return cannot requalify"
+);
 assert.ok(game.includes("clearNextActions"));
 assert.ok(game.includes("plan.title"));
 assert.ok(game.includes("plan.message"));
