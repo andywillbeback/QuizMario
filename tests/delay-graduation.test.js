@@ -50,6 +50,29 @@ function miss(book, lemma, now) {
 }
 
 {
+  // Calendar day, not a raw 24h timer. Local 23:30 → 00:10 is under a day
+  // and still graduates. 01:00 → 23:30 the same local date does not.
+  const morning = new Date(2026, 9, 22, 1, 0, 0, 0).getTime();
+  const evening = new Date(2026, 9, 22, 23, 30, 0, 0).getTime();
+  const nextDawn = new Date(2026, 9, 23, 0, 10, 0, 0).getTime();
+  assert.strictEqual(rq.calendarDay(morning), rq.calendarDay(evening));
+  assert.notStrictEqual(rq.calendarDay(evening), rq.calendarDay(nextDawn));
+  assert.ok(nextDawn - evening < DAY, "overnight keep-check is shorter than 24h");
+
+  const book = {};
+  const entry = miss(book, "boundary", morning);
+  const early = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: morning + 1000 });
+  const late = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: evening });
+  assert.strictEqual(early.graduated, false);
+  assert.strictEqual(late.graduated, false, "same local calendar day must not graduate");
+  assert.strictEqual(late.sessionCleared, true);
+  assert.strictEqual(book[entry.lemmaKey].active, true);
+  const grad = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: nextDawn });
+  assert.strictEqual(grad.graduated, true, "next local calendar day graduates even under 24h");
+  assert.strictEqual(book[entry.lemmaKey].active, false);
+}
+
+{
   const book = {};
   const entry = miss(book, "reset", T0);
   rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + 10 });
