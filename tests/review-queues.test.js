@@ -102,10 +102,21 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
   assert.strictEqual(book[entry.lemmaKey].streak, 0);
   assert.strictEqual(rq.lemmaKey("zhongkao", " alpha "), entry.lemmaKey);
 
-  let step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1);
+  // Q3: same-day consecutive corrects → session_clear only, not graduate.
+  let step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + 1000 });
   assert.strictEqual(step.graduated, false);
+  assert.strictEqual(step.sessionCleared, false);
   assert.strictEqual(step.streak, 1);
-  step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1);
+  step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + 2000 });
+  assert.strictEqual(step.graduated, false, "same-session streak must not graduate");
+  assert.strictEqual(step.sessionCleared, true);
+  assert.strictEqual(book[entry.lemmaKey].active, true, "session_clear keeps the lemma in the book");
+  assert.strictEqual(book[entry.lemmaKey].sessionCleared, true);
+  assert.strictEqual(rq.activeWrongEntries(book, "zhongkao").length, 1);
+
+  // Delayed correct on a later calendar day → graduate.
+  const day2 = T0 + rq.DAY_MS;
+  step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: day2 });
   assert.strictEqual(step.graduated, true);
   assert.strictEqual(book[entry.lemmaKey].active, false);
   assert.strictEqual(book[entry.lemmaKey].wrongAtGrad, 1);
@@ -114,10 +125,32 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
   assert.strictEqual(rq.scanCumulative(book, [{ ...entry, prog: { wrong: 1 } }]), 0);
   assert.strictEqual(book[entry.lemmaKey].active, false, "same wrong count must not undo graduation");
 
-  const again = rq.touchWrongBook(book, { ...entry, now: T0 + 50 }, { wrong: 2 }, "miss");
+  const again = rq.touchWrongBook(book, { ...entry, now: day2 + 50 }, { wrong: 2 }, "miss");
   assert.strictEqual(again.entered, true);
   assert.strictEqual(book[entry.lemmaKey].active, true);
   assert.strictEqual(book[entry.lemmaKey].streak, 0);
+  assert.strictEqual(book[entry.lemmaKey].sessionCleared, false);
+  assert.strictEqual(book[entry.lemmaKey].lastCorrectAt, 0);
+}
+
+{
+  // One correct today + one correct tomorrow also graduates (actual interval).
+  const book = {};
+  const entry = {
+    lemmaKey: rq.lemmaKey("zhongkao", "Beta"),
+    lemma: "Beta",
+    track: "zhongkao",
+    levelIdx: 0,
+    cardKey: keyOf(0, "beta"),
+    now: T0,
+  };
+  rq.touchWrongBook(book, entry, { wrong: 1 }, "miss");
+  const once = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + 500 });
+  assert.strictEqual(once.graduated, false);
+  assert.strictEqual(once.sessionCleared, false);
+  const later = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + rq.DAY_MS });
+  assert.strictEqual(later.graduated, true, "cross-day correct after one prior correct graduates");
+  assert.strictEqual(book[entry.lemmaKey].active, false);
 }
 
 {
@@ -139,8 +172,11 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
   assert.strictEqual(book[entry.lemmaKey].gloss_zh, "能力");
   assert.strictEqual(book[entry.lemmaKey].pos, "n.");
   assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "entering 错词本 opens deep-train debt");
-  rq.noteWrongBookCorrect(book, entry.lemmaKey, 1);
-  const graduated = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1);
+  rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + 100 });
+  rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + 200 });
+  assert.strictEqual(book[entry.lemmaKey].active, true, "same-day clear is not graduation");
+  assert.strictEqual(book[entry.lemmaKey].sessionCleared, true);
+  const graduated = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1, { now: T0 + rq.DAY_MS });
   assert.strictEqual(graduated.graduated, true);
   assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "recognition graduation is not an ALS deep pass");
   book[entry.lemmaKey].alsDeepDone = true;
@@ -264,5 +300,8 @@ assert.ok(!game.includes("继续闯关会先练今日到期"));
 assert.ok(!game.includes("btn-rate-again"));
 assert.ok(game.includes("今天没有到期或错词"));
 assert.ok(game.includes("错词本毕业"));
+assert.ok(game.includes("同轮连对≠长期掌握") || game.includes("同轮连对只算当轮清掉"),
+  "Q3 copy must say same-session streak is not long-term mastery");
+assert.ok(game.includes("隔天"), "Q3 copy must mention delayed / next-day check");
 
 console.log("review-queues ok");
