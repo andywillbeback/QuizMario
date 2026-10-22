@@ -3,6 +3,7 @@
  * Fields: word, meaning_zh, example_en, example_zh, pos, roots, affix, root_group, scene, explain_zh
  * v12: modern Mandarin glosses audited; template examples replaced; 100 sets × Part A/B (15) = 3000.
  */
+window.QUIZMARIO_CONTENT_VERSION = "words-v12";
 window.VOCAB_LEVELS = [
   [
     {

@@ -22,10 +22,48 @@ Top-level fields on every row: `event_id`, `learner_id`, `user_id`, `source`, `e
 
 `headword` is lowercased. `vocab.due_review` always has `payload.due_at`. A card with no absolute due timestamp uses `1970-01-01T00:00:00.000Z` so the same queue does not emit again on every refresh.
 
-Example:
+## Schema v2 (sense and evidence)
+
+New rows set `schema_version` to `2`. A line with no `schema_version` is v1. Both parse: v2 only adds keys. `learner_id`, `user_id`, `headword`, `event_type`, and the old `payload` keys (`headword`, `track`, `gloss_zh`, `answer`, `reason`, `outcome`, `due_at`) stay where they were.
+
+Identity, when the Supabase uid is known:
+
+| Field | Meaning |
+|---|---|
+| `canonical_learner_id` | Same uuid as `learner_id`. The id ALS should treat as the learner. |
+| `source_user_id` | QuizMario's user id. Today that is the same Supabase `auth.users.id` as `user_id`. |
+| `source_event_id` | Id QuizMario assigned at emission. Defaults to `event_id`. |
+
+These three are also copied into `payload`, because the Supabase table has no new columns. The upsert sends only `event_id`, `learner_id`, `user_id`, `source`, `event_type`, `payload`, `created_at`, `item_id`, `headword`, `frame_id`, `cefr_level`, `run_purpose`. A database that never re-ran the SQL still accepts the insert.
+
+Evidence, only when QuizMario actually has it:
+
+| Field | When it is set |
+|---|---|
+| `sense_id` | Bank `sense_id` if the card has one (`sense_id_kind` `"bank"`). Otherwise a provisional key (`sense_id_kind` `"provisional"`). |
+| `lemma` | Lowercased headword. |
+| `pos` | Bank part of speech, unchanged (`v.`, `n.`, `adj.`). Omitted when the card has none. |
+| `task_direction` | `recognition` (看英文选中文, QM `meaning`) or `production` (看中文选英文 / 拼写). |
+| `task_direction_detail` | QM's own direction when it is finer than the two-way split: `meaning`, `form`, or `spelling`. |
+| `attempt` | `first_attempt` or `retry`. A retry is the same session's later card after a miss (`_repeat`). |
+| `answer_exposed` | Whether the answer was already shown before this attempt. `false` is tracked, not omitted. |
+| `answer_exposed_at` | ISO time of that reveal, when the requeue stamped it. |
+| `hint_exposed`, `hint_exposed_at` | Only if a caller tracks a hint separately. The always-on example line is not a hint exposure, and QuizMario does not time it. |
+| `review_interval_days`, `review_interval_ms` | The SRS `interval` already on the card, in days and milliseconds. Omitted for a new card. This is not a request for ALS to schedule the card. `reps` is still not included. |
+| `content_version`, `bank_version` | Core bank is `words-v12` (`window.QUIZMARIO_CONTENT_VERSION`). Other tracks use `exam-tracks:<track id>` until those files grow their own stamp. The two fields match unless a caller passes both. |
+| `grade_status` | `again` (wrong pick), `unknown` (不会), `pending` (correct, Good/Easy not chosen yet), `good`, `easy`. Due and wrong-book rows have none. |
+| `score` | SM-2 quality when graded: `0` again/unknown, `1` good, `2` easy. Absent while `pending`. |
+
+`sense_id` provisional form is `lemma.pos.gloss_zh`. The POS token drops a trailing dot, so `v.` becomes `v` and the key is `communicate.v.交流`. Split on the first two `.` only; the gloss is the remainder and may contain `；` or spaces. Unknown POS keeps an empty slot: `communicate..交流`. Lemma only, with no gloss, is `sense_id_kind` `"lemma_only"` and is not a sense distinction. `sense-id.js` (`may:month`, `china:country`) is the card-key disambiguator for a few surfaces. It is not the bank sense id and is not written as `sense_id` unless a card already carries that field.
+
+A correct pick is stored as `grade_status` `"pending"` and is not uploaded until Good / Easy sets `good` or `easy`, or until a forced flush (leaving the page, or the export button). The Supabase role is still append-only: if a `pending` row was already inserted, a later Good/Easy updates the local JSONL only.
+
+This richness is the probe feed. It does not add an ALS panel to the student login page, and it does not turn on a free always-sync control.
+
+Example (regenerate with `node tools/sample-learner-event.js`):
 
 ```json
-{"event_id":"7c1a9c2e-4b18-4f0a-9c1d-2a6e5b8d0f11","learner_id":"11111111-1111-4111-8111-111111111111","user_id":"11111111-1111-4111-8111-111111111111","source":"quizmario","event_type":"vocab.answer_wrong","headword":"communicate","item_id":"zhongkao|0::communicate","created_at":"2026-10-21T06:00:00.000Z","payload":{"headword":"communicate","track":"zhongkao","gloss_zh":"交流","answer":"community","outcome":"wrong"}}
+{"event_id":"7c1a9c2e-4b18-4f0a-9c1d-2a6e5b8d0f11","learner_id":"11111111-1111-4111-8111-111111111111","user_id":"11111111-1111-4111-8111-111111111111","source":"quizmario","event_type":"vocab.answer_wrong","created_at":"2026-10-22T00:00:00.000Z","schema_version":2,"source_event_id":"7c1a9c2e-4b18-4f0a-9c1d-2a6e5b8d0f11","canonical_learner_id":"11111111-1111-4111-8111-111111111111","source_user_id":"11111111-1111-4111-8111-111111111111","sense_id":"communicate.v.交流","sense_id_kind":"provisional","lemma":"communicate","pos":"v.","task_direction":"recognition","task_direction_detail":"meaning","attempt":"first_attempt","answer_exposed":false,"review_interval_days":3,"review_interval_ms":259200000,"content_version":"words-v12","bank_version":"words-v12","grade_status":"again","score":0,"item_id":"zhongkao|0::communicate","headword":"communicate","payload":{"headword":"communicate","track":"zhongkao","gloss_zh":"交流","answer":"community","reason":"form","reason_zh":"形近","outcome":"wrong","schema_version":2,"source_event_id":"7c1a9c2e-4b18-4f0a-9c1d-2a6e5b8d0f11","canonical_learner_id":"11111111-1111-4111-8111-111111111111","source_user_id":"11111111-1111-4111-8111-111111111111","sense_id":"communicate.v.交流","sense_id_kind":"provisional","lemma":"communicate","pos":"v.","task_direction":"recognition","task_direction_detail":"meaning","attempt":"first_attempt","answer_exposed":false,"review_interval_days":3,"review_interval_ms":259200000,"content_version":"words-v12","bank_version":"words-v12","grade_status":"again","score":0}}
 ```
 
 ## Where the rows live
@@ -48,7 +86,11 @@ cp ~/Downloads/quizmario-learner-events-*.jsonl data/learner_events_inbox/quizma
   data/learner_events_inbox/quizmario.jsonl
 ```
 
-Field names the ingester should read: `event_id`, `learner_id` (or `user_id`), `source`, `event_type`, `payload`, `created_at`, `item_id`, `headword`, `cefr_level`. For due signals, read `payload.due_at`. Do not read QM `interval` / `reps` from these events; they are not included.
+Field names the ingester should read: `event_id`, `learner_id` (or `user_id`), `source`, `event_type`, `payload`, `created_at`, `item_id`, `headword`, `cefr_level`. For due signals, read `payload.due_at`. v2 lines also carry `schema_version`, `canonical_learner_id`, `source_user_id`, `source_event_id`, and, when QuizMario had them, `sense_id`, `lemma`, `pos`, `task_direction`, `attempt`, `answer_exposed`, `review_interval_days`, `content_version` / `bank_version`, `grade_status`, and `score`. The same evidence keys are inside `payload` for a Supabase reader. Ignore unknown keys. Do not treat `review_interval_days` as a schedule to apply; `reps` is still not on the event. A v1 line has no `schema_version` and still parses.
+
+```bash
+node tools/sample-learner-event.js
+```
 
 ## Supabase setup
 

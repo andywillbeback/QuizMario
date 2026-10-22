@@ -202,6 +202,207 @@ function wrong(extra) {
   assert.ok(doc.includes("vocab.answer_unknown"), "不会 is its own event, not a wrong pick");
   assert.ok(doc.includes("payload") && doc.includes("`reason`"), "wrong picks may carry a reason tag");
   assert.ok(!/已同步到\s*ALS/.test(doc + sql));
+  for (const field of [
+    "schema_version", "canonical_learner_id", "source_user_id", "source_event_id",
+    "sense_id", "lemma", "pos", "task_direction", "attempt",
+    "answer_exposed", "review_interval_days", "content_version", "bank_version",
+    "grade_status", "score", "lemma.pos.gloss_zh",
+  ]) {
+    assert.ok(doc.includes(field), "v2 doc names " + field);
+  }
+  assert.ok(sql.includes("sense_id"), "payload comment names the v2 sense key");
+  assert.ok(!/add column/i.test(sql), "v2 does not require a new column");
+}
+
+{
+  const ev = wrong({
+    pos: "v.",
+    task_direction: "meaning",
+    first_attempt: true,
+    answer_exposed: false,
+    review_interval_days: 3,
+    content_version: "words-v12",
+  });
+  assert.strictEqual(ev.schema_version, 2);
+  assert.strictEqual(ev.source_event_id, ev.event_id);
+  assert.strictEqual(ev.canonical_learner_id, UID);
+  assert.strictEqual(ev.source_user_id, UID);
+  assert.strictEqual(ev.sense_id, "communicate.v.交流");
+  assert.strictEqual(ev.sense_id_kind, "provisional");
+  assert.strictEqual(ev.lemma, "communicate");
+  assert.strictEqual(ev.pos, "v.");
+  assert.strictEqual(ev.task_direction, "recognition");
+  assert.strictEqual(ev.task_direction_detail, "meaning");
+  assert.strictEqual(ev.attempt, "first_attempt");
+  assert.strictEqual(ev.answer_exposed, false);
+  assert.strictEqual(ev.review_interval_days, 3);
+  assert.strictEqual(ev.review_interval_ms, 3 * 24 * 60 * 60 * 1000);
+  assert.strictEqual(ev.content_version, "words-v12");
+  assert.strictEqual(ev.bank_version, "words-v12");
+  assert.strictEqual(ev.grade_status, "again");
+  assert.strictEqual(ev.score, 0);
+  assert.strictEqual(ev.payload.sense_id, ev.sense_id);
+  assert.strictEqual(ev.payload.grade_status, "again");
+  assert.ok(!Object.prototype.hasOwnProperty.call(ev, "hint_exposed"), "the example line is not a tracked hint");
+  const line = JSON.parse(le.toJsonl([ev]).trim());
+  assert.strictEqual(line.schema_version, 2);
+  assert.strictEqual(line.headword, "communicate");
+  assert.strictEqual(line.payload.headword, "communicate");
+  assert.strictEqual(line.payload.answer, "community");
+  const row = le.cloudRow(ev);
+  for (const key of Object.keys(row)) {
+    assert.ok(le.CLOUD_COLUMNS.indexOf(key) !== -1, "cloud row stays on " + key);
+  }
+  assert.ok(!Object.prototype.hasOwnProperty.call(row, "sense_id"));
+  assert.ok(!Object.prototype.hasOwnProperty.call(row, "schema_version"));
+  assert.strictEqual(row.payload.sense_id, "communicate.v.交流");
+  assert.strictEqual(row.payload.canonical_learner_id, UID);
+}
+
+{
+  const bank = wrong({ sense_id: "communicate:social", pos: "v." });
+  assert.strictEqual(bank.sense_id, "communicate:social");
+  assert.strictEqual(bank.sense_id_kind, "bank");
+  const bare = le.buildEvent({
+    event_type: le.TYPES.DUE,
+    learner_id: UID,
+    headword: "alpha",
+    due_at: "2026-10-22T00:00:00.000Z",
+    created_at: NOW,
+  }, NOW);
+  assert.strictEqual(bare.sense_id, "alpha");
+  assert.strictEqual(bare.sense_id_kind, "lemma_only");
+  assert.ok(!bare.grade_status, "a due signal is not a grade");
+  assert.ok(!bare.task_direction);
+  assert.strictEqual(le.provisionalSenseId("May", "n.", "五月"), "may.n.五月");
+  assert.strictEqual(le.provisionalSenseId("communicate", "", "交流"), "communicate..交流");
+}
+
+{
+  const produced = le.buildEvent({
+    event_type: le.TYPES.CORRECT,
+    learner_id: UID,
+    headword: "adult",
+    pos: "n.",
+    gloss_zh: "成年人",
+    track: "ket",
+    task_direction: "spelling",
+    first_attempt: false,
+    answer_exposed: true,
+    answer_exposed_at: "2026-10-22T01:02:03.000Z",
+    hint_exposed: true,
+    hint_exposed_at: "2026-10-22T01:00:00.000Z",
+    created_at: NOW,
+  }, NOW);
+  assert.strictEqual(produced.task_direction, "production");
+  assert.strictEqual(produced.task_direction_detail, "spelling");
+  assert.strictEqual(produced.attempt, "retry");
+  assert.strictEqual(produced.answer_exposed, true);
+  assert.strictEqual(produced.answer_exposed_at, "2026-10-22T01:02:03.000Z");
+  assert.strictEqual(produced.hint_exposed, true);
+  assert.strictEqual(produced.hint_exposed_at, "2026-10-22T01:00:00.000Z");
+  assert.strictEqual(produced.grade_status, "pending");
+  assert.ok(!Object.prototype.hasOwnProperty.call(produced, "score"));
+  assert.strictEqual(produced.cefr_level, "A2");
+  const own = le.buildEvent({
+    event_type: le.TYPES.WRONG,
+    learner_id: UID,
+    event_id: "10000000-0000-4000-8000-0000000000aa",
+    source_event_id: "qm-local-1",
+    headword: "adult",
+    created_at: NOW,
+  }, NOW);
+  assert.strictEqual(own.source_event_id, "qm-local-1");
+  assert.strictEqual(own.event_id, "10000000-0000-4000-8000-0000000000aa");
+}
+
+{
+  const store = le.emptyStore();
+  store.learner_id = UID;
+  const pending = le.buildEvent({
+    event_type: le.TYPES.CORRECT,
+    learner_id: UID,
+    headword: "adult",
+    item_id: "ket|0::adult",
+    gloss_zh: "成年人",
+    created_at: NOW,
+  }, NOW);
+  le.append(store, pending);
+  assert.strictEqual(le.pendingRows(store).length, 0, "Good/Easy is still open, so the row waits");
+  assert.strictEqual(le.pendingRows(store, { force: true }).length, 1);
+  const graded = le.applyGrade(store, { item_id: "ket|0::adult", event_type: le.TYPES.CORRECT }, "easy");
+  assert.strictEqual(graded.grade_status, "easy");
+  assert.strictEqual(graded.score, 2);
+  assert.strictEqual(graded.payload.score, 2);
+  const rows = le.pendingRows(store);
+  assert.strictEqual(rows.length, 1);
+  assert.strictEqual(rows[0].payload.grade_status, "easy");
+  assert.ok(!Object.prototype.hasOwnProperty.call(rows[0], "grade_status"));
+}
+
+{
+  const remote = le.fromRemote({
+    event_id: "10000000-0000-4000-8000-0000000000bb",
+    learner_id: UID,
+    user_id: UID,
+    source: "quizmario",
+    event_type: "vocab.answer_wrong",
+    headword: "communicate",
+    created_at: NOW,
+    payload: {
+      headword: "communicate",
+      gloss_zh: "交流",
+      schema_version: 2,
+      source_event_id: "10000000-0000-4000-8000-0000000000bb",
+      canonical_learner_id: UID,
+      source_user_id: UID,
+      sense_id: "communicate.v.交流",
+      lemma: "communicate",
+      pos: "v.",
+      grade_status: "again",
+      score: 0,
+      answer_exposed: false,
+    },
+  });
+  assert.strictEqual(remote.schema_version, 2);
+  assert.strictEqual(remote.sense_id, "communicate.v.交流");
+  assert.strictEqual(remote.answer_exposed, false);
+  assert.strictEqual(remote.score, 0);
+  const again = JSON.parse(le.toJsonl([remote]).trim());
+  assert.strictEqual(again.canonical_learner_id, UID);
+  assert.strictEqual(again.payload.sense_id, "communicate.v.交流");
+  const v1 = le.fromRemote({
+    event_id: "10000000-0000-4000-8000-0000000000cc",
+    learner_id: UID,
+    user_id: UID,
+    source: "quizmario",
+    event_type: "vocab.answer_wrong",
+    headword: "beta",
+    payload: { headword: "beta", track: "zhongkao" },
+    created_at: NOW,
+  });
+  const v1Line = JSON.parse(le.toJsonl([v1]).trim());
+  assert.ok(!Object.prototype.hasOwnProperty.call(v1Line, "schema_version"), "a v1 row stays a v1 row");
+  assert.strictEqual(v1Line.headword, "beta");
+  assert.strictEqual(v1Line.learner_id, UID);
+  assert.strictEqual(v1Line.payload.track, "zhongkao");
+}
+
+{
+  const sampleLine = le.toJsonl([le.sampleEvent()]).trim();
+  const sample = JSON.parse(sampleLine);
+  assert.strictEqual(sample.schema_version, 2);
+  assert.strictEqual(sample.sense_id, "communicate.v.交流");
+  assert.strictEqual(sample.event_type, "vocab.answer_wrong");
+  assert.strictEqual(sample.payload.outcome, "wrong");
+  const doc = fs.readFileSync(path.join(__dirname, "../docs/learner-events.md"), "utf8");
+  const documented = doc.split("\n").filter((line) => line.indexOf('"schema_version":2') !== -1 && line.indexOf('"sense_id"') !== -1);
+  assert.strictEqual(documented.length, 1, "the doc shows one sample line");
+  assert.strictEqual(documented[0], sampleLine, "node tools/sample-learner-event.js regenerates the documented line");
+  const script = fs.readFileSync(path.join(__dirname, "../tools/sample-learner-event.js"), "utf8");
+  assert.ok(script.includes("sampleEvent"));
+  const words = fs.readFileSync(path.join(__dirname, "../words.js"), "utf8");
+  assert.ok(words.includes('QUIZMARIO_CONTENT_VERSION = "words-v12"'));
 }
 
 console.log("learner-events ok");
