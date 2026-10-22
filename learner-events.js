@@ -3,6 +3,9 @@
  * Local outbox (quizmario_learner_events_v1) is the JSONL export.
  * Logged-in inserts go to Supabase public.learner_events (see supabase/learner_events.sql).
  * A failed insert must not affect user_progress sync.
+ * The ingest panel is not part of the student login or home. download() and
+ * copyJsonl() stay on the API. ?alsDebug=1 or localStorage quizmario_als_debug=1
+ * mounts that panel on the game home only.
  *
  * Schema v2 adds sense and evidence fields. They are extra JSON keys.
  * The Supabase upsert still sends only the original columns; the new
@@ -893,6 +896,64 @@
       setNote("这个浏览器不能写入剪贴板，请改用下载。");
       return Promise.resolve(body);
     }
+
+    function alsDebugEnabled() {
+      try {
+        var search = root.location && typeof root.location.search === "string" ? root.location.search : "";
+        if (/(?:^|[?&])alsDebug=1(?:&|$)/.test(search)) return true;
+        if (root.localStorage && root.localStorage.getItem("quizmario_als_debug") === "1") return true;
+      } catch (_) {}
+      return false;
+    }
+
+    function removeLearnerPanel() {
+      var existing = $("learner-events-panel");
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+    }
+
+    function mountDebugPanel() {
+      if ($("learner-events-panel") || !$("screen-home")) return;
+      var doc = root.document;
+      var panel = doc.createElement("div");
+      panel.id = "learner-events-panel";
+      panel.className = "panel";
+      panel.setAttribute("data-als-debug", "1");
+      var title = doc.createElement("h3");
+      title.textContent = "ALS 学习信号";
+      var status = doc.createElement("p");
+      status.id = "learner-events-status";
+      status.className = "sub";
+      var note = doc.createElement("p");
+      note.id = "learner-events-note";
+      note.className = "sub";
+      note.hidden = true;
+      var row = doc.createElement("div");
+      row.className = "btn-row";
+      var exportBtn = doc.createElement("button");
+      exportBtn.id = "btn-export-learner-events";
+      exportBtn.className = "secondary";
+      exportBtn.type = "button";
+      exportBtn.textContent = "下载 JSONL";
+      var copyBtn = doc.createElement("button");
+      copyBtn.id = "btn-copy-learner-events";
+      copyBtn.className = "ghost";
+      copyBtn.type = "button";
+      copyBtn.textContent = "复制 JSONL";
+      row.appendChild(exportBtn);
+      row.appendChild(copyBtn);
+      panel.appendChild(title);
+      panel.appendChild(status);
+      panel.appendChild(note);
+      panel.appendChild(row);
+      var stats = $("stats-panel");
+      if (stats && stats.parentNode) stats.parentNode.appendChild(panel);
+      else $("screen-home").appendChild(panel);
+    }
+
+    // Students never see the ingest panel. A debug flag can put it back on the
+    // game home. Login/register has no #screen-home, so the panel stays off.
+    if (!alsDebugEnabled() || !$("screen-home")) removeLearnerPanel();
+    else mountDebugPanel();
 
     var exportBtn = $("btn-export-learner-events");
     if (exportBtn) exportBtn.addEventListener("click", download);
