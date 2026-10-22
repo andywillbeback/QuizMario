@@ -3,6 +3,7 @@
 **Date:** 2026-10-23 Asia/Shanghai  
 **Branch:** `grok/q3-delay-graduation`  
 **Base:** `main` @ `692387e` (#41)  
+**PR:** https://github.com/andywillbeback/QuizMario/pull/46 (draft) @ `cd3a888`  
 **Not Andy-done / not live.** Leave draft; do not merge.  
 Leaves alone: PR #43 @ `78077c8`, PR #44 @ `203664d`, PR #45 @ `8d48cc8`.
 
@@ -16,8 +17,8 @@ Leaves alone: PR #43 @ `78077c8`, PR #44 @ `203664d`, PR #45 @ `8d48cc8`.
 | Same-session consecutive corrects ≠ graduate | PASS (`sessionCleared` only) |
 | Graduation requires later calendar day than `lastCorrectAt` | PASS |
 | SRS 已学会 still cross-day only (unchanged) | PASS |
-| Draft PR labeled Grok版本 / 聚光单词（grok） Q3 | (opened after push) |
-| Tests green | (local suite) |
+| Draft PR labeled Grok版本 / 聚光单词（grok） Q3 | PASS (#46) |
+| Tests green | PASS |
 
 ## Before
 
