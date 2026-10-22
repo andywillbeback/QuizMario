@@ -592,14 +592,82 @@ function wrong(extra) {
       created_at: "2020-01-01T00:00:00.000Z",
     });
     le.append(full, oldReturn);
-    assert.strictEqual(full.events.length, le.MAX_EVENTS);
+    // Soft overflow: every row above was still unuploaded, so the return
+    // is kept without dropping them (Q6 / 聚光单词（grok）).
+    assert.strictEqual(full.events.length, le.MAX_EVENTS + 1,
+      "unuploaded quizmario rows soft-overflow past the 800 cap with an ALS return");
     assert.ok(full.events.some((ev) => ev.source === "als" && ev.sense_id === "ability.n.能力"),
-      "the cap drops a quizmario row before an ALS return");
+      "ALS return is kept");
+    assert.strictEqual(
+      full.events.filter((ev) => ev.source !== "als").length,
+      le.MAX_EVENTS,
+      "no unuploaded quizmario row was dropped for the return"
+    );
+
+    {
+      // Cap may drop uploaded quizmario, never pending ones.
+      const mix = le.emptyStore();
+      mix.learner_id = UID;
+      for (let i = 0; i < le.MAX_EVENTS; i++) {
+        const ev = wrong({
+          event_id: "42000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-22T10:00:" + String(i % 60).padStart(2, "0") + ".000Z",
+        });
+        le.append(mix, ev);
+        le.markUploaded(mix, [ev.event_id]);
+      }
+      assert.strictEqual(mix.events.length, le.MAX_EVENTS);
+      const pendingIds = [];
+      for (let i = 0; i < 50; i++) {
+        const ev = wrong({
+          event_id: "41000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-22T11:00:" + String(i % 60).padStart(2, "0") + ".000Z",
+        });
+        le.append(mix, ev);
+        pendingIds.push(ev.event_id);
+      }
+      // Soft overflow: 50 pending + up to 750 newest uploaded.
+      assert.strictEqual(mix.events.length, le.MAX_EVENTS);
+      for (const id of pendingIds) {
+        assert.ok(mix.events.some((ev) => ev.event_id === id), "pending " + id + " survived trim");
+      }
+      assert.strictEqual(le.pendingRows(mix, { force: true }).length, 50);
+      // due dedupe still collapses same card + due_at
+      const dueA = le.buildEvent({
+        event_type: le.TYPES.DUE,
+        learner_id: UID,
+        headword: "ability",
+        item_id: "zhongkao|0::ability",
+        track: "zhongkao",
+        due_at: "2026-10-23T00:00:00.000Z",
+        created_at: "2026-10-22T11:00:00.000Z",
+      });
+      const dueB = le.buildEvent({
+        event_type: le.TYPES.DUE,
+        learner_id: UID,
+        headword: "ability",
+        item_id: "zhongkao|0::ability",
+        track: "zhongkao",
+        due_at: "2026-10-23T00:00:00.000Z",
+        created_at: "2026-10-22T11:01:00.000Z",
+      });
+      const d1 = le.append(mix, dueA);
+      const d2 = le.append(mix, dueB);
+      assert.strictEqual(d2.duplicate, true, "offline retry of same due is deduped");
+      assert.strictEqual(d1.event.event_id, d2.event.event_id);
+    }
+
     const sync = fs.readFileSync(path.join(__dirname, "../sync.js"), "utf8");
     assert.ok(sync.includes("await window.QuizMarioLearnerEvents.bindUser(user)"),
       "home sync waits for the pull before the session-ready paint");
     const game = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
     assert.ok(game.includes("markDeepQualified") && game.includes("onLearnerEvents"));
+    const leSrc = fs.readFileSync(path.join(__dirname, "../learner-events.js"), "utf8");
+    assert.ok(leSrc.includes('addEventListener("online"'), "online retries pending flush + pull");
+    assert.ok(leSrc.includes('addEventListener("pageshow"'), "pageshow re-pulls ALS returns after ALS tab");
+    assert.ok(leSrc.includes("retryOutboxAndPull"), "Q4/Q6 retry helper present");
+    assert.ok(leSrc.includes("Soft-overflow") || leSrc.includes("soft-overflow") || leSrc.includes("unuploaded"),
+      "trim documents unuploaded soft-overflow");
     const rules = fs.readFileSync(path.join(__dirname, "../srs-rules.js"), "utf8");
     assert.ok(!rules.includes("alsDeepDone") && !rules.includes("sense_return"),
       "recognition schedule() does not learn about ALS returns");
