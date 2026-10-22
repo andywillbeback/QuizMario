@@ -122,6 +122,38 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
 
 {
   const book = {};
+  const entry = {
+    lemmaKey: rq.lemmaKey("zhongkao", "ability"),
+    lemma: "ability",
+    track: "zhongkao",
+    levelIdx: 0,
+    cardKey: "zhongkao|0::ability",
+    sense_id: "ability.n.能力",
+    gloss_zh: "能力",
+    pos: "n.",
+    now: T0,
+  };
+  const first = rq.touchWrongBook(book, entry, { wrong: 1 }, "miss");
+  assert.strictEqual(first.entered, true);
+  assert.strictEqual(book[entry.lemmaKey].sense_id, "ability.n.能力");
+  assert.strictEqual(book[entry.lemmaKey].gloss_zh, "能力");
+  assert.strictEqual(book[entry.lemmaKey].pos, "n.");
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "entering 错词本 opens deep-train debt");
+  rq.noteWrongBookCorrect(book, entry.lemmaKey, 1);
+  const graduated = rq.noteWrongBookCorrect(book, entry.lemmaKey, 1);
+  assert.strictEqual(graduated.graduated, true);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "recognition graduation is not an ALS deep pass");
+  book[entry.lemmaKey].alsDeepDone = true;
+  const back = rq.touchWrongBook(book, { ...entry, now: T0 + 80 }, { wrong: 3 }, "miss");
+  assert.strictEqual(back.entered, true);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, false, "a new miss owes deep practice again");
+  book[entry.lemmaKey].alsDeepDone = true;
+  assert.strictEqual(rq.scanCumulative(book, [{ ...entry, prog: { wrong: 4 } }]), 0);
+  assert.strictEqual(book[entry.lemmaKey].alsDeepDone, true, "an already-active row keeps a finished deep train");
+}
+
+{
+  const book = {};
   const once = {
     lemmaKey: "zhongkao::once",
     lemma: "once",

@@ -88,6 +88,24 @@ cp ~/Downloads/quizmario-learner-events-*.jsonl data/learner_events_inbox/quizma
 
 Field names the ingester should read: `event_id`, `learner_id` (or `user_id`), `source`, `event_type`, `payload`, `created_at`, `item_id`, `headword`, `cefr_level`. For due signals, read `payload.due_at`. v2 lines also carry `schema_version`, `canonical_learner_id`, `source_user_id`, `source_event_id`, and, when QuizMario had them, `sense_id`, `lemma`, `pos`, `task_direction`, `attempt`, `answer_exposed`, `review_interval_days`, `content_version` / `bank_version`, `grade_status`, and `score`. The same evidence keys are inside `payload` for a Supabase reader. Ignore unknown keys. Do not treat `review_interval_days` as a schedule to apply; `reps` is still not on the event. A v1 line has no `schema_version` and still parses.
 
+## 错词本 → ALS 深练 (QuizMario half)
+
+Recognition SRS stays in QuizMario. `schedule()` does not move because an ALS sentence pass happened. Deep-train debt is also not 「ALS 补了 / 回流词」: that strip stays empty until real `source=als` outcome rows can be mapped.
+
+An active 错词本 row owes deep practice until `alsDeepDone` is set, or until a later readable event has `source=als` and `event_type` of `sense_return`, `vocab.sense_return`, or `als.sense_return` for that `sense_id`. A QuizMario `vocab.wrong_book_add` does not clear the debt. Two correct ratings inside 今日必练 graduate the book row and do not mark the debt done by themselves. A new miss clears `alsDeepDone`.
+
+When that debt is above zero, the signed-in student home shows 「N 个错词待 ALS 深练」 and a primary link, including while 今日必练 still has cards. The daily soft gate shows the same link so it is not buried. 「去 ALS 修语法」 remains the bare side door after 今日必练. The student home does not show an ingest panel or claim that ALS already stored the rows.
+
+Both links open `http://127.0.0.1:8501/` (local Streamlit). The deep-train link adds query params ALS can read with `st.query_params`:
+
+```text
+http://127.0.0.1:8501/?qm_deep=1&run_purpose=als_deep_train&sense_id=ability.n.%E8%83%BD%E5%8A%9B&headword=ability&gloss_zh=%E8%83%BD%E5%8A%9B&track=zhongkao
+```
+
+`qm_deep=1` means this entry is wrong-book deep practice, not the grammar side door. Repeated `sense_id`, `headword`, `gloss_zh`, and `track` stay in that order, one sense per group. Zip them by index. `sense_id` is the bank id when the card has one, otherwise the provisional `lemma.pos.gloss_zh` key (POS trailing dot removed).
+
+「ALS 没打开？先保存这批错词」 downloads `quizmario-als-deep-train.jsonl` for the same senses. Each line is a `source=quizmario` `vocab.wrong_book_add` row with `schema_version` 2, `run_purpose` `als_deep_train`, and L2 fields `sense_id`, `headword`, `gloss_zh`, `track` (plus `lemma` and `pos` when known) on the line and inside `payload`. Drop that file in the inbox and run the existing ingester. Do not schedule QuizMario cards from it. Prefer these senses in Repair → Rebuild → Vary → Transfer until an independent-evidence gate passes, then emit `sense_return` with `source=als` and the same `sense_id` so QuizMario can clear the debt later. This repository does not ingest that return yet: the client still only pulls `source=quizmario`.
+
 ```bash
 node tools/sample-learner-event.js
 ```

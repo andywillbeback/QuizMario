@@ -38,6 +38,9 @@
  *   Correct ratings in 继续闯关 do not advance the streak.
  *   Inactive rows are kept so a later scan does not re-collect a graduate
  *   whose cumulative wrong is still >= 2.
+ *   sense_id / gloss_zh / pos ride along when the caller has them.
+ *   A new miss clears alsDeepDone. Two correct recognition ratings do not
+ *   set it: ALS deep practice is a separate debt from graduating the book.
  */
 (function (root, factory) {
   var api = factory();
@@ -263,6 +266,17 @@
     row.priority = prog && prog.wrong ? prog.wrong : (row.priority || 0);
   }
 
+  /** Copy sense identity when the caller has it. Empty values do not wipe a stored gloss. */
+  function stampSense(row, entry, resetDone) {
+    if (!row || !entry) return;
+    if (entry.sense_id) row.sense_id = String(entry.sense_id).trim();
+    var gloss = entry.gloss_zh || entry.meaning_zh;
+    if (gloss) row.gloss_zh = String(gloss).trim();
+    if (entry.pos) row.pos = String(entry.pos).trim();
+    if (resetDone) row.alsDeepDone = false;
+    else if (row.alsDeepDone == null) row.alsDeepDone = false;
+  }
+
   /**
    * reason "miss": quality 0 / wrong answer. Always (re)activates, streak 0.
    * reason "scan": cumulative wrong >= 2, without undoing a graduation
@@ -277,6 +291,7 @@
       if (!row) row = book[entry.lemmaKey] = blankRow(entry);
       var wasInactive = !row.active;
       assignPointer(row, entry, prog);
+      stampSense(row, entry, true);
       row.active = true;
       row.streak = 0;
       row.priority = wrong;
@@ -287,6 +302,7 @@
     if (!row) {
       row = book[entry.lemmaKey] = blankRow(entry);
       assignPointer(row, entry, prog);
+      stampSense(row, entry, true);
       row.active = true;
       row.streak = 0;
       row.priority = wrong;
@@ -295,10 +311,12 @@
     }
     if (row.active) {
       assignPointer(row, entry, prog);
+      stampSense(row, entry, false);
       return { entered: false, row: row };
     }
     if (wrong > (row.wrongAtGrad || 0)) {
       assignPointer(row, entry, prog);
+      stampSense(row, entry, true);
       row.active = true;
       row.streak = 0;
       row.priority = wrong;

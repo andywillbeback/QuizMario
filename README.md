@@ -70,4 +70,4 @@
 
 `schema_version` 2 在 JSONL 行上和 `payload` 里加上义项和作答证据（`sense_id`、词性、recognition/production、第一次还是重试、答案是否已露出、真实复习间隔、词库版本、Good/Easy/Again）。没有 `schema_version` 的旧行仍然能解析。Supabase 不新增列。样本：`node tools/sample-learner-event.js`。这是给闭环探针的事件，不是登录页上的同步开关。
 
-今日必练练完后的「去 ALS 修语法」打开本机 Streamlit `http://127.0.0.1:8501/`。只有这台 Mac 上 ALS 已经在跑时才能打开；还没有公开的 ALS 网址。
+错词本里还没做完 ALS 深练的词，登录后的学生首页会显示「N 个错词待 ALS 深练」，今日必练没清空也可以点。按钮打开本机 Streamlit `http://127.0.0.1:8501/`，并在网址里带上这些词的义项。ALS 没开时可以先保存这批错词，交给本机 ALS 读。今日必练练完后的「去 ALS 修语法」仍是旁边的入口，网址同样是 `http://127.0.0.1:8501/`，不带这批错词。只有这台 Mac 上 ALS 已经在跑时才能打开；还没有公开的 ALS 网址。识别间隔仍只由本机 `schedule()` 决定。字段和 ALS 怎么读这批错词见 `docs/learner-events.md`。
