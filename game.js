@@ -3083,8 +3083,6 @@
       als.hidden = false;
       als.textContent = plan.alsLabel;
       als.href = plan.alsHref;
-      if (plan.alsPlaceholder) als.setAttribute("data-als-placeholder", "true");
-      else als.removeAttribute("data-als-placeholder");
     }
     const home = $("btn-clear-home");
     if (home) {
