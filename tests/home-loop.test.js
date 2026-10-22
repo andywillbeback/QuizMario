@@ -84,6 +84,8 @@ assert.strictEqual(loop.frontierGroup(99, 3), 3);
   assert.strictEqual(plan.nextLine, "练完了，然后继续闯关第 4 组。");
   assert.ok(plan.message.indexOf(plan.nextLine) === 0, plan.message);
   assert.ok(plan.message.indexOf("这批到期的词都见过了") !== -1, plan.message);
+  assert.ok(plan.message.indexOf("隔天再认对") !== -1, plan.message);
+  assert.ok(plan.message.indexOf("连续答对两次") === -1, "Q3: same-day streak must not be described as graduation");
   assert.strictEqual(plan.alsHref, "http://127.0.0.1:8501/");
   assert.strictEqual(loop.ALS_GRAMMAR_HREF, "http://127.0.0.1:8501/");
 }
@@ -100,6 +102,9 @@ assert.strictEqual(loop.frontierGroup(99, 3), 3);
   assert.ok(said.indexOf("练完了") === -1, said);
   assert.ok(said.indexOf("清空") === -1, said);
   assert.ok(pending.primaryLabel.indexOf("继续闯关第 4 组") !== -1);
+  assert.ok(pending.message.indexOf("同轮连对") !== -1, pending.message);
+  assert.ok(pending.message.indexOf("隔天再认对") !== -1, pending.message);
+  assert.ok(pending.message.indexOf("连续答对两次") === -1, pending.message);
   assert.strictEqual(pending.alsHref, "http://127.0.0.1:8501/");
 }
 

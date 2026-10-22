@@ -31,11 +31,12 @@ Leaves alone: PR #43 @ `78077c8`, PR #44 @ `203664d`, PR #45 @ `8d48cc8`.
 - Later calendar day than `lastCorrectAt`: **graduate**
 - Miss / re-enter: reset streak, `sessionCleared`, `lastCorrectAt`
 - UI copy: 同轮连对≠长期掌握；隔天再认对才毕业
+- Verify fix: 今日必练 clear (`home-loop.js`) had still said 连续答对两次就离开. That screen is the live must-practice finish. It now matches the rule above. README one-liner updated the same way. `srs-rules.js` / miss clock (`returnClearsMiss`) untouched.
 
 ## Files
 
-- `review-queues.js`, `game.js`, `docs/learner-events.md`
-- `tests/delay-graduation.test.js`, `tests/review-queues.test.js`, `tests/p0.test.js`
+- `review-queues.js`, `game.js`, `home-loop.js`, `docs/learner-events.md`, `README.md`
+- `tests/delay-graduation.test.js`, `tests/review-queues.test.js`, `tests/p0.test.js`, `tests/home-loop.test.js`
 
 ## Conflicts note
 
