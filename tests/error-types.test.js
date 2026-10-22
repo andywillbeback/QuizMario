@@ -37,6 +37,35 @@ assert.strictEqual(et.classifyMiss({
 }).bucket, "form");
 
 {
+  const account = { word: "account", meaning_zh: "账户；叙述", pos: "n.", roots: "account" };
+  const near = {
+    actress: { word: "actress", meaning_zh: "女演员", pos: "n.", roots: "act" },
+    accident: { word: "accident", meaning_zh: "事故", pos: "n.", roots: "accident" },
+    academy: { word: "academy", meaning_zh: "学园", pos: "n.", roots: "academy" },
+  };
+  for (const word of Object.keys(near)) {
+    const hit = et.classifyMiss({ direction: "form", target: account, chosen: near[word] });
+    assert.strictEqual(hit.bucket, "form", "account → " + word + " is a clear 形近 near-miss");
+    assert.strictEqual(hit.label, "形近");
+    assert.strictEqual(et.feedbackLine(hit, word), "错因：形近 · 和「" + word + "」长得像");
+  }
+  const asText = et.classifyMiss({ direction: "form", target: account, chosen: "actress" });
+  assert.strictEqual(asText.bucket, "form", "the same near-miss is 形近 from the choice string alone");
+}
+
+assert.notStrictEqual(et.classifyMiss({
+  direction: "form",
+  target: { word: "ability", meaning_zh: "能力", pos: "n.", roots: "ability" },
+  chosen: { word: "abroad", meaning_zh: "到国外", pos: "adv.", roots: "abroad" },
+}).bucket, "form", "a 2-letter opening on a different length is not 形近");
+
+assert.strictEqual(et.classifyMiss({
+  direction: "form",
+  target: { word: "history", meaning_zh: "历史", pos: "n." },
+  chosen: { word: "hospital", meaning_zh: "医院", pos: "n." },
+}).bucket, "other", "a 1-letter opening stays 其他");
+
+{
   const sense = et.classifyMiss({
     direction: "form",
     target: { word: "big", meaning_zh: "大的", pos: "adj.", roots: "big" },

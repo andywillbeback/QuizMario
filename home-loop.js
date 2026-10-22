@@ -12,17 +12,16 @@
  * 「ALS 补了 X / 回流词 Y」. Until then it stays null and the strip
  * says 「薄弱点 → 今日必练」.
  *
- * The public ALS site is not referenced anywhere in this repo (docs
- * describe a Mac ingest, not a URL). ALS_GRAMMAR_HREF is a labeled
- * placeholder on Andy's GitHub Pages root until that URL exists.
+ * There is still no public ALS site. ALS_GRAMMAR_HREF opens the
+ * Mac-local Streamlit practice app at http://127.0.0.1:8501/.
+ * The link only works when ALS is already running on the student's Mac.
  */
 (function (root, factory) {
   var api = factory();
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.QuizMarioHomeLoop = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  var ALS_GRAMMAR_HREF = "https://andywillbeback.github.io/#als-placeholder";
-  var ALS_GRAMMAR_PLACEHOLDER = true;
+  var ALS_GRAMMAR_HREF = "http://127.0.0.1:8501/";
 
   /** Always null until real ALS rows can be mapped. See the file comment. */
   function alsReturnCounts(events) {
@@ -99,10 +98,20 @@
     return n;
   }
 
+  function wholeCount(value) {
+    var n = Math.floor(Number(value));
+    if (!isFinite(n) || n < 0) return 0;
+    return n;
+  }
+
   /**
    * Next step after a finished queue. The frontier CTA and the ALS
    * grammar link are relevant only when sessionKind is "must"
    * (今日必练 clear). Other clears keep their own buttons.
+   * opts.left is today's must queue (due + wrong book), not how many
+   * cards this sitting still had on screen. 「练完了」 is only for an
+   * empty queue. A round can end while a card is still due later today
+   * (rescheduled about 10 minutes out, or still in 错词本).
    */
   function clearNextActions(opts) {
     opts = opts || {};
@@ -111,30 +120,43 @@
       showAls: false,
       alsRelevant: false,
       frontier: 0,
+      left: 0,
+      title: "",
       primaryLabel: "",
       alsLabel: "",
       alsHref: "",
-      alsPlaceholder: false,
       nextLine: "",
+      detail: "",
+      message: "",
     };
     if (opts.kind !== "must") return empty;
     var n = frontierGroup(opts.unlockedLevel, opts.levelCount);
+    var left = wholeCount(opts.left);
+    var cleared = left === 0;
+    var nextLine = cleared
+      ? ("练完了，然后继续闯关第 " + n + " 组。")
+      : ("这轮做完了，今天还剩 " + left + " 道，稍后还会再出现。");
+    var detail = cleared
+      ? "这批到期的词都见过了。错词本里连续答对两次的已经离开。"
+      : "到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。";
     return {
       showFrontier: true,
       showAls: true,
       alsRelevant: true,
       frontier: n,
+      left: left,
+      title: cleared ? "今日必练清空了" : "这轮先到这里",
       primaryLabel: "继续闯关第 " + n + " 组",
       alsLabel: "去 ALS 修语法",
       alsHref: ALS_GRAMMAR_HREF,
-      alsPlaceholder: ALS_GRAMMAR_PLACEHOLDER,
-      nextLine: "练完了，然后继续闯关第 " + n + " 组。",
+      nextLine: nextLine,
+      detail: detail,
+      message: nextLine + detail,
     };
   }
 
   return {
     ALS_GRAMMAR_HREF: ALS_GRAMMAR_HREF,
-    ALS_GRAMMAR_PLACEHOLDER: ALS_GRAMMAR_PLACEHOLDER,
     alsReturnCounts: alsReturnCounts,
     homeLoopStrip: homeLoopStrip,
     frontierGroup: frontierGroup,

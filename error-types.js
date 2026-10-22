@@ -6,7 +6,8 @@
  * No model call. 「不会」 is not a wrong pick and is not counted.
  *
  * Priority, first match wins:
- *   形近  spelling-near lemmas (edit distance or a long shared prefix)
+ *   形近  spelling-near lemmas (edit distance, a long shared prefix,
+ *         or a clear same-length opening such as account / actress)
  *   义近  gloss overlap, or the same non-trivial root
  *   词性  both sides have a POS and the coarse tags differ
  *   其他  none of those — 未归类
@@ -96,7 +97,16 @@
     return prev[bl];
   }
 
-  /** Spelling-near: small edit distance, or one lemma continues the other. */
+  /**
+   * Spelling-near: small edit distance, one lemma continues the other,
+   * or a clear shared opening.
+   * account → actress is edit distance 5, so the distance caps miss it,
+   * and so do account → academy (also 5) and account → accident (3,
+   * one letter longer). Those three still open the same way and are
+   * the near-misses a 看中文选英文 card actually offers. A 2-letter
+   * opening only counts when the words are the same length; ability →
+   * abroad (one letter off) stays out of 形近.
+   */
   function formNear(left, right) {
     var a = letters(left);
     var b = letters(right);
@@ -115,8 +125,11 @@
     while (prefix < m && a.charAt(prefix) === b.charAt(prefix)) prefix++;
     var prefixOf = a.indexOf(b) === 0 || b.indexOf(a) === 0;
     var extra = longer - prefix;
+    var gap = Math.abs(a.length - b.length);
     if (prefixOf && prefix >= 4 && extra >= 1 && extra <= 4) return true;
-    if (prefix >= 5 && shorter >= 6 && Math.abs(a.length - b.length) <= 4) return true;
+    if (prefix >= 5 && shorter >= 6 && gap <= 4) return true;
+    if (shorter >= 6 && prefix >= 3 && gap <= 1) return true;
+    if (shorter >= 6 && prefix >= 2 && gap === 0 && dist <= 5) return true;
     return false;
   }
 
