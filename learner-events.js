@@ -366,14 +366,12 @@
         rest.push(ev);
       }
     }
-    // Never drop unuploaded quizmario. Soft overflow when needed.
-    var keptReturns = returns;
-    var returnBudget = Math.max(0, MAX_EVENTS - pending.length);
-    if (keptReturns.length > returnBudget) {
-      if (returnBudget > 0) keptReturns = keptReturns.slice(keptReturns.length - returnBudget);
-      else keptReturns = returns; // pending alone fills/exceeds the cap
-    }
-    var must = pending.concat(keptReturns);
+    // Never drop unuploaded quizmario or ALS sense returns. A partial
+    // budget (pending just under 800) must not keep one return and drop
+    // the rest: that cliff deleted sense_return rows Q4 had just pulled.
+    // Soft-overflow above the cap when pending + returns exceed it.
+    // Uploaded quizmario rows are the only ones the cap may drop.
+    var must = pending.concat(returns);
     var keptRest = rest;
     if (must.length >= MAX_EVENTS) {
       keptRest = [];
@@ -905,20 +903,26 @@
         refreshStatus();
         return;
       }
+      var uploadError = null;
       var rows = pendingRows(store, { force: !!force });
       if (rows.length) {
         var res = await client.from("learner_events").upsert(rows, {
           onConflict: "event_id",
           ignoreDuplicates: true,
         });
-        if (res.error) throw res.error;
-        var ids = [];
-        for (var i = 0; i < rows.length; i++) ids.push(rows[i].event_id);
-        markUploaded(store, ids);
-        persistStore();
-        cloudState = "ok";
-        cloudBlocked = "";
-        warned = false;
+        if (res.error) {
+          // Q4: a stuck outbox must not skip the ALS re-pull. The upload
+          // error is still reported after pullOnce.
+          uploadError = res.error;
+        } else {
+          var ids = [];
+          for (var i = 0; i < rows.length; i++) ids.push(rows[i].event_id);
+          markUploaded(store, ids);
+          persistStore();
+          cloudState = "ok";
+          cloudBlocked = "";
+          warned = false;
+        }
       } else if (cloudState !== "missing" && cloudState !== "error") {
         cloudState = "ok";
       }
@@ -930,6 +934,7 @@
           console.warn("QuizMario learner_events pull", pullErr);
         }
       }
+      if (uploadError) throw uploadError;
       refreshStatus();
     }
 

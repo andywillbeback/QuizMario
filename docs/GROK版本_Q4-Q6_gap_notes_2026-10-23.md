@@ -14,7 +14,7 @@ Live path baseline: PR #40 deep-train CTA + PR #41 sense_return clear @ `main`.
 
 ## What this pack changed
 
-1. **Q6** (`learner-events.js`): trim never drops unuploaded `source=quizmario`; soft-overflow above 800 when pending (+ returns) require it; only uploaded quizmario may be trimmed; ALS returns still preferred within budget. `online` / `pageshow` / `visibilityState===visible` call `retryOutboxAndPull` (reset `pulled`, force flush + re-pull). Existing due dedupe + upsert `ignoreDuplicates` keep retries safe.
+1. **Q6** (`learner-events.js`): trim never drops unuploaded `source=quizmario` or ALS `sense_return` rows; soft-overflow above 800 when pending + returns require it; only uploaded quizmario may be trimmed. `online` / `pageshow` / `visibilityState===visible` call `retryOutboxAndPull` (reset `pulled`, force flush + re-pull). A failed pending upsert still re-pulls, then reports the upload error. Existing due dedupe + upsert `ignoreDuplicates` keep retries safe.
 2. **Q4**: same re-pull on return/visible/online so learner continuity + sense_return map after ALS tab without inventing new product fields. Handoff still stamps `learner_id` / `sense_id` as on main.
 3. **Q5** (`home-loop.js`): `returnEvidenceOk` / `qualifiesAlsReturn` reject explicit `qualified_for_sense_return=false`, `independent=false`, recognition-only `task_direction`/`evidence_kind`. Legacy omit still qualifies. **`returnClearsMiss` / `lastMissAt` unchanged** (PR #41 miss clock preserved).
 4. Docs + tests updated; helpers exported for unit coverage.
@@ -23,7 +23,7 @@ Live path baseline: PR #40 deep-train CTA + PR #41 sense_return clear @ `main`.
 
 - No live Supabase service-role smoke; no `identity_map` bind.
 - No squash-merge to `main` (new scope; leave draft).
-- Dual-gate ACE VERIFY not run on this PR.
+- Local node ACE verify on this branch fixed two holes: trim no longer drops ALS returns to fit a partial outbox, and a failed upsert still re-pulls. Still not Andy-done.
 - ChatGPT parallel pack not compared here.
 - Q1–Q3, Q7–Q9 and ALS A1–A12 out of tonight’s QuizMario Q4–Q6 scope.
 - Soft-overflow can grow localStorage if flush stays blocked for a long time — still safer than dropping signals; ops watch if needed.

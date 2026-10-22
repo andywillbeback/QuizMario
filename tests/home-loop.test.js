@@ -306,6 +306,16 @@ const mixedBook = openBook.concat([
     { source: "als", event_type: "vocab.sense_return", sense_id: "ability.n.能力",
       payload: { sense_id: "ability.n.能力", task_direction: "recognition" },
       created_at: "2026-10-22T06:00:00.000Z" },
+    { source: "als", event_type: "sense_return", sense_id: "ability.n.能力",
+      payload: { sense_id: "ability.n.能力", evidence_kind: "recognition" },
+      created_at: "2026-10-22T06:00:00.000Z" },
+    { source: "als", event_type: "sense_return", sense_id: "accept.v.接受",
+      payload: { sense_id: "accept.v.接受", evidence_kind: "mc_recognition" },
+      created_at: "2026-10-22T06:00:00.000Z" },
+    { source: "als", event_type: "sense_return", sense_id: "ability.n.能力",
+      qualified_for_sense_return: false,
+      payload: { sense_id: "ability.n.能力", qualified_for_sense_return: true },
+      created_at: "2026-10-22T06:00:00.000Z" },
   ];
   assert.deepStrictEqual(loop.alsDeepQualifiedIds(rejected), [],
     "explicit ALS fail gates do not close deep-train debt");
@@ -327,8 +337,17 @@ const mixedBook = openBook.concat([
   };
   assert.deepStrictEqual(loop.alsDeepQualifiedIds([ok]), ["ability.n.能力"]);
   assert.strictEqual(loop.returnClearsMiss(Date.parse(ok.created_at), Date.parse("2026-10-22T05:00:00.000Z")), true);
+  assert.strictEqual(loop.returnClearsMiss(Date.parse(ok.created_at), Date.parse(ok.created_at)), false,
+    "PR #41 miss clock is strict >; an equal lastMissAt does not clear");
   assert.strictEqual(loop.returnClearsMiss(Date.parse(ok.created_at), Date.parse("2026-10-22T07:00:00.000Z")), false,
     "PR #41 miss clock unchanged");
+  assert.strictEqual(loop.qualifiesAlsReturn({
+    source: "als",
+    event_type: "sense_return",
+    sense_id: "ability.n.能力",
+    payload: { sense_id: "ability.n.能力" },
+    created_at: "2026-10-22T06:00:00.000Z",
+  }), true, "legacy omit still qualifies");
 }
 
 {
