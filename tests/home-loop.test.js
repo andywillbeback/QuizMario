@@ -164,6 +164,14 @@ const mixedBook = openBook.concat([
   assert.strictEqual(home.primaryLabel, "去 ALS 深练这 2 个错词");
   assert.ok(home.href.indexOf("http://127.0.0.1:8501/") === 0, home.href);
   assert.ok(home.href.indexOf("qm_deep=1") !== -1, home.href);
+  assert.ok(home.href.indexOf("deep_train=1") !== -1, home.href);
+  assert.ok(home.href.indexOf("sense_ids=") !== -1, home.href);
+  {
+    const q = home.href.split("?")[1] || "";
+    const raw = q.split("&").find((part) => part.indexOf("sense_ids=") === 0);
+    assert.ok(raw, home.href);
+    assert.strictEqual(decodeURIComponent(raw.slice("sense_ids=".length)), "ability.n.能力,accept.v.接受");
+  }
   assert.ok(home.href.indexOf("sense_id=" + encodeURIComponent("ability.n.能力")) !== -1, home.href);
   assert.ok(home.href.indexOf("sense_id=" + encodeURIComponent("accept.v.接受")) !== -1, home.href);
   assert.ok(home.href.indexOf("headword=ability") !== -1, home.href);
@@ -212,6 +220,8 @@ const mixedBook = openBook.concat([
   assert.strictEqual(both.deepText, "2 个错词待 ALS 深练");
   assert.ok(both.deepHref.indexOf("http://127.0.0.1:8501/") === 0, both.deepHref);
   assert.ok(both.deepHref.indexOf("qm_deep=1") !== -1, both.deepHref);
+  assert.ok(both.deepHref.indexOf("deep_train=1") !== -1, both.deepHref);
+  assert.ok(both.deepHref.indexOf("sense_ids=") !== -1, both.deepHref);
   assert.ok(both.message.indexOf("还有 2 个错词待 ALS 深练") !== -1, both.message);
   assert.ok(both.primaryLabel.indexOf("继续闯关") !== -1);
 }

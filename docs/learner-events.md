@@ -96,13 +96,13 @@ An active 错词本 row owes deep practice until `alsDeepDone` is set, or until 
 
 When that debt is above zero, the signed-in student home shows 「N 个错词待 ALS 深练」 and a primary link, including while 今日必练 still has cards. The daily soft gate shows the same link so it is not buried. 「去 ALS 修语法」 remains the bare side door after 今日必练. The student home does not show an ingest panel or claim that ALS already stored the rows.
 
-Both links open `http://127.0.0.1:8501/` (local Streamlit). The deep-train link adds query params ALS can read with `st.query_params`:
+Both links open `http://127.0.0.1:8501/` (local Streamlit). The deep-train link puts both ALS contracts on the same URL. The Mac tip reads `deep_train=1` and `sense_ids` (one URL-decoded comma-separated list of unique sense ids). The repeated groups stay for a parser that zips `sense_id`, `headword`, `gloss_zh`, and `track` by index.
 
 ```text
-http://127.0.0.1:8501/?qm_deep=1&run_purpose=als_deep_train&sense_id=ability.n.%E8%83%BD%E5%8A%9B&headword=ability&gloss_zh=%E8%83%BD%E5%8A%9B&track=zhongkao
+http://127.0.0.1:8501/?qm_deep=1&run_purpose=als_deep_train&deep_train=1&sense_ids=ability.n.%E8%83%BD%E5%8A%9B&sense_id=ability.n.%E8%83%BD%E5%8A%9B&headword=ability&gloss_zh=%E8%83%BD%E5%8A%9B&track=zhongkao
 ```
 
-`qm_deep=1` means this entry is wrong-book deep practice, not the grammar side door. Repeated `sense_id`, `headword`, `gloss_zh`, and `track` stay in that order, one sense per group. Zip them by index. `sense_id` is the bank id when the card has one, otherwise the provisional `lemma.pos.gloss_zh` key (POS trailing dot removed).
+`qm_deep=1` and `deep_train=1` both mean this entry is wrong-book deep practice, not the grammar side door. `sense_id` is the bank id when the card has one, otherwise the provisional `lemma.pos.gloss_zh` key (POS trailing dot removed). Two senses join as `sense_ids=first%2Csecond` after `encodeURIComponent` of the comma-separated list.
 
 「ALS 没打开？先保存这批错词」 downloads `quizmario-als-deep-train.jsonl` for the same senses. Each line is a `source=quizmario` `vocab.wrong_book_add` row with `schema_version` 2, `run_purpose` `als_deep_train`, and L2 fields `sense_id`, `headword`, `gloss_zh`, `track` (plus `lemma` and `pos` when known) on the line and inside `payload`. Drop that file in the inbox and run the existing ingester. Do not schedule QuizMario cards from it. Prefer these senses in Repair → Rebuild → Vary → Transfer until an independent-evidence gate passes, then emit `sense_return` with `source=als` and the same `sense_id` so QuizMario can clear the debt later. This repository does not ingest that return yet: the client still only pulls `source=quizmario`.
 

@@ -23,8 +23,9 @@
  * There is still no public ALS site. ALS_GRAMMAR_HREF opens the
  * Mac-local Streamlit practice app at http://127.0.0.1:8501/.
  * The link only works when ALS is already running on the student's Mac.
- * The deep-train CTA uses that same origin and adds qm_deep=1 plus the
- * outstanding senses. 「去 ALS 修语法」 stays the bare side door.
+ * The deep-train CTA uses that same origin and adds both ALS contracts:
+ * qm_deep=1 plus repeated sense_id groups, and deep_train=1 with
+ * sense_ids as one comma-separated list. 「去 ALS 修语法」 stays the bare side door.
  */
 (function (root, factory) {
   var api = factory();
@@ -148,7 +149,20 @@
   function alsDeepHref(items, events) {
     var list = deepTrainDebt(items, events);
     if (!list.length) return ALS_GRAMMAR_HREF;
-    var parts = ["qm_deep=1", "run_purpose=als_deep_train"];
+    var ids = [];
+    var seen = {};
+    for (var n = 0; n < list.length; n++) {
+      var id = list[n].sense_id;
+      if (!id || seen[id]) continue;
+      seen[id] = true;
+      ids.push(id);
+    }
+    var parts = [
+      "qm_deep=1",
+      "run_purpose=als_deep_train",
+      "deep_train=1",
+      "sense_ids=" + encodeURIComponent(ids.join(",")),
+    ];
     for (var i = 0; i < list.length; i++) {
       var it = list[i];
       parts.push("sense_id=" + encodeURIComponent(it.sense_id));

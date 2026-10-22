@@ -144,6 +144,8 @@ function staticGuards() {
   assert.strictEqual(owed.text, "1 个错词待 ALS 深练");
   assert.ok(owed.href.indexOf("http://127.0.0.1:8501/") === 0, owed.href);
   assert.ok(owed.href.indexOf("qm_deep=1") !== -1, owed.href);
+  assert.ok(owed.href.indexOf("deep_train=1") !== -1, owed.href);
+  assert.ok(owed.href.indexOf("sense_ids=") !== -1, owed.href);
   assert.strictEqual(loop.homeDeepTrain({
     signedIn: true, onHome: true, mustCount: 3, items: [],
   }).visible, false, "must queue alone is not deep-train debt");
@@ -1027,6 +1029,8 @@ async function main() {
     assert.ok(dueHome.deepText.indexOf("个错词待 ALS 深练") !== -1, dueHome.deepText);
     assert.ok(dueHome.deepHref.indexOf("http://127.0.0.1:8501/") === 0, dueHome.deepHref);
     assert.ok(dueHome.deepHref.indexOf("qm_deep=1") !== -1, dueHome.deepHref);
+    assert.ok(dueHome.deepHref.indexOf("deep_train=1") !== -1, dueHome.deepHref);
+    assert.ok(dueHome.deepHref.indexOf("sense_ids=") !== -1, dueHome.deepHref);
     assert.ok(dueHome.deepHref.toLowerCase().indexOf(String(planted.weak).toLowerCase()) !== -1, dueHome.deepHref);
     assert.strictEqual(dueHome.gateDeepHidden, false, "the soft gate does not cover the only deep-train path");
     assert.ok(dueHome.gateDeepHref.indexOf("http://127.0.0.1:8501/") === 0, dueHome.gateDeepHref);
