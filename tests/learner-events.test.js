@@ -156,7 +156,7 @@ function wrong(extra) {
     payload: {},
     created_at: NOW,
   });
-  assert.strictEqual(remote, null, "QM export does not ingest ALS outcomes");
+  assert.strictEqual(remote, null, "unmapped ALS rows stay out of the local store");
   const row = le.fromRemote({
     event_id: "10000000-0000-4000-8000-000000000010",
     learner_id: UID,
@@ -405,4 +405,207 @@ function wrong(extra) {
   assert.ok(words.includes('QUIZMARIO_CONTENT_VERSION = "words-v12"'));
 }
 
-console.log("learner-events ok");
+{
+  const sense = "ability.n.能力";
+  const types = ["sense_return", "vocab.sense_return", "als.sense_return"];
+  assert.deepStrictEqual(le.ALS_RETURN_TYPES, types);
+  types.forEach((type, i) => {
+    const row = le.fromRemote({
+      event_id: "20000000-0000-4000-8000-00000000000" + i,
+      learner_id: UID,
+      user_id: UID,
+      source: "als",
+      event_type: type,
+      created_at: NOW,
+      payload: { sense_id: sense },
+    });
+    assert.ok(row, type);
+    assert.strictEqual(row.source, "als", "pull keeps the real ALS source");
+    assert.strictEqual(row.event_type, type);
+    assert.strictEqual(row.sense_id, sense);
+    assert.strictEqual(le.publicEvent(row).source, "als");
+    assert.strictEqual(le.cloudRow(row), null, "ALS rows are not shaped into a quizmario upload");
+    assert.strictEqual(le.toJsonl([row]), "", "QM JSONL does not copy or rewrite an ALS return");
+  });
+
+  const store = le.emptyStore();
+  store.learner_id = UID;
+  const local = wrong({ event_id: "10000000-0000-4000-8000-0000000000d1" });
+  le.append(store, local);
+  const returned = le.fromRemote({
+    event_id: "20000000-0000-4000-8000-00000000000a",
+    learner_id: UID,
+    user_id: UID,
+    source: "als",
+    event_type: "sense_return",
+    created_at: "2026-10-22T03:00:00.000Z",
+    payload: JSON.stringify({ sense_id: sense }),
+  });
+  le.append(store, returned);
+  const pending = le.pendingRows(store, { force: true });
+  assert.strictEqual(pending.length, 1);
+  assert.strictEqual(pending[0].event_id, local.event_id);
+  assert.strictEqual(pending[0].source, "quizmario");
+  assert.ok(pending.every((row) => row.source === "quizmario"));
+  const exported = le.toJsonl(store.events);
+  assert.ok(exported.indexOf('"source":"quizmario"') !== -1);
+  assert.ok(exported.indexOf('"source":"als"') === -1);
+  assert.ok(exported.indexOf("sense_return") === -1);
+  assert.strictEqual(store.events.filter((ev) => ev.source === "als").length, 1);
+}
+
+{
+  const calls = [];
+  function builder(reply) {
+    const state = { eqs: [], inn: null };
+    const api = {
+      select() { return api; },
+      eq(key, value) { state.eqs.push([key, value]); return api; },
+      in(key, value) { state.inn = [key, value.slice()]; return api; },
+      order() { return api; },
+      limit(n) {
+        state.limit = n;
+        calls.push(state);
+        return Promise.resolve(reply(state));
+      },
+    };
+    return api;
+  }
+  const client = {
+    from(table) {
+      assert.strictEqual(table, "learner_events");
+      return builder((state) => {
+        const source = state.eqs.filter((pair) => pair[0] === "source").map((pair) => pair[1])[0];
+        if (source === "quizmario") {
+          return {
+            data: [{
+              event_id: "30000000-0000-4000-8000-000000000001",
+              learner_id: UID,
+              user_id: UID,
+              source: "quizmario",
+              event_type: "vocab.answer_wrong",
+              headword: "ability",
+              payload: { headword: "ability", sense_id: "ability.n.能力" },
+              created_at: NOW,
+            }],
+            error: null,
+          };
+        }
+        assert.strictEqual(source, "als");
+        assert.deepStrictEqual(state.inn, ["event_type", le.ALS_RETURN_TYPES]);
+        return {
+          data: [
+            {
+              event_id: "30000000-0000-4000-8000-000000000002",
+              learner_id: UID,
+              user_id: UID,
+              source: "als",
+              event_type: "sense_return",
+              payload: { sense_id: "ability.n.能力" },
+              created_at: "2026-10-22T04:00:00.000Z",
+            },
+            {
+              event_id: "30000000-0000-4000-8000-000000000003",
+              learner_id: UID,
+              user_id: UID,
+              source: "als",
+              event_type: "als.session_end",
+              payload: { sense_id: "ability.n.能力" },
+              created_at: "2026-10-22T04:01:00.000Z",
+            },
+          ],
+          error: null,
+        };
+      });
+    },
+  };
+  le.fetchRemoteRows(client, UID).then((fetched) => {
+    assert.strictEqual(fetched.error, null);
+    assert.strictEqual(calls.length, 2, "pull reads quizmario rows and ALS returns separately");
+    assert.ok(calls.every((call) => call.eqs.some((pair) => pair[0] === "learner_id" && pair[1] === UID)));
+    assert.strictEqual(calls[0].limit, le.MAX_EVENTS);
+    const store = le.emptyStore();
+    store.learner_id = UID;
+    const merged = le.mergeRemote(store, fetched.rows);
+    assert.strictEqual(merged.added, 2, "session_end is dropped; the sense_return is kept");
+    assert.deepStrictEqual(store.events.map((ev) => ev.source).sort(), ["als", "quizmario"]);
+    const als = store.events.find((ev) => ev.source === "als");
+    assert.strictEqual(als.event_type, "sense_return");
+    assert.strictEqual(als.sense_id, "ability.n.能力");
+    const rows = le.pendingRows(store, { force: true });
+    assert.ok(rows.every((row) => row.source === "quizmario" && row.event_type !== "sense_return"));
+    const loop = require("../home-loop");
+    const book = {
+      "zhongkao::ability": { lemma: "ability", pos: "n.", gloss_zh: "能力", active: true, alsDeepDone: false },
+      "zhongkao::accept": { lemma: "accept", sense_id: "accept.v.接受", pos: "v.", gloss_zh: "接受", active: true, alsDeepDone: false },
+    };
+    const events = store.events.map(le.publicEvent);
+    assert.strictEqual(loop.markDeepQualified(book, events), true);
+    assert.strictEqual(book["zhongkao::ability"].alsDeepDone, true);
+    assert.strictEqual(book["zhongkao::accept"].alsDeepDone, false);
+    const mid = loop.homeDeepTrain({
+      signedIn: true,
+      onHome: true,
+      mustCount: 4,
+      items: [book["zhongkao::ability"], book["zhongkao::accept"]],
+      events: events,
+    });
+    assert.strictEqual(mid.visible, true);
+    assert.strictEqual(mid.count, 1);
+    assert.strictEqual(mid.text, "1 个错词待 ALS 深练");
+    const accept = le.fromRemote({
+      event_id: "30000000-0000-4000-8000-000000000004",
+      learner_id: UID,
+      user_id: UID,
+      source: "als",
+      event_type: "vocab.sense_return",
+      payload: { sense_id: "accept.v.接受" },
+      created_at: "2026-10-22T05:00:00.000Z",
+    });
+    events.push(le.publicEvent(accept));
+    assert.strictEqual(loop.markDeepQualified(book, events), true);
+    const gone = loop.homeDeepTrain({
+      signedIn: true,
+      onHome: true,
+      mustCount: 4,
+      items: [book["zhongkao::ability"], book["zhongkao::accept"]],
+      events: events,
+    });
+    assert.strictEqual(gone.visible, false, "empty deep-train debt hides the CTA");
+    assert.strictEqual(gone.count, 0);
+    assert.strictEqual(loop.alsReturnCounts(events), null, "sense_return is not ALS 补了 / 回流词");
+    const full = le.emptyStore();
+    for (let i = 0; i < le.MAX_EVENTS; i++) {
+      le.append(full, wrong({
+        event_id: "40000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+        created_at: "2026-10-22T08:00:" + String(i % 60).padStart(2, "0") + ".000Z",
+      }));
+    }
+    assert.strictEqual(full.events.length, le.MAX_EVENTS);
+    const oldReturn = le.fromRemote({
+      event_id: "30000000-0000-4000-8000-000000000099",
+      learner_id: UID,
+      user_id: UID,
+      source: "als",
+      event_type: "als.sense_return",
+      payload: { sense_id: "ability.n.能力" },
+      created_at: "2020-01-01T00:00:00.000Z",
+    });
+    le.append(full, oldReturn);
+    assert.strictEqual(full.events.length, le.MAX_EVENTS);
+    assert.ok(full.events.some((ev) => ev.source === "als" && ev.sense_id === "ability.n.能力"),
+      "the cap drops a quizmario row before an ALS return");
+    const sync = fs.readFileSync(path.join(__dirname, "../sync.js"), "utf8");
+    assert.ok(sync.includes("await window.QuizMarioLearnerEvents.bindUser(user)"),
+      "home sync waits for the pull before the session-ready paint");
+    const game = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
+    assert.ok(game.includes("markDeepQualified") && game.includes("onLearnerEvents"));
+    const rules = fs.readFileSync(path.join(__dirname, "../srs-rules.js"), "utf8");
+    assert.ok(!rules.includes("alsDeepDone") && !rules.includes("sense_return"),
+      "recognition schedule() does not learn about ALS returns");
+    console.log("learner-events ok");
+  }).catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

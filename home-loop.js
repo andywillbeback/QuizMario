@@ -1,16 +1,15 @@
 /* Signed-in home loop strip and the 今日必练 clear-screen next step.
  * Loaded before game.js. Also require()-able from node tests.
  *
- * ALS 补了 X / 回流词 Y is not computable here. learner-events.js only
- * keeps source=quizmario rows (the Supabase pull filters on that source),
- * and those rows are QuizMario signals, not ALS outcomes. Do not substitute
- * the wrong book, the due queue, or the 今日必练 count for X/Y.
+ * ALS 补了 X / 回流词 Y is not computable here. A pulled source=als
+ * sense_return clears deep-train debt only. It is not that pair.
+ * Do not substitute the wrong book, the due queue, or the 今日必练
+ * count for X/Y.
  *
- * TODO: when source=als rows are readable on the client and their
- * event_type mapping is known, alsReturnCounts() should return
- * { filled, returned } and homeLoopStrip will switch to
- * 「ALS 补了 X / 回流词 Y」. Until then it stays null and the strip
- * says 「薄弱点 → 今日必练」.
+ * TODO: when an event_type mapping for those two counts is known,
+ * alsReturnCounts() should return { filled, returned } and
+ * homeLoopStrip will switch to 「ALS 补了 X / 回流词 Y」. Until then
+ * it stays null and the strip says 「薄弱点 → 今日必练」.
  *
  * Deep-train debt is a different number. An active 错词本 sense owes
  * ALS deep practice (Repair → Rebuild → Vary → Transfer) until a real
@@ -97,6 +96,31 @@
       ids.push(id);
     }
     return ids;
+  }
+
+  /**
+   * Sets alsDeepDone on wrong-book rows whose sense_id matches a
+   * source=als sense_return. Recognition graduation does not call this.
+   * Mutates the book map. Returns whether any row changed.
+   */
+  function markDeepQualified(book, events) {
+    var ids = alsDeepQualifiedIds(events);
+    if (!ids.length || !book) return false;
+    var want = {};
+    var q;
+    for (q = 0; q < ids.length; q++) want[ids[q]] = true;
+    var keys = Object.keys(book);
+    var changed = false;
+    for (var i = 0; i < keys.length; i++) {
+      var row = book[keys[i]];
+      if (!row || row.alsDeepDone === true) continue;
+      var sense = String(row.sense_id || "").trim() || provisionalSenseId(row.lemma, row.pos, row.gloss_zh);
+      if (sense && want[sense]) {
+        row.alsDeepDone = true;
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   function normalizeDebtItem(raw) {
@@ -420,6 +444,7 @@
     alsReturnCounts: alsReturnCounts,
     provisionalSenseId: provisionalSenseId,
     alsDeepQualifiedIds: alsDeepQualifiedIds,
+    markDeepQualified: markDeepQualified,
     deepTrainDebt: deepTrainDebt,
     alsDeepHref: alsDeepHref,
     deepTrainHandoff: deepTrainHandoff,

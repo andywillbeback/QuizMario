@@ -9,9 +9,10 @@
  * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
  * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
- * learner-events.js emits quizmario signals only. schedule() remains the only SRS clock.
+ * learner-events.js emits quizmario signals only, and keeps pulled source=als
+ * sense_return rows. schedule() remains the only SRS clock.
  * Home loop strip (home-loop.js): signed-in home shows 薄弱点 → 今日必练.
- * ALS 补了 / 回流词 stays unimplemented until source=als rows are readable.
+ * ALS 补了 / 回流词 stays unimplemented: a sense_return is not that count.
  * 错词本 deep-train debt is separate. While any active book sense still
  * owes ALS deep practice, the signed-in home shows 「N 个错词待 ALS 深练」
  * and a primary CTA to local :8501, even if 今日必练 is not empty.
@@ -3202,21 +3203,7 @@
    * Recognition graduation does not. QuizMario rows do not.
    */
   function applyAlsQualifications(events) {
-    const ids = HL.alsDeepQualifiedIds(events);
-    if (!ids.length) return false;
-    const book = ensureWrongBook();
-    const keys = Object.keys(book);
-    let changed = false;
-    for (let i = 0; i < keys.length; i++) {
-      const row = book[keys[i]];
-      if (!row || row.alsDeepDone === true) continue;
-      const sense = row.sense_id || HL.provisionalSenseId(row.lemma, row.pos, row.gloss_zh);
-      if (sense && ids.indexOf(sense) !== -1) {
-        row.alsDeepDone = true;
-        changed = true;
-      }
-    }
-    return changed;
+    return HL.markDeepQualified(ensureWrongBook(), events);
   }
 
   function paintDeepLink(el, view) {
@@ -3511,6 +3498,11 @@
       storePracticeReminder(PR.markPracticeReminder(opts.reminder, day));
     }
   }
+
+  window.__QM.onLearnerEvents = function () {
+    const home = $("screen-home");
+    if (home && home.classList.contains("active")) refreshHomeQueues();
+  };
 
   window.__QM.onSessionReady = function () {
     if (sessionKind === "placement" && !currentNeedsPlacement()) {

@@ -199,7 +199,7 @@
     } finally {
       holdUploads = false;
       if (user && window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.bindUser === "function") {
-        try { window.QuizMarioLearnerEvents.bindUser(user); } catch (_) {}
+        try { await window.QuizMarioLearnerEvents.bindUser(user); } catch (_) {}
       }
       if (pendingDuringBoot && user) {
         pendingDuringBoot = false;

@@ -2,6 +2,10 @@
  * Signals only. SM-2 / Anki-lite clocks stay in srs-rules.js.
  * Local outbox (quizmario_learner_events_v1) is the JSONL export.
  * Logged-in inserts go to Supabase public.learner_events (see supabase/learner_events.sql).
+ * The same pull also reads this learner's source=als sense_return rows. RLS SELECT is
+ * own learner_id with no source filter; INSERT still requires source=quizmario.
+ * Those returns stay source=als in the local store, clear deep-train debt, and
+ * are never uploaded or copied into the QM JSONL export.
  * A failed insert must not affect user_progress sync.
  * The ingest panel is not part of the student login or home. download() and
  * copyJsonl() stay on the API. ?alsDebug=1 or localStorage quizmario_als_debug=1
@@ -22,6 +26,8 @@
   if (root && root.document) api.installBrowser(root);
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   var SOURCE = "quizmario";
+  var ALS_SOURCE = "als";
+  var ALS_RETURN_TYPES = ["sense_return", "vocab.sense_return", "als.sense_return"];
   var STORAGE_KEY = "quizmario_learner_events_v1";
   var MAX_EVENTS = 800;
   var TYPES = {
@@ -325,13 +331,48 @@
     });
   }
 
+  function isAlsSenseReturn(source, eventType) {
+    if (source !== ALS_SOURCE) return false;
+    var type = String(eventType || "");
+    for (var i = 0; i < ALS_RETURN_TYPES.length; i++) {
+      if (type === ALS_RETURN_TYPES[i]) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Keep ALS sense returns when the cap is hit. A busy quizmario outbox
+   * must not drop the return before home can set alsDeepDone.
+   */
   function trim(store) {
     sortEvents(store.events);
     if (store.events.length <= MAX_EVENTS) return store;
-    var removed = store.events.splice(0, store.events.length - MAX_EVENTS);
+    var returns = [];
+    var rest = [];
+    var events = store.events;
+    for (var i = 0; i < events.length; i++) {
+      if (isAlsSenseReturn(events[i] && events[i].source, events[i] && events[i].event_type)) returns.push(events[i]);
+      else rest.push(events[i]);
+    }
+    var keptReturns = returns;
+    var keptRest = rest;
+    if (keptReturns.length >= MAX_EVENTS) {
+      keptReturns = keptReturns.slice(keptReturns.length - MAX_EVENTS);
+      keptRest = [];
+    } else {
+      var room = MAX_EVENTS - keptReturns.length;
+      if (keptRest.length > room) keptRest = keptRest.slice(keptRest.length - room);
+    }
+    var keep = {};
+    var next = keptRest.concat(keptReturns);
+    for (var k = 0; k < next.length; k++) keep[next[k].event_id] = true;
     var uploaded = store.uploaded || {};
-    for (var i = 0; i < removed.length; i++) delete uploaded[removed[i].event_id];
+    for (var j = 0; j < events.length; j++) {
+      if (!keep[events[j].event_id]) delete uploaded[events[j].event_id];
+    }
     store.uploaded = uploaded;
+    sortEvents(next);
+    store.events = next;
     return store;
   }
 
@@ -405,7 +446,7 @@
       event_id: ev.event_id,
       learner_id: ev.learner_id || "",
       user_id: ev.user_id || ev.learner_id || "",
-      source: SOURCE,
+      source: ev.source ? String(ev.source) : SOURCE,
       event_type: ev.event_type,
       created_at: normalizeIso(ev.created_at) || ev.created_at,
     };
@@ -452,6 +493,7 @@
 
   /** Columns the current learner_events table accepts. Rich fields stay in payload. */
   function cloudRow(ev) {
+    if (!ev || (ev.source && ev.source !== SOURCE)) return null;
     var pub = publicEvent(ev);
     var row = {};
     for (var i = 0; i < CLOUD_COLUMNS.length; i++) {
@@ -472,7 +514,12 @@
   }
 
   function toJsonl(events) {
-    var list = (events || []).slice();
+    var list = [];
+    var src = events || [];
+    for (var n = 0; n < src.length; n++) {
+      if (src[n] && src[n].source && src[n].source !== SOURCE) continue;
+      list.push(src[n]);
+    }
     sortEvents(list);
     var lines = [];
     for (var i = 0; i < list.length; i++) lines.push(JSON.stringify(publicEvent(list[i])));
@@ -502,7 +549,9 @@
       if (uploaded[ev.event_id]) continue;
       if (ev.source && ev.source !== SOURCE) continue;
       if (!force && gradeIsPending(ev)) continue;
-      rows.push(cloudRow(ev));
+      var row = cloudRow(ev);
+      if (!row || row.source !== SOURCE) continue;
+      rows.push(row);
     }
     return rows;
   }
@@ -551,7 +600,8 @@
 
   function fromRemote(row) {
     if (!row || !row.event_id || !row.event_type) return null;
-    if (row.source && row.source !== SOURCE) return null;
+    var source = row.source ? String(row.source) : SOURCE;
+    if (source !== SOURCE && !isAlsSenseReturn(source, row.event_type)) return null;
     var payload = row.payload;
     if (typeof payload === "string") {
       try { payload = JSON.parse(payload); } catch (_) { payload = {}; }
@@ -561,7 +611,7 @@
       event_id: String(row.event_id),
       learner_id: row.learner_id || "",
       user_id: row.user_id || row.learner_id || "",
-      source: SOURCE,
+      source: source,
       event_type: row.event_type,
       created_at: row.created_at,
       payload: payload,
@@ -614,6 +664,51 @@
     return { store: store, added: added };
   }
 
+  var REMOTE_COLUMNS = CLOUD_COLUMNS.join(",");
+
+  function settled(promise) {
+    return Promise.resolve(promise).then(
+      function (res) { return res || { data: [], error: null }; },
+      function (err) { return { data: [], error: err }; }
+    );
+  }
+
+  /**
+   * QuizMario rows for this learner, plus source=als sense_return types.
+   * Two selects: event_type values contain dots, and .in() keeps each
+   * value inside the list. RLS SELECT is own learner_id for either source.
+   */
+  function fetchRemoteRows(client, learnerId) {
+    if (!client || !learnerId) return Promise.resolve({ rows: [], error: null });
+    function select() {
+      return client.from("learner_events").select(REMOTE_COLUMNS);
+    }
+    var qm = select()
+      .eq("learner_id", learnerId)
+      .eq("source", SOURCE)
+      .order("created_at", { ascending: false })
+      .limit(MAX_EVENTS);
+    var als = select()
+      .eq("learner_id", learnerId)
+      .eq("source", ALS_SOURCE)
+      .in("event_type", ALS_RETURN_TYPES.slice())
+      .order("created_at", { ascending: false })
+      .limit(MAX_EVENTS);
+    return Promise.all([settled(qm), settled(als)]).then(function (pair) {
+      var qmRes = pair[0] || {};
+      var alsRes = pair[1] || {};
+      var rows = [];
+      if (!qmRes.error && qmRes.data && qmRes.data.length) rows = rows.concat(qmRes.data);
+      if (!alsRes.error && alsRes.data && alsRes.data.length) rows = rows.concat(alsRes.data);
+      return {
+        rows: rows,
+        error: qmRes.error || alsRes.error || null,
+        quizmarioError: qmRes.error || null,
+        alsError: alsRes.error || null,
+      };
+    });
+  }
+
   function classifyCloudError(err) {
     var msg = (err && err.message) || String(err || "");
     if (/learner_events|schema cache|does not exist|42P01|PGRST205|PGRST204/i.test(msg)) return "missing";
@@ -663,13 +758,25 @@
 
     function statusText() {
       var store = load();
-      var n = store.events.length;
-      var up = countUploaded(store);
+      var counts = { qm: 0, als: 0 };
+      var all = store.events || [];
+      for (var c = 0; c < all.length; c++) {
+        if (all[c] && all[c].source === ALS_SOURCE) counts.als++;
+        else counts.qm++;
+      }
+      var n = counts.qm + counts.als;
+      var uploadedMap = store.uploaded || {};
+      var up = 0;
+      for (var u = 0; u < all.length; u++) {
+        if (!all[u] || all[u].source === ALS_SOURCE) continue;
+        if (uploadedMap[all[u].event_id]) up++;
+      }
       var mode = cloudMode();
       if (!n) {
         return "还没有学习信号。答对、答错、进入错词本，或首页算出今日到期之后，可以下载 JSONL。间隔重复仍由本机计算。";
       }
-      var base = "本机 " + n + " 条学习信号（source=quizmario）";
+      var base = "本机 " + counts.qm + " 条学习信号（source=quizmario）";
+      if (counts.als) base += "，另有 " + counts.als + " 条 ALS sense_return（只读，不上传）";
       if (mode === "session" && cloudState === "ok" && up > 0) {
         return base + "，其中 " + up + " 条已写入 Supabase learner_events。ALS 不会自动收到这些行：下载 JSONL 交给 ingest，或等 ALS 自己来读这张表。";
       }
@@ -752,22 +859,25 @@
       try { return clientApi.client(); } catch (_) { return null; }
     }
 
+    function notifyPulled() {
+      try {
+        var qm = root.__QM;
+        if (qm && typeof qm.onLearnerEvents === "function") qm.onLearnerEvents();
+      } catch (_) {}
+    }
+
     async function pullOnce() {
       if (pulled) return;
       var client = clientOrNull();
       var store = load();
       if (!client || !store.learner_id) return;
       pulled = true;
-      var res = await client.from("learner_events")
-        .select("event_id,learner_id,user_id,source,event_type,payload,created_at,item_id,headword,frame_id,cefr_level,run_purpose")
-        .eq("learner_id", store.learner_id)
-        .eq("source", SOURCE)
-        .order("created_at", { ascending: false })
-        .limit(MAX_EVENTS);
-      if (res.error) throw res.error;
-      mergeRemote(store, res.data || []);
+      var fetched = await fetchRemoteRows(client, store.learner_id);
+      if (fetched.rows && fetched.rows.length) mergeRemote(store, fetched.rows);
       persistStore();
       refreshStatus();
+      notifyPulled();
+      if (fetched.error) throw fetched.error;
     }
 
     async function flushOnce(force) {
@@ -851,8 +961,19 @@
       setNote("");
     }
 
-    function download() {
+    function exportJsonlEvents() {
+      var out = [];
       var events = exportEvents();
+      for (var i = 0; i < events.length; i++) {
+        var ev = events[i];
+        if (ev && ev.source && ev.source !== SOURCE) continue;
+        out.push(ev);
+      }
+      return out;
+    }
+
+    function download() {
+      var events = exportJsonlEvents();
       if (!events.length) {
         setNote("还没有学习信号，没有文件可下。");
         return "";
@@ -877,7 +998,7 @@
     }
 
     function copyJsonl() {
-      var events = exportEvents();
+      var events = exportJsonlEvents();
       if (!events.length) {
         setNote("还没有学习信号，没有内容可复制。");
         return Promise.resolve("");
@@ -1004,7 +1125,7 @@
     api.flush = flush;
     api.clear = clear;
     api.list = function () { return exportEvents().map(publicEvent); };
-    api.toJsonl = function () { return toJsonl(exportEvents()); };
+    api.toJsonl = function () { return toJsonl(exportJsonlEvents()); };
     api.download = download;
     api.copyJsonl = copyJsonl;
     api._load = load;
@@ -1037,6 +1158,8 @@
 
   var api = {
     SOURCE: SOURCE,
+    ALS_SOURCE: ALS_SOURCE,
+    ALS_RETURN_TYPES: ALS_RETURN_TYPES,
     STORAGE_KEY: STORAGE_KEY,
     MAX_EVENTS: MAX_EVENTS,
     TYPES: TYPES,
@@ -1063,8 +1186,10 @@
     pendingRows: pendingRows,
     markUploaded: markUploaded,
     countUploaded: countUploaded,
+    isAlsSenseReturn: isAlsSenseReturn,
     fromRemote: fromRemote,
     mergeRemote: mergeRemote,
+    fetchRemoteRows: fetchRemoteRows,
     classifyCloudError: classifyCloudError,
     installBrowser: installBrowser,
   };
