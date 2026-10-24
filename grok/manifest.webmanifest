@@ -1,7 +1,7 @@
 {
-  "name": "聚光单词（grok） — Vocab Spotlight",
-  "short_name": "聚光单词 grok",
-  "description": "聚光单词（grok） Vocab Spotlight",
+  "name": "聚光单词 · 1st edition — Vocab Spotlight",
+  "short_name": "聚光单词 1st edition",
+  "description": "聚光单词 · 1st edition Vocab Spotlight",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

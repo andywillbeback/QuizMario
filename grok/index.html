@@ -3,10 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<style>html:not(.session-ok),html:not(.session-ok) body{background:#03060f}html:not(.session-ok) body{visibility:hidden}</style>
+<style>
+html:not(.session-ok),html:not(.session-ok) body{background:#03060f}
+html:not(.session-ok) body{visibility:hidden}
+html:not(.session-ok) #auth-hold{visibility:visible;display:flex;position:fixed;inset:0;z-index:5;margin:0;align-items:center;justify-content:center;text-align:center;color:#f4f7ff;font:600 16px/1.5 "PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif;letter-spacing:.04em}
+html.session-ok #auth-hold{display:none!important}
+html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(.session-ok) #login-cta{display:none!important}
+</style>
 <script>
 (function () {
   var blob = (location.search || "") + (location.hash || "");
+  function plausible() {
+    try {
+      var raw = localStorage.getItem("quizmario-auth");
+      var s = raw && JSON.parse(raw);
+      return !!(s && s.user && (s.access_token || s.refresh_token));
+    } catch (e) {
+      return false;
+    }
+  }
+  window.addEventListener("pageshow", function (ev) {
+    if (!ev.persisted) return;
+    if (plausible() || window.__QM_AUTH_PENDING) return;
+    document.documentElement.classList.remove("session-ok");
+    location.replace("login.html");
+  });
   if (/type=recovery/.test(blob)) {
     location.replace("login.html" + blob);
     return;
@@ -14,33 +35,25 @@
   var pending = /[?&#](code|access_token|error|error_description)=/.test(blob)
     || /type=(signup|magiclink|invite)/.test(blob);
   window.__QM_AUTH_PENDING = pending;
-  if (pending) return;
-  var signed = false;
-  try {
-    var raw = localStorage.getItem("quizmario-auth");
-    var s = raw && JSON.parse(raw);
-    signed = !!(s && s.user && (s.access_token || s.refresh_token));
-  } catch (e) {}
-  if (signed) {
+  if (pending || plausible()) {
     window.__QM_EXPECT_SESSION = true;
-    document.documentElement.classList.add("session-ok");
-  } else {
-    location.replace("login.html");
+    return;
   }
+  location.replace("login.html");
 })();
 </script>
 <meta name="theme-color" content="#03060f">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="聚光单词（grok）">
-<meta name="application-name" content="聚光单词（grok）">
+<meta name="apple-mobile-web-app-title" content="聚光单词 · 1st edition">
+<meta name="application-name" content="聚光单词 · 1st edition">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
-<title>聚光单词（grok） — Vocab Spotlight</title>
+<title>聚光单词 · 1st edition — Vocab Spotlight</title>
 <style>
   :root {
     --bg: #03060f;
@@ -1138,6 +1151,7 @@
 </style>
 </head>
 <body class="at-gate">
+<p id="auth-hold" role="status">聚光单词 · 1st edition<br>正在确认登录…</p>
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 <div id="sort-bar" class="sort-bar" role="group" aria-label="连杀语音">
@@ -1145,11 +1159,11 @@
 </div>
 <div class="app">
   <header class="brand">
-    <h1>聚光单词<span class="build-badge">（grok）</span></h1>
+    <h1>聚光单词<span class="build-badge">1st edition</span></h1>
   </header>
 
   <div id="account-bar">
-    <span id="sync-status" aria-live="polite">未登录本地</span>
+    <span id="sync-status" aria-live="polite">正在确认登录…</span>
     <a id="login-link" href="login.html">登录 / 注册</a>
     <button id="btn-logout" class="ghost" type="button" hidden>退出登录</button>
     <label id="wipe-label" hidden><input id="wipe-local" type="checkbox"> 退出时清除本机</label>
@@ -1169,7 +1183,7 @@
     <!-- LANDING: only the two exam tracks -->
     <section id="screen-gate" class="screen active" aria-label="选择考试">
       <div class="gate">
-        <p class="gate-mark">聚光单词（grok）</p>
+        <p class="gate-mark">聚光单词 · 1st edition</p>
         <div class="gate-actions">
           <button id="btn-gate-zhongkao" type="button">中考</button>
           <button id="btn-gate-gaokao" type="button">高考</button>
@@ -1195,7 +1209,7 @@
           <button id="btn-challenge" class="secondary" type="button">12分钟挑战</button>
           <button id="btn-spelling" class="secondary" type="button">拼写</button>
           <button id="btn-levels" class="secondary" type="button">选择关卡</button>
-          <a id="login-cta" class="btn secondary" href="login.html">登录 / 注册</a>
+          <a id="login-cta" class="btn secondary" href="login.html" hidden>登录 / 注册</a>
           <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
         </div>
@@ -1315,6 +1329,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
   <script src="sync-merge.js"></script>
   <script src="cloud-client.js"></script>
+  <script src="entry-guard.js"></script>
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>

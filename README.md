@@ -4,7 +4,7 @@
 
 线上：https://andywillbeback.github.io/QuizMario/ · 教师看板：teacher.html
 
-Grok 版：https://andywillbeback.github.io/QuizMario/grok/ · 教师图表看板：https://andywillbeback.github.io/QuizMario/grok/teacher.html
+聚光单词 · 1st edition：https://andywillbeback.github.io/QuizMario/grok/ · 教师图表看板：https://andywillbeback.github.io/QuizMario/grok/teacher.html
 
 - 词库：原版核心 8 组 400 词 · 中考核心 100 · KET(A2) 100 · PET(B1) 100 · 四级基础 100（每组 50 词，新词库均含例句）
 - Anki-lite SRS（Good / Easy）。通关：本组至少 80% 的词条进入复习且间隔 ≥1 天。答错会把那一张退回学习、稍后重问，但不再要求新词 / 到期 / 学习中全部为 0。
@@ -58,7 +58,7 @@ Grok 版：https://andywillbeback.github.io/QuizMario/grok/ · 教师图表看�
 - 退出只清登录会话。勾选「退出时清除本机」并在弹窗里确认后，才会删本机进度和学习信号；云端不删。
 - 已登录时点「重置进度」只清本机进度和学习信号。刷新后云端进度会再同步下来。云端 `learner_events` 行不删。
 
-## 教师看板（聚光单词 grok）
+## 教师看板（聚光单词 · 1st edition）
 
 教师打开 https://andywillbeback.github.io/QuizMario/grok/teacher.html ，用 Supabase 邮箱和密码登录。页面使用 `grok/config.js` 里的 anon / publishable key，不使用 `service_role`。学生首页和登录页没有指向这块看板的链接。
 

@@ -5,7 +5,7 @@
  *
  * SUPABASE_URL      Project URL, like https://xxxxxxxx.supabase.co
  * SUPABASE_ANON_KEY anon / public key (legacy JWT eyJ… or sb_publishable_…)
- * SITE_URL          Auth Site URL for this Grok build. Keep the trailing slash.
+ * SITE_URL          Auth Site URL for this grok-track build. Keep the trailing slash.
  */
 window.QUIZMARIO_CONFIG = {
   SUPABASE_URL: "https://cmainasvlfdynidabunp.supabase.co",
