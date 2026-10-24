@@ -1,7 +1,11 @@
 /* QuizMario → ALS learner_events.
  * Signals only. SM-2 / Anki-lite clocks stay in srs-rules.js.
  * Local outbox (quizmario_learner_events_v1) is the JSONL export.
- * Logged-in inserts go to Supabase public.learner_events (see supabase/learner_events.sql).
+ * Logged-in inserts go to Supabase public.learner_events
+ * (see supabase/learner_events.sql and supabase/learner_events_evidence.sql).
+ * The upsert sends only DB_COLUMNS. evidence_kind, independent, and
+ * task_direction are optional top-level columns and are always copied into
+ * payload. The browser uses the anon key through QuizMarioCloudClient.
  * A failed insert must not affect user_progress sync.
  *
  * Also require()-able from node tests. Browser storage attaches when document exists.
@@ -28,6 +32,16 @@
     mc_recognition: true,
     mc_production: true,
   };
+  /** Top-level columns public.learner_events accepts.
+   *  Keep this list aligned with supabase/learner_events.sql.
+   *  Unknown keys must not be upserted: PostgREST returns PGRST204. */
+  var DB_COLUMNS = [
+    "event_id", "learner_id", "user_id", "source", "event_type",
+    "payload", "created_at", "item_id", "headword", "frame_id",
+    "cefr_level", "run_purpose",
+    "evidence_kind", "independent", "task_direction",
+  ];
+  var REMOTE_COLUMNS = DB_COLUMNS.join(",");
 
   /** Copy typed-spelling evidence onto the event and its payload. false is stored. */
   function applyEvidence(ev, input) {
@@ -201,7 +215,46 @@
     return store;
   }
 
+  function copyPayload(src) {
+    var payload = {};
+    if (!src || typeof src !== "object" || Array.isArray(src)) return payload;
+    var keys = Object.keys(src);
+    for (var i = 0; i < keys.length; i++) payload[keys[i]] = src[keys[i]];
+    return payload;
+  }
+
+  function hasValue(value) {
+    return value != null && value !== "";
+  }
+
+  /** Prefer the event field, then payload. false is a real independent flag. */
+  function evidenceOf(ev, key) {
+    var top = ev ? ev[key] : undefined;
+    if (top === false || hasValue(top)) return top;
+    var payload = ev && ev.payload;
+    if (payload && (payload[key] === false || hasValue(payload[key]))) return payload[key];
+    return undefined;
+  }
+
+  function pickDbColumns(row) {
+    var out = {};
+    if (!row) return out;
+    for (var i = 0; i < DB_COLUMNS.length; i++) {
+      var key = DB_COLUMNS[i];
+      if (Object.prototype.hasOwnProperty.call(row, key)) out[key] = row[key];
+    }
+    return out;
+  }
+
   function publicEvent(ev) {
+    ev = ev || {};
+    var payload = copyPayload(ev.payload);
+    var kind = evidenceOf(ev, "evidence_kind");
+    var independent = evidenceOf(ev, "independent");
+    var direction = evidenceOf(ev, "task_direction");
+    if (hasValue(kind)) payload.evidence_kind = kind;
+    if (independent === true || independent === false) payload.independent = independent;
+    if (hasValue(direction)) payload.task_direction = direction;
     var out = {
       event_id: ev.event_id,
       learner_id: ev.learner_id || "",
@@ -209,17 +262,17 @@
       source: SOURCE,
       event_type: ev.event_type,
       created_at: normalizeIso(ev.created_at) || ev.created_at,
-      payload: ev.payload || {},
+      payload: payload,
     };
     if (ev.item_id) out.item_id = ev.item_id;
     if (ev.headword) out.headword = ev.headword;
     if (ev.frame_id) out.frame_id = ev.frame_id;
     if (ev.cefr_level) out.cefr_level = ev.cefr_level;
     if (ev.run_purpose) out.run_purpose = ev.run_purpose;
-    if (ev.evidence_kind) out.evidence_kind = ev.evidence_kind;
-    if (ev.independent === true || ev.independent === false) out.independent = ev.independent;
-    if (ev.task_direction) out.task_direction = ev.task_direction;
-    return out;
+    if (hasValue(kind)) out.evidence_kind = kind;
+    if (independent === true || independent === false) out.independent = independent;
+    if (hasValue(direction)) out.task_direction = direction;
+    return pickDbColumns(out);
   }
 
   function toJsonl(events) {
@@ -230,6 +283,7 @@
     return lines.length ? lines.join("\n") + "\n" : "";
   }
 
+  /** Rows still to insert. Only DB_COLUMNS, so an unknown field cannot 400 the flush. */
   function pendingRows(store) {
     var learner = store && store.learner_id;
     var uploaded = (store && store.uploaded) || {};
@@ -240,7 +294,7 @@
       if (!ev.learner_id || (learner && ev.learner_id !== learner)) continue;
       if (uploaded[ev.event_id]) continue;
       if (ev.source && ev.source !== SOURCE) continue;
-      rows.push(publicEvent(ev));
+      rows.push(pickDbColumns(publicEvent(ev)));
     }
     return rows;
   }
@@ -461,7 +515,7 @@
       if (!client || !store.learner_id) return;
       pulled = true;
       var res = await client.from("learner_events")
-        .select("event_id,learner_id,user_id,source,event_type,payload,created_at,item_id,headword,frame_id,cefr_level,run_purpose")
+        .select(REMOTE_COLUMNS)
         .eq("learner_id", store.learner_id)
         .eq("source", SOURCE)
         .order("created_at", { ascending: false })
@@ -657,6 +711,7 @@
     append: append,
     stampLearner: stampLearner,
     retainLearner: retainLearner,
+    DB_COLUMNS: DB_COLUMNS,
     publicEvent: publicEvent,
     toJsonl: toJsonl,
     pendingRows: pendingRows,

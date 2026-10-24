@@ -609,3 +609,68 @@ function wrong(extra) {
     process.exit(1);
   });
 }
+
+{
+  const gle = require("../grok/learner-events");
+  const known = [
+    "event_id", "learner_id", "user_id", "source", "event_type",
+    "payload", "created_at", "item_id", "headword", "frame_id",
+    "cefr_level", "run_purpose",
+    "evidence_kind", "independent", "task_direction",
+  ];
+  assert.deepStrictEqual(gle.DB_COLUMNS, known);
+  const schemaDir = path.join(__dirname, "../grok/supabase");
+  const schema = fs.readFileSync(path.join(schemaDir, "learner_events.sql"), "utf8");
+  const migration = fs.readFileSync(path.join(schemaDir, "learner_events_evidence.sql"), "utf8");
+  known.forEach((col) => {
+    assert.ok(schema.includes(col), "schema names " + col);
+  });
+  ["evidence_kind", "independent", "task_direction"].forEach((col) => {
+    assert.ok(migration.includes("add column if not exists " + col), "migration adds " + col);
+  });
+  assert.ok(!/service_role/i.test(fs.readFileSync(path.join(__dirname, "../grok/learner-events.js"), "utf8")));
+  const stray = gle.buildEvent({
+    event_type: gle.TYPES.WRONG,
+    learner_id: UID,
+    headword: "apple",
+    task_direction: "spelling",
+    evidence_kind: "typed_spelling",
+    independent: false,
+    created_at: NOW,
+  }, NOW);
+  stray.not_a_column = "nope";
+  stray.payload.gloss_zh = "苹果";
+  const pub = gle.publicEvent(stray);
+  Object.keys(pub).forEach((key) => {
+    assert.ok(known.indexOf(key) !== -1, "publicEvent stays on " + key);
+  });
+  assert.ok(!Object.prototype.hasOwnProperty.call(pub, "not_a_column"));
+  assert.strictEqual(pub.evidence_kind, "typed_spelling");
+  assert.strictEqual(pub.independent, false);
+  assert.strictEqual(pub.task_direction, "spelling");
+  assert.strictEqual(pub.payload.evidence_kind, "typed_spelling");
+  assert.strictEqual(pub.payload.independent, false);
+  assert.strictEqual(pub.payload.task_direction, "spelling");
+  assert.strictEqual(pub.payload.gloss_zh, "苹果");
+  const bare = gle.publicEvent(gle.buildEvent({
+    event_type: gle.TYPES.DUE,
+    learner_id: UID,
+    headword: "apple",
+    due_at: NOW,
+    created_at: NOW,
+  }, NOW));
+  assert.ok(!Object.prototype.hasOwnProperty.call(bare, "evidence_kind"));
+  assert.ok(!Object.prototype.hasOwnProperty.call(bare, "independent"));
+  assert.ok(!Object.prototype.hasOwnProperty.call(bare, "task_direction"));
+  const store = gle.emptyStore();
+  store.learner_id = UID;
+  gle.append(store, stray);
+  const rows = gle.pendingRows(store);
+  assert.strictEqual(rows.length, 1);
+  Object.keys(rows[0]).forEach((key) => {
+    assert.ok(known.indexOf(key) !== -1, "pendingRows stays on " + key);
+  });
+  assert.ok(!Object.prototype.hasOwnProperty.call(rows[0], "not_a_column"));
+  assert.strictEqual(rows[0].payload.evidence_kind, "typed_spelling");
+  assert.strictEqual(rows[0].independent, false);
+}
