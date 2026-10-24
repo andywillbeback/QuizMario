@@ -23,6 +23,32 @@
     WRONG_BOOK: "vocab.wrong_book_add",
   };
   var EPOCH_DUE = "1970-01-01T00:00:00.000Z";
+  var EVIDENCE_KIND = {
+    typed_spelling: true,
+    mc_recognition: true,
+    mc_production: true,
+  };
+
+  /** Copy typed-spelling evidence onto the event and its payload. false is stored. */
+  function applyEvidence(ev, input) {
+    if (!ev || !input) return ev;
+    if (!ev.payload || typeof ev.payload !== "object") ev.payload = {};
+    var kind = input.evidence_kind != null ? String(input.evidence_kind).trim() : "";
+    if (EVIDENCE_KIND[kind]) {
+      ev.evidence_kind = kind;
+      ev.payload.evidence_kind = kind;
+    }
+    if (input.independent === true || input.independent === false) {
+      ev.independent = input.independent;
+      ev.payload.independent = input.independent;
+    }
+    if (input.task_direction) {
+      var dir = String(input.task_direction);
+      ev.task_direction = dir;
+      ev.payload.task_direction = dir;
+    }
+    return ev;
+  }
 
   function emptyStore() {
     return { v: 1, learner_id: "", events: [], uploaded: {} };
@@ -89,6 +115,7 @@
     if (head) ev.headword = head;
     var cefr = input.cefr_level || cefrForTrack(input.track);
     if (cefr) ev.cefr_level = cefr;
+    applyEvidence(ev, input);
     return ev;
   }
 
@@ -189,6 +216,9 @@
     if (ev.frame_id) out.frame_id = ev.frame_id;
     if (ev.cefr_level) out.cefr_level = ev.cefr_level;
     if (ev.run_purpose) out.run_purpose = ev.run_purpose;
+    if (ev.evidence_kind) out.evidence_kind = ev.evidence_kind;
+    if (ev.independent === true || ev.independent === false) out.independent = ev.independent;
+    if (ev.task_direction) out.task_direction = ev.task_direction;
     return out;
   }
 
@@ -253,6 +283,11 @@
     if (row.frame_id) ev.frame_id = String(row.frame_id);
     if (row.cefr_level) ev.cefr_level = String(row.cefr_level);
     if (row.run_purpose) ev.run_purpose = String(row.run_purpose);
+    applyEvidence(ev, {
+      evidence_kind: row.evidence_kind || payload.evidence_kind,
+      independent: row.independent === true || row.independent === false ? row.independent : payload.independent,
+      task_direction: row.task_direction || payload.task_direction,
+    });
     return ev;
   }
 
@@ -615,6 +650,8 @@
     headwordOf: headwordOf,
     cefrForTrack: cefrForTrack,
     dueAtIso: dueAtIso,
+    EVIDENCE_KIND: EVIDENCE_KIND,
+    applyEvidence: applyEvidence,
     buildEvent: buildEvent,
     dueDedupeKey: dueDedupeKey,
     append: append,

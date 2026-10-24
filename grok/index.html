@@ -462,6 +462,7 @@
 
   #answer-area { margin-top: 4px; }
   #type-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  #type-row[hidden], #card-speak[hidden] { display: none !important; }
   #answer-input {
     flex: 1; min-width: 180px;
     font-size: 1.15rem; padding: 12px 14px; border-radius: 12px;
@@ -894,6 +895,15 @@
   .stats-chart { width: 100%; height: auto; margin-top: 8px; }
   .stats-legend { font-size: .75rem !important; opacity: .75; }
   .stats-tracks { margin: 4px 0 0; padding-left: 18px; font-size: .82rem; line-height: 1.6; }
+  #report-panel label { display: block; font-size: .82rem; margin: 10px 0 4px; }
+  #report-panel input, #report-code {
+    width: 100%; box-sizing: border-box;
+    padding: 10px 12px; border-radius: 10px; font: inherit; font-size: 16px;
+    border: 1px solid rgba(255,255,255,.2);
+    background: rgba(3, 6, 14, 0.55); color: #fff;
+  }
+  #report-code { min-height: 4.8em; resize: vertical; }
+  #report-panel .btn-row { justify-content: flex-start; }
   .speak-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .speak-btn { padding: 6px 10px; font-size: .85rem; border-radius: 999px; }
   .speak-row .fb-ex { flex-basis: 100%; }
@@ -1200,12 +1210,28 @@
         </div>
         <p id="continue-hint" class="sub continue-hint" hidden></p>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
-          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 拼写另算，不挡住第一次通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd> · 看完解析后 <kbd>Enter</kbd>=继续
+          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 拼写改为键入英文，旧选择成绩不算独立拼写；拼写另算，不挡住第一次通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>（拼写时不选）· 拼写时 <kbd>Enter</kbd>=检查 · 看完解析后 <kbd>Enter</kbd>=继续
         </p>
 
         <div id="stats-panel" class="panel">
           <h3>📈 我的学习数据</h3>
           <div id="stats-body"></div>
+        </div>
+
+        <div id="report-panel" class="panel">
+          <h3>学习报告码</h3>
+          <p class="sub">填写姓名和班级码，再复制发给老师。码以 QMR1. 开头。老师打开教师看板，粘贴后点「导入报告码」。</p>
+          <label for="profile-name">姓名</label>
+          <input id="profile-name" type="text" autocomplete="name" maxlength="40" placeholder="姓名">
+          <label for="profile-cls">班级码</label>
+          <input id="profile-cls" type="text" autocomplete="off" autocapitalize="characters" maxlength="40" placeholder="班级码" aria-label="班级码">
+          <div class="btn-row">
+            <button id="btn-report" type="button">复制学习报告码</button>
+            <a class="btn secondary" href="teacher.html">教师看板</a>
+          </div>
+          <label for="report-code">报告码</label>
+          <textarea id="report-code" readonly rows="3" spellcheck="false" placeholder="报告码会出现在这里" aria-label="学习报告码"></textarea>
+          <p id="report-status" class="sub" role="status"></p>
         </div>
 
         <div id="learner-events-panel" class="panel">
@@ -1225,7 +1251,7 @@
     <section id="screen-levels" class="screen">
       <div class="title-card">
         <h2>选择关卡 Word sets</h2>
-        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；拼写单独记。</p>
+        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；拼写改为键入，单独记，不挡住第一次通关。</p>
         <div id="level-grid" class="level-grid"></div>
         <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
       </div>
@@ -1250,8 +1276,13 @@
         <div id="prompt-label">英文 → 中文意思</div>
         <div id="prompt-main">—</div>
         <div id="prompt-hint"></div>
+        <div id="card-speak" class="speak-row" hidden></div>
       </div>
       <div id="answer-area">
+        <div id="type-row" hidden>
+          <input id="answer-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="输入英文拼写" placeholder="输入英文单词">
+          <button id="btn-check-spelling" class="secondary" type="button">检查</button>
+        </div>
         <div id="choices" role="group" aria-label="选择英文单词" hidden></div>
         <button id="btn-unknown" class="ghost" type="button" hidden>不会</button>
       </div>

@@ -34,5 +34,77 @@
     return text.replace(re, "___");
   }
 
-  return { blankExample: blankExample };
+  var PLACEHOLDER_EXAMPLE = [
+    /junior-high English sentence/i,
+    /^Please .+ carefully during the lesson\.?$/i,
+    /^I saw a .+ near the /i,
+    /^Please listen .+ in class\.?$/i,
+    /^It feels .+ at the /i,
+    /^There is a .+ in our classroom\.?$/i,
+  ];
+
+  function isPlaceholderExample(example) {
+    if (!example) return true;
+    var text = String(example);
+    for (var i = 0; i < PLACEHOLDER_EXAMPLE.length; i++) {
+      if (PLACEHOLDER_EXAMPLE[i].test(text)) return true;
+    }
+    return false;
+  }
+
+  /** True when `word` is a whole token in `text`, even if blanking failed closed. */
+  function containsToken(text, word) {
+    var raw = text == null ? "" : String(text);
+    var target = word == null ? "" : String(word).trim();
+    if (!raw || !target) return false;
+    if (blankExample(raw, target) !== raw) return true;
+    var escaped = escapeRegExp(target);
+    try {
+      return new RegExp("(?:^|[^A-Za-z0-9'’])(?:" + escaped + ")(?:$|[^A-Za-z0-9'’])", "i").test(" " + raw + " ");
+    } catch (_) {
+      return raw.toLowerCase().indexOf(target.toLowerCase()) !== -1;
+    }
+  }
+
+  /** Speakable cloze: the answer token becomes the word "blank", not the spelling. */
+  function speechBlank(example, word) {
+    return blankExample(example, word).replace(/___+/g, "blank");
+  }
+
+  /**
+   * During-card speech. Meaning (and challenge, which is meaning) may speak the
+   * English prompt. Spelling and other ZH→EN modes must not speak the answer
+   * word; the example is spoken only after the answer token is blanked.
+   */
+  function cardSpeechPlan(card, direction) {
+    card = card || {};
+    var meaning = direction === "meaning";
+    var word = card.word || "";
+    var example = card.example_en || "";
+    var plan = {
+      autoSpeakWord: !!(meaning && word),
+      showWord: !!(meaning && word),
+      exampleSay: "",
+    };
+    if (!example || isPlaceholderExample(example)) return plan;
+    if (meaning) {
+      plan.exampleSay = example;
+      return plan;
+    }
+    if (containsToken(example, word)) {
+      var spoken = speechBlank(example, word);
+      if (!containsToken(spoken, word)) plan.exampleSay = spoken;
+      return plan;
+    }
+    plan.exampleSay = example;
+    return plan;
+  }
+
+  return {
+    blankExample: blankExample,
+    isPlaceholderExample: isPlaceholderExample,
+    containsToken: containsToken,
+    speechBlank: speechBlank,
+    cardSpeechPlan: cardSpeechPlan,
+  };
 });
