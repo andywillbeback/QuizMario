@@ -519,7 +519,7 @@ function wrong(extra) {
       });
     },
   };
-  le.fetchRemoteRows(client, UID).then((fetched) => {
+  le.fetchRemoteRows(client, UID).then(async (fetched) => {
     assert.strictEqual(fetched.error, null);
     assert.strictEqual(calls.length, 2, "pull reads quizmario rows and ALS returns separately");
     assert.ok(calls.every((call) => call.eqs.some((pair) => pair[0] === "learner_id" && pair[1] === UID)));
@@ -592,17 +592,299 @@ function wrong(extra) {
       created_at: "2020-01-01T00:00:00.000Z",
     });
     le.append(full, oldReturn);
-    assert.strictEqual(full.events.length, le.MAX_EVENTS);
+    // Soft overflow: every row above was still unuploaded, so the return
+    // is kept without dropping them (Q6 / 聚光单词（grok）).
+    assert.strictEqual(full.events.length, le.MAX_EVENTS + 1,
+      "unuploaded quizmario rows soft-overflow past the 800 cap with an ALS return");
     assert.ok(full.events.some((ev) => ev.source === "als" && ev.sense_id === "ability.n.能力"),
-      "the cap drops a quizmario row before an ALS return");
+      "ALS return is kept");
+    assert.strictEqual(
+      full.events.filter((ev) => ev.source !== "als").length,
+      le.MAX_EVENTS,
+      "no unuploaded quizmario row was dropped for the return"
+    );
+
+    {
+      // Cap may drop uploaded quizmario, never pending ones.
+      const mix = le.emptyStore();
+      mix.learner_id = UID;
+      for (let i = 0; i < le.MAX_EVENTS; i++) {
+        const ev = wrong({
+          event_id: "42000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-22T10:00:" + String(i % 60).padStart(2, "0") + ".000Z",
+        });
+        le.append(mix, ev);
+        le.markUploaded(mix, [ev.event_id]);
+      }
+      assert.strictEqual(mix.events.length, le.MAX_EVENTS);
+      const pendingIds = [];
+      for (let i = 0; i < 50; i++) {
+        const ev = wrong({
+          event_id: "41000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-22T11:00:" + String(i % 60).padStart(2, "0") + ".000Z",
+        });
+        le.append(mix, ev);
+        pendingIds.push(ev.event_id);
+      }
+      // Soft overflow: 50 pending + up to 750 newest uploaded.
+      assert.strictEqual(mix.events.length, le.MAX_EVENTS);
+      for (const id of pendingIds) {
+        assert.ok(mix.events.some((ev) => ev.event_id === id), "pending " + id + " survived trim");
+      }
+      assert.strictEqual(le.pendingRows(mix, { force: true }).length, 50);
+      // due dedupe still collapses same card + due_at
+      const dueA = le.buildEvent({
+        event_type: le.TYPES.DUE,
+        learner_id: UID,
+        headword: "ability",
+        item_id: "zhongkao|0::ability",
+        track: "zhongkao",
+        due_at: "2026-10-23T00:00:00.000Z",
+        created_at: "2026-10-22T11:00:00.000Z",
+      });
+      const dueB = le.buildEvent({
+        event_type: le.TYPES.DUE,
+        learner_id: UID,
+        headword: "ability",
+        item_id: "zhongkao|0::ability",
+        track: "zhongkao",
+        due_at: "2026-10-23T00:00:00.000Z",
+        created_at: "2026-10-22T11:01:00.000Z",
+      });
+      const d1 = le.append(mix, dueA);
+      const d2 = le.append(mix, dueB);
+      assert.strictEqual(d2.duplicate, true, "offline retry of same due is deduped");
+      assert.strictEqual(d1.event.event_id, d2.event.event_id);
+    }
+
+    {
+      // 799 unuploaded must not eat the return budget down to one row.
+      const cliff = le.emptyStore();
+      for (let i = 0; i < le.MAX_EVENTS - 1; i++) {
+        le.append(cliff, wrong({
+          event_id: "43000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-22T09:" + String(Math.floor(i / 60) % 60).padStart(2, "0") + ":" + String(i % 60).padStart(2, "0") + ".000Z",
+        }));
+      }
+      le.append(cliff, le.fromRemote({
+        event_id: "30000000-0000-4000-8000-000000000201",
+        learner_id: UID,
+        user_id: UID,
+        source: "als",
+        event_type: "sense_return",
+        payload: { sense_id: "ability.n.能力" },
+        created_at: "2026-10-21T00:00:00.000Z",
+      }));
+      le.append(cliff, le.fromRemote({
+        event_id: "30000000-0000-4000-8000-000000000202",
+        learner_id: UID,
+        user_id: UID,
+        source: "als",
+        event_type: "als.sense_return",
+        payload: { sense_id: "accept.v.接受" },
+        created_at: "2026-10-22T12:00:00.000Z",
+      }));
+      assert.strictEqual(
+        cliff.events.filter((ev) => ev.source !== "als").length,
+        le.MAX_EVENTS - 1,
+        "unuploaded rows stay when returns push past the cap"
+      );
+      assert.deepStrictEqual(
+        cliff.events.filter((ev) => ev.source === "als").map((ev) => ev.sense_id).sort(),
+        ["ability.n.能力", "accept.v.接受"],
+        "both ALS returns survive a nearly full unuploaded outbox"
+      );
+    }
+
+    {
+      const packed = le.emptyStore();
+      packed.learner_id = UID;
+      for (let i = 0; i < 100; i++) {
+        const ev = wrong({
+          event_id: "44000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-20T00:00:" + String(i % 60).padStart(2, "0") + ".000Z",
+        });
+        packed.events.push(ev);
+        le.markUploaded(packed, [ev.event_id]);
+      }
+      for (let i = 0; i < 700; i++) {
+        packed.events.push(wrong({
+          event_id: "45000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          created_at: "2026-10-22T01:" + String(Math.floor(i / 60) % 60).padStart(2, "0") + ":" + String(i % 60).padStart(2, "0") + ".000Z",
+        }));
+      }
+      for (let i = 0; i < 150; i++) {
+        packed.events.push(le.fromRemote({
+          event_id: "46000000-0000-4000-8000-" + String(i).padStart(12, "0"),
+          learner_id: UID,
+          user_id: UID,
+          source: "als",
+          event_type: "sense_return",
+          payload: { sense_id: "sense" + i },
+          created_at: "2026-10-22T02:" + String(Math.floor(i / 60) % 60).padStart(2, "0") + ":" + String(i % 60).padStart(2, "0") + ".000Z",
+        }));
+      }
+      le.trim(packed);
+      assert.strictEqual(packed.events.filter((ev) => ev.source === "quizmario" && !packed.uploaded[ev.event_id]).length, 700);
+      assert.strictEqual(packed.events.filter((ev) => ev.source === "als").length, 150, "returns are not trimmed to make the cap");
+      assert.strictEqual(packed.events.filter((ev) => ev.source === "quizmario" && packed.uploaded[ev.event_id]).length, 0, "uploaded quizmario is what the cap drops");
+    }
+
     const sync = fs.readFileSync(path.join(__dirname, "../sync.js"), "utf8");
     assert.ok(sync.includes("await window.QuizMarioLearnerEvents.bindUser(user)"),
       "home sync waits for the pull before the session-ready paint");
     const game = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
     assert.ok(game.includes("markDeepQualified") && game.includes("onLearnerEvents"));
+    const leSrc = fs.readFileSync(path.join(__dirname, "../learner-events.js"), "utf8");
+    assert.ok(leSrc.includes('addEventListener("online"'), "online retries pending flush + pull");
+    assert.ok(leSrc.includes('addEventListener("pageshow"'), "pageshow re-pulls ALS returns after ALS tab");
+    assert.ok(leSrc.includes("retryOutboxAndPull"), "Q4/Q6 retry helper present");
+    assert.ok(leSrc.includes("Soft-overflow") || leSrc.includes("soft-overflow") || leSrc.includes("unuploaded"),
+      "trim documents unuploaded soft-overflow");
     const rules = fs.readFileSync(path.join(__dirname, "../srs-rules.js"), "utf8");
     assert.ok(!rules.includes("alsDeepDone") && !rules.includes("sense_return"),
       "recognition schedule() does not learn about ALS returns");
+
+    {
+      // Returning online with a stuck outbox must still re-pull sense_return.
+      const listeners = { doc: {}, win: {} };
+      const calls = [];
+      let alsRows = [];
+      let failUpsert = false;
+      let notified = 0;
+      function query(kind) {
+        const rec = { kind: kind, eqs: [], inn: null };
+        const chain = {
+          eq(k, v) { rec.eqs.push([k, v]); return chain; },
+          in(k, v) { rec.inn = [k, v]; return chain; },
+          order() { return chain; },
+          limit(n) {
+            rec.limit = n;
+            calls.push(rec);
+            const source = rec.eqs.filter((pair) => pair[0] === "source").map((pair) => pair[1])[0];
+            return Promise.resolve({ data: source === "als" ? alsRows : [], error: null });
+          },
+        };
+        return chain;
+      }
+      const cloud = {
+        from() {
+          return {
+            select() { return query("select"); },
+            upsert(rows, opts) {
+              calls.push({ kind: "upsert", n: rows.length, opts: opts });
+              if (failUpsert) return Promise.resolve({ error: { message: "upload failed" } });
+              return Promise.resolve({ error: null });
+            },
+          };
+        },
+      };
+      const storage = {};
+      const host = {
+        location: { search: "" },
+        console: { warn() {} },
+        localStorage: {
+          getItem(key) { return Object.prototype.hasOwnProperty.call(storage, key) ? storage[key] : null; },
+          setItem(key, value) { storage[key] = String(value); },
+          removeItem(key) { delete storage[key]; },
+        },
+        document: {
+          visibilityState: "visible",
+          getElementById() { return null; },
+          createElement() { return { appendChild() {}, setAttribute() {}, children: [] }; },
+          addEventListener(type, fn) { (listeners.doc[type] = listeners.doc[type] || []).push(fn); },
+        },
+        addEventListener(type, fn) { (listeners.win[type] = listeners.win[type] || []).push(fn); },
+        QuizMarioCloudClient: {
+          isConfigured() { return true; },
+          client() { return cloud; },
+        },
+        QuizMarioCloud: { loggedIn() { return true; } },
+        __QM: { onLearnerEvents() { notified++; } },
+      };
+      const prevWarn = console.warn;
+      console.warn = function () {};
+      le.installBrowser(host);
+      assert.ok(listeners.doc.visibilitychange, "visible tab retries");
+      assert.ok(listeners.win.pageshow, "pageshow retries");
+      assert.ok(listeners.win.online, "online retries");
+      await le.bindUser({ id: UID });
+      assert.strictEqual(calls.filter((c) => c.kind === "select").length, 2, "bind pulls both sources");
+
+      calls.length = 0;
+      notified = 0;
+      alsRows = [{
+        event_id: "50000000-0000-4000-8000-0000000000bb",
+        learner_id: UID,
+        user_id: UID,
+        source: "als",
+        event_type: "sense_return",
+        payload: { sense_id: "ability.n.能力", qualified_for_sense_return: true, independent: true },
+        created_at: "2026-10-22T08:00:00.000Z",
+      }];
+      host.document.visibilityState = "hidden";
+      listeners.doc.visibilitychange[0]();
+      host.document.visibilityState = "visible";
+      await listeners.doc.visibilitychange[0]();
+      // visible handler does not return the flush promise; wait on the chain via a second flush
+      await le.flush();
+      assert.ok(calls.filter((c) => c.kind === "select").length >= 2, "visible re-pulls ALS returns");
+      assert.ok(notified >= 1, "re-pull notifies the home");
+      assert.strictEqual(le.list().filter((ev) => ev.source === "als").length, 1);
+
+      calls.length = 0;
+      alsRows = alsRows.concat([{
+        event_id: "50000000-0000-4000-8000-0000000000cc",
+        learner_id: UID,
+        user_id: UID,
+        source: "als",
+        event_type: "als.sense_return",
+        payload: { sense_id: "accept.v.接受" },
+        created_at: "2026-10-22T09:00:00.000Z",
+      }]);
+      listeners.win.pageshow[0]();
+      await le.flush();
+      assert.ok(calls.filter((c) => c.kind === "select").length >= 2, "pageshow re-pulls");
+
+      le.record({
+        event_type: le.TYPES.WRONG,
+        learner_id: UID,
+        headword: "accept",
+        lemma: "accept",
+        pos: "v.",
+        gloss_zh: "接受",
+        item_id: "zhongkao|0::accept",
+        track: "zhongkao",
+        created_at: "2026-10-22T10:00:00.000Z",
+      });
+      failUpsert = true;
+      alsRows = alsRows.concat([{
+        event_id: "50000000-0000-4000-8000-0000000000dd",
+        learner_id: UID,
+        user_id: UID,
+        source: "als",
+        event_type: "sense_return",
+        payload: {
+          sense_id: "accept.v.接受",
+          qualified_for_sense_return: true,
+          independent: true,
+          task_direction: "production",
+        },
+        created_at: "2026-10-22T11:00:00.000Z",
+      }]);
+      calls.length = 0;
+      listeners.win.online[0]();
+      await le.flush();
+      const upserts = calls.filter((c) => c.kind === "upsert");
+      assert.ok(upserts.length >= 1 && upserts[0].opts && upserts[0].opts.ignoreDuplicates === true);
+      assert.ok(calls.filter((c) => c.kind === "select").length >= 2, "failed upload still re-pulls");
+      const pulled = le.list().find((ev) => ev.event_id === "50000000-0000-4000-8000-0000000000dd");
+      assert.ok(pulled, "sense_return landed despite the stuck outbox");
+      const stillPending = le.pendingRows(le._load(), { force: true });
+      assert.ok(stillPending.some((row) => row.headword === "accept"), "failed row stays pending");
+      console.warn = prevWarn;
+    }
+
     console.log("learner-events ok");
   }).catch((err) => {
     console.error(err);
