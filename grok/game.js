@@ -2058,6 +2058,7 @@
     } else {
       playPartClearCue(currentLevel);
     }
+    offerSetShare("level");
   }
 
 
@@ -2922,6 +2923,22 @@
     nextCard();
   }
 
+  /** Optional share card. A missing script or a throw must not block 通关 / 下一组. */
+  function offerSetShare(kind) {
+    try {
+      const box = $("share-achievement");
+      const sheet = $("share-sheet");
+      if (box) box.hidden = true;
+      if (sheet) sheet.hidden = true;
+      const api = window.QuizMarioShare;
+      if (!api || typeof api.onSetComplete !== "function") return;
+      api.onSetComplete({
+        kind: kind === "level" ? "level" : "session",
+        label: kind === "level" ? setTitle(currentLevel) : "",
+      });
+    } catch (_) {}
+  }
+
   function finishQueueSession() {
     stopChallenge();
     pendingRate = false;
@@ -2962,6 +2979,7 @@
         : "这些词都在错词本里连续答对了两次，已经毕业离开。";
     }
     showScreen("clear");
+    offerSetShare(kind);
   }
 
   function enterExam(id) {
@@ -3008,6 +3026,11 @@
       if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.clear === "function") {
         window.QuizMarioLearnerEvents.clear();
       }
+      try {
+        if (window.QuizMarioShare && typeof window.QuizMarioShare.clearLocal === "function") {
+          window.QuizMarioShare.clearLocal();
+        }
+      } catch (_) {}
       save = loadSave();
       sortMode = "default";
       voiceOn = true;

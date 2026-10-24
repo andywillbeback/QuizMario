@@ -666,6 +666,34 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     font-size: 2rem;
     min-height: 2.2em;
   }
+  #share-achievement[hidden],
+  #share-sheet[hidden],
+  #share-card-img[hidden],
+  #btn-share-save[hidden],
+  #btn-share-native[hidden] { display: none !important; }
+  .share-achievement { margin-top: 4px; }
+  .share-sheet { margin-top: 8px; }
+  #share-card-img {
+    display: block;
+    width: min(320px, 86vw);
+    height: auto;
+    margin: 8px auto 0;
+    border-radius: 18px;
+    background: #03060f;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
+    -webkit-touch-callout: default;
+  }
+  .share-copy {
+    margin: 10px auto 0;
+    max-width: 28rem;
+    line-height: 1.5;
+    color: var(--gold);
+    word-break: break-word;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+  #share-card-hint,
+  #share-card-status { margin: 8px auto 0; font-size: .82rem; }
 
   footer {
     padding: 8px 16px 6px; font-size: .78rem; color: var(--muted); text-align: center; max-width: 640px;
@@ -1281,6 +1309,21 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
           <button id="btn-next-level" type="button">Next set</button>
           <button id="btn-clear-home" class="secondary" type="button">Home</button>
         </div>
+        <div id="share-achievement" class="share-achievement" hidden>
+          <button id="btn-share-achievement" class="secondary" type="button">分享成就</button>
+        </div>
+        <div id="share-sheet" class="share-sheet" hidden>
+          <img id="share-card-img" alt="聚光单词成就卡片" hidden>
+          <p id="share-card-copy" class="share-copy"></p>
+          <p id="share-card-hint" class="sub">长按图片保存，可发到朋友圈</p>
+          <div class="btn-row">
+            <a id="btn-share-save" class="btn" href="#" download="juguang-checkin.png" hidden>保存图片</a>
+            <button id="btn-share-copy" class="secondary" type="button">复制文案</button>
+            <button id="btn-share-native" class="secondary" type="button" hidden>系统分享</button>
+            <button id="btn-share-close" class="ghost" type="button">返回</button>
+          </div>
+          <p id="share-card-status" class="sub" role="status"></p>
+        </div>
       </div>
     </section>
 
@@ -1342,6 +1385,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="sense-examples.js"></script>
   <script src="practice.js"></script>
   <script src="feedback.js"></script>
+  <script src="share-card.js"></script>
   <script src="game.js"></script>
   <script src="sync.js"></script>
   <script>
