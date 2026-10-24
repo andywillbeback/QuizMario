@@ -65,7 +65,7 @@ function staticGuards() {
     assert.ok(src.includes(edition), name + " uses the 1st edition name");
     assert.ok(!src.includes("（grok）") && !src.includes("聚光单词 grok"), name + " still shows a grok product label");
   }
-  assert.ok(manifest.includes('"short_name": "聚光单词 1st edition"'));
+  assert.ok(manifest.includes('"short_name": "聚光单词"'));
   assert.ok(!teacherJs.includes("（grok）"));
   assert.ok(!auth.includes("返回游戏"), "login copy must not send people back to the exam gate");
   assert.ok(login.includes('id="mode-register"') && login.includes('id="mode-login"'));

@@ -1,7 +1,8 @@
 {
-  "name": "聚光单词 · 1st edition — Vocab Spotlight",
-  "short_name": "聚光单词 1st edition",
-  "description": "聚光单词 · 1st edition Vocab Spotlight",
+  "name": "聚光单词 · 1st edition",
+  "short_name": "聚光单词",
+  "description": "聚光单词 · 1st edition",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -10,7 +11,7 @@
   "theme_color": "#05070d",
   "lang": "zh-CN",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }
