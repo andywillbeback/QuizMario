@@ -80,7 +80,6 @@ function staticGuards() {
     ["id=\"about-panel\"", "about panel"],
     ["id=\"homescreen-tip\"", "homescreen tip"],
     ["id=\"btn-due-only\"", "只练到期 button"],
-    ["id=\"answer-input\"", "typed answer field"],
     ["id=\"btn-mc-toggle\"", "typed/MC toggle"],
     ["只练到期", "只练到期 label"],
     ["学习报告码", "report copy"],
@@ -89,8 +88,9 @@ function staticGuards() {
   for (const [needle, why] of banned) {
     assert.ok(!index.includes(needle), "index.html brought back " + why);
   }
+  assert.ok(index.includes('id="answer-input"'), "Q1 typed spelling input is present");
   assert.ok(!game.includes("let dueOnly") && !game.includes("if (dueOnly") && !game.includes("mcMode"),
-    "game.js must not filter the queue with dueOnly or a typed-answer mode");
+    "game.js must not filter the queue with dueOnly or a typed-answer mode toggle");
   assert.ok(game.includes("delete save.dueOnly"), "a leftover dueOnly flag is still stripped from the save");
   assert.ok(sync.includes("sendToLogin"), "sync.js still sends a missing session to login");
   assert.ok(index.includes('src="srs-rules.js"'), "clearance rules load with the game");
@@ -729,7 +729,7 @@ async function main() {
         defaultSort: !!document.getElementById("btn-sort-default"),
         challengeMs: window.__QM && window.__QM.challengeMs,
         queue: Number(document.getElementById("play-queue").textContent),
-        typed: !!document.getElementById("answer-input"),
+        typed: (() => { const row = document.getElementById("type-row"); return !!(row && !row.hidden); })(),
         due: !!document.getElementById("btn-due-only")
       };
     })()`), 10000, "first practice card");
@@ -1376,7 +1376,7 @@ async function main() {
       return {
         title: document.getElementById("play-level").textContent,
         again: !!document.getElementById("btn-rate-again"),
-        typed: !!document.getElementById("answer-input")
+        typed: (() => { const row = document.getElementById("type-row"); return !!(row && !row.hidden); })()
       };
     })()`), 10000, "今日必练 again");
     assert.strictEqual(wrongPlay.title, "今日必练");
@@ -1554,6 +1554,7 @@ async function main() {
     assert.strictEqual(month.hidden, false, "a multi-sense card shows the cue");
     assert.ok(month.choices.join("\n").indexOf("五月") !== -1, "五月 stays one of the choices");
     assert.strictEqual(month.clockHidden, true, "the sense preview does not start the clock");
+    assert.strictEqual(month.typedVisible, false, "meaning preview stays multiple choice");
     assert.ok(month.label.indexOf("中文意思") !== -1, month.label);
 
     const modal = await evalRetry(`window.__QM.debugPreviewCard("may", "form")`);
@@ -1562,6 +1563,7 @@ async function main() {
     assert.ok(modal.cue.indexOf("情态动词") !== -1, modal.cue);
     assert.ok(modal.cue.toLowerCase().indexOf("may") === -1, "ZH→EN cue must not spell the word: " + modal.cue);
     assert.ok(modal.choices.join("\n").toLowerCase().indexOf("may") !== -1, "may stays one of the choices");
+    assert.strictEqual(modal.typedVisible, false, "form preview stays multiple choice");
     assert.ok(modal.label.indexOf("英文") !== -1, modal.label);
 
     const calm = await evalRetry(`window.__QM.debugPreviewCard("ability", "meaning")`);
@@ -1570,6 +1572,52 @@ async function main() {
     assert.strictEqual(calm.cue, "");
     assert.strictEqual(calm.hidden, true, "one sense stays quiet");
     assert.ok(calm.choices.join("\n").indexOf("能力") !== -1);
+    assert.strictEqual(calm.typedVisible, false, "a one-sense meaning card stays multiple choice");
+
+    await evalRetry(`document.getElementById("btn-spelling").click()`);
+    const spellPlay = await waitFor(async () => evalRetry(`(() => {
+      const play = document.getElementById("screen-play");
+      const row = document.getElementById("type-row");
+      const input = document.getElementById("answer-input");
+      const n = document.querySelectorAll("#choices .choice").length;
+      if (!(play && play.classList.contains("active")) || !row || row.hidden || !input) return null;
+      if (window.__QM && window.__QM.sessionKind !== "spelling") return null;
+      return {
+        kind: window.__QM.sessionKind,
+        label: (document.getElementById("prompt-label") || {}).textContent || "",
+        choices: n,
+        choicesHidden: !!((document.getElementById("choices") || {}).hidden),
+        typed: !row.hidden
+      };
+    })()`), 10000, "拼写 typed input");
+    assert.strictEqual(spellPlay.kind, "spelling");
+    assert.strictEqual(spellPlay.typed, true, "拼写 shows the typed row");
+    assert.strictEqual(spellPlay.choices, 0, "拼写 does not deal MC choices");
+    assert.strictEqual(spellPlay.choicesHidden, true);
+    assert.ok(spellPlay.label.indexOf("键入") !== -1, spellPlay.label);
+    const spellGrade = await evalRetry(`(() => {
+      const input = document.getElementById("answer-input");
+      input.value = "not-a-word";
+      document.getElementById("btn-check-spelling").click();
+      const fb = (document.getElementById("feedback") || {}).textContent || "";
+      const events = (window.QuizMarioLearnerEvents && window.QuizMarioLearnerEvents.list && window.QuizMarioLearnerEvents.list()) || [];
+      const ev = events.filter((row) => row && row.evidence_kind === "typed_spelling").pop() || null;
+      return {
+        feedback: fb,
+        choices: document.querySelectorAll("#choices .choice").length,
+        evidence: ev ? ev.evidence_kind : "",
+        payloadEvidence: ev && ev.payload ? ev.payload.evidence_kind : "",
+        independent: ev ? ev.independent : null,
+        direction: ev ? (ev.task_direction_detail || "") : ""
+      };
+    })()`);
+    assert.strictEqual(spellGrade.choices, 0, "submitting a typed answer does not reveal MC choices");
+    assert.ok(spellGrade.feedback.indexOf("not-a-word") !== -1, spellGrade.feedback);
+    assert.ok(spellGrade.feedback.indexOf("键入") !== -1, spellGrade.feedback);
+    assert.strictEqual(spellGrade.evidence, "typed_spelling");
+    assert.strictEqual(spellGrade.payloadEvidence, "typed_spelling");
+    assert.strictEqual(spellGrade.independent, false, "one typed miss is not independent mastery");
+    assert.strictEqual(spellGrade.direction, "spelling");
 
     console.log("student-path ok");
   } catch (err) {

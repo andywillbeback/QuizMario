@@ -53,6 +53,8 @@ Evidence, only when QuizMario actually has it:
 | `content_version`, `bank_version` | Core bank is `words-v12` (`window.QUIZMARIO_CONTENT_VERSION`). Other tracks use `exam-tracks:<track id>` until those files grow their own stamp. The two fields match unless a caller passes both. |
 | `grade_status` | `again` (wrong pick), `unknown` (不会), `pending` (correct, Good/Easy not chosen yet), `good`, `easy`. Due and wrong-book rows have none. |
 | `score` | SM-2 quality when graded: `0` again/unknown, `1` good, `2` easy. Absent while `pending`. |
+| `evidence_kind` | `typed_spelling` for 拼写 key-in, `mc_recognition` for 看英文选中文, `mc_production` for 看中文选英文 / 今日必练. Omitted when the caller does not set one of those three. |
+| `independent` | Typed spelling only. `true` once the typed streak is 稳定, otherwise `false`. `false` is stored. Meaning and 今日必练 do not set it. Old multiple-choice spelling is not independent. |
 
 `sense_id` provisional form is `lemma.pos.gloss_zh`. The POS token drops a trailing dot, so `v.` becomes `v` and the key is `communicate.v.交流`. Split on the first two `.` only; the gloss is the remainder and may contain `；` or spaces. Unknown POS keeps an empty slot: `communicate..交流`. Lemma only, with no gloss, is `sense_id_kind` `"lemma_only"` and is not a sense distinction. `sense-id.js` (`may:month`, `china:country`) is the card-key disambiguator for a few surfaces. It is not the bank sense id and is not written as `sense_id` unless a card already carries that field.
 
@@ -86,7 +88,7 @@ cp ~/Downloads/quizmario-learner-events-*.jsonl data/learner_events_inbox/quizma
   data/learner_events_inbox/quizmario.jsonl
 ```
 
-Field names the ingester should read: `event_id`, `learner_id` (or `user_id`), `source`, `event_type`, `payload`, `created_at`, `item_id`, `headword`, `cefr_level`. For due signals, read `payload.due_at`. v2 lines also carry `schema_version`, `canonical_learner_id`, `source_user_id`, `source_event_id`, and, when QuizMario had them, `sense_id`, `lemma`, `pos`, `task_direction`, `attempt`, `answer_exposed`, `review_interval_days`, `content_version` / `bank_version`, `grade_status`, and `score`. The same evidence keys are inside `payload` for a Supabase reader. Ignore unknown keys. Do not treat `review_interval_days` as a schedule to apply; `reps` is still not on the event. A v1 line has no `schema_version` and still parses.
+Field names the ingester should read: `event_id`, `learner_id` (or `user_id`), `source`, `event_type`, `payload`, `created_at`, `item_id`, `headword`, `cefr_level`. For due signals, read `payload.due_at`. v2 lines also carry `schema_version`, `canonical_learner_id`, `source_user_id`, `source_event_id`, and, when QuizMario had them, `sense_id`, `lemma`, `pos`, `task_direction`, `attempt`, `answer_exposed`, `review_interval_days`, `content_version` / `bank_version`, `grade_status`, `score`, `evidence_kind`, and `independent`. The same evidence keys are inside `payload` for a Supabase reader. Ignore unknown keys. Do not treat `review_interval_days` as a schedule to apply; `reps` is still not on the event. A v1 line has no `schema_version` and still parses.
 
 ## 错词本 → ALS 深练 (QuizMario half)
 

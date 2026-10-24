@@ -22,7 +22,13 @@
     if (!p || typeof p !== "object") return false;
     if ((p.reps || 0) > 0 || (p.correct || 0) > 0 || (p.wrong || 0) > 0 || (p.unknown || 0) > 0 || (p.mastery || 0) > 0) return true;
     var spell = p.spelling;
-    return !!(spell && ((spell.correct || 0) > 0 || (spell.wrong || 0) > 0 || (spell.unknown || 0) > 0));
+    if (!spell || typeof spell !== "object") return false;
+    if ((spell.correct || 0) > 0 || (spell.wrong || 0) > 0 || (spell.unknown || 0) > 0) return true;
+    var typed = spell.typed;
+    if (typed && ((typed.correct || 0) + (typed.wrong || 0) + (typed.unknown || 0) > 0)) return true;
+    var mc = spell.mc;
+    if (mc && ((mc.correct || 0) + (mc.wrong || 0) + (mc.unknown || 0) > 0)) return true;
+    return false;
   }
 
   function hasTrackProgress(cards, trackId) {

@@ -4,7 +4,7 @@
  * Clearance (通关): ≥80% of the set in review with interval ≥1 day (srs-rules.js).
  * 已学会 is a later-day clean recall, not the same thing as 通关 or 保持率.
  * 继续闯关 is regular study with no clock. 12分钟挑战 is the only timed mode (CHALLENGE_MS).
- * 通关 is 看英文选中文. 拼写 is tracked separately and does not block the first 通关.
+ * 通关 is 看英文选中文. 拼写 is typed (Q1); old MC spelling is not independent mastery.
  * 今日必练: due cards first, then 错词本 fill-in (review-queues.js). ZH→EN, still schedule().
  * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
  * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
@@ -243,6 +243,9 @@
     }
     if (p.ef == null) p.ef = 2.5;
     if (SRS.noteLegacyMastery) SRS.noteLegacyMastery(p);
+    if (p.spelling && Practice.ensureSpellingShape) {
+      p.spelling = Practice.ensureSpellingShape(p.spelling);
+    }
     return p;
   }
 
@@ -508,7 +511,10 @@
       const p = cards[k];
       if (!p) continue;
       const spell = p.spelling || {};
-      if ((p.correct || 0) + (p.wrong || 0) + (p.unknown || 0) + (spell.correct || 0) + (spell.wrong || 0) + (spell.unknown || 0) > 0) n++;
+      const practicedSpell = Practice.hasSpellingPractice
+        ? Practice.hasSpellingPractice(spell)
+        : ((spell.correct || 0) + (spell.wrong || 0) + (spell.unknown || 0) > 0);
+      if ((p.correct || 0) + (p.wrong || 0) + (p.unknown || 0) > 0 || practicedSpell) n++;
     }
     return n;
   }
@@ -1183,7 +1189,7 @@
     if (promptLabel) {
       promptLabel.textContent = meaningMode
         ? "英文 → 中文意思"
-        : (sessionDirection === "spelling" ? "拼写 · 中文 → 英文" : "中文意思 → 英文单词");
+        : (sessionDirection === "spelling" ? "拼写 · 中文 → 键入英文" : "中文意思 → 英文单词");
     }
     const promptMain = $("prompt-main");
     if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
@@ -1205,7 +1211,7 @@
     else srsTag = formatDue(prog);
     metaBits.unshift(srsTag);
     if (currentCard.pos) metaBits.push(currentCard.pos);
-    if (sessionDirection === "spelling") metaBits.push("拼写不计入通关");
+    if (sessionDirection === "spelling") metaBits.push("键入拼写 · 不计入通关");
     let hint = "";
     if (meaningMode) {
       if (currentCard.example_en && !isPlaceholderExample(currentCard.example_en)) {
@@ -1548,6 +1554,61 @@
     b.hidden = !on;
   }
 
+  function setTypeRowVisible(on) {
+    const row = $("type-row");
+    if (row) row.hidden = !on;
+    const box = $("choices");
+    if (on && box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+    if (!on) {
+      const input = $("answer-input");
+      if (input) input.value = "";
+    }
+  }
+
+  function clearAnswerSurfaces() {
+    const box = $("choices");
+    if (box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+    setTypeRowVisible(false);
+    setUnknownVisible(false);
+  }
+
+  function submitTypedSpelling() {
+    if (awaiting || pendingRate || !currentCard) return;
+    if (sessionKind !== "spelling" && sessionDirection !== "spelling") return;
+    const input = $("answer-input");
+    const raw = input ? String(input.value || "") : "";
+    if (!String(raw).trim()) return;
+    const correct = currentCard.word;
+    const ok = answersMatch(raw, correct);
+    grade(ok, false, raw, ok ? "correct" : "wrong");
+  }
+
+  function renderTypedSpelling() {
+    const box = $("choices");
+    if (box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+    setTypeRowVisible(true);
+    setUnknownVisible(true);
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = false;
+    const input = $("answer-input");
+    if (input) {
+      input.value = "";
+      input.disabled = false;
+      try { input.focus({ preventScroll: true }); } catch (_) {
+        try { input.focus(); } catch (_) {}
+      }
+    }
+  }
+
   function bumpPractice(bucket, good) {
     if (!save.practice || typeof save.practice !== "object") {
       save.practice = { meaning: { n: 0, good: 0 }, spelling: { n: 0, good: 0 }, hint: { n: 0, good: 0 } };
@@ -1591,17 +1652,24 @@
   function gradeSpelling(correct, chosen, outcome) {
     awaiting = true;
     setUnknownVisible(false);
+    const input = $("answer-input");
+    if (input) input.disabled = true;
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = true;
     const kind = outcome || (correct ? "correct" : "wrong");
     const prog = getProg(currentCard.key);
-    const noted = Practice.noteSpelling(prog, kind, Date.now());
+    // Q1: live 拼写 is always typed. Legacy MC scores stay in spelling.mc via Practice.
+    const noted = Practice.noteSpelling(prog, kind, Date.now(), { mode: "typed" });
     bumpPractice("spelling", kind === "correct");
     if (kind !== "correct") rememberWrongWord(currentCard.word);
+    emitLearnerAnswer(kind === "correct", currentCard, kind === "unknown" ? "" : chosen, kind, null, null);
     const fb = $("feedback");
     const view = viewFor(kind, chosen, "", noted.signal);
     const title = kind === "correct" ? "拼写对了" : (kind === "unknown" ? "不会 · 先看答案" : "拼写再想想");
+    const indep = noted.independent ? " · 独立拼写" : " · 键入练习";
     if (fb) {
       fb.innerHTML =
-        '<div class="fb-title">' + title + "</div>" +
+        '<div class="fb-title">' + title + indep + "</div>" +
         '<div class="fb-answer">' + escapeHtml(currentCard.word) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
         feedbackHtml(view) +
         extraExampleHtml(currentCard) +
@@ -1654,7 +1722,7 @@
       return;
     }
     if (awaiting || !currentCard || pendingRate) return;
-    if (sessionKind === "spelling") {
+    if (Practice.sessionAnswerMode(sessionKind, sessionDirection).typed) {
       gradeSpelling(correct, chosen, outcome);
       return;
     }
@@ -2031,6 +2099,12 @@
 
   function renderChoices() {
     if (!currentCard) return;
+    const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
+    if (mode.typed) {
+      renderTypedSpelling();
+      return;
+    }
+    setTypeRowVisible(false);
     if (sessionDirection === "meaning") {
       const correct = currentCard.meaning_zh || "";
       const opts = [correct, ...pickMeaningDistractors(currentCard, 3)].filter((opt) => String(opt || "").trim());
@@ -2042,6 +2116,7 @@
       paintChoices(opts, correct, meaningsMatch);
       return;
     }
+    // form / 今日必练: keep ZH→EN multiple choice
     const correct = currentCard.word;
     const opts = [correct, ...pickHardDistractors(currentCard, 3)].filter((opt) => opt);
     paintChoices(opts, correct, answersMatch);
@@ -2463,7 +2538,7 @@
       "<div><b>" + pct(st.ret7) + "</b>近7天复习保持率</div>" +
       "</div>" + svg +
       '<p class="stats-legend">柱：每日答题量 · 黄线：每日正确率 · 累计答题 ' + st.answers + " 次 · 学习 " + st.activeDays + " 天</p>" +
-      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。拼写单独记，不挡住第一次通关。</p>' +
+      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。拼写改为键入；旧选择成绩不算独立拼写，不挡住第一次通关。</p>' +
       spellLine +
       radar +
       '<ul class="stats-tracks">' + tr + "</ul>";
@@ -2482,19 +2557,17 @@
   }
 
   function spellingLine() {
-    let cards = 0;
-    let correct = 0;
-    let wrong = 0;
-    for (const p of Object.values(save.cards || {})) {
-      const s = p && p.spelling;
-      if (!s) continue;
-      if ((s.correct || 0) + (s.wrong || 0) + (s.unknown || 0) === 0) continue;
-      cards++;
-      correct += s.correct || 0;
-      wrong += s.wrong || 0;
+    const sum = Practice.summarizeSpelling(save.cards || {});
+    if (!sum.typedCards && !sum.mcOnly) return "";
+    let line = "";
+    if (sum.typedCards) {
+      line = "拼写(键入) " + sum.typedCards + " 词 · 对 " + sum.correct + " · 错 " + sum.wrong + " · 不计入通关";
     }
-    if (!cards) return "";
-    return '<p class="stats-legend">拼写 ' + cards + " 词 · 对 " + correct + " · 错 " + wrong + " · 不计入通关</p>";
+    if (sum.mcOnly) {
+      const note = "旧选择 " + sum.mcOnly + " 词不计独立";
+      line = line ? (line + " · " + note) : ("拼写 · " + note);
+    }
+    return '<p class="stats-legend">' + line + "</p>";
   }
 
   // ---- report code for teacher (compact, no full card dump) ----
@@ -2642,11 +2715,7 @@
       awaiting = false;
       hideKillBanner();
       hidePlacementNote();
-      const choices = $("choices");
-      if (choices) {
-        choices.hidden = true;
-        choices.innerHTML = "";
-      }
+      clearAnswerSurfaces();
       showScreen("play");
       const playLevel = $("play-level");
       if (playLevel) playLevel.textContent = setTitle(levelIdx + 1);
@@ -2654,6 +2723,7 @@
       const el = $("prompt-sense");
       const cue = el && !el.hidden ? (el.textContent || "") : "";
       const choiceText = Array.from(document.querySelectorAll("#choices .choice")).map((b) => b.textContent || "");
+      const typeRow = $("type-row");
       return {
         ok: true,
         word: found.word,
@@ -2663,6 +2733,7 @@
         cue: cue,
         hidden: !el || !!el.hidden,
         choices: choiceText,
+        typedVisible: !!(typeRow && !typeRow.hidden),
         clockHidden: !!($("challenge-clock") && $("challenge-clock").hidden),
       };
     },
@@ -2810,6 +2881,12 @@
       first_attempt: !(card && card._repeat),
       answer_exposed: !!(card && card._hintSeen),
     });
+    const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
+    if (mode.evidence_kind) input.evidence_kind = mode.evidence_kind;
+    if (mode.typed) {
+      const prog = card && card.key ? getProg(card.key) : null;
+      input.independent = !!(prog && Practice.isIndependentSpelling && Practice.isIndependentSpelling(prog.spelling));
+    }
     if (card && card._answerExposedAt) input.answer_exposed_at = card._answerExposedAt;
     if (intervalDays != null) input.review_interval_days = intervalDays;
     if (kind === "wrong" && chosen) input.answer = chosen;
@@ -3621,11 +3698,11 @@
     challengeFailed = false;
     hideKillBanner();
     stopChallenge();
-    const choices = $("choices");
-    if (choices) {
-      choices.hidden = true;
-      choices.innerHTML = "";
-    }
+    clearAnswerSurfaces();
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = false;
+    const input = $("answer-input");
+    if (input) input.disabled = false;
     hideQueueEmpty();
     showScreen("play");
     const playLevel = $("play-level");
@@ -3858,6 +3935,7 @@
     startLevel(lvl, { mode: "challenge" });
   });
   if ($("btn-spelling")) $("btn-spelling").addEventListener("click", () => startSpellingSession());
+  if ($("btn-check-spelling")) $("btn-check-spelling").addEventListener("click", () => submitTypedSpelling());
   if ($("btn-must-practice")) $("btn-must-practice").addEventListener("click", () => startMustPractice());
   if ($("btn-must-remind")) $("btn-must-remind").addEventListener("click", () => startMustPractice());
   if ($("btn-must-start")) $("btn-must-start").addEventListener("click", () => startMustPractice());
@@ -3978,6 +4056,14 @@
       return;
     }
     if (!awaiting) {
+      const typeRow = $("type-row");
+      const typing = typeRow && !typeRow.hidden && (sessionKind === "spelling" || sessionDirection === "spelling");
+      if (typing && e.key === "Enter") {
+        e.preventDefault();
+        submitTypedSpelling();
+        return;
+      }
+      if (typing) return;
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= 4) {
         const box = $("choices");

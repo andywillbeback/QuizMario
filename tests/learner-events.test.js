@@ -206,7 +206,7 @@ function wrong(extra) {
     "schema_version", "canonical_learner_id", "source_user_id", "source_event_id",
     "sense_id", "lemma", "pos", "task_direction", "attempt",
     "answer_exposed", "review_interval_days", "content_version", "bank_version",
-    "grade_status", "score", "lemma.pos.gloss_zh",
+    "grade_status", "score", "evidence_kind", "independent", "lemma.pos.gloss_zh",
   ]) {
     assert.ok(doc.includes(field), "v2 doc names " + field);
   }
