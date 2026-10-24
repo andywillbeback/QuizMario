@@ -102,7 +102,7 @@ function read(name) {
   assert.ok(spellGrade.includes("speakButtons(currentCard)"), "spelling feedback can read the word and example");
   assert.ok(!rootIndex.includes('id="answer-input"'), "root student app keeps MC spelling");
   assert.ok(!rootGame.includes("renderTypedSpelling"), "root game.js is not switched to typed spelling");
-  assert.ok(!rootIndex.includes('id="report-panel"'), "report UI is restored on grok/, not the root ALS app");
+  assert.ok(!rootIndex.includes('id="report-panel"'), "root student app has no report panel");
 }
 
 {
@@ -253,30 +253,35 @@ function read(name) {
   const index = read("grok/index.html");
   const game = read("grok/game.js");
   const teacher = read("grok/teacher.html");
-  assert.ok(index.includes('id="report-panel"'), "home has a report block");
-  assert.ok(index.includes('id="profile-name"') && index.includes('id="profile-cls"'));
-  assert.ok(index.includes('id="btn-report"') && index.includes(">复制学习报告码</button>"));
-  assert.ok(index.includes('id="report-code"') && index.includes("readonly"));
-  assert.ok(index.includes('id="report-status"'));
-  assert.ok(index.includes("QMR1."), "report copy still names the QMR1 code");
-  assert.ok(!index.includes('href="teacher.html"'), "students do not get a link to the teacher board");
-  assert.ok(!index.includes("教师看板"), "student home does not tell them to open the teacher board");
+  const login = read("grok/login.html");
+  for (const needle of [
+    'id="report-panel"',
+    'id="profile-name"',
+    'id="profile-cls"',
+    'id="btn-report"',
+    'id="report-code"',
+    'id="report-status"',
+    "复制学习报告码",
+    "学习报告码",
+    "发给老师",
+    "QMR1",
+    'href="teacher.html"',
+    "教师看板",
+  ]) {
+    assert.ok(!index.includes(needle), "student home still shows " + needle);
+    assert.ok(!login.includes(needle), "login still shows " + needle);
+  }
   assert.ok(!index.includes("ALS 学习信号") && !index.includes("下载 JSONL") && !index.includes("复制 JSONL"),
     "student home does not show the ALS signal panel");
   assert.ok(!index.includes('id="learner-events-panel"') && !index.includes('id="btn-export-learner-events"') && !index.includes('id="btn-copy-learner-events"'),
     "JSONL dump controls are gone from the student home");
   assert.ok(index.includes('src="learner-events.js"'), "learner events still load for cloud sync");
-  const login = read("grok/login.html");
-  assert.ok(!login.includes("ALS 学习信号") && !login.includes("下载 JSONL") && !login.includes("复制 JSONL") && !login.includes("教师看板") && !login.includes('href="teacher.html"'),
-    "login stays free of the teacher board and ALS signal panel");
-  const reportStart = index.indexOf('id="report-panel"');
-  const report = index.slice(reportStart, index.indexOf("</section>", reportStart));
-  assert.ok(report.includes("profile-name") && report.includes("QMR1."), "report block still explains the code");
-  assert.ok(!/ALS|sense_return|深练|teacher\.html|教师看板|JSONL/.test(report), "report block only asks students to copy the code");
-  assert.ok(game.includes('id="btn-report"') || game.includes('$("btn-report")'));
-  assert.ok(game.includes("reportCode()") && game.includes("请先填写姓名和班级码"));
-  assert.ok(game.includes("学习报告码已复制"));
-  assert.ok(game.includes('"QMR1."'), "report codes still use the QMR1 prefix");
+  assert.ok(!login.includes("ALS 学习信号") && !login.includes("下载 JSONL") && !login.includes("复制 JSONL"),
+    "login stays free of the ALS signal panel");
+  assert.ok(!game.includes("$(\"btn-report\")") && !game.includes("reportCode(") && !game.includes("buildReport("),
+    "student game no longer builds a report code");
+  assert.ok(!game.includes("学习报告码") && !game.includes("请先填写姓名和班级码") && !game.includes('"QMR1."'),
+    "student game has no QMR1 copy-to-teacher flow");
   assert.ok(teacher.includes("<h2>教师看板"), "teacher.html still serves the board");
   assert.ok(teacher.includes("导入报告码"), "teacher paste flow stays");
   assert.ok(teacher.includes("QMR1"), "teacher still expects QMR1 lines");

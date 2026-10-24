@@ -2114,10 +2114,6 @@
     }
     persist(opts);
     refreshHud();
-    const nm = $("profile-name");
-    const cl = $("profile-cls");
-    if (nm) nm.value = (save.profile && save.profile.name) || "";
-    if (cl) cl.value = (save.profile && save.profile.cls) || "";
     renderStats();
     if ($("screen-levels") && $("screen-levels").classList.contains("active")) renderLevels();
   }
@@ -2316,22 +2312,6 @@
     return SRS.summarizeSet(progs, now).ready;
   }
 
-  function weakWords(limit) {
-    const list = [];
-    for (const t of TRACKS) {
-      withTrack(t.id, () => {
-        LEVELS.forEach((words, li) => {
-          for (const w of words) {
-            const p = save.cards[cardKey(li, w.word)];
-            if (p && (p.wrong || 0) > 0) list.push([w.word, w.meaning_zh, p.wrong || 0, (p.correct || 0)]);
-          }
-        });
-      });
-    }
-    list.sort((a, b) => (b[2] - b[3] * 0.3) - (a[2] - a[3] * 0.3));
-    return list.slice(0, limit || 12);
-  }
-
   function computeStats() {
     const d7 = lastDays(7);
     const sum = (arr, f) => arr.reduce((a, x) => a + (x[f] || 0), 0);
@@ -2430,28 +2410,6 @@
     return '<p class="stats-legend">' + line + "</p>";
   }
 
-  // ---- report code for teacher (compact, no full card dump) ----
-  function buildReport() {
-    persist();
-    const st = computeStats();
-    const tr = {};
-    for (const id of Object.keys(st.tracks)) { const s = st.tracks[id]; tr[id] = [s.learned, s.total, s.cleared]; }
-    return {
-      v: 1,
-      n: (save.profile.name || "").slice(0, 40),
-      k: (save.profile.cls || "").slice(0, 40).toUpperCase(),
-      at: new Date().toISOString(),
-      s: st.streak, ad: st.activeDays, a: st.answers, acc: st.acc, a7: st.acc7, r7: st.ret7,
-      tr,
-      d: lastDays(30).filter((d) => d.c + d.w + (d.unk || 0)).map((d) => [d.day, d.c, d.w, d.rc, d.rw, d.n, d.unk || 0]),
-      wk: weakWords(12),
-    };
-  }
-
-  function reportCode() {
-    return "QMR1." + btoa(unescape(encodeURIComponent(JSON.stringify(buildReport()))));
-  }
-
   // ---- pronunciation (browser speechSynthesis, en-GB preferred) ----
   function pickGbVoice() {
     if (!("speechSynthesis" in window)) return null;
@@ -2496,32 +2454,12 @@
       if (b) { e.preventDefault(); sayEn(b.getAttribute("data-say")); }
     });
     if ("speechSynthesis" in window) window.speechSynthesis.onvoiceschanged = () => {};
-    const nm = $("profile-name"), cl = $("profile-cls");
-    if (nm) nm.value = save.profile.name || "";
-    if (cl) cl.value = save.profile.cls || "";
-    const saveProfile = () => {
-      save.profile = { name: (nm ? nm.value : "").trim(), cls: (cl ? cl.value : "").trim().toUpperCase() };
-      persist();
-    };
-    if (nm) nm.addEventListener("change", saveProfile);
-    if (cl) cl.addEventListener("change", saveProfile);
-    const rb = $("btn-report");
-    if (rb) rb.addEventListener("click", () => {
-      saveProfile();
-      const st = $("report-status");
-      if (!save.profile.name || !save.profile.cls) { if (st) st.textContent = "请先填写姓名和班级码。"; return; }
-      const code = reportCode();
-      $("report-code").value = code;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(code).then(() => st && (st.textContent = "学习报告码已复制，发给老师即可（微信/QQ）。"), () => st && (st.textContent = "已生成，请手动全选复制。"));
-      } else if (st) st.textContent = "已生成，请手动全选复制。";
-    });
     renderStats();
   }
 
   // test hook (harmless in production)
   window.__QM = {
-    switchTrack, computeStats, buildReport, reportCode,
+    switchTrack, computeStats,
     get track() { return currentTrack; },
     get levels() { return LEVELS; },
     get challengeMs() { return SRS.CHALLENGE_MS; },
