@@ -1,7 +1,8 @@
 /* 聚光单词 achievement card + Shanghai check-in.
  * A calendar day counts only after a completed set (the existing clear screen).
  * Streak and the「我要打十个」unlock stay in localStorage, not learner_events.
- * If this file fails to load, game.js hides the share button and practice continues.
+ * The stored achievement name has no exclamation; the painted card title is 我要打十个！.
+ * If this file fails to load or the card fails to paint, practice continues.
  *
  * Also require()-able from node tests. Browser UI attaches when document exists.
  */
@@ -18,12 +19,39 @@
   var BRAND = "聚光单词 · 1st edition";
   var ACHIEVEMENT_ID = "wo_yao_da_shi_ge";
   var ACHIEVEMENT_TITLE = "我要打十个";
+  var ACHIEVEMENT_CARD_TITLE = "我要打十个！";
   var STREAK_GOAL = 10;
   var STORAGE_KEY = "juguang_checkin_v1";
   var TZ = "Asia/Shanghai";
-  var FONT = "\"PingFang SC\", \"Noto Sans SC\", \"Microsoft YaHei\", sans-serif";
+  /* One family only. A comma-separated list or a numeric weight can make
+   * canvas reject the font and leave the 10px default, which looks blank. */
+  var FONT_CANDIDATES = [
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Heiti SC",
+    "Noto Sans SC",
+    "Noto Sans CJK SC",
+    "Source Han Sans SC",
+    "Microsoft YaHei",
+    "WenQuanYi Micro Hei",
+    "Droid Sans Fallback",
+    "system-ui",
+    "sans-serif",
+  ];
   var CARD_W = 1080;
   var CARD_H = 1350;
+  var PAINT_FAIL_HINT = "图片生成失败，可以继续练习。";
+  var fontChoice = null;
+  /* Outlines for the painted title. Used when no system font actually draws 我. */
+  var TITLE_GLYPHS = {
+    "我": [["M",944,1608],["L",1016,1464],["Q",872,1432,704,1400],["L",704,1112],["L",1208,1112],["Q",1184,1360,1184,1664],["L",1360,1664],["Q",1360,1352,1376,1112],["L",1944,1112],["L",1944,952],["L",1384,952],["Q",1416,696,1480,456],["Q",1592,616,1688,824],["L",1840,744],["Q",1704,448,1544,256],["Q",1656,-8,1720,-8],["Q",1744,-8,1776,36],["Q",1808,80,1824,160],["L",1960,104],["Q",1888,-184,1712,-184],["Q",1568,-184,1424,128],["Q",1224,-48,976,-168],["L",896,-24],["Q",1184,120,1352,296],["Q",1256,576,1224,952],["L",704,952],["L",704,632],["Q",880,672,1024,720],["L",1056,560],["Q",888,504,704,456],["L",704,48],["Q",704,-88,664,-136],["Q",624,-184,504,-184],["Q",360,-184,232,-152],["L",192,24],["Q",336,-16,480,-16],["Q",536,-16,536,88],["L",536,416],["Q",344,368,136,328],["L",104,504],["Q",336,544,536,584],["L",536,952],["L",104,952],["L",104,1112],["L",536,1112],["L",536,1376],["L",240,1328],["L",176,1488],["Q",592,1528,944,1608],["Z"],["M",1592,1624],["Q",1752,1464,1848,1280],["L",1704,1200],["Q",1616,1376,1448,1528],["Z"]],
+    "要": [["M",88,600],["L",760,600],["L",856,736],["L",1024,704],["L",952,600],["L",1936,600],["L",1936,456],["L",1560,456],["Q",1456,232,1272,112],["L",1880,-56],["L",1752,-192],["Q",1400,-72,1088,16],["Q",752,-136,200,-192],["L",112,-32],["Q",544,0,824,80],["Q",568,144,352,192],["Q",512,320,640,456],["L",88,456],["Z"],["M",1048,160],["Q",1296,280,1384,456],["L",840,456],["Q",744,336,648,248],["Z"],["M",160,1600],["L",1888,1600],["L",1888,1448],["L",1336,1448],["L",1336,1288],["L",1792,1288],["L",1792,784],["L",256,784],["L",256,1288],["L",728,1288],["L",728,1448],["L",160,1448],["Z"],["M",1192,1288],["L",1192,1448],["L",872,1448],["L",872,1288],["Z"],["M",416,920],["L",728,920],["L",728,1152],["L",416,1152],["Z"],["M",872,1152],["L",872,920],["L",1192,920],["L",1192,1152],["Z"],["M",1336,1152],["L",1336,920],["L",1632,920],["L",1632,1152],["Z"]],
+    "打": [["M",912,1568],["L",1944,1568],["L",1944,1416],["L",1608,1416],["L",1608,32],["Q",1608,-80,1560,-128],["Q",1512,-176,1360,-176],["Q",1272,-176,1192,-160],["L",1160,0],["Q",1264,-16,1360,-16],["Q",1448,-16,1448,56],["L",1448,1416],["L",912,1416],["Z"],["M",104,1320],["L",400,1320],["L",400,1656],["L",560,1656],["L",560,1320],["L",808,1320],["L",808,1168],["L",560,1168],["L",560,752],["L",808,856],["L",840,712],["L",560,584],["L",560,32],["Q",560,-88,520,-136],["Q",480,-184,384,-184],["Q",256,-184,144,-160],["L",112,8],["Q",232,-24,360,-24],["Q",400,-24,400,72],["L",400,520],["L",136,424],["L",80,592],["Q",248,640,400,696],["L",400,1168],["L",104,1168],["Z"]],
+    "十": [["M",120,1032],["L",936,1032],["L",936,1656],["L",1096,1656],["L",1096,1032],["L",1928,1032],["L",1928,880],["L",1096,880],["L",1096,-184],["L",936,-184],["L",936,880],["L",120,880],["Z"]],
+    "个": [["M",1008,1656],["L",1176,1616],["L",1136,1544],["Q",1416,1048,1968,856],["L",1872,680],["Q",1336,912,1040,1392],["Q",720,936,208,648],["L",96,776],["Q",456,992,648,1184],["Q",840,1376,1008,1656],["Z"],["M",944,976],["L",1104,976],["L",1104,-184],["L",944,-184],["Z"]],
+    "！": [["M",1088,416],["L",968,416],["L",912,1464],["L",1136,1464],["Z"],["M",1152,112],["Q",1152,40,1120,4],["Q",1088,-32,1024,-32],["Q",960,-32,928,4],["Q",896,40,896,112],["Q",896,184,928,216],["Q",960,248,1024,248],["Q",1088,248,1120,216],["Q",1152,184,1152,112],["Z"]],
+  };
+
 
   var installed = false;
   var current = null;
@@ -186,6 +214,7 @@
     var streak = checkin.streak || 0;
     var showAchievement = !!(checkin.unlocked && streak >= STREAK_GOAL);
     var title = showAchievement ? ACHIEVEMENT_TITLE : (meta.kind === "level" ? "完成一组" : "今日打卡");
+    var cardTitle = showAchievement ? ACHIEVEMENT_CARD_TITLE : title;
     var subtitle = showAchievement
       ? ("已连续打卡" + streak + "天")
       : ("连续 " + streak + "/" + STREAK_GOAL + " 天");
@@ -195,6 +224,7 @@
     return {
       brand: BRAND,
       title: title,
+      cardTitle: cardTitle,
       subtitle: subtitle,
       date: formatDay(checkin.day),
       day: checkin.day || "",
@@ -253,7 +283,105 @@
     ctx.closePath();
   }
 
-  function drawEmblem(ctx, cx, cy) {
+  function quoteFamily(name) {
+    if (!name || name === "sans-serif" || name === "system-ui") return name || "sans-serif";
+    return '"' + String(name).replace(/"/g, "") + '"';
+  }
+
+  function fontApplied(ctx, px) {
+    try {
+      var got = ctx && ctx.font;
+      if (typeof got !== "string") return true;
+      return got.indexOf(String(px) + "px") !== -1;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  function glyphInk(doc, family) {
+    try {
+      var canvas = doc.createElement("canvas");
+      if (!canvas || typeof canvas.getContext !== "function") return -1;
+      canvas.width = 48;
+      canvas.height = 48;
+      var probe = canvas.getContext("2d");
+      if (!probe || typeof probe.getImageData !== "function" || typeof probe.fillText !== "function") return -1;
+      function count(ch) {
+        probe.fillStyle = "#000000";
+        probe.fillRect(0, 0, 48, 48);
+        probe.fillStyle = "#ffffff";
+        probe.font = "bold 32px " + quoteFamily(family);
+        if (!fontApplied(probe, 32)) return 0;
+        probe.textAlign = "center";
+        probe.textBaseline = "middle";
+        probe.fillText(ch, 24, 24);
+        var data = probe.getImageData(0, 0, 48, 48).data;
+        if (!data || !data.length) return -1;
+        var n = 0;
+        for (var i = 0; i < data.length; i += 4) {
+          if (data[i] > 40 || data[i + 1] > 40 || data[i + 2] > 40) n += 1;
+        }
+        return n;
+      }
+      var ink = count("我");
+      if (ink < 0) return -1;
+      var missing = count("\uFFFF");
+      if (missing < 0) return ink > 24 ? ink : 0;
+      if (ink < 24) return 0;
+      if (missing > 0 && ink < missing * 1.35) return 0;
+      return ink;
+    } catch (_) {
+      return -1;
+    }
+  }
+
+  function inspectFonts() {
+    if (fontChoice) return fontChoice;
+    var doc = typeof document !== "undefined" ? document : null;
+    if (!doc || typeof doc.createElement !== "function") {
+      return { family: "sans-serif", ink: -1 };
+    }
+    var best = { family: "sans-serif", ink: 0 };
+    for (var i = 0; i < FONT_CANDIDATES.length; i++) {
+      var ink = glyphInk(doc, FONT_CANDIDATES[i]);
+      if (ink < 0) {
+        fontChoice = { family: "sans-serif", ink: -1 };
+        return fontChoice;
+      }
+      if (ink > best.ink) best = { family: FONT_CANDIDATES[i], ink: ink };
+      if (ink > 24) {
+        fontChoice = { family: FONT_CANDIDATES[i], ink: ink };
+        return fontChoice;
+      }
+    }
+    fontChoice = best.ink > 0 ? best : { family: "sans-serif", ink: 0 };
+    return fontChoice;
+  }
+
+  function fontDecision(assets) {
+    if (assets && typeof assets.fontInk === "number") {
+      return {
+        family: assets.fontFamily ? String(assets.fontFamily) : "sans-serif",
+        ink: assets.fontInk,
+      };
+    }
+    try { return inspectFonts(); } catch (_) { return { family: "sans-serif", ink: -1 }; }
+  }
+
+  function fontOf(choice, weight, px) {
+    var word = weight >= 600 ? "bold" : "normal";
+    var family = choice && choice.family ? choice.family : "sans-serif";
+    return word + " " + px + "px " + quoteFamily(family);
+  }
+
+  function setFont(ctx, choice, weight, px) {
+    ctx.font = fontOf(choice, weight, px);
+    if (!fontApplied(ctx, px)) {
+      ctx.font = (weight >= 600 ? "bold " : "normal ") + px + "px sans-serif";
+    }
+  }
+
+  function drawEmblem(ctx, cx, cy, choice) {
     ctx.beginPath();
     ctx.arc(cx, cy, 54, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(230,201,138,0.14)";
@@ -262,10 +390,114 @@
     ctx.strokeStyle = "#e6c98a";
     ctx.stroke();
     ctx.fillStyle = "#e6c98a";
-    ctx.font = "700 48px " + FONT;
+    setFont(ctx, choice, 700, 48);
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("聚", cx, cy + 2);
+  }
+
+  function curveTo(ctx, cpx, cpy, x, y) {
+    if (typeof ctx.quadraticCurveTo === "function") ctx.quadraticCurveTo(cpx, cpy, x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  function drawTrophy(ctx, cx, cy) {
+    var canSave = typeof ctx.save === "function" && typeof ctx.restore === "function";
+    if (canSave) ctx.save();
+    try {
+      ctx.beginPath();
+      ctx.arc(cx, cy - 8, 168, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(230,201,138,0.14)";
+      ctx.fill();
+      if (typeof ctx.translate === "function") ctx.translate(cx, cy);
+      if (typeof ctx.scale === "function") ctx.scale(1.35, 1.35);
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#e6c98a";
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.arc(-78, -28, 34, 0.7 * Math.PI, 1.55 * Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(78, -28, 34, 1.45 * Math.PI, 0.3 * Math.PI);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-62, -78);
+      curveTo(ctx, -70, -10, -28, 28);
+      ctx.lineTo(28, 28);
+      curveTo(ctx, 70, -10, 62, -78);
+      curveTo(ctx, 0, -58, -62, -78);
+      ctx.closePath();
+      ctx.fillStyle = "#e6c98a";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-40, -70);
+      curveTo(ctx, -44, -16, -16, 16);
+      ctx.lineTo(8, 16);
+      curveTo(ctx, 18, -20, 10, -66);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,244,210,0.45)";
+      ctx.fill();
+      ctx.beginPath();
+      if (typeof ctx.ellipse === "function") ctx.ellipse(0, -78, 64, 14, 0, 0, Math.PI * 2);
+      else ctx.arc(0, -78, 64, 0, Math.PI * 2);
+      ctx.fillStyle = "#fff4d2";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#b8893e";
+      ctx.stroke();
+      ctx.fillStyle = "#e6c98a";
+      ctx.fillRect(-10, 28, 20, 36);
+      ctx.beginPath();
+      ctx.moveTo(-22, 26);
+      ctx.lineTo(22, 26);
+      ctx.lineTo(16, 36);
+      ctx.lineTo(-16, 36);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-46, 64);
+      ctx.lineTo(46, 64);
+      ctx.lineTo(36, 82);
+      ctx.lineTo(-36, 82);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = "#b8893e";
+      ctx.fillRect(-54, 82, 108, 12);
+    } finally {
+      if (canSave) ctx.restore();
+    }
+  }
+
+  function drawGlyphTitle(ctx, text, cx, cy, px) {
+    var chars = String(text || "").split("");
+    var gap = Math.round(px * 0.04);
+    var advance = px + gap;
+    var x = cx - ((chars.length * advance) - gap) / 2;
+    var top = cy - px / 2;
+    ctx.fillStyle = "#f8fbff";
+    for (var i = 0; i < chars.length; i++) {
+      var cmds = TITLE_GLYPHS[chars[i]];
+      if (cmds && cmds.length) {
+        ctx.beginPath();
+        for (var c = 0; c < cmds.length; c++) {
+          var cmd = cmds[c];
+          var op = cmd[0];
+          if (op === "M") ctx.moveTo(x + (cmd[1] / 2048) * px, top + ((2048 - cmd[2]) / 2048) * px);
+          else if (op === "L") ctx.lineTo(x + (cmd[1] / 2048) * px, top + ((2048 - cmd[2]) / 2048) * px);
+          else if (op === "Q") {
+            curveTo(
+              ctx,
+              x + (cmd[1] / 2048) * px,
+              top + ((2048 - cmd[2]) / 2048) * px,
+              x + (cmd[3] / 2048) * px,
+              top + ((2048 - cmd[4]) / 2048) * px
+            );
+          } else if (op === "Z") ctx.closePath();
+        }
+        ctx.fill();
+      }
+      x += advance;
+    }
   }
 
   function drawDots(ctx, cx, cy, model) {
@@ -279,6 +511,28 @@
       ctx.fillStyle = i < filled ? "#e6c98a" : "rgba(255,255,255,0.16)";
       ctx.fill();
     }
+  }
+
+  function paintLine(ctx, choice, text, weight, px, x, y, color, baseline) {
+    if (!text) return;
+    ctx.fillStyle = color;
+    setFont(ctx, choice, weight, px);
+    ctx.textAlign = "center";
+    ctx.textBaseline = baseline || "top";
+    ctx.fillText(text, x, y);
+  }
+
+  function paintHeadline(ctx, choice, text, px, x, y) {
+    var glyphs = !!(choice && choice.ink === 0);
+    if (!glyphs) {
+      ctx.fillStyle = "#f8fbff";
+      setFont(ctx, choice, 700, px);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      if (!fontApplied(ctx, px)) glyphs = true;
+      else ctx.fillText(text, x, y);
+    }
+    if (glyphs) drawGlyphTitle(ctx, text, x, y, px);
   }
 
   function paintCard(ctx, model, assets) {
@@ -298,7 +552,7 @@
       }
       ctx.fillRect(0, 0, w, h);
       if (ctx.createRadialGradient) {
-        var glow = ctx.createRadialGradient(w / 2, 180, 20, w / 2, 220, 520);
+        var glow = ctx.createRadialGradient(w / 2, h * 0.42, 20, w / 2, h * 0.46, 520);
         if (glow && glow.addColorStop) {
           glow.addColorStop(0, "rgba(230,201,138,0.28)");
           glow.addColorStop(1, "rgba(230,201,138,0)");
@@ -315,7 +569,29 @@
       ctx.strokeStyle = "rgba(230,201,138,0.35)";
       ctx.stroke();
 
+      var choice = fontDecision(assets);
+      var cx = w / 2;
       ctx.textAlign = "center";
+      if (model.showAchievement) {
+        paintLine(ctx, choice, model.brand || BRAND, 500, 34, cx, 168, "rgba(226,234,248,0.8)", "top");
+        paintLine(ctx, choice, clip(model.learner || "学员", 18), 700, 36, cx, 222, "#e6c98a", "top");
+        ctx.fillStyle = "#e6c98a";
+        ctx.fillRect(cx - 36, 276, 72, 4);
+        var mid = h / 2;
+        drawTrophy(ctx, cx, mid - 120);
+        var headline = model.cardTitle || ACHIEVEMENT_CARD_TITLE;
+        paintHeadline(ctx, choice, headline, 96, cx, mid + 110);
+        paintLine(ctx, choice, model.subtitle || "", 700, 42, cx, mid + 200, "#e6c98a", "middle");
+        drawDots(ctx, cx, mid + 280, model);
+        var foot = mid + 340;
+        if (model.label) {
+          paintLine(ctx, choice, clip(model.label, 28), 400, 30, cx, foot, "rgba(226,234,248,0.66)", "middle");
+          foot += 48;
+        }
+        paintLine(ctx, choice, model.date || "", 500, 32, cx, Math.max(foot, h - 150), "rgba(226,234,248,0.78)", "middle");
+        return true;
+      }
+
       var y = 200;
       var logo = assets.logo;
       if (logo && logo.width && typeof ctx.drawImage === "function") {
@@ -326,45 +602,32 @@
           ctx.drawImage(logo, (w - dw) / 2, y, dw, dh);
           y += dh + 28;
         } catch (_) {
-          drawEmblem(ctx, w / 2, y + 54);
+          drawEmblem(ctx, cx, y + 54, choice);
           y += 132;
         }
       } else {
-        drawEmblem(ctx, w / 2, y + 54);
+        drawEmblem(ctx, cx, y + 54, choice);
         y += 132;
       }
 
-      ctx.textBaseline = "top";
-      ctx.fillStyle = "rgba(226,234,248,0.8)";
-      ctx.font = "500 34px " + FONT;
-      ctx.fillText(model.brand || BRAND, w / 2, y);
+      paintLine(ctx, choice, model.brand || BRAND, 500, 34, cx, y, "rgba(226,234,248,0.8)", "top");
       y += 48;
-      ctx.fillStyle = "#e6c98a";
-      ctx.font = "600 36px " + FONT;
-      ctx.fillText(clip(model.learner || "学员", 18), w / 2, y);
+      paintLine(ctx, choice, clip(model.learner || "学员", 18), 700, 36, cx, y, "#e6c98a", "top");
       y += 56;
       ctx.fillStyle = "#e6c98a";
-      ctx.fillRect((w / 2) - 36, y, 72, 4);
+      ctx.fillRect(cx - 36, y, 72, 4);
       y += 40;
-      ctx.fillStyle = "#f8fbff";
-      ctx.font = "800 92px " + FONT;
-      ctx.fillText(model.title || "", w / 2, y);
+      paintLine(ctx, choice, model.cardTitle || model.title || "", 700, 92, cx, y, "#f8fbff", "top");
       y += 118;
-      ctx.fillStyle = "#e6c98a";
-      ctx.font = "600 42px " + FONT;
-      ctx.fillText(model.subtitle || "", w / 2, y);
+      paintLine(ctx, choice, model.subtitle || "", 700, 42, cx, y, "#e6c98a", "top");
       y += 78;
-      drawDots(ctx, w / 2, y, model);
+      drawDots(ctx, cx, y, model);
       y += 44;
       if (model.label) {
-        ctx.fillStyle = "rgba(226,234,248,0.66)";
-        ctx.font = "400 30px " + FONT;
-        ctx.fillText(clip(model.label, 28), w / 2, y);
+        paintLine(ctx, choice, clip(model.label, 28), 400, 30, cx, y, "rgba(226,234,248,0.66)", "top");
         y += 52;
       }
-      ctx.fillStyle = "rgba(226,234,248,0.78)";
-      ctx.font = "500 32px " + FONT;
-      ctx.fillText(model.date || "", w / 2, y);
+      paintLine(ctx, choice, model.date || "", 500, 32, cx, y, "rgba(226,234,248,0.78)", "top");
       return true;
     } catch (_) {
       return false;
@@ -489,7 +752,7 @@
         var ctx = canvas.getContext && canvas.getContext("2d");
         var ok = paintCard(ctx, model, { logo: logo, width: CARD_W, height: CARD_H });
         if (!ok) {
-          setHint("图片生成失败，仍可复制文案。");
+          setHint(PAINT_FAIL_HINT);
           return;
         }
         var url = canvas.toDataURL("image/png");
@@ -510,46 +773,9 @@
           }, "image/png");
         }
       } catch (_) {
-        setHint("图片生成失败，仍可复制文案。");
+        setHint(PAINT_FAIL_HINT);
       }
     });
-  }
-
-  function fallbackCopy(text) {
-    var doc = typeof document !== "undefined" ? document : null;
-    if (!doc || !doc.body || !doc.execCommand) return false;
-    var ta = doc.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    doc.body.appendChild(ta);
-    ta.select();
-    var ok = false;
-    try { ok = !!doc.execCommand("copy"); } catch (_) { ok = false; }
-    ta.remove();
-    return ok;
-  }
-
-  function setStatus(text) {
-    var doc = typeof document !== "undefined" ? document : null;
-    var status = doc && doc.getElementById("share-card-status");
-    if (status) status.textContent = text || "";
-  }
-
-  function copyCurrent() {
-    if (!current || !current.copy) return;
-    var text = current.copy;
-    var clip = typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText;
-    if (clip) {
-      navigator.clipboard.writeText(text).then(function () {
-        setStatus("文案已复制");
-      }, function () {
-        setStatus(fallbackCopy(text) ? "文案已复制" : "复制失败，请长按上方文案");
-      });
-      return;
-    }
-    setStatus(fallbackCopy(text) ? "文案已复制" : "复制失败，请长按上方文案");
   }
 
   function nativeShare() {
@@ -591,13 +817,6 @@
         try { openSheet(); } catch (_) {}
       });
     }
-    var copyBtn = doc.getElementById("btn-share-copy");
-    if (copyBtn) {
-      copyBtn.addEventListener("click", function (ev) {
-        if (ev && ev.preventDefault) ev.preventDefault();
-        try { copyCurrent(); } catch (_) {}
-      });
-    }
     var nativeBtn = doc.getElementById("btn-share-native");
     if (nativeBtn) {
       nativeBtn.addEventListener("click", function (ev) {
@@ -627,6 +846,7 @@
     BRAND: BRAND,
     ACHIEVEMENT_ID: ACHIEVEMENT_ID,
     ACHIEVEMENT_TITLE: ACHIEVEMENT_TITLE,
+    ACHIEVEMENT_CARD_TITLE: ACHIEVEMENT_CARD_TITLE,
     STREAK_GOAL: STREAK_GOAL,
     STORAGE_KEY: STORAGE_KEY,
     CARD_W: CARD_W,
