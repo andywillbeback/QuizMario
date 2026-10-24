@@ -895,15 +895,6 @@
   .stats-chart { width: 100%; height: auto; margin-top: 8px; }
   .stats-legend { font-size: .75rem !important; opacity: .75; }
   .stats-tracks { margin: 4px 0 0; padding-left: 18px; font-size: .82rem; line-height: 1.6; }
-  #report-panel label { display: block; font-size: .82rem; margin: 10px 0 4px; }
-  #report-panel input, #report-code {
-    width: 100%; box-sizing: border-box;
-    padding: 10px 12px; border-radius: 10px; font: inherit; font-size: 16px;
-    border: 1px solid rgba(255,255,255,.2);
-    background: rgba(3, 6, 14, 0.55); color: #fff;
-  }
-  #report-code { min-height: 4.8em; resize: vertical; }
-  #report-panel .btn-row { justify-content: flex-start; }
   .speak-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .speak-btn { padding: 6px 10px; font-size: .85rem; border-radius: 999px; }
   .speak-row .fb-ex { flex-basis: 100%; }
@@ -1216,21 +1207,6 @@
         <div id="stats-panel" class="panel">
           <h3>📈 我的学习数据</h3>
           <div id="stats-body"></div>
-        </div>
-
-        <div id="report-panel" class="panel">
-          <h3>学习报告码</h3>
-          <p class="sub">填写姓名和班级码，再复制学习报告码发给老师。码以 QMR1. 开头。</p>
-          <label for="profile-name">姓名</label>
-          <input id="profile-name" type="text" autocomplete="name" maxlength="40" placeholder="姓名">
-          <label for="profile-cls">班级码</label>
-          <input id="profile-cls" type="text" autocomplete="off" autocapitalize="characters" maxlength="40" placeholder="班级码" aria-label="班级码">
-          <div class="btn-row">
-            <button id="btn-report" type="button">复制学习报告码</button>
-          </div>
-          <label for="report-code">报告码</label>
-          <textarea id="report-code" readonly rows="3" spellcheck="false" placeholder="报告码会出现在这里" aria-label="学习报告码"></textarea>
-          <p id="report-status" class="sub" role="status"></p>
         </div>
 
       </div>
