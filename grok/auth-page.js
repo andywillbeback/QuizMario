@@ -45,6 +45,21 @@
       if (mode !== "register") confirmInput.value = "";
     }
     if (password) password.autocomplete = mode === "register" ? "new-password" : "current-password";
+    var register = mode === "register";
+    ["name-label", "class-label"].forEach(function (id) {
+      var el = $(id);
+      if (el) el.hidden = !register;
+    });
+    var displayName = $("display-name");
+    var className = $("class-name");
+    if (displayName) {
+      displayName.required = register;
+      displayName.disabled = !register;
+    }
+    if (className) {
+      className.required = register;
+      className.disabled = !register;
+    }
     var submit = $("btn-submit");
     if (submit) submit.textContent = mode === "register" ? "注册" : "登录";
     var loginBtn = $("mode-login");
@@ -79,6 +94,24 @@
     var panel = $("session-panel");
     if (form) form.hidden = false;
     if (panel) panel.hidden = true;
+  }
+
+  function readIdentity() {
+    var nameEl = $("display-name");
+    var clsEl = $("class-name");
+    var nameRaw = nameEl ? nameEl.value : "";
+    var clsRaw = clsEl ? clsEl.value : "";
+    var api = window.QuizMarioProfileName;
+    if (api && typeof api.validatePair === "function") {
+      try { return api.validatePair(nameRaw, clsRaw); } catch (_) {}
+    }
+    var name = String(nameRaw || "").trim();
+    var cls = String(clsRaw || "").trim();
+    if (!name || Array.from(name).length < 2 || Array.from(name).length > 12) {
+      return { ok: false, error: name ? "姓名需要 2–12 个字。" : "请填写姓名。" };
+    }
+    if (!cls) return { ok: false, error: "请填写班级名。" };
+    return { ok: true, name: name, cls: cls };
   }
 
   function readRedirectError() {
@@ -137,6 +170,14 @@
         msg("两次密码不一致。", "bad");
         return;
       }
+      var identity = null;
+      if (mode === "register") {
+        try { identity = readIdentity(); } catch (_) { identity = { ok: false, error: "请填写姓名和班级名。" }; }
+        if (!identity || !identity.ok) {
+          msg((identity && identity.error) || "请填写姓名和班级名。", "bad");
+          return;
+        }
+      }
       if (!configured()) {
         msg(configHelp(), "bad");
         return;
@@ -147,10 +188,24 @@
       try {
         var client = CLIENT.client();
         if (mode === "register") {
+          var signupData = { display_name: identity.name, class_name: identity.cls };
+          try {
+            if (window.QuizMarioProfileName && typeof window.QuizMarioProfileName.signupData === "function") {
+              signupData = window.QuizMarioProfileName.signupData(identity.name, identity.cls);
+            }
+          } catch (_) {}
+          try {
+            if (window.QuizMarioProfileName && typeof window.QuizMarioProfileName.seedLocalProfile === "function") {
+              window.QuizMarioProfileName.seedLocalProfile(identity.name, identity.cls);
+            }
+          } catch (_) {}
           var signed = await client.auth.signUp({
             email: email,
             password: password,
-            options: { emailRedirectTo: CLIENT.siteUrl() },
+            options: {
+              emailRedirectTo: CLIENT.siteUrl(),
+              data: signupData,
+            },
           });
           if (signed.error) throw signed.error;
           if (signed.data && signed.data.session) {

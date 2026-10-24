@@ -69,13 +69,18 @@ function staticGuards() {
   assert.ok(!teacherJs.includes("（grok）"));
   assert.ok(!auth.includes("返回游戏"), "login copy must not send people back to the exam gate");
   assert.ok(login.includes('id="mode-register"') && login.includes('id="mode-login"'));
+  assert.ok(login.includes('id="display-name"') && login.includes('id="class-name"'), "register collects 姓名 and 班级名");
+  assert.ok(auth.includes("display_name") && auth.includes("class_name"), "signup stores display_name and class_name");
+  assert.ok(index.includes('src="profile-name.js"'), "index loads the profile prompt");
+  assert.ok(index.indexOf('src="game.js"') < index.indexOf('src="profile-name.js"'));
+  assert.ok(index.indexOf('src="profile-name.js"') < index.indexOf('src="sync.js"'));
 
   const banned = ["学习报告码", "QMR1", "教师看板", "ALS 学习信号", 'href="teacher.html"'];
   for (const needle of banned) {
     assert.ok(!index.includes(needle), "student index still shows " + needle);
     assert.ok(!login.includes(needle), "login still shows " + needle);
   }
-  for (const file of ["grok/index.html", "grok/login.html", "grok/game.js", "grok/sync.js", "grok/entry-guard.js", "grok/config.js", "grok/auth-page.js"]) {
+  for (const file of ["grok/index.html", "grok/login.html", "grok/game.js", "grok/sync.js", "grok/entry-guard.js", "grok/config.js", "grok/auth-page.js", "grok/profile-name.js"]) {
     const src = read(file);
     assert.ok(!/service_role\s*[:=]\s*['"][^'"]+['"]/.test(src), file + " must not embed a service_role secret");
     assert.ok(!/sb_secret_/.test(src), file);
@@ -401,6 +406,32 @@ async function main() {
     assert.strictEqual(gate.homeActive, false, "a live session lands on the exam gate, not practice home");
     assert.ok(String(gate.mark).includes("聚光单词 · 1st edition"), gate.mark);
     assert.strictEqual(gate.grokLabel, false, "the gate still shows a grok product label");
+
+    await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
+    const blocked = await waitFor(async () => evalRetry(`(() => {
+      const prompt = document.getElementById("profile-name-gate");
+      const home = document.getElementById("screen-home");
+      if (!prompt || prompt.hidden) return null;
+      if (home && home.classList.contains("active")) return null;
+      return (prompt.querySelector("h2") || {}).textContent || "";
+    })()`), 8000, "姓名 and 班级 prompt");
+    assert.ok(blocked.indexOf("姓名") !== -1, blocked);
+
+    await evalRetry(`(() => {
+      document.getElementById("profile-name-input").value = "小王";
+      document.getElementById("profile-class-input").value = "初三1班";
+      document.getElementById("profile-name-form").requestSubmit();
+      return true;
+    })()`);
+    await waitFor(async () => evalRetry(`(() => {
+      const prompt = document.getElementById("profile-name-gate");
+      if (!prompt || !prompt.hidden) return null;
+      let save = null;
+      try { save = JSON.parse(localStorage.getItem("vocabSpotlight_v1") || "null"); } catch (e) { save = null; }
+      const profile = save && save.profile;
+      if (!profile || profile.name !== "小王" || profile.cls !== "初三1班") return null;
+      return true;
+    })()`), 8000, "profile.name and profile.cls saved");
 
     await evalRetry(`document.getElementById("btn-gate-zhongkao").click()`);
     const home = await waitFor(async () => {

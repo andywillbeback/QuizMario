@@ -15,6 +15,7 @@
   var timer = null;
   var uploadChain = Promise.resolve();
   var bootLocalJson = "";
+  var cloudSave = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -100,7 +101,7 @@
   async function uploadSnapshot(snapshot) {
     var client = CLIENT && CLIENT.client();
     if (!client || !user || !MERGE) return;
-    if (MERGE.isBlank(snapshot)) {
+    if (MERGE.isBlank(snapshot) && !profileReady(snapshot)) {
       setStatus("已登录 · 已同步", user.email || "");
       return;
     }
@@ -115,6 +116,30 @@
     }, { onConflict: "user_id" });
     if (res.error) throw res.error;
     setStatus("已登录 · 已同步", user.email || "");
+  }
+
+  function profileReady(snapshot) {
+    try {
+      var api = window.QuizMarioProfileName;
+      if (api && typeof api.complete === "function" && typeof api.readProfile === "function") {
+        return api.complete(api.readProfile(snapshot));
+      }
+    } catch (_) {}
+    var p = snapshot && snapshot.profile;
+    return !!(p && String(p.name || "").trim() && String(p.cls || "").trim());
+  }
+
+  function stampIdentity(cloud) {
+    var api = window.QuizMarioProfileName;
+    var qm = window.__QM;
+    if (!api || !user || !qm || typeof qm.getSave !== "function" || typeof qm.setProfile !== "function") return;
+    if (typeof api.pickProfile !== "function" || typeof api.readProfile !== "function") return;
+    var picked = api.pickProfile(qm.getSave(), cloud, user);
+    var cur = api.readProfile(qm.getSave());
+    var nextName = picked.name || cur.name;
+    var nextCls = picked.cls || cur.cls;
+    if (nextName === cur.name && nextCls === cur.cls) return;
+    qm.setProfile(nextName, nextCls);
   }
 
   function flushNow() {
@@ -182,6 +207,7 @@
       var fetched = await client.from("user_progress").select("save,updated_at").eq("user_id", user.id).maybeSingle();
       if (fetched.error) throw fetched.error;
       var cloud = MERGE.normalizeCloudSave(fetched.data);
+      cloudSave = cloud;
       var bootLocal = bootLocalJson ? JSON.parse(bootLocalJson) : {};
       var liveJson = "";
       try { liveJson = JSON.stringify(qm.getSave()); } catch (_) {}
@@ -211,6 +237,7 @@
         pendingDuringBoot = false;
         enqueueUpload();
       }
+      try { stampIdentity(cloudSave); } catch (_) {}
       if (user && window.__QM && typeof window.__QM.onSessionReady === "function") {
         try { window.__QM.onSessionReady(); } catch (_) {}
       }
