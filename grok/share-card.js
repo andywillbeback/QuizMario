@@ -154,6 +154,32 @@
     };
   }
 
+  /** Saved profile name, else a masked email local-part, else 学员. Never a made-up username. */
+  function learnerDisplayName(input) {
+    input = input || {};
+    var name = String(input.name == null ? "" : input.name).replace(/\s+/g, " ").trim();
+    if (name) return name;
+    var masked = maskLocalPart(input.email);
+    if (masked) return masked;
+    return "学员";
+  }
+
+  function maskLocalPart(email) {
+    var s = String(email == null ? "" : email).trim();
+    var at = s.indexOf("@");
+    if (at <= 0) return "";
+    var local = s.slice(0, at);
+    var host = s.slice(at + 1);
+    if (!local || !host) return "";
+    var stars = local.indexOf("***");
+    if (stars !== -1) {
+      var already = local.slice(0, stars + 3);
+      return already === "***" ? "" : already;
+    }
+    var keep = local.length <= 1 ? 1 : 2;
+    return local.slice(0, keep) + "***";
+  }
+
   function cardModel(checkin, meta) {
     checkin = checkin || {};
     meta = meta || {};
@@ -178,6 +204,7 @@
       showAchievement: showAchievement,
       justUnlocked: !!checkin.justUnlocked,
       label: meta.label ? String(meta.label) : "",
+      learner: learnerDisplayName({ name: meta.name, email: meta.email }),
       copy: copy,
     };
   }
@@ -311,7 +338,11 @@
       ctx.fillStyle = "rgba(226,234,248,0.8)";
       ctx.font = "500 34px " + FONT;
       ctx.fillText(model.brand || BRAND, w / 2, y);
-      y += 64;
+      y += 48;
+      ctx.fillStyle = "#e6c98a";
+      ctx.font = "600 36px " + FONT;
+      ctx.fillText(clip(model.learner || "学员", 18), w / 2, y);
+      y += 56;
       ctx.fillStyle = "#e6c98a";
       ctx.fillRect((w / 2) - 36, y, 72, 4);
       y += 40;
@@ -427,6 +458,8 @@
     sheet.hidden = false;
     var copyEl = doc.getElementById("share-card-copy");
     if (copyEl) copyEl.textContent = current.copy || "";
+    var who = doc.getElementById("share-card-learner");
+    if (who) who.textContent = current.learner || "";
     var status = doc.getElementById("share-card-status");
     if (status) status.textContent = current.justUnlocked ? ACHIEVEMENT_TITLE : "";
     var nativeBtn = doc.getElementById("btn-share-native");
@@ -607,6 +640,7 @@
     activeStreak: activeStreak,
     recordSetComplete: recordSetComplete,
     cardModel: cardModel,
+    learnerDisplayName: learnerDisplayName,
     readState: readState,
     commitSetComplete: commitSetComplete,
     clearLocal: clearLocal,

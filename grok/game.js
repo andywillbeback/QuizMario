@@ -2932,9 +2932,17 @@
       if (sheet) sheet.hidden = true;
       const api = window.QuizMarioShare;
       if (!api || typeof api.onSetComplete !== "function") return;
+      let email = "";
+      try {
+        const raw = localStorage.getItem("quizmario-auth");
+        const saved = raw && JSON.parse(raw);
+        if (saved && saved.user && saved.user.email) email = String(saved.user.email);
+      } catch (_) {}
       api.onSetComplete({
         kind: kind === "level" ? "level" : "session",
         label: kind === "level" ? setTitle(currentLevel) : "",
+        name: (save && save.profile && save.profile.name) || "",
+        email: email,
       });
     } catch (_) {}
   }

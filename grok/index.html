@@ -683,6 +683,11 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     box-shadow: 0 14px 36px rgba(0, 0, 0, 0.38);
     -webkit-touch-callout: default;
   }
+  .share-learner {
+    margin: 10px auto 0;
+    font-weight: 700;
+    color: var(--text);
+  }
   .share-copy {
     margin: 10px auto 0;
     max-width: 28rem;
@@ -1314,6 +1319,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         </div>
         <div id="share-sheet" class="share-sheet" hidden>
           <img id="share-card-img" alt="聚光单词成就卡片" hidden>
+          <p id="share-card-learner" class="share-learner"></p>
           <p id="share-card-copy" class="share-copy"></p>
           <p id="share-card-hint" class="sub">长按图片保存，可发到朋友圈</p>
           <div class="btn-row">

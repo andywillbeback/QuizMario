@@ -87,6 +87,7 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.strictEqual(first.copy, "聚光单词 · 完成一组｜连续 1/10 天");
   assert.strictEqual(first.label, "第1组 · Part A");
   assert.ok(!first.copy.includes("我要打十个"), "a first-day card does not claim the achievement");
+  assert.strictEqual(first.learner, "学员", "a card with no saved name and no email says 学员");
 
   const again = share.commitSetComplete(store, shanghaiNoon("2026-10-01"), { kind: "session" });
   assert.strictEqual(again.streak, 1, "a second set on the same Shanghai day does not add a day");
@@ -171,9 +172,13 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
     streak: 10,
     unlocked: true,
     justUnlocked: true,
-  }, { kind: "level", label: "第3组 · Part B" });
+  }, { kind: "level", label: "第3组 · Part B", name: "林晓", email: "secret@example.com" });
+  assert.strictEqual(model.learner, "林晓");
+  assert.strictEqual(model.title, "我要打十个");
   assert.strictEqual(share.paintCard(ctx, model, { width: 1080, height: 1350 }), true);
   assert.ok(ctx.texts.includes("我要打十个"));
+  assert.ok(ctx.texts.includes("林晓"));
+  assert.ok(!ctx.texts.some((text) => text.indexOf("secret") !== -1 || text.indexOf("@") !== -1));
   assert.ok(ctx.texts.includes("聚光单词 · 1st edition"));
   assert.ok(ctx.texts.includes("已连续打卡10天"));
   assert.ok(ctx.texts.includes("2026年10月10日"));
@@ -187,6 +192,23 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   share.clearLocal(store);
   assert.strictEqual(store.getItem(share.STORAGE_KEY), null);
   assert.deepStrictEqual(share.readState(store).days, []);
+}
+
+{
+  assert.strictEqual(share.learnerDisplayName({ name: "  小明  ", email: "andy@example.com" }), "小明");
+  assert.strictEqual(share.learnerDisplayName({ name: "   ", email: "andy.will@example.com" }), "an***");
+  assert.strictEqual(share.learnerDisplayName({ email: "a@example.com" }), "a***");
+  assert.strictEqual(share.learnerDisplayName({ email: "an***@school.edu" }), "an***");
+  assert.strictEqual(share.learnerDisplayName({ email: "***@school.edu" }), "学员");
+  assert.strictEqual(share.learnerDisplayName({ email: "not-an-email" }), "学员");
+  assert.strictEqual(share.learnerDisplayName({}), "学员");
+  assert.ok(!share.learnerDisplayName({ email: "andy.will@example.com" }).includes("@"));
+  const longName = "一二三四五六七八九十一二三四五六七八九十";
+  const longCard = share.cardModel({ day: "2026-10-01", streak: 1 }, { name: longName });
+  assert.strictEqual(longCard.learner, longName, "the saved name is kept in full");
+  const longCtx = mockCtx();
+  assert.strictEqual(share.paintCard(longCtx, longCard), true);
+  assert.ok(longCtx.texts.some((text) => text !== longName && text.indexOf("…") !== -1), "a long name is clipped on the card");
 }
 
 {
@@ -215,6 +237,10 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.ok(/id="share-achievement"[^>]*hidden/.test(index), "share stays hidden until a set completes");
   assert.ok(index.includes('id="btn-share-achievement"') && index.includes("分享成就"));
   assert.ok(index.includes("保存图片") && index.includes("复制文案"));
+  const sheetAt = index.indexOf('id="share-sheet"');
+  const learnerAt = index.indexOf('id="share-card-learner"');
+  const copyAt = index.indexOf('id="share-card-copy"');
+  assert.ok(sheetAt > 0 && learnerAt > sheetAt && copyAt > learnerAt, "learner line stays inside the share sheet");
   assert.ok(index.indexOf('src="share-card.js"') < index.indexOf('src="game.js"'));
   assert.ok(index.indexOf('src="practice.js"') < index.indexOf('src="share-card.js"'));
 
@@ -240,6 +266,8 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.ok(offerFn.includes("catch"));
   assert.ok(offerFn.includes("QuizMarioShare"));
   assert.ok(offerFn.includes("onSetComplete"));
+  assert.ok(offerFn.includes("save.profile") && offerFn.includes("quizmario-auth"), "the card reads a saved name or the session email");
+  assert.ok(!read("grok/auth-page.js").includes("share-card"), "login identity UI is not part of the share card");
   assert.ok(game.includes("btn-next-level") && game.includes("startLevel(next)"));
 
   assert.ok(!sw.includes("words.js"));
