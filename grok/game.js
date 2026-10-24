@@ -316,6 +316,10 @@
   }
 
   function showScreen(name) {
+    if ((name === "gate" || name === "home") && !document.documentElement.classList.contains("session-ok") && !window.__QM_EXPECT_SESSION && !window.__QM_AUTH_PENDING) {
+      location.replace("login.html");
+      return;
+    }
     if (name !== "play") clearRateDock();
     document.body.classList.toggle("at-gate", name === "gate");
     document.body.classList.toggle("at-play", name === "play");
@@ -2961,6 +2965,10 @@
   }
 
   function enterExam(id) {
+    if (!document.documentElement.classList.contains("session-ok")) {
+      location.replace("login.html");
+      return;
+    }
     try {
       switchTrack(id);
     } finally {

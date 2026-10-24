@@ -1,4 +1,4 @@
-/* 聚光单词（grok） teacher board.
+/* grok-track teacher board.
  * Cloud charts are the default. QMR1 paste stays behind a collapsed section.
  * Authorization is app_metadata.role === "teacher". user_metadata is ignored.
  */
@@ -823,7 +823,7 @@
     var note = "";
     var dir = await client.rpc("teacher_directory");
     if (dir.error) {
-      note = "邮箱掩码目录还没生效。请在 Supabase SQL 编辑器运行 grok/supabase/teacher_read.sql，然后刷新。当前用学员编号代替邮箱。";
+      note = "邮箱掩码目录还没生效。请在 Supabase SQL 编辑器运行本目录 supabase/teacher_read.sql，然后刷新。当前用学员编号代替邮箱。";
     } else {
       directory = dir.data || [];
     }
@@ -900,7 +900,7 @@
         showDenied();
         return;
       }
-      $("cloud-status").textContent = "读取失败。" + humanAuthError(err) + " 若只能看到自己的进度，请运行 grok/supabase/teacher_read.sql 后退出再登录。";
+      $("cloud-status").textContent = "读取失败。" + humanAuthError(err) + " 若只能看到自己的进度，请运行本目录 supabase/teacher_read.sql 后退出再登录。";
     }
   }
 
@@ -908,7 +908,7 @@
     var client = clientOrNull();
     if (!client) {
       showLogin();
-      setGate("还不能登录：请确认 grok/config.js 已填写 SUPABASE_URL 和 SUPABASE_ANON_KEY。页面不会使用 service 密钥。", true);
+      setGate("还不能登录：请确认本目录 config.js 已填写 SUPABASE_URL 和 SUPABASE_ANON_KEY。页面不会使用 service 密钥。", true);
       return;
     }
     var user = await currentUser(client);

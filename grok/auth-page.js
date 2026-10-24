@@ -31,7 +31,7 @@
   }
 
   function configHelp() {
-    return "还不能登录：请在 config.js 填入 SUPABASE_URL 和 SUPABASE_ANON_KEY（见 README）。现在可以返回游戏，进度仍保存在本机。";
+    return "还不能登录：请在 config.js 填入 SUPABASE_URL 和 SUPABASE_ANON_KEY（见 README）。未登录不能选择中考或高考。";
   }
 
   function setMode(next) {

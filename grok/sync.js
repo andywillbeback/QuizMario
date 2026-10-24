@@ -35,24 +35,29 @@
   }
 
   function sendToLogin() {
+    document.documentElement.classList.remove("session-ok");
     var tail = window.__QM_AUTH_PENDING ? ((location.search || "") + (location.hash || "")) : "";
     location.replace("login.html" + tail);
   }
 
   function renderAccount() {
     var logged = !!user;
+    var confirming = !logged && (!!window.__QM_EXPECT_SESSION || document.documentElement.classList.contains("session-ok"));
     var link = $("login-link");
     var cta = $("login-cta");
     var out = $("btn-logout");
     var wipe = $("wipe-label");
-    if (link) link.hidden = logged;
-    if (cta) cta.hidden = logged;
+    if (cta) cta.hidden = true;
+    if (link) link.hidden = logged || confirming;
     if (out) out.hidden = !logged;
     if (wipe) wipe.hidden = !logged;
-    if (!logged) {
-      var configured = CLIENT && CLIENT.isConfigured();
-      setStatus("未登录本地", configured ? "" : "config.js 仍是占位符，进度只保存在本机");
+    if (logged) return;
+    if (confirming) {
+      setStatus("已登录 · 同步中", "");
+      return;
     }
+    var configured = CLIENT && CLIENT.isConfigured();
+    setStatus("未登录本地", configured ? "" : "config.js 仍是占位符，进度只保存在本机");
   }
 
   function friendlySyncError(err) {
@@ -136,6 +141,8 @@
       try { await client.auth.signOut(); } catch (_) {}
     }
     user = null;
+    window.__QM_EXPECT_SESSION = false;
+    document.documentElement.classList.remove("session-ok");
     try { localStorage.removeItem("quizmario-auth"); } catch (_) {}
     if (opts.wipe) {
       try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
@@ -155,8 +162,7 @@
     if (!MERGE || !CLIENT || !CLIENT.isConfigured() || !CLIENT.client() || !qm) {
       holdUploads = false;
       renderAccount();
-      if (window.__QM_EXPECT_SESSION) revealApp();
-      else sendToLogin();
+      sendToLogin();
       return;
     }
     var client = CLIENT.client();
@@ -194,7 +200,7 @@
     } catch (e) {
       setStatus(user ? "已登录 · 同步失败" : "未登录本地", friendlySyncError(e));
       if (window.console && console.warn) console.warn("QuizMario sync", e);
-      if (user || window.__QM_EXPECT_SESSION) revealApp();
+      if (user) revealApp();
       else sendToLogin();
     } finally {
       holdUploads = false;
