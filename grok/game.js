@@ -2494,6 +2494,20 @@
       persist({ keepUpdatedAt: true, upload: false });
       return save.updatedAt;
     },
+    setProfile(name, cls) {
+      if (!save.profile || typeof save.profile !== "object" || Array.isArray(save.profile)) {
+        save.profile = { name: "", cls: "" };
+      }
+      var nextName = typeof name === "string" ? name : (save.profile.name || "");
+      var nextCls = typeof cls === "string" ? cls : (save.profile.cls || "");
+      if (save.profile.name === nextName && save.profile.cls === nextCls) {
+        return { name: save.profile.name, cls: save.profile.cls };
+      }
+      save.profile.name = nextName;
+      save.profile.cls = nextCls;
+      persist();
+      return { name: save.profile.name, cls: save.profile.cls };
+    },
   };
 
   // --- Wire UI ---

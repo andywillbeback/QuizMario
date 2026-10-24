@@ -79,6 +79,14 @@ input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,2
         <label for="confirm">确认密码</label>
         <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="确认密码">
       </div>
+      <div id="name-label">
+        <label for="display-name">姓名</label>
+        <input id="display-name" name="display-name" type="text" autocomplete="nickname" maxlength="12" required placeholder="姓名（2–12 字）">
+      </div>
+      <div id="class-label">
+        <label for="class-name">班级名</label>
+        <input id="class-name" name="class-name" type="text" autocomplete="organization" maxlength="20" required placeholder="班级名">
+      </div>
       <div class="actions">
         <button type="submit" class="primary" id="btn-submit">注册</button>
         <div class="links"><button type="button" class="texty" id="btn-forgot">忘记密码？</button></div>
@@ -112,6 +120,7 @@ input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,2
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <script src="sync-merge.js"></script>
 <script src="cloud-client.js"></script>
+<script src="profile-name.js"></script>
 <script src="auth-page.js"></script>
 <script>
 (function () {
