@@ -4,6 +4,8 @@
 
 线上：https://andywillbeback.github.io/QuizMario/ · 教师看板：teacher.html
 
+Grok 版：https://andywillbeback.github.io/QuizMario/grok/
+
 - 词库：原版核心 8 组 400 词 · 中考核心 100 · KET(A2) 100 · PET(B1) 100 · 四级基础 100（每组 50 词，新词库均含例句）
 - Anki-lite SRS（Good / Easy）。通关：本组至少 80% 的词条进入复习且间隔 ≥1 天。答错会把那一张退回学习、稍后重问，但不再要求新词 / 到期 / 学习中全部为 0。
 - 今日必练：首页把「今日到期」（已打开的组里 `due <= 现在` 且不是纯新词）和「错词本」收成一条练习。先到期，再补还没出现在到期里的错词。看中文选英文，答完仍走 `schedule()`。到期账本和错词本账本分开存。
