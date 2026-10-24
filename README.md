@@ -4,7 +4,7 @@
 
 线上：https://andywillbeback.github.io/QuizMario/ · 教师看板：teacher.html
 
-Grok 版：https://andywillbeback.github.io/QuizMario/grok/
+Grok 版：https://andywillbeback.github.io/QuizMario/grok/ · 教师图表看板：https://andywillbeback.github.io/QuizMario/grok/teacher.html
 
 - 词库：原版核心 8 组 400 词 · 中考核心 100 · KET(A2) 100 · PET(B1) 100 · 四级基础 100（每组 50 词，新词库均含例句）
 - Anki-lite SRS（Good / Easy）。通关：本组至少 80% 的词条进入复习且间隔 ≥1 天。答错会把那一张退回学习、稍后重问，但不再要求新词 / 到期 / 学习中全部为 0。
@@ -57,6 +57,35 @@ Grok 版：https://andywillbeback.github.io/QuizMario/grok/
 - 状态文案：`未登录本地`、`已登录 · 同步中`、`已登录 · 已同步`、`已登录 · 同步失败`。
 - 退出只清登录会话。勾选「退出时清除本机」并在弹窗里确认后，才会删本机进度和学习信号；云端不删。
 - 已登录时点「重置进度」只清本机进度和学习信号。刷新后云端进度会再同步下来。云端 `learner_events` 行不删。
+
+## 教师看板（聚光单词 grok）
+
+教师打开 https://andywillbeback.github.io/QuizMario/grok/teacher.html ，用 Supabase 邮箱和密码登录。页面使用 `grok/config.js` 里的 anon / publishable key，不使用 `service_role`。学生首页和登录页没有指向这块看板的链接。
+
+登录后默认是云端图表，不是报告码粘贴。页底有一栏收起的「旧版报告码导入」，不展开就不会用到。
+
+只有 JWT `app_metadata.role = teacher` 能读全班。`user_metadata` 里的 role 不算。已经具备该角色的邮箱：`andyisback@163.com`、`642772166@qq.com`。新教师在 SQL Editor 执行（对方需要退出再登录，JWT 才会带上新角色）：
+
+```sql
+update auth.users
+set raw_app_meta_data =
+  coalesce(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('role', 'teacher')
+where lower(email) = 'teacher@example.com';
+```
+
+全班读取策略在 `grok/supabase/teacher_read.sql`（`public.is_teacher()`，以及 `user_progress` / `learner_events` 的教师 SELECT；学生仍只能读写自己的行）。邮箱在看板上显示为 `an***@163.com` 这种掩码，来自 `public.teacher_directory()`，学生调用得不到行。
+
+看板图表：
+
+1. 学员数 / 近7日活跃 / 平均掌握% / 薄弱词数
+2. 已接触词条的掌握度分布（`cards.mastery`，不含未学新词）
+3. 近 7 日练习折线（`learner_events` 里的答题和错词本，不含 `vocab.due_review`）
+4. 题型 / 事件占比（有 `payload.task_direction` 时按题型，否则按 `event_type`）
+5. 薄弱词 Top 10（`cards.wrong`、错词本 `active`、`vocab.answer_wrong`、`vocab.wrong_book_add`）
+6. 学员表（掩码邮箱）。点一行看进度、个人近 7 日答题、薄弱词和最近事件
+7. 没有任何云端行时显示空状态
+
+掌握%是已接触词条的进度均值：`state = review` 且 `interval >= 1` 天记 1，其余练过的记 0.5。已学会沿用存档规则：`mastered` 为真且已经巩固；旧档没有 `mastered` 时，要巩固并且 `mastery >= 3`。近 7 日活跃算存档 `daily` 或任意学习事件落在这 7 天里的学员。
 
 ## 学习信号（ALS）
 

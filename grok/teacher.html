@@ -28,8 +28,8 @@
     background: radial-gradient(ellipse at 50% 36%, transparent 0%, transparent 34%, rgba(2, 5, 14, 0.22) 60%, rgba(1, 3, 10, 0.78) 100%);
   }
   .page {
-    position: relative; z-index: 2; max-width: 1100px; margin: 12px auto 24px;
-    padding: 8px 18px 12px;
+    position: relative; z-index: 2; max-width: 1180px; margin: 12px auto 24px;
+    padding: 8px 18px 18px;
     background: linear-gradient(180deg, rgba(18, 28, 52, 0.58), rgba(7, 12, 24, 0.46));
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 22px;
@@ -37,41 +37,79 @@
     backdrop-filter: blur(6px) saturate(1.2);
     -webkit-backdrop-filter: blur(6px) saturate(1.2);
   }
-  .brand { text-align: center; margin: 8px 0 16px; }
+  .brand { text-align: center; margin: 8px 0 8px; }
   .brand h1 { margin: 0; font-weight: 600; font-size: clamp(1.6rem, 4vw, 2.1rem); letter-spacing: .16em; padding-left: .16em; color: #f7fbff; text-shadow: 0 0 22px rgba(190,214,255,.35); }
   .brand .en { margin: 6px 0 0; letter-spacing: .16em; color: rgba(226,234,248,.84); font-size: .82rem; }
   h2 { font-size: 1.15rem; margin: 0 0 4px; font-weight: 600; }
-  .sub { color: rgba(226,234,248,.72); font-size: .88rem; margin: 0 0 12px; }
-  textarea, select {
-    width: 100%; min-height: 120px; box-sizing: border-box;
+  h3 { margin: 18px 0 8px; font-size: 1rem; font-weight: 600; }
+  .sub { color: rgba(226,234,248,.72); font-size: .88rem; margin: 0 0 12px; line-height: 1.5; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 12px; }
+  .toolbar .who { color: var(--gold); font-size: .9rem; margin-right: auto; }
+  label { display: block; font-size: .82rem; color: var(--cyan); margin: 8px 0 4px; }
+  input[type="email"], input[type="password"], textarea, select {
+    width: 100%; box-sizing: border-box;
     background: rgba(3, 6, 14, 0.55); color: #fff;
-    border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 8px; font-size: .78rem;
+    border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 10px; font-size: .95rem;
   }
-  select { width: auto; min-height: 0; padding: 8px; }
+  textarea { min-height: 120px; font-size: .78rem; }
+  select { width: auto; padding: 8px; }
+  #login-form { max-width: 420px; }
   button, .btn {
     background: linear-gradient(180deg, #f8fbff, #d5e3f6); color: #121722; border: 0;
     border-radius: 12px; padding: 10px 14px; font-size: .95rem; font-weight: 700;
     margin: 6px 6px 0 0; cursor: pointer;
   }
   button.ghost { background: transparent; color: var(--cyan); border: 1px solid rgba(255,255,255,.22); font-weight: 600; }
-  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 14px 0; }
+  button.linkish { background: none; border: 0; color: var(--cyan); padding: 0; margin: 0; font-weight: 600; font-size: inherit; }
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
   .cards div { background: rgba(9,14,28,.46); border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 10px; text-align: center; font-size: .78rem; }
   .cards b { display: block; font-size: 1.4rem; color: var(--gold); }
+  .chart-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: 12px; }
+  .panel {
+    background: rgba(9,14,28,.46);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 16px;
+    padding: 12px 12px 8px;
+    min-width: 0;
+  }
+  .panel h3 { margin: 0 0 4px; }
+  .panel .hint { margin: 0 0 8px; color: rgba(226,234,248,.62); font-size: .75rem; line-height: 1.4; }
+  .chart-box { position: relative; height: 240px; }
+  .chart-box.tall { height: 280px; }
+  .span-2 { grid-column: 1 / -1; }
+  .fallback { margin: 8px 0 0; font-size: .8rem; color: var(--cyan); white-space: pre-wrap; }
   .tbl-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; font-size: .82rem; }
-  th, td { border-bottom: 1px solid rgba(255,255,255,.12); padding: 6px; text-align: left; white-space: nowrap; }
-  th { color: var(--cyan); cursor: pointer; }
-  .bar { display: inline-block; height: 8px; background: var(--cyan); border-radius: 4px; vertical-align: middle; }
-  #status { font-size: .85rem; margin-top: 6px; color: var(--gold); }
+  th, td { border-bottom: 1px solid rgba(255,255,255,.12); padding: 8px 6px; text-align: left; white-space: nowrap; }
+  th { color: var(--cyan); }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover, tbody tr.is-on { background: rgba(190,214,255,.08); }
+  #empty-state, #detail {
+    margin: 12px 0;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px dashed rgba(230,201,138,.45);
+    background: rgba(9,14,28,.35);
+  }
+  #detail { border-style: solid; border-color: rgba(255,255,255,.16); }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #student-timeline { margin: 0; padding-left: 1.1rem; }
+  #student-timeline li { margin: 4px 0; }
+  #cloud-status, #legacy-status, #gate-msg { font-size: .85rem; margin-top: 6px; color: var(--gold); min-height: 1.2em; }
+  #gate-msg.is-bad { color: #ffb4c0; }
+  details { margin-top: 22px; }
+  summary { cursor: pointer; color: var(--cyan); }
   a { color: var(--cyan); }
   .gold-sign {
     margin: 22px 0 8px; text-align: center; color: var(--gold);
     font-family: "Montserrat", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    font-weight: 500;
-    font-size: 0.95rem;
-    letter-spacing: 0.22em;
-    padding-left: 0.22em;
+    font-weight: 500; font-size: 0.95rem; letter-spacing: 0.22em; padding-left: 0.22em;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55);
+  }
+  [hidden] { display: none !important; }
+  @media (max-width: 800px) {
+    .cards, .chart-grid, .detail-grid { grid-template-columns: 1fr; }
+    .span-2 { grid-column: auto; }
   }
   @media (max-width: 420px) {
     .gold-sign { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
@@ -86,26 +124,124 @@
     <h1>聚光单词（grok）</h1>
     <p class="en">Vocab Spotlight</p>
   </header>
-  <h2>教师看板 · 班级学习数据</h2>
-  <p class="sub">纯静态页面：数据只在你这台设备的浏览器里处理，不上传任何服务器。把学生发来的「学习报告码」（QMR1. 开头）粘贴到下面，每行一个；也可导入 .json / .txt 文件。<a href="index.html">← 返回游戏</a></p>
-  <textarea id="codes" placeholder="QMR1.xxxxx&#10;QMR1.yyyyy"></textarea>
-  <div>
-    <button id="btn-parse">导入报告码</button>
-    <button class="ghost" id="btn-file">导入文件</button>
-    <input id="file" type="file" accept=".json,.txt,application/json,text/plain" multiple hidden>
-    <button class="ghost" id="btn-csv">导出 CSV</button>
-    <button class="ghost" id="btn-clear">清空</button>
-    班级：<select id="cls"><option value="">全部</option></select>
-  </div>
-  <div id="status"></div>
-  <div class="cards" id="summary"></div>
-  <h3>学生进度</h3>
-  <div class="tbl-wrap"><table id="tbl"></table></div>
-  <h3>全班易错词 Top 20</h3>
-  <div class="tbl-wrap"><table id="weak"></table></div>
+
+  <section id="gate" aria-label="教师登录">
+    <h2>教师看板</h2>
+    <p class="sub">用教师邮箱和密码登录，查看全班云端进度。授权只认 app_metadata 里的 role=teacher。</p>
+    <form id="login-form">
+      <label for="email">邮箱</label>
+      <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="教师邮箱">
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="密码">
+      <button type="submit" id="btn-login">登录</button>
+    </form>
+    <p id="gate-msg" hidden>这个账号不是教师，不能打开班级看板。授权只认 app_metadata 里的 role=teacher，不认 user_metadata。</p>
+    <button type="button" class="ghost" id="btn-logout-gate" hidden>退出登录</button>
+  </section>
+
+  <section id="board" hidden aria-label="班级图表">
+    <div class="toolbar">
+      <span class="who" id="who"></span>
+      <button type="button" class="ghost" id="btn-refresh">刷新</button>
+      <button type="button" class="ghost" id="btn-logout">退出</button>
+    </div>
+    <h2>教师看板 · 班级云进度</h2>
+    <p class="sub">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。</p>
+    <p id="cloud-status" role="status"></p>
+    <div class="cards" id="kpi-strip">
+      <div><b id="kpi-students">—</b>学员数</div>
+      <div><b id="kpi-active">—</b>近7日活跃</div>
+      <div><b id="kpi-mastery">—</b>平均掌握%</div>
+      <div><b id="kpi-weak">—</b>薄弱词数</div>
+    </div>
+    <div id="empty-state" hidden>
+      <h3>还没有学员云端进度</h3>
+      <p class="sub">学生用自己的邮箱登录并练习后，这里会画出掌握度、近 7 日练习、题型占比和薄弱词。现在没有任何云端行。</p>
+    </div>
+    <div id="chart-grid" class="chart-grid">
+      <article class="panel">
+        <h3>掌握度分布</h3>
+        <p class="hint">已接触词条的 mastery 星级。0 / 0.5 / 1 / 2 / 3。</p>
+        <div class="chart-box"><canvas id="chart-mastery" aria-label="掌握度分布"></canvas></div>
+        <p class="fallback" id="chart-mastery-fallback" hidden></p>
+      </article>
+      <article class="panel">
+        <h3>题型 / 模式占比</h3>
+        <p class="hint">有 task_direction 时按题型，否则按 event_type。</p>
+        <div class="chart-box"><canvas id="chart-modes" aria-label="题型与模式占比"></canvas></div>
+        <p class="fallback" id="chart-modes-fallback" hidden></p>
+      </article>
+      <article class="panel">
+        <h3>近7日练习活跃</h3>
+        <p class="hint">learner_events 中的答题与错词本。不含 vocab.due_review。</p>
+        <div class="chart-box"><canvas id="chart-activity" aria-label="近7日练习活跃"></canvas></div>
+        <p class="fallback" id="chart-activity-fallback" hidden></p>
+      </article>
+      <article class="panel">
+        <h3>薄弱词 Top10</h3>
+        <p class="hint">存档错次、错词本和错题事件合计。</p>
+        <div class="chart-box tall"><canvas id="chart-weak" aria-label="薄弱词 Top10"></canvas></div>
+        <p class="fallback" id="chart-weak-fallback" hidden></p>
+      </article>
+    </div>
+    <h3>学员</h3>
+    <div class="tbl-wrap">
+      <table id="students">
+        <thead>
+          <tr>
+            <th>学员</th><th>姓名</th><th>词库</th><th>已接触</th><th>掌握%</th><th>已学会</th><th>薄弱</th><th>近7日</th><th>更新</th>
+          </tr>
+        </thead>
+        <tbody id="student-body"></tbody>
+      </table>
+    </div>
+    <section id="detail" hidden aria-live="polite">
+      <button type="button" class="ghost" id="btn-detail-back">返回列表</button>
+      <h3 id="detail-title">学员</h3>
+      <p class="sub" id="detail-progress"></p>
+      <div class="detail-grid">
+        <article class="panel">
+          <h3>个人近7日</h3>
+          <p class="hint" id="detail-line-hint">答题次数</p>
+          <div class="chart-box"><canvas id="chart-student" aria-label="个人近7日"></canvas></div>
+          <p class="fallback" id="chart-student-fallback" hidden></p>
+        </article>
+        <article class="panel">
+          <h3>薄弱词</h3>
+          <div class="tbl-wrap"><table id="student-weak"></table></div>
+          <h3>最近事件</h3>
+          <ul id="student-timeline"></ul>
+        </article>
+      </div>
+    </section>
+
+    <details id="legacy-report">
+      <summary>旧版报告码导入（默认不用）</summary>
+      <p class="sub">云端图表是默认画面。只有学生仍发来旧的学习报告码（QMR1. 开头）时才展开这里，数据留在这台浏览器里。</p>
+      <textarea id="codes" placeholder="QMR1.xxxxx&#10;QMR1.yyyyy"></textarea>
+      <div>
+        <button type="button" id="btn-parse">导入报告码</button>
+        <button type="button" class="ghost" id="btn-file">导入文件</button>
+        <input id="file" type="file" accept=".json,.txt,application/json,text/plain" multiple hidden>
+        <button type="button" class="ghost" id="btn-csv">导出 CSV</button>
+        <button type="button" class="ghost" id="btn-clear">清空</button>
+        班级：<select id="cls"><option value="">全部</option></select>
+      </div>
+      <div id="legacy-status"></div>
+      <div class="cards" id="legacy-summary"></div>
+      <div class="tbl-wrap"><table id="legacy-tbl"></table></div>
+      <h3>全班易错词</h3>
+      <div class="tbl-wrap"><table id="legacy-weak"></table></div>
+    </details>
+  </section>
   <p class="gold-sign">Doctoral product powered by Pu Jin</p>
 </div>
 <script src="spiral-field.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="sync-merge.js"></script>
+<script src="cloud-client.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script src="teacher.js"></script>
 </body>
 </html>
