@@ -1,0 +1,16 @@
+{
+  "name": "聚光单词（grok） — Vocab Spotlight",
+  "short_name": "聚光单词 grok",
+  "description": "聚光单词（grok） Vocab Spotlight",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#05070d",
+  "theme_color": "#05070d",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

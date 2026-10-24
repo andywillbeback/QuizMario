@@ -1,0 +1,14 @@
+/* QuizMario cloud sync settings.
+ * Andy: create a free Supabase project, then paste two values from
+ * Project Settings → API. The anon key is public (RLS protects each row).
+ * Never put the service_role key in this file.
+ *
+ * SUPABASE_URL      Project URL, like https://xxxxxxxx.supabase.co
+ * SUPABASE_ANON_KEY anon / public key (legacy JWT eyJ… or sb_publishable_…)
+ * SITE_URL          Auth Site URL for this Grok build. Keep the trailing slash.
+ */
+window.QUIZMARIO_CONFIG = {
+  SUPABASE_URL: "https://cmainasvlfdynidabunp.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_wXq1t1Ynsj9o1qGpU5T3IQ_7M5EC1ZK",
+  SITE_URL: "https://andywillbeback.github.io/QuizMario/grok/",
+};

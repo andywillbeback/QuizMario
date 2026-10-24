@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060d1c"><link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="application-name" content="聚光单词（grok）"><title>聚光单词（grok） · 登录</title>
+<style>
+*{box-sizing:border-box}html{background:#050b18}html,body{margin:0;overflow-x:hidden}
+body{color:#fff;font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC","Noto Sans CJK SC",system-ui,sans-serif;
+ background:radial-gradient(ellipse 70% 80% at 60% 50%,#0c1a33 0%,#081226 55%,#050b18 100%);}
+.grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+ background-image:linear-gradient(rgba(120,160,230,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,160,230,.06) 1px,transparent 1px);
+ background-size:44px 44px;animation:gridDrift 30s linear infinite;
+ -webkit-mask-image:radial-gradient(ellipse at 55% 50%,#000 30%,transparent 85%);mask-image:radial-gradient(ellipse at 55% 50%,#000 30%,transparent 85%)}
+@keyframes gridDrift{to{background-position:44px 44px,44px 44px}}
+.topbar{position:fixed;top:22px;left:28px;z-index:3;display:flex;align-items:center;gap:8px;font-weight:700;font-size:17px;letter-spacing:.06em}
+.topbar img{width:34px;height:34px}
+.wrap{position:relative;z-index:2;min-height:100vh;display:grid;grid-template-columns:minmax(300px,36%) 1fr;align-items:center;padding:0 0 0 7%}
+.card{width:300px}
+h1{margin:0;font-size:38px;font-weight:700;letter-spacing:.02em;text-shadow:0 0 18px rgba(120,170,255,.25)}
+.sub{margin:14px 0 26px;font-size:17px;color:#e8eefb}
+.sub small{display:block;margin-top:6px;font-size:12px;letter-spacing:.28em;color:rgba(170,195,240,.6)}
+.tabs{display:flex;gap:22px;margin:0 0 14px;border-bottom:1px solid rgba(140,170,230,.15)}
+.tabs button{appearance:none;background:none;border:0;color:rgba(200,215,245,.55);font:inherit;font-size:15px;padding:0 2px 9px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-pressed=true]{color:#fff;border-color:#1f7bff}
+label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+input{display:block;width:100%;height:46px;margin:0 0 12px;padding:0 13px;font:inherit;font-size:15px;color:#fff;
+ background:rgba(66,84,112,.55);border:1px solid rgba(150,175,215,.12);border-radius:4px}
+input::placeholder{color:rgba(205,215,235,.6)}
+input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,255,.2)}
+.actions{margin-top:6px}
+.primary{display:block;width:100%;height:46px;border:0;border-radius:4px;background:linear-gradient(180deg,#2a8bff,#1670f0);color:#fff;font:inherit;font-size:16px;letter-spacing:.2em;cursor:pointer;text-align:center;line-height:46px;text-decoration:none;box-shadow:0 6px 18px rgba(22,112,240,.35)}
+.primary:hover{filter:brightness(1.08)}.primary:disabled{opacity:.55}
+.links{display:flex;gap:16px;margin-top:10px}
+.texty{appearance:none;background:none;border:0;padding:4px 0;color:rgba(220,230,250,.82);font:inherit;font-size:13px;cursor:pointer}
+.texty:hover{color:#fff}
+#auth-msg{min-height:1.3em;margin:10px 0 0;font-size:13px;line-height:1.45}
+#auth-msg.ok{color:#b7f7d2}#auth-msg.bad{color:#ffb4c0}
+#config-banner{margin:0 0 12px;padding:8px 10px;font-size:12px;color:#cfe0ff;border:1px dashed rgba(100,160,255,.45);border-radius:4px}
+#session-panel h2{margin:0 0 8px;font-size:18px}#session-panel p{margin:0 0 12px;color:#cdd8ee}
+#session-panel .texty{display:block;margin:8px 0}
+.orbbox{position:relative;height:100vh;min-height:560px}
+#orb{position:absolute;inset:0;width:100%;height:100%}
+.credit{position:fixed;left:28px;bottom:22px;z-index:3;margin:0;font-size:20px;letter-spacing:.16em;font-weight:700;color:#ffe9a0;background:linear-gradient(105deg,#c9a227 0%,#fff4c2 32%,#ffffff 48%,#ffd76a 58%,#e8b84a 78%,#a67c1a 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 0 8px rgba(255,232,150,.95)) drop-shadow(0 0 22px rgba(255,210,100,.7)) drop-shadow(0 0 40px rgba(232,180,60,.4)) drop-shadow(0 2px 5px rgba(0,0,0,.65));}
+[hidden]{display:none!important}
+@media (max-width:760px){
+ .wrap{display:flex;flex-direction:column;align-items:center;padding:60px 20px 24px}
+ .orbbox{order:-1;width:100%;height:270px;min-height:0;margin-bottom:0}
+ .card{width:100%;max-width:340px;text-align:left}
+ h1{font-size:30px;text-align:center}.sub{text-align:center;margin:10px 0 20px;font-size:15px}
+ .topbar{position:absolute;top:18px;left:20px}
+ .credit{position:static;text-align:center;margin:28px 0 0;font-size:17px;letter-spacing:.14em}
+}
+</style></head><body>
+<div class="grid" aria-hidden="true"></div>
+<div class="topbar"><img src="logo-mark.png" alt="">聚光单词（grok）</div>
+<main class="wrap">
+ <div class="left">
+ <h1>欢迎使用</h1>
+ <p class="sub">登录以同步你的学习进度<small>VOCAB SPOTLIGHT</small></p>
+ <section class="card" aria-label="账号" style="width:auto">
+    <p id="config-banner" hidden></p>
+    <form id="auth-form">
+      <div class="tabs" role="tablist" aria-label="登录或注册">
+        <button type="button" id="mode-login" role="tab" aria-pressed="false" aria-selected="false">登录</button>
+        <button type="button" id="mode-register" role="tab" aria-pressed="true" aria-selected="true">注册</button>
+      </div>
+      <label for="email">邮箱</label>
+      <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="邮箱">
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="密码（至少 6 位）">
+      <div id="confirm-label">
+        <label for="confirm">确认密码</label>
+        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="确认密码">
+      </div>
+      <div class="actions">
+        <button type="submit" class="primary" id="btn-submit">注册</button>
+        <div class="links"><button type="button" class="texty" id="btn-forgot">忘记密码？</button></div>
+      </div>
+    </form>
+
+    <section id="session-panel" hidden>
+      <h2>已登录</h2>
+      <p>当前账号：<b id="session-email"></b></p>
+      <a class="primary" href="index.html">进入游戏</a>
+      <button type="button" class="texty" id="btn-session-logout">退出登录</button>
+      <form id="password-form">
+        <label for="new-password">设置新密码</label>
+        <input id="new-password" type="password" autocomplete="new-password" minlength="6" placeholder="至少 6 位">
+        <label for="new-password-2">再输入一次</label>
+        <input id="new-password-2" type="password" autocomplete="new-password" minlength="6">
+        <div class="actions">
+          <button type="submit" class="primary" id="btn-update-password">更新密码</button>
+        </div>
+      </form>
+    </section>
+    <p id="auth-msg" role="status"></p>
+  </section>
+
+ </div>
+ <div class="orbbox" aria-hidden="true"><canvas id="orb"></canvas></div>
+ <p class="credit">Doctoral product powered by Pu Jin</p>
+</main>
+<script src="orb.js"></script>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="sync-merge.js"></script>
+<script src="cloud-client.js"></script>
+<script src="auth-page.js"></script>
+</body></html>
