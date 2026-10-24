@@ -59,7 +59,8 @@ self.addEventListener("fetch", function (event) {
   if (url.origin !== self.location.origin) return;
   if (!isShellPath(url.pathname)) return;
 
-  event.respondWith(fetch(req).then(function (res) {
+  // Reload so GitHub Pages' HTTP cache cannot pin a stale shell.
+  event.respondWith(fetch(req, { cache: "reload" }).then(function (res) {
     if (res && res.ok && res.type === "basic" && !res.redirected) {
       var copy = res.clone();
       caches.open(CACHE).then(function (cache) {
