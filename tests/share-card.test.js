@@ -42,9 +42,13 @@ function shanghaiNoon(day) {
 
 function mockCtx() {
   const texts = [];
+  const fonts = [];
+  const ops = [];
   return new Proxy({}, {
     get(_target, prop) {
       if (prop === "texts") return texts;
+      if (prop === "fonts") return fonts;
+      if (prop === "ops") return ops;
       if (prop === "canvas") return { width: 1080, height: 1350 };
       if (prop === "createLinearGradient" || prop === "createRadialGradient") {
         return function () {
@@ -53,16 +57,24 @@ function mockCtx() {
       }
       if (prop === "measureText") return function () { return { width: 120 }; };
       if (prop === "fillText") {
-        return function (text) { texts.push(String(text)); };
+        return function (text) {
+          texts.push(String(text));
+          ops.push("fillText");
+        };
       }
       if (typeof prop === "symbol") return undefined;
-      return function () {};
+      return function () { ops.push(String(prop)); };
     },
-    set() { return true; },
+    set(_target, prop, value) {
+      if (prop === "font") fonts.push(String(value));
+      return true;
+    },
   });
 }
 
 assert.strictEqual(share.ACHIEVEMENT_TITLE, "我要打十个");
+assert.strictEqual(share.ACHIEVEMENT_CARD_TITLE, "我要打十个！");
+assert.notStrictEqual(share.ACHIEVEMENT_TITLE, share.ACHIEVEMENT_CARD_TITLE);
 assert.strictEqual(share.STREAK_GOAL, 10);
 assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
 
@@ -83,6 +95,7 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.strictEqual(first.unlocked, false);
   assert.strictEqual(first.showAchievement, false);
   assert.strictEqual(first.title, "完成一组");
+  assert.strictEqual(first.cardTitle, "完成一组");
   assert.strictEqual(first.subtitle, "连续 1/10 天");
   assert.strictEqual(first.copy, "聚光单词 · 完成一组｜连续 1/10 天");
   assert.strictEqual(first.label, "第1组 · Part A");
@@ -116,6 +129,7 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.strictEqual(unlocked.justUnlocked, true);
   assert.strictEqual(unlocked.showAchievement, true);
   assert.strictEqual(unlocked.title, "我要打十个");
+  assert.strictEqual(unlocked.cardTitle, "我要打十个！");
   assert.strictEqual(unlocked.subtitle, "已连续打卡10天");
   assert.strictEqual(unlocked.copy, "聚光单词 · 我要打十个｜已连续打卡10天");
   assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-10");
@@ -124,6 +138,7 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.strictEqual(held.streak, 11);
   assert.strictEqual(held.justUnlocked, false, "the name stays unlocked without firing again");
   assert.strictEqual(held.title, "我要打十个");
+  assert.strictEqual(held.cardTitle, "我要打十个！");
   assert.strictEqual(held.copy, "聚光单词 · 我要打十个｜已连续打卡11天");
 }
 
@@ -175,8 +190,14 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   }, { kind: "level", label: "第3组 · Part B", name: "林晓", email: "secret@example.com" });
   assert.strictEqual(model.learner, "林晓");
   assert.strictEqual(model.title, "我要打十个");
-  assert.strictEqual(share.paintCard(ctx, model, { width: 1080, height: 1350 }), true);
-  assert.ok(ctx.texts.includes("我要打十个"));
+  assert.strictEqual(model.cardTitle, "我要打十个！");
+  assert.strictEqual(share.paintCard(ctx, model, { width: 1080, height: 1350, fontInk: 400 }), true);
+  assert.ok(ctx.texts.includes("我要打十个！"), "the painted center title includes the exclamation");
+  assert.ok(!ctx.texts.includes("我要打十个"), "the stored name is not the on-image title");
+  assert.ok(ctx.ops.includes("quadraticCurveTo"), "the achievement card paints a trophy");
+  assert.ok(ctx.fonts.length > 0);
+  assert.ok(ctx.fonts.every((font) => font.indexOf(",") === -1), "canvas font is a single family");
+  assert.ok(ctx.fonts.every((font) => /^(bold|normal) \d+px (sans-serif|"[^"]+")$/.test(font)));
   assert.ok(ctx.texts.includes("林晓"));
   assert.ok(!ctx.texts.some((text) => text.indexOf("secret") !== -1 || text.indexOf("@") !== -1));
   assert.ok(ctx.texts.includes("聚光单词 · 1st edition"));
@@ -184,6 +205,24 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.ok(ctx.texts.includes("2026年10月10日"));
   assert.strictEqual(share.paintCard(null, model), false);
   assert.strictEqual(share.paintCard(ctx, null), false);
+  assert.strictEqual(share.paintCard({
+    fillRect() { throw new Error("paint boom"); },
+    fillText() {},
+  }, model), false, "a paint failure is a soft miss");
+
+  const blankFont = mockCtx();
+  assert.strictEqual(share.paintCard(blankFont, model, { width: 1080, height: 1350, fontInk: 0 }), true);
+  assert.ok(!blankFont.texts.includes("我要打十个！"), "missing CJK ink does not depend on fillText for the title");
+  assert.ok(blankFont.ops.includes("quadraticCurveTo"));
+  assert.ok(blankFont.ops.filter((op) => op === "lineTo").length > 40, "the title is stroked from glyph outlines");
+
+  const streak = share.cardModel({ day: "2026-10-01", streak: 1 }, { kind: "level" });
+  const streakCtx = mockCtx();
+  assert.strictEqual(share.paintCard(streakCtx, streak, { width: 1080, height: 1350, fontInk: 400 }), true);
+  assert.ok(streakCtx.texts.includes("完成一组"));
+  assert.ok(streakCtx.texts.includes("连续 1/10 天"));
+  assert.ok(!streakCtx.texts.includes("我要打十个！"));
+  assert.ok(!streakCtx.ops.includes("quadraticCurveTo"), "a streak card is progress, not the trophy unlock");
 }
 
 {
@@ -215,10 +254,18 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   const src = read("grok/share-card.js");
   assert.strictEqual(share.ACHIEVEMENT_TITLE, "我要打十个");
   assert.ok(src.includes('ACHIEVEMENT_TITLE = "我要打十个"'));
+  assert.ok(src.includes('ACHIEVEMENT_CARD_TITLE = "我要打十个！"'));
   assert.ok(src.includes("current.justUnlocked ? ACHIEVEMENT_TITLE"), "unlock toast is the achievement name");
   assert.ok(!src.includes("今日打卡王"));
-  assert.ok(!src.includes("我要打十个！"));
   assert.ok(!src.includes("成就已解锁"));
+  assert.ok(!src.includes("复制文案"));
+  assert.ok(!src.includes("仍可复制文案"));
+  assert.ok(!src.includes("btn-share-copy"));
+  assert.ok(!src.includes("clipboard"));
+  assert.ok(!src.includes("execCommand"));
+  assert.ok(!src.includes("系统分享"));
+  assert.ok(src.includes("navigator.share"));
+  assert.ok(src.includes("WenQuanYi Micro Hei") && src.includes("sans-serif"));
   assert.ok(!/from\("learner_events"\)|DB_COLUMNS|event_type/.test(src), "check-in stays out of the learner_events flush");
 }
 
@@ -236,8 +283,29 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.ok(index.includes('id="btn-next-level"') && index.includes('id="btn-clear-home"'));
   assert.ok(/id="share-achievement"[^>]*hidden/.test(index), "share stays hidden until a set completes");
   assert.ok(index.includes('id="btn-share-achievement"') && index.includes("分享成就"));
-  assert.ok(index.includes("保存图片") && index.includes("复制文案"));
+  assert.ok(index.includes("保存图片"));
+  assert.ok(!index.includes("复制文案"));
+  assert.ok(!index.includes("系统分享"));
+  assert.ok(!index.includes("btn-share-copy"));
   const sheetAt = index.indexOf('id="share-sheet"');
+  const sheetEnd = index.indexOf('id="screen-fail"');
+  const sheet = index.slice(sheetAt, sheetEnd);
+  const nativeAt = sheet.indexOf('id="btn-share-native"');
+  const saveAt = sheet.indexOf('id="btn-share-save"');
+  const closeAt = sheet.indexOf('id="btn-share-close"');
+  assert.ok(nativeAt > 0 && nativeAt < saveAt && saveAt < closeAt, "sheet order is 分享, 保存图片, 返回");
+  const nativeTag = sheet.slice(
+    sheet.lastIndexOf("<button", nativeAt),
+    sheet.indexOf("</button>", nativeAt) + "</button>".length,
+  );
+  assert.ok(nativeTag.includes('class="btn is-hero"'), nativeTag);
+  assert.ok(!nativeTag.includes("secondary"));
+  assert.ok(nativeTag.includes(">分享</button>"));
+  const saveTag = sheet.slice(sheet.lastIndexOf("<a", saveAt), sheet.indexOf("</a>", saveAt) + "</a>".length);
+  assert.ok(saveTag.includes(">保存图片</a>"));
+  assert.ok(saveTag.includes("secondary"), "保存图片 stays behind the primary 分享 button");
+  assert.ok(!saveTag.includes("is-hero"));
+  assert.ok(sheet.includes(">返回</button>"));
   const learnerAt = index.indexOf('id="share-card-learner"');
   const copyAt = index.indexOf('id="share-card-copy"');
   assert.ok(sheetAt > 0 && learnerAt > sheetAt && copyAt > learnerAt, "learner line stays inside the share sheet");
