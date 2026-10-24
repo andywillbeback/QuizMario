@@ -4,7 +4,7 @@
  * Clearance (通关): ≥80% of the set in review with interval ≥1 day (srs-rules.js).
  * 已学会 is a later-day clean recall, not the same thing as 通关 or 保持率.
  * 继续闯关 is regular study with no clock. 12分钟挑战 is the only timed mode (CHALLENGE_MS).
- * 通关 is 看英文选中文. 拼写 is tracked separately and does not block the first 通关.
+ * 通关 is 看英文选中文. 拼写 is typed; old MC spelling is not independent mastery.
  * 今日必练: due cards first, then 错词本 fill-in (review-queues.js). ZH→EN, still schedule().
  * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
  * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
@@ -173,6 +173,9 @@
     }
     if (p.ef == null) p.ef = 2.5;
     if (SRS.noteLegacyMastery) SRS.noteLegacyMastery(p);
+    if (p.spelling && Practice.ensureSpellingShape) {
+      p.spelling = Practice.ensureSpellingShape(p.spelling);
+    }
     return p;
   }
 
@@ -449,7 +452,10 @@
       const p = cards[k];
       if (!p) continue;
       const spell = p.spelling || {};
-      if ((p.correct || 0) + (p.wrong || 0) + (p.unknown || 0) + (spell.correct || 0) + (spell.wrong || 0) + (spell.unknown || 0) > 0) n++;
+      const practicedSpell = Practice.hasSpellingPractice
+        ? Practice.hasSpellingPractice(spell)
+        : ((spell.correct || 0) + (spell.wrong || 0) + (spell.unknown || 0) > 0);
+      if ((p.correct || 0) + (p.wrong || 0) + (p.unknown || 0) > 0 || practicedSpell) n++;
     }
     return n;
   }
@@ -530,11 +536,11 @@
     killStreak = 0;
     pendingRate = false;
     hideKillBanner();
-    const choices = $("choices");
-    if (choices) {
-      choices.hidden = true;
-      choices.innerHTML = "";
-    }
+    clearAnswerSurfaces();
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = false;
+    const input = $("answer-input");
+    if (input) input.disabled = false;
     showScreen("play");
     const playLevel = $("play-level");
     if (playLevel) {
@@ -822,9 +828,13 @@
   /** @param {string} text @param {{rate?:number,pitch?:number,volume?:number}} [opts] */
   function speakLine(text, opts) {
     if (!voiceOn || !text) return;
-    const phrases = extractVoPhrases(text);
-    if (phrases.length && playCustomPhrases(phrases)) return;
-    // TTS fallback when custom clip missing
+    opts = opts || {};
+    // Lexicon reads must not hijack a headword that happens to contain a kill phrase.
+    if (!opts.lexicon) {
+      const phrases = extractVoPhrases(text);
+      if (phrases.length && playCustomPhrases(phrases)) return;
+    }
+    // TTS fallback when custom clip missing. speechSynthesis absent → no-op.
     if (!window.speechSynthesis) return;
     try {
       stopCustomVo();
@@ -1073,7 +1083,7 @@
     if (promptLabel) {
       promptLabel.textContent = meaningMode
         ? "英文 → 中文意思"
-        : (sessionDirection === "spelling" ? "拼写 · 中文 → 英文" : "中文意思 → 英文单词");
+        : (sessionDirection === "spelling" ? "拼写 · 中文 → 键入英文" : "中文意思 → 英文单词");
     }
     const promptMain = $("prompt-main");
     if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
@@ -1095,7 +1105,7 @@
     else srsTag = formatDue(prog);
     metaBits.unshift(srsTag);
     if (currentCard.pos) metaBits.push(currentCard.pos);
-    if (sessionDirection === "spelling") metaBits.push("拼写不计入通关");
+    if (sessionDirection === "spelling") metaBits.push("键入拼写 · 不计入通关");
     let hint = "";
     if (meaningMode) {
       if (currentCard.example_en && !isPlaceholderExample(currentCard.example_en)) {
@@ -1117,6 +1127,7 @@
     if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
     updateProgress();
     renderChoices();
+    renderCardSpeech();
   }
 
   function stopChallenge() {
@@ -1307,6 +1318,7 @@
       currentCard = card;
       awaiting = false;
       fillCardContent();
+      maybeSpeakPrompt();
       animRestart(box, "card-enter");
       clearAnim(box, "card-enter", 420);
       firstCardOfSession = false;
@@ -1330,6 +1342,8 @@
   }
 
   function isPlaceholderExample(example) {
+    const api = window.QuizMarioCloze;
+    if (api && typeof api.isPlaceholderExample === "function") return api.isPlaceholderExample(example);
     return !example || /junior-high English sentence/i.test(example) ||
       /^Please .+ carefully during the lesson\.?$/i.test(example) ||
       /^I saw a .+ near the /i.test(example) ||
@@ -1432,6 +1446,108 @@
     b.hidden = !on;
   }
 
+  function setTypeRowVisible(on) {
+    const row = $("type-row");
+    if (row) row.hidden = !on;
+    const box = $("choices");
+    if (on && box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+    if (!on) {
+      const input = $("answer-input");
+      if (input) input.value = "";
+    }
+  }
+
+  function setCardSpeakVisible(on) {
+    const row = $("card-speak");
+    if (!row) return;
+    if (!on) {
+      row.hidden = true;
+      row.innerHTML = "";
+    }
+  }
+
+  function clearAnswerSurfaces() {
+    const box = $("choices");
+    if (box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+    setTypeRowVisible(false);
+    setUnknownVisible(false);
+    setCardSpeakVisible(false);
+  }
+
+  function submitTypedSpelling() {
+    if (awaiting || pendingRate || !currentCard) return;
+    if (sessionKind !== "spelling" && sessionDirection !== "spelling") return;
+    const input = $("answer-input");
+    const raw = input ? String(input.value || "") : "";
+    if (!String(raw).trim()) return;
+    const correct = currentCard.word;
+    const ok = answersMatch(raw, correct);
+    grade(ok, false, raw, ok ? "correct" : "wrong");
+  }
+
+  function renderTypedSpelling() {
+    const box = $("choices");
+    if (box) {
+      box.hidden = true;
+      box.innerHTML = "";
+    }
+    setTypeRowVisible(true);
+    setUnknownVisible(true);
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = false;
+    const input = $("answer-input");
+    if (input) {
+      input.value = "";
+      input.disabled = false;
+      try { input.focus({ preventScroll: true }); } catch (_) {
+        try { input.focus(); } catch (_) {}
+      }
+    }
+  }
+
+  /**
+   * During the card: meaning/challenge get 读单词 + 读例句 and may auto-speak.
+   * Spelling and other ZH→EN modes do not speak the answer word before the guess.
+   */
+  function renderCardSpeech() {
+    const row = $("card-speak");
+    if (!row) return;
+    const api = window.QuizMarioCloze;
+    if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") {
+      setCardSpeakVisible(false);
+      return;
+    }
+    const plan = api.cardSpeechPlan(currentCard, sessionDirection);
+    const parts = [];
+    if (plan.showWord && currentCard.word) {
+      parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(currentCard.word) + '">🔊 读单词</button>');
+    }
+    if (plan.exampleSay) {
+      parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(plan.exampleSay) + '">🔊 读例句</button>');
+    }
+    if (!parts.length) {
+      setCardSpeakVisible(false);
+      return;
+    }
+    row.hidden = false;
+    row.innerHTML = parts.join("");
+  }
+
+  /** English prompt only. speakLine respects voiceOn and avoids cancel+speak in one turn. */
+  function maybeSpeakPrompt() {
+    const api = window.QuizMarioCloze;
+    if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") return;
+    const plan = api.cardSpeechPlan(currentCard, sessionDirection);
+    if (!plan.autoSpeakWord || sessionDirection !== "meaning" || !currentCard.word) return;
+    speakLine(currentCard.word, { lexicon: true, rate: 0.9 });
+  }
+
   function bumpPractice(bucket, good) {
     if (!save.practice || typeof save.practice !== "object") {
       save.practice = { meaning: { n: 0, good: 0 }, spelling: { n: 0, good: 0 }, hint: { n: 0, good: 0 } };
@@ -1475,20 +1591,29 @@
   function gradeSpelling(correct, chosen, outcome) {
     awaiting = true;
     setUnknownVisible(false);
+    setCardSpeakVisible(false);
+    const input = $("answer-input");
+    if (input) input.disabled = true;
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = true;
     const kind = outcome || (correct ? "correct" : "wrong");
     const prog = getProg(currentCard.key);
-    const noted = Practice.noteSpelling(prog, kind, Date.now());
+    // Live 拼写 is always typed. Legacy MC scores stay in spelling.mc via Practice.
+    const noted = Practice.noteSpelling(prog, kind, Date.now(), { mode: "typed" });
     bumpPractice("spelling", kind === "correct");
     if (kind !== "correct") rememberWrongWord(currentCard.word);
+    emitLearnerAnswer(kind === "correct", currentCard, kind === "unknown" ? "" : chosen, kind);
     const fb = $("feedback");
     const view = viewFor(kind, chosen, "", noted.signal);
     const title = kind === "correct" ? "拼写对了" : (kind === "unknown" ? "不会 · 先看答案" : "拼写再想想");
+    const indep = noted.independent ? " · 独立拼写" : " · 键入练习";
     if (fb) {
       fb.innerHTML =
-        '<div class="fb-title">' + title + "</div>" +
+        '<div class="fb-title">' + title + indep + "</div>" +
         '<div class="fb-answer">' + escapeHtml(currentCard.word) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
         feedbackHtml(view) +
         extraExampleHtml(currentCard) +
+        speakButtons(currentCard) +
         '<div class="rate-row"><button type="button" class="rate-btn good" id="btn-feedback-continue">' +
         '<span class="rate-zh">继续</span><span class="rate-sub">Continue</span></button></div>';
       fb.className = (kind === "correct" ? "ok" : "bad") + " show";
@@ -1506,12 +1631,13 @@
 
   function grade(correct, easy, chosen, outcome) {
     if (awaiting || !currentCard || pendingRate) return;
-    if (sessionKind === "spelling") {
+    if (Practice.sessionAnswerMode(sessionKind, sessionDirection).typed) {
       gradeSpelling(correct, chosen, outcome);
       return;
     }
     awaiting = true;
     setUnknownVisible(false);
+    setCardSpeakVisible(false);
     const kind = outcome || (correct ? "correct" : "wrong");
     const prog = getProg(currentCard.key);
     const prevMastery = Math.floor(prog.mastery || 0);
@@ -1836,6 +1962,12 @@
 
   function renderChoices() {
     if (!currentCard) return;
+    const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
+    if (mode.typed) {
+      renderTypedSpelling();
+      return;
+    }
+    setTypeRowVisible(false);
     if (sessionDirection === "meaning") {
       const correct = currentCard.meaning_zh || "";
       const opts = [correct, ...pickMeaningDistractors(currentCard, 3)].filter((opt) => String(opt || "").trim());
@@ -1847,6 +1979,7 @@
       paintChoices(opts, correct, meaningsMatch);
       return;
     }
+    // form / 今日必练 / 错词本 / 到期: keep ZH→EN multiple choice
     const correct = currentCard.word;
     const opts = [correct, ...pickHardDistractors(currentCard, 3)].filter((opt) => opt);
     paintChoices(opts, correct, answersMatch);
@@ -2265,7 +2398,7 @@
       "<div><b>" + pct(st.ret7) + "</b>近7天复习保持率</div>" +
       "</div>" + svg +
       '<p class="stats-legend">柱：每日答题量 · 黄线：每日正确率 · 累计答题 ' + st.answers + " 次 · 学习 " + st.activeDays + " 天</p>" +
-      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。拼写单独记，不挡住第一次通关。</p>' +
+      '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。拼写改为键入；旧选择成绩不算独立拼写，不挡住第一次通关。</p>' +
       spellLine +
       radar +
       '<ul class="stats-tracks">' + tr + "</ul>";
@@ -2284,19 +2417,17 @@
   }
 
   function spellingLine() {
-    let cards = 0;
-    let correct = 0;
-    let wrong = 0;
-    for (const p of Object.values(save.cards || {})) {
-      const s = p && p.spelling;
-      if (!s) continue;
-      if ((s.correct || 0) + (s.wrong || 0) + (s.unknown || 0) === 0) continue;
-      cards++;
-      correct += s.correct || 0;
-      wrong += s.wrong || 0;
+    const sum = Practice.summarizeSpelling(save.cards || {});
+    if (!sum.typedCards && !sum.mcOnly) return "";
+    let line = "";
+    if (sum.typedCards) {
+      line = "拼写(键入) " + sum.typedCards + " 词 · 对 " + sum.correct + " · 错 " + sum.wrong + " · 不计入通关";
     }
-    if (!cards) return "";
-    return '<p class="stats-legend">拼写 ' + cards + " 词 · 对 " + correct + " · 错 " + wrong + " · 不计入通关</p>";
+    if (sum.mcOnly) {
+      const note = "旧选择 " + sum.mcOnly + " 词不计独立";
+      line = line ? (line + " · " + note) : ("拼写 · " + note);
+    }
+    return '<p class="stats-legend">' + line + "</p>";
   }
 
   // ---- report code for teacher (compact, no full card dump) ----
@@ -2342,9 +2473,11 @@
   }
 
   function speakButtons(card) {
+    if (!card) return "";
+    const exampleOk = card.example_en && !isPlaceholderExample(card.example_en);
     return '<div class="speak-row">' +
-      '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '">🔈 读单词</button>' +
-      (card.example_en ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '">🔈 读例句</button>' +
+      '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '">🔊 读单词</button>' +
+      (exampleOk ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '">🔊 读例句</button>' +
         '<div class="fb-ex">例：' + escapeHtml(card.example_en) +
         (card.example_zh ? " " + escapeHtml(card.example_zh) : "") + "</div>" : "") +
       "</div>";
@@ -2472,6 +2605,13 @@
       gloss_zh: card.meaning_zh || "",
       outcome: kind,
     };
+    const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
+    if (mode.evidence_kind) input.evidence_kind = mode.evidence_kind;
+    if (mode.typed) {
+      const prog = card && card.key ? getProg(card.key) : null;
+      input.independent = !!(prog && Practice.isIndependentSpelling && Practice.isIndependentSpelling(prog.spelling));
+    }
+    input.task_direction = sessionDirection;
     if (kind === "wrong" && chosen) input.answer = chosen;
     try { LE.record(input); } catch (_) {}
   }
@@ -2824,11 +2964,11 @@
     challengeFailed = false;
     hideKillBanner();
     stopChallenge();
-    const choices = $("choices");
-    if (choices) {
-      choices.hidden = true;
-      choices.innerHTML = "";
-    }
+    clearAnswerSurfaces();
+    const check = $("btn-check-spelling");
+    if (check) check.disabled = false;
+    const input = $("answer-input");
+    if (input) input.disabled = false;
     hideQueueEmpty();
     showScreen("play");
     const playLevel = $("play-level");
@@ -2871,7 +3011,7 @@
       if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
     } else if (kind === "spelling") {
       if (title) title.textContent = "这轮拼写练完了";
-      if (msg) msg.textContent = "拼写单独记，不改变本组通关。";
+      if (msg) msg.textContent = "键入拼写单独记，不改变本组通关。旧的选择成绩不算独立拼写。";
     } else {
       const left = wrongBookQueueItems().length;
       if (title) title.textContent = left ? "这轮错词练完了" : "错词本清空了";
@@ -2904,6 +3044,7 @@
     startLevel(lvl, { mode: "challenge" });
   });
   if ($("btn-spelling")) $("btn-spelling").addEventListener("click", () => startSpellingSession());
+  if ($("btn-check-spelling")) $("btn-check-spelling").addEventListener("click", () => submitTypedSpelling());
   if ($("btn-must-practice")) $("btn-must-practice").addEventListener("click", () => startMustPractice());
   if ($("btn-must-start")) $("btn-must-start").addEventListener("click", () => startMustPractice());
   if ($("btn-must-later")) $("btn-must-later").addEventListener("click", () => laterMustPractice());
@@ -3011,6 +3152,15 @@
       return;
     }
     if (!awaiting) {
+      const typeRow = $("type-row");
+      const typingTarget = e.target && e.target.id === "answer-input";
+      const typing = typingTarget || (typeRow && !typeRow.hidden && (sessionKind === "spelling" || sessionDirection === "spelling"));
+      if (typing && e.key === "Enter") {
+        e.preventDefault();
+        submitTypedSpelling();
+        return;
+      }
+      if (typing) return;
       const n = parseInt(e.key, 10);
       if (n >= 1 && n <= 4) {
         const box = $("choices");

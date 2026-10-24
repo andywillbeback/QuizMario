@@ -14,7 +14,9 @@
   var RADAR_MIN = 8;
 
   function directionLabel(direction) {
-    return direction === "meaning" ? "看英文选中文" : "看中文选英文";
+    if (direction === "meaning") return "看英文选中文";
+    if (direction === "spelling") return "看中文键入英文";
+    return "看中文选英文";
   }
 
   function hintLine(outcome, hintSeen) {
@@ -45,6 +47,8 @@
     } else if (outcome === "wrong") {
       if (direction === "meaning") {
         lines.push("错向：" + dirLabel + " · 选了「" + (picked || "（空）") + "」，应是「" + meaning + "」");
+      } else if (direction === "spelling") {
+        lines.push("错向：" + dirLabel + " · 输入了「" + (picked || "（空）") + "」，应是「" + word + "」");
       } else {
         lines.push("错向：" + dirLabel + " · 选了「" + (picked || "（空）") + "」，应是「" + word + "」");
       }
@@ -55,7 +59,7 @@
     lines.push(hintLine(outcome, !!a.hintSeen));
 
     if (direction === "spelling") {
-      lines.push("拼写：" + (a.spellingSignal || "在练") + " · 不计入通关");
+      lines.push("拼写(键入)：" + (a.spellingSignal || "在练") + " · 不计入通关 · 旧选择不算独立");
       lines.push("下次复习：词义进度未改");
     } else {
       lines.push("下次复习：" + (a.dueLabel || "待定"));

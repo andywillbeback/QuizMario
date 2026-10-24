@@ -14,6 +14,17 @@
     return Number.isFinite(t) ? t : 0;
   }
 
+  /** Top-level, typed, or legacy MC. MC is progress, not independent mastery. */
+  function spellingTouched(spell) {
+    if (!spell || typeof spell !== "object") return false;
+    if ((spell.correct || 0) > 0 || (spell.wrong || 0) > 0 || (spell.unknown || 0) > 0) return true;
+    var typed = spell.typed;
+    if (typed && ((typed.correct || 0) + (typed.wrong || 0) + (typed.unknown || 0) > 0)) return true;
+    var mc = spell.mc;
+    if (mc && ((mc.correct || 0) + (mc.wrong || 0) + (mc.unknown || 0) > 0)) return true;
+    return false;
+  }
+
   function studiedCount(save) {
     if (!save || !save.cards || typeof save.cards !== "object") return 0;
     var n = 0;
@@ -21,8 +32,7 @@
     for (var i = 0; i < keys.length; i++) {
       var p = save.cards[keys[i]];
       if (!p || typeof p !== "object") continue;
-      var spell = p.spelling;
-      var spelled = spell && ((spell.correct || 0) > 0 || (spell.wrong || 0) > 0 || (spell.unknown || 0) > 0);
+      var spelled = spellingTouched(p.spelling);
       if (spelled || (p.reps || 0) > 0 || (p.correct || 0) > 0 || (p.wrong || 0) > 0 || (p.unknown || 0) > 0 || (p.mastery || 0) > 0) n++;
     }
     return n;
@@ -119,6 +129,7 @@
 
   return {
     saveTime: saveTime,
+    spellingTouched: spellingTouched,
     studiedCount: studiedCount,
     isBlank: isBlank,
     isCloudConfigured: isCloudConfigured,
