@@ -1220,28 +1220,17 @@
 
         <div id="report-panel" class="panel">
           <h3>学习报告码</h3>
-          <p class="sub">填写姓名和班级码，再复制发给老师。码以 QMR1. 开头。老师打开教师看板，粘贴后点「导入报告码」。</p>
+          <p class="sub">填写姓名和班级码，再复制学习报告码发给老师。码以 QMR1. 开头。</p>
           <label for="profile-name">姓名</label>
           <input id="profile-name" type="text" autocomplete="name" maxlength="40" placeholder="姓名">
           <label for="profile-cls">班级码</label>
           <input id="profile-cls" type="text" autocomplete="off" autocapitalize="characters" maxlength="40" placeholder="班级码" aria-label="班级码">
           <div class="btn-row">
             <button id="btn-report" type="button">复制学习报告码</button>
-            <a class="btn secondary" href="teacher.html">教师看板</a>
           </div>
           <label for="report-code">报告码</label>
           <textarea id="report-code" readonly rows="3" spellcheck="false" placeholder="报告码会出现在这里" aria-label="学习报告码"></textarea>
           <p id="report-status" class="sub" role="status"></p>
-        </div>
-
-        <div id="learner-events-panel" class="panel">
-          <h3>ALS 学习信号</h3>
-          <p id="learner-events-status" class="sub">还没有学习信号。答对、答错、点「不会」、进入错词本，或首页算出今日到期之后，可以下载 JSONL。间隔重复仍由本机计算。</p>
-          <p id="learner-events-note" class="sub" hidden></p>
-          <div class="btn-row">
-            <button id="btn-export-learner-events" class="secondary" type="button">下载 JSONL</button>
-            <button id="btn-copy-learner-events" class="ghost" type="button">复制 JSONL</button>
-          </div>
         </div>
 
       </div>
