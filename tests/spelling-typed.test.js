@@ -258,14 +258,29 @@ function read(name) {
   assert.ok(index.includes('id="btn-report"') && index.includes(">复制学习报告码</button>"));
   assert.ok(index.includes('id="report-code"') && index.includes("readonly"));
   assert.ok(index.includes('id="report-status"'));
-  assert.ok(index.includes('href="teacher.html"'), "report block links to the grok teacher board");
-  const report = index.slice(index.indexOf('id="report-panel"'), index.indexOf('id="learner-events-panel"'));
-  assert.ok(report.includes("profile-name") && !/ALS|sense_return|深练/.test(report), "report block does not add an ALS CTA");
+  assert.ok(index.includes("QMR1."), "report copy still names the QMR1 code");
+  assert.ok(!index.includes('href="teacher.html"'), "students do not get a link to the teacher board");
+  assert.ok(!index.includes("教师看板"), "student home does not tell them to open the teacher board");
+  assert.ok(!index.includes("ALS 学习信号") && !index.includes("下载 JSONL") && !index.includes("复制 JSONL"),
+    "student home does not show the ALS signal panel");
+  assert.ok(!index.includes('id="learner-events-panel"') && !index.includes('id="btn-export-learner-events"') && !index.includes('id="btn-copy-learner-events"'),
+    "JSONL dump controls are gone from the student home");
+  assert.ok(index.includes('src="learner-events.js"'), "learner events still load for cloud sync");
+  const login = read("grok/login.html");
+  assert.ok(!login.includes("ALS 学习信号") && !login.includes("下载 JSONL") && !login.includes("复制 JSONL") && !login.includes("教师看板") && !login.includes('href="teacher.html"'),
+    "login stays free of the teacher board and ALS signal panel");
+  const reportStart = index.indexOf('id="report-panel"');
+  const report = index.slice(reportStart, index.indexOf("</section>", reportStart));
+  assert.ok(report.includes("profile-name") && report.includes("QMR1."), "report block still explains the code");
+  assert.ok(!/ALS|sense_return|深练|teacher\.html|教师看板|JSONL/.test(report), "report block only asks students to copy the code");
   assert.ok(game.includes('id="btn-report"') || game.includes('$("btn-report")'));
   assert.ok(game.includes("reportCode()") && game.includes("请先填写姓名和班级码"));
   assert.ok(game.includes("学习报告码已复制"));
+  assert.ok(game.includes('"QMR1."'), "report codes still use the QMR1 prefix");
+  assert.ok(teacher.includes("<h2>教师看板"), "teacher.html still serves the board");
   assert.ok(teacher.includes("导入报告码"), "teacher paste flow stays");
   assert.ok(teacher.includes("QMR1"), "teacher still expects QMR1 lines");
+  assert.ok(!teacher.includes("ALS 学习信号"), "teacher board is not an ALS signal dump");
 }
 
 console.log("spelling-typed ok");
