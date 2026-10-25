@@ -36,6 +36,8 @@
   if (!FB) throw new Error("feedback.js must load before game.js");
   const Sense = window.QuizMarioSense;
   if (!Sense) throw new Error("sense-id.js must load before game.js");
+  const StreakVoice = window.QuizMarioStreak;
+  if (!StreakVoice) throw new Error("kill-streak.js must load before game.js");
   const SenseExamples = window.QuizMarioSenseExamples;
   const MIN_MS = SRS.MIN_MS;
   const DAY_MS = SRS.DAY_MS;
@@ -1060,19 +1062,15 @@
 
   function announceKillStreak() {
     const n = killStreak;
-    let say = "";
-    if (KILL_LINES[n]) say = KILL_LINES[n];
-    const spree = SPREE_LINES.find((s) => s.at === n) || (n >= 8 ? { text: "Legendary" } : null);
-    if (spree && spree.text !== say) {
-      say = say ? say + ". " + spree.text : spree.text;
-    }
-    if (!say && n >= 8) say = "Legendary";
-    if (say) {
-      const isLegendary = /Legendary/i.test(say);
-      showKillBanner(say.toUpperCase(), isLegendary ? "legendary" : "kill");
-      if (isLegendary) playSting("legendary");
-      speakLine(say);
-    }
+    const plan = StreakVoice.killStreakPlan(n, KILL_LINES, SPREE_LINES);
+    if (!plan.text) return;
+    // Legendary VO + sting only when shouldSpeakLegendary (8, 12, 16, …).
+    // Intervening counts still get the banner, with speak and sting left off.
+    const legendary = StreakVoice.shouldSpeakLegendary(n);
+    const speak = StreakVoice.shouldAnnounceSpree(n) && plan.speak;
+    showKillBanner(plan.text.toUpperCase(), legendary ? "legendary" : "kill");
+    if (legendary && plan.sting) playSting("legendary");
+    if (speak) speakLine(plan.text);
   }
 
   function announceShutDown() {
