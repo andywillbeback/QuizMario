@@ -5,7 +5,8 @@
  * Run: node tests/share-card.test.js
  *
  * The achievement has one display name: 我要打十个.
- * A day counts only when a set completes, on the Asia/Shanghai calendar.
+ * Finishing any set offers that achievement. A day still counts on the
+ * Asia/Shanghai calendar, and the streak is only the subtitle.
  */
 
 const assert = require("assert");
@@ -44,11 +45,13 @@ function mockCtx() {
   const texts = [];
   const fonts = [];
   const ops = [];
+  const styles = [];
   return new Proxy({}, {
     get(_target, prop) {
       if (prop === "texts") return texts;
       if (prop === "fonts") return fonts;
       if (prop === "ops") return ops;
+      if (prop === "styles") return styles;
       if (prop === "canvas") return { width: 1080, height: 1350 };
       if (prop === "createLinearGradient" || prop === "createRadialGradient") {
         return function () {
@@ -67,6 +70,7 @@ function mockCtx() {
     },
     set(_target, prop, value) {
       if (prop === "font") fonts.push(String(value));
+      if (prop === "fillStyle") styles.push(String(value));
       return true;
     },
   });
@@ -75,7 +79,8 @@ function mockCtx() {
 assert.strictEqual(share.ACHIEVEMENT_TITLE, "我要打十个");
 assert.strictEqual(share.ACHIEVEMENT_CARD_TITLE, "我要打十个！");
 assert.notStrictEqual(share.ACHIEVEMENT_TITLE, share.ACHIEVEMENT_CARD_TITLE);
-assert.strictEqual(share.STREAK_GOAL, 10);
+assert.strictEqual(share.STORAGE_KEY, "juguang_checkin_v1");
+assert.strictEqual(share.STREAK_GOAL, 10, "streak dots still cap at 10; unlock does not wait for them");
 assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
 
 {
@@ -92,21 +97,28 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   const store = memoryStorage();
   const first = share.commitSetComplete(store, shanghaiNoon("2026-10-01"), { kind: "level", label: "第1组 · Part A" });
   assert.strictEqual(first.streak, 1);
-  assert.strictEqual(first.unlocked, false);
-  assert.strictEqual(first.showAchievement, false);
-  assert.strictEqual(first.title, "完成一组");
-  assert.strictEqual(first.cardTitle, "完成一组");
-  assert.strictEqual(first.subtitle, "连续 1/10 天");
-  assert.strictEqual(first.copy, "聚光单词 · 完成一组｜连续 1/10 天");
+  assert.strictEqual(first.unlocked, true);
+  assert.strictEqual(first.justUnlocked, true);
+  assert.strictEqual(first.showAchievement, true);
+  assert.strictEqual(first.title, "我要打十个");
+  assert.strictEqual(first.cardTitle, "我要打十个！");
+  assert.strictEqual(first.subtitle, "已连续打卡1天");
+  assert.strictEqual(first.copy, "聚光单词 · 我要打十个｜已连续打卡1天");
   assert.strictEqual(first.label, "第1组 · Part A");
-  assert.ok(!first.copy.includes("我要打十个"), "a first-day card does not claim the achievement");
+  assert.ok(first.copy.includes("我要打十个"), "the first finished set offers the achievement");
+  assert.ok(!first.subtitle.includes("/"), "the subtitle is not a countdown toward 10 days");
   assert.strictEqual(first.learner, "学员", "a card with no saved name and no email says 学员");
+  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-01");
 
   const again = share.commitSetComplete(store, shanghaiNoon("2026-10-01"), { kind: "session" });
   assert.strictEqual(again.streak, 1, "a second set on the same Shanghai day does not add a day");
   assert.strictEqual(share.readState(store).days.length, 1);
-  assert.strictEqual(again.title, "今日打卡");
-  assert.strictEqual(again.copy, "聚光单词 · 今日打卡｜连续 1/10 天");
+  assert.strictEqual(again.showAchievement, true);
+  assert.strictEqual(again.justUnlocked, true, "each finished set offers the achievement again");
+  assert.strictEqual(again.title, "我要打十个");
+  assert.strictEqual(again.cardTitle, "我要打十个！");
+  assert.strictEqual(again.copy, "聚光单词 · 我要打十个｜已连续打卡1天");
+  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-01", "a later set keeps the first unlock day");
 }
 
 {
@@ -115,13 +127,16 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   for (let i = 1; i <= 9; i++) {
     const day = "2026-10-" + String(i).padStart(2, "0");
     last = share.commitSetComplete(store, shanghaiNoon(day), { kind: "session" });
+    assert.strictEqual(last.showAchievement, true, day);
+    assert.strictEqual(last.title, "我要打十个");
+    assert.strictEqual(last.cardTitle, "我要打十个！");
   }
   assert.strictEqual(last.streak, 9);
-  assert.strictEqual(last.unlocked, false);
-  assert.strictEqual(last.showAchievement, false);
-  assert.strictEqual(last.title, "今日打卡");
-  assert.strictEqual(last.subtitle, "连续 9/10 天");
-  assert.ok(!last.title.includes("我要打十个"));
+  assert.strictEqual(last.unlocked, true);
+  assert.strictEqual(last.justUnlocked, true);
+  assert.strictEqual(last.subtitle, "已连续打卡9天");
+  assert.ok(!last.subtitle.includes("9/10"));
+  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-01");
 
   const unlocked = share.commitSetComplete(store, shanghaiNoon("2026-10-10"), { kind: "level" });
   assert.strictEqual(unlocked.streak, 10);
@@ -132,14 +147,16 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.strictEqual(unlocked.cardTitle, "我要打十个！");
   assert.strictEqual(unlocked.subtitle, "已连续打卡10天");
   assert.strictEqual(unlocked.copy, "聚光单词 · 我要打十个｜已连续打卡10天");
-  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-10");
+  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-01");
 
   const held = share.commitSetComplete(store, shanghaiNoon("2026-10-11"), { kind: "level" });
   assert.strictEqual(held.streak, 11);
-  assert.strictEqual(held.justUnlocked, false, "the name stays unlocked without firing again");
+  assert.strictEqual(held.justUnlocked, true, "day 11 still offers the achievement");
+  assert.strictEqual(held.showAchievement, true);
   assert.strictEqual(held.title, "我要打十个");
   assert.strictEqual(held.cardTitle, "我要打十个！");
   assert.strictEqual(held.copy, "聚光单词 · 我要打十个｜已连续打卡11天");
+  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-01");
 }
 
 {
@@ -148,8 +165,12 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   share.commitSetComplete(store, shanghaiNoon("2026-10-02"), { kind: "session" });
   const broken = share.commitSetComplete(store, shanghaiNoon("2026-10-04"), { kind: "session" });
   assert.strictEqual(broken.streak, 1);
-  assert.strictEqual(broken.unlocked, false);
-  assert.strictEqual(broken.title, "今日打卡");
+  assert.strictEqual(broken.unlocked, true);
+  assert.strictEqual(broken.showAchievement, true);
+  assert.strictEqual(broken.title, "我要打十个");
+  assert.strictEqual(broken.cardTitle, "我要打十个！");
+  assert.strictEqual(broken.subtitle, "已连续打卡1天");
+  assert.ok(broken.copy.includes("我要打十个"));
 }
 
 {
@@ -160,15 +181,48 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   const later = share.commitSetComplete(store, shanghaiNoon("2026-11-01"), { kind: "level" });
   assert.strictEqual(later.unlocked, true, "a broken streak does not revoke the unlock");
   assert.strictEqual(later.streak, 1);
-  assert.strictEqual(later.showAchievement, false);
-  assert.strictEqual(later.title, "完成一组");
-  assert.ok(!later.copy.includes("我要打十个"));
+  assert.strictEqual(later.showAchievement, true);
+  assert.strictEqual(later.justUnlocked, true);
+  assert.strictEqual(later.title, "我要打十个");
+  assert.strictEqual(later.cardTitle, "我要打十个！");
+  assert.strictEqual(later.subtitle, "已连续打卡1天");
+  assert.ok(later.copy.includes("我要打十个"));
+  assert.strictEqual(share.readState(store).unlocked[share.ACHIEVEMENT_ID], "2026-10-01");
+}
+
+{
+  const partial = memoryStorage();
+  const days = [];
+  for (let i = 1; i <= 9; i++) days.push("2026-10-" + String(i).padStart(2, "0"));
+  partial.setItem(share.STORAGE_KEY, JSON.stringify({ v: 1, days: days, unlocked: {} }));
+  const migrated = share.commitSetComplete(partial, shanghaiNoon("2026-10-10"), { kind: "level" });
+  assert.strictEqual(migrated.streak, 10);
+  assert.strictEqual(migrated.showAchievement, true);
+  assert.strictEqual(migrated.justUnlocked, true);
+  assert.strictEqual(migrated.title, "我要打十个");
+  assert.strictEqual(partial.getItem(share.STORAGE_KEY) && JSON.parse(partial.getItem(share.STORAGE_KEY)).v, 1);
+  assert.strictEqual(share.readState(partial).unlocked[share.ACHIEVEMENT_ID], "2026-10-10");
+
+  const held = memoryStorage();
+  held.setItem(share.STORAGE_KEY, JSON.stringify({
+    v: 1,
+    days: ["2026-09-01"],
+    unlocked: { wo_yao_da_shi_ge: "2026-09-01" },
+  }));
+  const again = share.commitSetComplete(held, shanghaiNoon("2026-10-20"), { kind: "session" });
+  assert.strictEqual(again.streak, 1);
+  assert.strictEqual(again.showAchievement, true);
+  assert.strictEqual(again.title, "我要打十个");
+  assert.strictEqual(again.cardTitle, "我要打十个！");
+  assert.strictEqual(share.readState(held).unlocked[share.ACHIEVEMENT_ID], "2026-09-01", "an older unlock day is kept");
 }
 
 {
   const month = share.recordSetComplete({ v: 1, days: ["2026-10-31"], unlocked: {} }, Date.parse("2026-10-31T16:00:00.000Z"));
   assert.strictEqual(month.day, "2026-11-01");
   assert.strictEqual(month.streak, 2);
+  assert.strictEqual(month.unlocked, true);
+  assert.strictEqual(month.justUnlocked, true);
   assert.strictEqual(share.recordSetComplete(null, "nope"), null);
   const dirty = share.normalizeState({
     days: ["2026-10-02", "bad", "2026-10-02", "2026-10-01"],
@@ -216,13 +270,15 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.ok(blankFont.ops.includes("quadraticCurveTo"));
   assert.ok(blankFont.ops.filter((op) => op === "lineTo").length > 40, "the title is stroked from glyph outlines");
 
-  const streak = share.cardModel({ day: "2026-10-01", streak: 1 }, { kind: "level" });
+  const streak = share.cardModel({ day: "2026-10-01", streak: 1, unlocked: true, justUnlocked: true }, { kind: "level" });
   const streakCtx = mockCtx();
+  assert.strictEqual(streak.showAchievement, true);
   assert.strictEqual(share.paintCard(streakCtx, streak, { width: 1080, height: 1350, fontInk: 400 }), true);
-  assert.ok(streakCtx.texts.includes("完成一组"));
-  assert.ok(streakCtx.texts.includes("连续 1/10 天"));
-  assert.ok(!streakCtx.texts.includes("我要打十个！"));
-  assert.ok(!streakCtx.ops.includes("quadraticCurveTo"), "a streak card is progress, not the trophy unlock");
+  assert.ok(streakCtx.texts.includes("我要打十个！"), "one finished set paints the achievement title");
+  assert.ok(streakCtx.texts.includes("已连续打卡1天"));
+  assert.ok(!streakCtx.texts.some((text) => text.indexOf("/10") !== -1 || text.indexOf("连续 1/") !== -1));
+  assert.ok(streakCtx.ops.includes("quadraticCurveTo"), "one finished set paints the trophy card");
+  assert.ok(!streakCtx.styles.includes("rgba(255,255,255,0.16)"), "a one-day streak does not draw empty 10-day slots");
 }
 
 {
@@ -256,6 +312,9 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   assert.ok(src.includes('ACHIEVEMENT_TITLE = "我要打十个"'));
   assert.ok(src.includes('ACHIEVEMENT_CARD_TITLE = "我要打十个！"'));
   assert.ok(src.includes("current.justUnlocked ? ACHIEVEMENT_TITLE"), "unlock toast is the achievement name");
+  assert.ok(!src.includes("streak >= STREAK_GOAL"), "finishing a set does not wait for a 10-day streak");
+  assert.ok(!src.includes('streak + "/" + STREAK_GOAL'), "the card does not count down 连续 n/10 天");
+  assert.ok(src.includes('STORAGE_KEY = "juguang_checkin_v1"'));
   assert.ok(!src.includes("今日打卡王"));
   assert.ok(!src.includes("成就已解锁"));
   assert.ok(!src.includes("复制文案"));
