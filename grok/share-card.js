@@ -1,7 +1,9 @@
 /* 聚光单词 achievement card + Shanghai check-in.
  * A calendar day counts only after a completed set (the existing clear screen).
- * Streak and the「我要打十个」unlock stay in localStorage, not learner_events.
- * The stored achievement name has no exclamation; the painted card title is 我要打十个！.
+ * Streak stays in localStorage for the card subtitle, not in learner_events.
+ * 「我要打十个」is offered every time a set finishes. It does not wait for
+ * 10 consecutive Shanghai days. The stored name has no exclamation; the
+ * painted card title is 我要打十个！.
  * If this file fails to load or the card fails to paint, practice continues.
  *
  * Also require()-able from node tests. Browser UI attaches when document exists.
@@ -20,6 +22,7 @@
   var ACHIEVEMENT_ID = "wo_yao_da_shi_ge";
   var ACHIEVEMENT_TITLE = "我要打十个";
   var ACHIEVEMENT_CARD_TITLE = "我要打十个！";
+  /* Caps the streak dots on the card. Not an unlock threshold. */
   var STREAK_GOAL = 10;
   var STORAGE_KEY = "juguang_checkin_v1";
   var TZ = "Asia/Shanghai";
@@ -167,18 +170,13 @@
       next.days.sort();
     }
     var streak = streakOn(next.days, day);
-    var had = !!next.unlocked[ACHIEVEMENT_ID];
-    var justUnlocked = false;
-    if (streak >= STREAK_GOAL && !had) {
-      next.unlocked[ACHIEVEMENT_ID] = day;
-      justUnlocked = true;
-    }
+    if (!next.unlocked[ACHIEVEMENT_ID]) next.unlocked[ACHIEVEMENT_ID] = day;
     return {
       state: next,
       day: day,
       streak: streak,
-      unlocked: !!next.unlocked[ACHIEVEMENT_ID],
-      justUnlocked: justUnlocked,
+      unlocked: true,
+      justUnlocked: true,
     };
   }
 
@@ -212,15 +210,15 @@
     checkin = checkin || {};
     meta = meta || {};
     var streak = checkin.streak || 0;
-    var showAchievement = !!(checkin.unlocked && streak >= STREAK_GOAL);
+    var showAchievement = !!(checkin.unlocked || checkin.justUnlocked || checkin.day);
     var title = showAchievement ? ACHIEVEMENT_TITLE : (meta.kind === "level" ? "完成一组" : "今日打卡");
     var cardTitle = showAchievement ? ACHIEVEMENT_CARD_TITLE : title;
     var subtitle = showAchievement
       ? ("已连续打卡" + streak + "天")
-      : ("连续 " + streak + "/" + STREAK_GOAL + " 天");
+      : ("连续打卡" + streak + "天");
     var copy = showAchievement
       ? ("聚光单词 · " + ACHIEVEMENT_TITLE + "｜已连续打卡" + streak + "天")
-      : ("聚光单词 · " + title + "｜连续 " + streak + "/" + STREAK_GOAL + " 天");
+      : ("聚光单词 · " + title + "｜连续打卡" + streak + "天");
     return {
       brand: BRAND,
       title: title,
@@ -501,11 +499,18 @@
   }
 
   function drawDots(ctx, cx, cy, model) {
-    var goal = model.goal || STREAK_GOAL;
-    var filled = Math.max(0, Math.min(goal, model.streak || 0));
+    var cap = model.goal || STREAK_GOAL;
+    var streak = Math.max(0, model.streak || 0);
+    var total = cap;
+    var filled = Math.max(0, Math.min(cap, streak));
+    /* Achievement dots count the streak. Empty slots would look like a 10-day gate. */
+    if (model.showAchievement) {
+      total = Math.max(1, Math.min(cap, streak || 1));
+      filled = total;
+    }
     var gap = 28;
-    var start = cx - ((goal - 1) * gap) / 2;
-    for (var i = 0; i < goal; i++) {
+    var start = cx - ((total - 1) * gap) / 2;
+    for (var i = 0; i < total; i++) {
       ctx.beginPath();
       ctx.arc(start + i * gap, cy, 9, 0, Math.PI * 2);
       ctx.fillStyle = i < filled ? "#e6c98a" : "rgba(255,255,255,0.16)";
