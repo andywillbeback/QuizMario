@@ -56,21 +56,23 @@ const safeExample = {
     const plan = cloze.cardSpeechPlan(real, direction);
     assert.strictEqual(plan.autoSpeakWord, false, direction + " must not auto-speak the answer");
     assert.strictEqual(plan.showWord, false, direction + " must not offer 读单词 before the guess");
-    assert.strictEqual(plan.exampleSay, real.example_en, direction + " 读例句 speaks the headword");
-    assert.ok(!/\bblank\b/i.test(plan.exampleSay), plan.exampleSay);
-    assert.ok(!/_{3,}/.test(plan.exampleSay), plan.exampleSay);
-    assert.ok(cloze.containsToken(plan.exampleSay, "apple"), plan.exampleSay);
+    assert.strictEqual(plan.exampleSay, "", direction + " must not offer 读例句 before reveal");
     const revealed = cloze.cardSpeechPlan(real, direction, { revealed: true });
     assert.strictEqual(revealed.showWord, true, direction + " offers 读单词 after the answer is on screen");
     assert.strictEqual(revealed.autoSpeakWord, false, direction + " still does not auto-speak");
-    assert.strictEqual(revealed.exampleSay, real.example_en);
+    assert.strictEqual(revealed.exampleSay, real.example_en, direction + " 读例句 speaks the headword after reveal");
+    assert.ok(!/\bblank\b/i.test(revealed.exampleSay), revealed.exampleSay);
+    assert.ok(!/_{3,}/.test(revealed.exampleSay), revealed.exampleSay);
+    assert.ok(cloze.containsToken(revealed.exampleSay, "apple"), revealed.exampleSay);
   }
 }
 
 {
   const open = cloze.cardSpeechPlan(safeExample, "spelling");
-  assert.strictEqual(open.exampleSay, safeExample.example_en);
+  assert.strictEqual(open.exampleSay, "", "spelling hides 读例句 even when the sentence omits the headword");
   assert.strictEqual(open.showWord, false);
+  const openRevealed = cloze.cardSpeechPlan(safeExample, "spelling", { revealed: true });
+  assert.strictEqual(openRevealed.exampleSay, safeExample.example_en);
   const empty = cloze.cardSpeechPlan({ word: "apple", example_en: "" }, "form");
   assert.strictEqual(empty.exampleSay, "");
   assert.strictEqual(empty.autoSpeakWord, false);
@@ -106,6 +108,7 @@ const safeExample = {
   assert.ok(game.includes("gesture: !!opts.gesture"), "the teaching helper forwards the tap");
   const autoOnly = game.slice(game.indexOf("function maybeSpeakPrompt"), game.indexOf("function bumpPractice"));
   assert.ok(!autoOnly.includes("gesture"), "auto-speak stays on the cancel-safe path");
+  assert.ok(!autoOnly.includes("exampleSay"), "card enter does not auto-speak an example");
   assert.ok(game.includes("spokenExample"), "feedback 读例句 uses the filled sentence");
   assert.ok(!game.includes("speechBlank") && !clozeSourceIncludesBlank(), "nothing still asks TTS to say blank");
   const spellGrade = game.slice(game.indexOf("function gradeSpelling"), game.indexOf("function grade("));

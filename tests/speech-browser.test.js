@@ -431,12 +431,16 @@ async function main() {
 
     const samples = [];
 
-    async function waitCard(labelIncludes) {
+    async function waitCard(labelIncludes, opts) {
+      opts = opts || {};
+      const needExample = opts.needExample !== false;
       return waitFor(async () => {
         const s = await snap();
         if (!s || !s.active || !s.word || !s.example) return null;
         if (labelIncludes && s.label.indexOf(labelIncludes) === -1) return null;
-        if (!s.buttons.some((b) => b.kind === "example" && !b.slow)) return null;
+        const hasExample = s.buttons.some((b) => b.kind === "example");
+        if (needExample && !hasExample) return null;
+        if (opts.forbidExample && hasExample) return null;
         return s;
       }, 15000, "card " + (labelIncludes || ""));
     }
@@ -454,15 +458,20 @@ async function main() {
       }
     }
 
-    function expectSentence(s, phase) {
+    function expectSentence(s, phase, wantExample) {
       const say = (s.buttons.find((b) => b.kind === "example" && !b.slow) || {}).say || "";
       const visual = cloze.blankExample(s.example, s.word);
       const spoken = cloze.spokenExample(s.example, s.word);
       const before = oldBlankSpeech(s.example, s.word);
-      assert.strictEqual(say, spoken, phase + " 读例句 data-say");
-      assert.ok(hasToken(say, s.word), phase + " example speaks the headword: " + say);
-      assert.ok(!/\bblank\b/i.test(say), phase + " example must not say blank: " + say);
-      assert.ok(!/_{3,}/.test(say), phase + " example must not spell underscores: " + say);
+      if (wantExample) {
+        assert.strictEqual(say, spoken, phase + " 读例句 data-say");
+        assert.ok(hasToken(say, s.word), phase + " example speaks the headword: " + say);
+        assert.ok(!/\bblank\b/i.test(say), phase + " example must not say blank: " + say);
+        assert.ok(!/_{3,}/.test(say), phase + " example must not spell underscores: " + say);
+      } else {
+        assert.strictEqual(say, "", phase + " must not offer 读例句 before reveal");
+        assert.ok(!s.buttons.some((b) => b.kind === "example"), phase + " still has an example speak button");
+      }
       if (visual !== s.example) {
         assert.ok(s.hint.indexOf("___") !== -1, phase + " hint stays blanked: " + s.hint);
         assert.ok(before !== spoken, phase + " before/after differ");
@@ -471,15 +480,18 @@ async function main() {
       return { say, visual, spoken, before, wordBtn };
     }
 
-    async function readAloud(s, phase, wantWordButton) {
+    async function readAloud(s, phase, flags) {
+      flags = flags || {};
+      const wantWord = !!flags.word;
+      const wantExample = !!flags.example;
       await evaluate(`(() => {
         const row = document.getElementById("card-speak");
         if (row) row.scrollIntoView({ block: "center" });
         return true;
       })()`);
       s = await snap();
-      const info = expectSentence(s, phase);
-      if (wantWordButton) {
+      const info = expectSentence(s, phase, wantExample);
+      if (wantWord) {
         assert.ok(info.wordBtn, phase + " shows 读单词");
         assert.strictEqual(info.wordBtn.say, s.word);
         assert.ok(info.wordBtn.top >= 0 && info.wordBtn.top < 844, phase + " 读单词 is on the phone screen @" + info.wordBtn.top);
@@ -487,7 +499,7 @@ async function main() {
       } else {
         assert.ok(!info.wordBtn, phase + " hides 读单词 before the answer is on screen");
       }
-      if (wantWordButton && phase.indexOf("meaning") === 0 && phase.indexOf("reveal") === -1) {
+      if (wantWord && phase.indexOf("meaning") === 0 && phase.indexOf("reveal") === -1) {
         await waitUtterance(0, s.word, phase + " auto headword");
         await sleep(120);
       }
@@ -500,37 +512,50 @@ async function main() {
         b.click();
         return true;
       })()`);
-      if (wantWordButton) {
+      let heardWord = "";
+      if (wantWord) {
         assert.strictEqual(tapped, true, phase + " 读单词 button");
         await waitUtterance(beforeTap, s.word, phase + " 读单词 tap");
+        heardWord = s.word;
       }
-      const fromEx = (await snap()).spoken.length;
-      const clicked = await evaluate(`(() => {
-        const buttons = [...document.querySelectorAll(".speak-btn")];
-        const b = buttons.find((el) => el.getAttribute("data-say-kind") === "example" && el.getAttribute("data-say-slow") !== "1" && !el.hidden && !(el.closest && el.closest("[hidden]")));
-        if (!b) return "";
-        b.scrollIntoView({ block: "center" });
-        b.click();
-        return b.getAttribute("data-say") || "";
-      })()`);
-      assert.strictEqual(clicked, info.spoken, phase + " clicked example");
-      const heard = await waitUtterance(fromEx, info.spoken, phase + " 读例句");
-      assert.ok(hasToken(heard.text, s.word));
+      let heardExample = "";
+      if (wantExample) {
+        const fromEx = (await snap()).spoken.length;
+        const clicked = await evaluate(`(() => {
+          const buttons = [...document.querySelectorAll(".speak-btn")];
+          const b = buttons.find((el) => el.getAttribute("data-say-kind") === "example" && el.getAttribute("data-say-slow") !== "1" && !el.hidden && !(el.closest && el.closest("[hidden]")));
+          if (!b) return "";
+          b.scrollIntoView({ block: "center" });
+          b.click();
+          return b.getAttribute("data-say") || "";
+        })()`);
+        assert.strictEqual(clicked, info.spoken, phase + " clicked example");
+        const heard = await waitUtterance(fromEx, info.spoken, phase + " 读例句");
+        assert.ok(hasToken(heard.text, s.word));
+        heardExample = heard.text;
+      } else {
+        const from = flags.spokenFrom == null ? s.spoken.length : flags.spokenFrom;
+        await sleep(300);
+        const fresh = ((await snap()).spoken || []).slice(from);
+        const leaked = fresh.filter((r) => r.text === s.word || r.text === info.spoken || r.text === info.before || hasToken(r.text, s.word) || /\bblank\b/i.test(r.text) || /_{3,}/.test(r.text));
+        assert.deepStrictEqual(leaked, [], phase + " spoke the answer before reveal: " + JSON.stringify(fresh));
+      }
       samples.push({
         phase,
         word: s.word,
         visualHint: info.visual,
-        beforeExampleSpeech: info.before,
-        afterExampleSpeech: info.spoken,
-        heardExample: heard.text,
-        heardWord: wantWordButton ? s.word : "",
+        oldBlankSpeech: info.before,
+        fullSentence: info.spoken,
+        heardExample,
+        heardWord,
+        exampleOffered: wantExample,
       });
       return info;
     }
 
     const meaning1 = await waitCard("英文");
     assert.strictEqual(meaning1.vw, 390);
-    await readAloud(meaning1, "meaning-1", true);
+    await readAloud(meaning1, "meaning-1", { word: true, example: true });
     await shot("speech-meaning-1");
     await evaluate(`document.getElementById("btn-unknown").click()`);
     const meaning1Reveal = await waitFor(async () => {
@@ -539,7 +564,7 @@ async function main() {
       if (!s.buttons.some((b) => b.kind === "word" && !b.slow && b.say === meaning1.word)) return null;
       return s;
     }, 8000, "meaning reveal");
-    await readAloud(meaning1Reveal, "meaning-1-reveal", true);
+    await readAloud(meaning1Reveal, "meaning-1-reveal", { word: true, example: true });
 
     await evaluate(`document.getElementById("btn-feedback-continue").click()`);
     const meaning2 = await waitFor(async () => {
@@ -547,7 +572,7 @@ async function main() {
       if (!s || s.word === meaning1.word) return null;
       return s;
     }, 15000, "second meaning card");
-    await readAloud(meaning2, "meaning-2", true);
+    await readAloud(meaning2, "meaning-2", { word: true, example: true });
     await shot("speech-meaning-2");
     await evaluate(`document.getElementById("btn-unknown").click()`);
     await waitFor(async () => {
@@ -567,17 +592,18 @@ async function main() {
       return s;
     }, 10000, "home after meaning");
 
+    let spellingSpokenFrom = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-spelling").click()`);
     const spelling = [];
     for (let n = 1; n <= 2; n++) {
       const card = await waitFor(async () => {
-        const s = await waitCard("拼写").catch(() => null);
+        const s = await waitCard("拼写", { needExample: false, forbidExample: true }).catch(() => null);
         if (!s) return null;
         if (spelling.some((prev) => prev.word === s.word && prev.example === s.example)) return null;
-        if (s.buttons.some((b) => b.kind === "word" && !b.slow)) return null;
+        if (s.buttons.some((b) => b.kind === "word" || b.kind === "example")) return null;
         return s;
       }, 15000, "spelling card " + n);
-      await readAloud(card, "spelling-" + n + "-before", false);
+      await readAloud(card, "spelling-" + n + "-before", { word: false, example: false, spokenFrom: spellingSpokenFrom });
       await evaluate(`document.getElementById("btn-unknown").click()`);
       const revealed = await waitFor(async () => {
         const s = await snap();
@@ -586,9 +612,10 @@ async function main() {
         if (!s.buttons.some((b) => b.kind === "example" && !b.slow && hasToken(b.say, card.word))) return null;
         return s;
       }, 8000, "spelling reveal " + n);
-      await readAloud(revealed, "spelling-" + n + "-reveal", true);
+      await readAloud(revealed, "spelling-" + n + "-reveal", { word: true, example: true });
       if (n === 1) await shot("speech-spelling-reveal");
       spelling.push(card);
+      spellingSpokenFrom = (await snap()).spoken.length;
       await evaluate(`document.getElementById("btn-feedback-continue").click()`);
     }
 
@@ -603,18 +630,19 @@ async function main() {
       if (!s.mustBtn) return null;
       return s;
     }, 10000, "今日必练 button");
+    let formSpokenFrom = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-must-practice").click()`);
     const formSeen = [];
     for (let n = 1; n <= 2; n++) {
       const card = await waitFor(async () => {
-        const s = await waitCard("中文").catch(() => null);
+        const s = await waitCard("中文", { needExample: false, forbidExample: true }).catch(() => null);
         if (!s) return null;
         if (s.label.indexOf("拼写") !== -1) return null;
         if (formSeen.some((prev) => prev.word === s.word)) return null;
-        if (s.buttons.some((b) => b.kind === "word" && !b.slow)) return null;
+        if (s.buttons.some((b) => b.kind === "word" || b.kind === "example")) return null;
         return s;
       }, 15000, "form card " + n);
-      await readAloud(card, "form-" + n + "-before", false);
+      await readAloud(card, "form-" + n + "-before", { word: false, example: false, spokenFrom: formSpokenFrom });
       await evaluate(`document.getElementById("btn-unknown").click()`);
       const revealed = await waitFor(async () => {
         const s = await snap();
@@ -622,9 +650,10 @@ async function main() {
         if (!s.buttons.some((b) => b.kind === "word" && !b.slow && b.say === card.word)) return null;
         return s;
       }, 8000, "form reveal " + n);
-      await readAloud(revealed, "form-" + n + "-reveal", true);
+      await readAloud(revealed, "form-" + n + "-reveal", { word: true, example: true });
       if (n === 1) await shot("speech-form-reveal");
       formSeen.push(card);
+      formSpokenFrom = (await snap()).spoken.length;
       if (n === 1) await evaluate(`document.getElementById("btn-feedback-continue").click()`);
     }
 

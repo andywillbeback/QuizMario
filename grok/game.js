@@ -1550,9 +1550,9 @@
   }
 
   /**
-   * During the card: meaning/challenge show 读单词 and may auto-speak.
-   * Spelling and other ZH→EN modes show 读单词 once the answer is on screen.
-   * 读例句 always carries the real headword, while the hint on screen stays blanked.
+   * During the card: meaning/challenge show 读单词 and 读例句 and may auto-speak the word.
+   * Spelling and other ZH→EN modes hide both buttons until the answer is on screen,
+   * so 读例句 cannot leak the headword. The hint on screen stays blanked.
    */
   function renderCardSpeech(revealed) {
     const row = $("card-speak");

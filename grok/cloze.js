@@ -82,9 +82,10 @@
 
   /**
    * During-card speech. Meaning (and challenge, which is meaning) may auto-speak
-   * the English prompt and always offers 读单词. Spelling and other ZH→EN modes
-   * hide 读单词 until the answer is on screen (`opts.revealed`).
-   * 读例句 always speaks the real sentence, with the headword filled in.
+   * the English prompt and offers 读单词 plus the full example.
+   * Spelling and other ZH→EN modes hide 读单词 and 读例句 until the answer is
+   * on screen (`opts.revealed`), so a tap cannot speak the headword early.
+   * After reveal, 读例句 is the real sentence with the headword filled in.
    */
   function cardSpeechPlan(card, direction, opts) {
     card = card || {};
@@ -99,6 +100,7 @@
       exampleSay: "",
     };
     if (!example || isPlaceholderExample(example)) return plan;
+    if (!meaning && !revealed) return plan;
     plan.exampleSay = spokenExample(example, word);
     return plan;
   }
