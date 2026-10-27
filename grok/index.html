@@ -1188,8 +1188,9 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 <p id="auth-hold" role="status">聚光单词 · 1st edition<br>正在确认登录…</p>
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
-<div id="sort-bar" class="sort-bar" role="group" aria-label="连杀语音">
+<div id="sort-bar" class="sort-bar" role="group" aria-label="语音">
   <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
+  <button type="button" class="sort-btn" id="btn-accent" aria-label="当前英式英语发音，点按改为美式" title="英式英语">英音</button>
 </div>
 <div class="app">
   <header class="brand">
@@ -1392,6 +1393,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="feedback.js"></script>
   <script src="share-card.js"></script>
   <script src="kill-streak.js"></script>
+  <script src="pronunciation.js"></script>
   <script src="game.js"></script>
   <script src="profile-name.js"></script>
   <script src="sync.js"></script>
