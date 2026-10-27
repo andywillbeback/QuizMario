@@ -66,37 +66,40 @@
     }
   }
 
-  /** Speakable cloze: the answer token becomes the word "blank", not the spelling. */
-  function speechBlank(example, word) {
-    return blankExample(example, word).replace(/___+/g, "blank");
+  /**
+   * Sentence to read aloud. The headword stays audible.
+   * A visual cloze ("___") is filled with the headword so TTS never says
+   * the word "blank" and never spells out underscore runs.
+   * On-screen hints still use blankExample.
+   */
+  function spokenExample(example, word) {
+    var text = example == null ? "" : String(example);
+    var target = word == null ? "" : String(word).trim();
+    if (!text) return "";
+    if (target && /_{3,}/.test(text)) text = text.replace(/_{3,}/g, target);
+    return text;
   }
 
   /**
-   * During-card speech. Meaning (and challenge, which is meaning) may speak the
-   * English prompt. Spelling and other ZH→EN modes must not speak the answer
-   * word; the example is spoken only after the answer token is blanked.
+   * During-card speech. Meaning (and challenge, which is meaning) may auto-speak
+   * the English prompt and always offers 读单词. Spelling and other ZH→EN modes
+   * hide 读单词 until the answer is on screen (`opts.revealed`).
+   * 读例句 always speaks the real sentence, with the headword filled in.
    */
-  function cardSpeechPlan(card, direction) {
+  function cardSpeechPlan(card, direction, opts) {
     card = card || {};
+    opts = opts || {};
     var meaning = direction === "meaning";
+    var revealed = !!opts.revealed;
     var word = card.word || "";
     var example = card.example_en || "";
     var plan = {
       autoSpeakWord: !!(meaning && word),
-      showWord: !!(meaning && word),
+      showWord: !!((meaning || revealed) && word),
       exampleSay: "",
     };
     if (!example || isPlaceholderExample(example)) return plan;
-    if (meaning) {
-      plan.exampleSay = example;
-      return plan;
-    }
-    if (containsToken(example, word)) {
-      var spoken = speechBlank(example, word);
-      if (!containsToken(spoken, word)) plan.exampleSay = spoken;
-      return plan;
-    }
-    plan.exampleSay = example;
+    plan.exampleSay = spokenExample(example, word);
     return plan;
   }
 
@@ -104,7 +107,7 @@
     blankExample: blankExample,
     isPlaceholderExample: isPlaceholderExample,
     containsToken: containsToken,
-    speechBlank: speechBlank,
+    spokenExample: spokenExample,
     cardSpeechPlan: cardSpeechPlan,
   };
 });
