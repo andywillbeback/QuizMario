@@ -243,6 +243,30 @@
       notify(error ? "error" : "ready", error || "");
     }
 
+    function detachUtterance(u) {
+      if (!u) return;
+      u.onstart = null;
+      u.onend = null;
+      u.onerror = null;
+    }
+
+    /**
+     * Chrome can deliver the previous cancel's "interrupted" onto the next
+     * utterance, or end it before onstart. Retry the same line instead of
+     * treating that as a finished read. A real stop() bumps generation, so
+     * current(req) fails and this does not revive a line the caller stopped.
+     */
+    function retryDropped(req, u) {
+      if (!current(req) || utterance !== u || req.started) return false;
+      if (req.dropRetries >= 2) return false;
+      req.dropRetries += 1;
+      detachUtterance(u);
+      if (utterance === u) utterance = null;
+      clearPlaybackTimers();
+      schedule("speak", function () { startSpeech(req); }, CANCEL_GAP_MS);
+      return true;
+    }
+
     function refreshVoices() {
       if (!supported || destroyed || readingVoices) return;
       readingVoices = true;
@@ -300,12 +324,15 @@
         }, Math.max(60000, req.text.length * 300));
       };
       u.onend = function () {
-        if (utterance === u) finish(req);
+        if (!current(req) || utterance !== u) return;
+        if (!req.started && retryDropped(req, u)) return;
+        finish(req);
       };
       u.onerror = function (event) {
         if (!current(req) || utterance !== u) return;
         var code = (event && event.error) || "synthesis-failed";
         if (code === "interrupted" || code === "canceled" || code === "cancelled") {
+          if (retryDropped(req, u)) return;
           finish(req);
           return;
         }
@@ -345,7 +372,7 @@
       if (!current(req)) return;
       if (!enabled()) { stop(); return; }
       refreshVoices();
-      if (!voices.length && supported && !voicesSettled) {
+      if (!voices.length && supported && !voicesSettled && !req.gesture) {
         req.waiting = true;
         notify("loading", "");
         if (timers.voicesSettle == null) {
@@ -372,9 +399,58 @@
       }
       var slow = !!opts.slow;
       var example = !!opts.example;
-      if (request && request.text === text && request.slow === slow && request.example === example) return true;
+      var gesture = !!opts.gesture;
+      var same = request && request.text === text && request.slow === slow && request.example === example;
+      // A second tap while the line is already audible must not clip it.
+      // A not-yet-started duplicate from auto-speak stays queued. A button tap
+      // (gesture) speaks in this turn so the browser user-activation is kept.
+      if (same && (request.started || !gesture)) return true;
       if (typeof options.onBeforeSpeak === "function") {
         try { options.onBeforeSpeak(); } catch (_) {}
+      }
+      if (gesture) {
+        generation += 1;
+        clearPlaybackTimers();
+        detachUtterance(utterance);
+        utterance = null;
+        request = null;
+        playingVoice = null;
+        var tapped = {
+          text: text,
+          slow: slow,
+          example: example,
+          generation: generation,
+          failedVoices: [],
+          retried: false,
+          started: false,
+          waiting: false,
+          dropRetries: 0,
+          gesture: true,
+        };
+        request = tapped;
+        last = { text: text, slow: slow, example: example };
+        begin(tapped);
+        return true;
+      }
+      // Card enter stops the previous word, then speaks the next one.
+      // cancel() is already in flight; a second cancel drops the new utterance.
+      if (cancelCooling && !utterance && !request) {
+        var queued = {
+          text: text,
+          slow: slow,
+          example: example,
+          generation: generation,
+          failedVoices: [],
+          retried: false,
+          started: false,
+          waiting: false,
+          dropRetries: 0,
+          gesture: false,
+        };
+        request = queued;
+        last = { text: text, slow: slow, example: example };
+        schedule("speak", function () { begin(queued); }, CANCEL_GAP_MS);
+        return true;
       }
       var cancelled = release(true, true) || cancelCooling;
       var req = {
@@ -386,6 +462,8 @@
         retried: false,
         started: false,
         waiting: false,
+        dropRetries: 0,
+        gesture: false,
       };
       request = req;
       last = { text: text, slow: slow, example: example };

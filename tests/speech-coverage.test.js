@@ -4,6 +4,11 @@ const fs = require("fs");
 const path = require("path");
 const root = path.join(__dirname, "..");
 const cloze = require(path.join(root, "grok/cloze.js"));
+const clozeSrc = fs.readFileSync(path.join(root, "grok/cloze.js"), "utf8");
+
+function clozeSourceIncludesBlank() {
+  return /replace\(\/_\{\d,}\+\/g,\s*["']blank["']\)/.test(clozeSrc) || clozeSrc.includes('replace(/___+/g, "blank")');
+}
 
 const game = fs.readFileSync(path.join(root, "grok/game.js"), "utf8");
 const index = fs.readFileSync(path.join(root, "grok/index.html"), "utf8");
@@ -38,20 +43,36 @@ const safeExample = {
 }
 
 {
+  const visual = cloze.blankExample(real.example_en, "apple");
+  assert.strictEqual(visual, "She ate an ___ after lunch.", "the quiz hint stays a blank");
+  assert.strictEqual(cloze.spokenExample(visual, "apple"), real.example_en);
+  assert.strictEqual(cloze.spokenExample("The ___ near the ___.", "gate"), "The gate near the gate.");
+  assert.ok(!/\bblank\b/i.test(cloze.spokenExample(visual, "apple")));
+  assert.ok(!/_{3,}/.test(cloze.spokenExample(visual, "apple")));
+}
+
+{
   for (const direction of ["spelling", "form"]) {
     const plan = cloze.cardSpeechPlan(real, direction);
     assert.strictEqual(plan.autoSpeakWord, false, direction + " must not auto-speak the answer");
     assert.strictEqual(plan.showWord, false, direction + " must not offer 读单词 before the guess");
-    assert.ok(plan.exampleSay, direction + " still offers a safe example");
-    assert.ok(plan.exampleSay.indexOf("blank") !== -1, plan.exampleSay);
-    assert.ok(!cloze.containsToken(plan.exampleSay, "apple"), plan.exampleSay);
+    assert.strictEqual(plan.exampleSay, "", direction + " must not offer 读例句 before reveal");
+    const revealed = cloze.cardSpeechPlan(real, direction, { revealed: true });
+    assert.strictEqual(revealed.showWord, true, direction + " offers 读单词 after the answer is on screen");
+    assert.strictEqual(revealed.autoSpeakWord, false, direction + " still does not auto-speak");
+    assert.strictEqual(revealed.exampleSay, real.example_en, direction + " 读例句 speaks the headword after reveal");
+    assert.ok(!/\bblank\b/i.test(revealed.exampleSay), revealed.exampleSay);
+    assert.ok(!/_{3,}/.test(revealed.exampleSay), revealed.exampleSay);
+    assert.ok(cloze.containsToken(revealed.exampleSay, "apple"), revealed.exampleSay);
   }
 }
 
 {
   const open = cloze.cardSpeechPlan(safeExample, "spelling");
-  assert.strictEqual(open.exampleSay, safeExample.example_en);
+  assert.strictEqual(open.exampleSay, "", "spelling hides 读例句 even when the sentence omits the headword");
   assert.strictEqual(open.showWord, false);
+  const openRevealed = cloze.cardSpeechPlan(safeExample, "spelling", { revealed: true });
+  assert.strictEqual(openRevealed.exampleSay, safeExample.example_en);
   const empty = cloze.cardSpeechPlan({ word: "apple", example_en: "" }, "form");
   assert.strictEqual(empty.exampleSay, "");
   assert.strictEqual(empty.autoSpeakWord, false);
@@ -83,6 +104,19 @@ const safeExample = {
   assert.ok(say.includes("return false"));
   assert.ok(game.includes("function speakTeaching"), "buttons and auto-speak share the teaching helper");
   assert.ok(game.includes('speakTeaching(b.getAttribute("data-say")'), "replay buttons use the teaching voice");
+  assert.ok(game.includes("gesture: true"), "a 读单词 tap speaks inside the click");
+  assert.ok(game.includes("gesture: !!opts.gesture"), "the teaching helper forwards the tap");
+  const autoOnly = game.slice(game.indexOf("function maybeSpeakPrompt"), game.indexOf("function bumpPractice"));
+  assert.ok(!autoOnly.includes("gesture"), "auto-speak stays on the cancel-safe path");
+  assert.ok(!autoOnly.includes("exampleSay"), "card enter does not auto-speak an example");
+  assert.ok(game.includes("spokenExample"), "feedback 读例句 uses the filled sentence");
+  assert.ok(!game.includes("speechBlank") && !clozeSourceIncludesBlank(), "nothing still asks TTS to say blank");
+  const spellGrade = game.slice(game.indexOf("function gradeSpelling"), game.indexOf("function grade("));
+  assert.ok(spellGrade.includes("renderCardSpeech(true)"), "spelling reveal keeps 读单词 on the card");
+  assert.ok(!spellGrade.includes("setCardSpeakVisible(false)"));
+  const gradeFn = game.slice(game.indexOf("function grade("), game.indexOf("function confirmCorrect"));
+  assert.ok(gradeFn.includes("renderCardSpeech(true)"), "meaning reveal keeps 读单词 beside the headword");
+  assert.ok(gradeFn.includes("speakButtons(currentCard)"), "feedback still has 读单词 and 读例句");
   const buttons = game.slice(game.indexOf("function speakButtons"), game.indexOf("function initV6Ui"));
   assert.ok(buttons.includes("isPlaceholderExample"), "feedback 读例句 skips placeholders");
   assert.ok(buttons.includes("🔊 读单词") && buttons.includes("🔊 读例句") && buttons.includes("slowSpeakButton"));

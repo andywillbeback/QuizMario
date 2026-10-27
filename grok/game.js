@@ -1550,10 +1550,11 @@
   }
 
   /**
-   * During the card: meaning/challenge get 读单词 + 读例句 and may auto-speak.
-   * Spelling and other ZH→EN modes do not speak the answer word before the guess.
+   * During the card: meaning/challenge show 读单词 and 读例句 and may auto-speak the word.
+   * Spelling and other ZH→EN modes hide both buttons until the answer is on screen,
+   * so 读例句 cannot leak the headword. The hint on screen stays blanked.
    */
-  function renderCardSpeech() {
+  function renderCardSpeech(revealed) {
     const row = $("card-speak");
     if (!row) return;
     const api = window.QuizMarioCloze;
@@ -1561,7 +1562,7 @@
       setCardSpeakVisible(false);
       return;
     }
-    const plan = api.cardSpeechPlan(currentCard, sessionDirection);
+    const plan = api.cardSpeechPlan(currentCard, sessionDirection, { revealed: !!revealed });
     const parts = [];
     if (plan.showWord && currentCard.word) {
       parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(currentCard.word) + '" data-say-kind="word">🔊 读单词</button>');
@@ -1844,7 +1845,7 @@
   function gradeSpelling(correct, chosen, outcome) {
     awaiting = true;
     setUnknownVisible(false);
-    setCardSpeakVisible(false);
+    renderCardSpeech(true);
     const input = $("answer-input");
     if (input) input.disabled = true;
     const check = $("btn-check-spelling");
@@ -1891,7 +1892,7 @@
     }
     awaiting = true;
     setUnknownVisible(false);
-    setCardSpeakVisible(false);
+    renderCardSpeech(true);
     const kind = outcome || (correct ? "correct" : "wrong");
     const prog = getProg(currentCard.key);
     const prevMastery = Math.floor(prog.mastery || 0);
@@ -2681,7 +2682,11 @@
     opts = opts || {};
     if (wordSpeech) {
       try {
-        if (wordSpeech.speak(spoken, { example: !!opts.example, slow: !!opts.slow })) return true;
+        if (wordSpeech.speak(spoken, {
+          example: !!opts.example,
+          slow: !!opts.slow,
+          gesture: !!opts.gesture,
+        })) return true;
       } catch (_) {}
     }
     if (opts.slow) return false;
@@ -2707,12 +2712,20 @@
     } catch (_) { return false; }
   }
 
+  function exampleSpeechText(card) {
+    const example = card && card.example_en ? String(card.example_en) : "";
+    const api = window.QuizMarioCloze;
+    if (api && typeof api.spokenExample === "function") return api.spokenExample(example, card.word);
+    return example;
+  }
+
   function speakButtons(card) {
     if (!card) return "";
     const exampleOk = card.example_en && !isPlaceholderExample(card.example_en);
+    const exampleSay = exampleOk ? exampleSpeechText(card) : "";
     return '<div class="speak-row">' +
       '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '" data-say-kind="word">🔊 读单词</button>' +
-      (exampleOk ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '" data-say-kind="example">🔊 读例句</button>' : "") +
+      (exampleSay ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(exampleSay) + '" data-say-kind="example">🔊 读例句</button>' : "") +
       slowSpeakButton(card.word, "word") +
       (exampleOk ? '<div class="fb-ex">例：' + escapeHtml(card.example_en) +
         (card.example_zh ? " " + escapeHtml(card.example_zh) : "") + "</div>" : "") +
@@ -2734,6 +2747,7 @@
       speakTeaching(b.getAttribute("data-say"), {
         example: b.getAttribute("data-say-kind") === "example",
         slow: b.getAttribute("data-say-slow") === "1",
+        gesture: true,
       });
     });
     bindRelatedUi();

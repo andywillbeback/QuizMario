@@ -104,8 +104,10 @@ function makeSynth(voices) {
     cancel() {
       synth.inCancel = true;
       synth.cancelled += 1;
-      synth.speaking = false;
-      synth.pending = false;
+      if (!synth.stickySpeaking) {
+        synth.speaking = false;
+        synth.pending = false;
+      }
       synth.inCancel = false;
     },
     resume() { synth.resumed += 1; synth.paused = false; },
@@ -442,6 +444,75 @@ const compactSam = voice("Samantha (Compact)", "en-GB");
   rig.clock.flush(80);
   assert.strictEqual(rig.synth.spoken.length, 1, "stop drops the queued word");
   assert.strictEqual(rig.synth.spoken[0].text, "apple");
+  rig.ctrl.destroy();
+}
+
+{
+  const rig = mount([daniel]);
+  rig.ctrl.speak("apple");
+  rig.synth.spoken[0].onstart();
+  rig.synth.stickySpeaking = true;
+  const before = rig.synth.cancelled;
+  rig.ctrl.stop();
+  assert.ok(rig.synth.cancelled > before, "stopping an audible word cancels once");
+  const afterStop = rig.synth.cancelled;
+  assert.strictEqual(rig.ctrl.speak("berry"), true);
+  assert.strictEqual(rig.synth.cancelled, afterStop, "the next headword must not cancel again while the engine is still cooling");
+  assert.strictEqual(rig.synth.spoken.length, 1);
+  rig.clock.flush(40);
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "berry");
+  const dropped = rig.synth.spoken[rig.synth.spoken.length - 1];
+  dropped.onerror({ error: "interrupted" });
+  rig.clock.flush(39);
+  assert.strictEqual(rig.synth.spoken.length, 2, "a cancel that lands on the new word waits out the gap");
+  rig.clock.flush(1);
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "berry", "the dropped headword is spoken again");
+  const again = rig.synth.spoken[rig.synth.spoken.length - 1];
+  again.onerror({ error: "canceled" });
+  rig.clock.flush(40);
+  const third = rig.synth.spoken[rig.synth.spoken.length - 1];
+  third.onerror({ error: "interrupted" });
+  const length = rig.synth.spoken.length;
+  rig.clock.flush(80);
+  assert.strictEqual(rig.synth.spoken.length, length, "a dropped word is retried only twice");
+  rig.ctrl.destroy();
+}
+
+{
+  const rig = mount([daniel]);
+  rig.ctrl.speak("apple");
+  const first = rig.synth.spoken[0];
+  first.onstart();
+  first.onerror({ error: "interrupted" });
+  rig.clock.flush(80);
+  assert.strictEqual(rig.synth.spoken.length, 1, "an audible word is not restarted when it is interrupted");
+  rig.ctrl.destroy();
+}
+
+{
+  const rig = mount([daniel]);
+  rig.ctrl.speak("apple");
+  assert.strictEqual(rig.synth.spoken.length, 1);
+  const cancels = rig.synth.cancelled;
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true);
+  assert.strictEqual(rig.synth.cancelled, cancels, "读单词 does not cancel in the tap turn");
+  assert.strictEqual(rig.synth.spoken.length, 2, "a tap before the word starts speaks inside the gesture");
+  assert.strictEqual(rig.synth.spoken[1].text, "apple");
+  rig.synth.spoken[1].onstart();
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true);
+  assert.strictEqual(rig.synth.spoken.length, 2, "a second tap does not clip a word that already started");
+  rig.ctrl.speak("She ate an apple.", { example: true, gesture: true });
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "She ate an apple.");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].rate, speech.EXAMPLE_RATE);
+  rig.ctrl.destroy();
+}
+
+{
+  const rig = mount([]);
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true);
+  assert.strictEqual(rig.synth.spoken.length, 1, "a tap does not wait out the voice list");
+  assert.strictEqual(rig.synth.spoken[0].text, "apple");
+  assert.strictEqual(rig.synth.spoken[0].lang, "en-GB");
   rig.ctrl.destroy();
 }
 
