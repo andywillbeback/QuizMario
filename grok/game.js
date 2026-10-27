@@ -83,6 +83,8 @@
   /** @type {"default"} */
   let sortMode = publicSortMode(save.sortMode);
   let voiceOn = save.voiceOn !== false; // default on
+  /** Teaching voice for words and examples. Streak clips stay on speakLine. */
+  let wordSpeech = null;
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
   /** When true, waiting for Good/Easy after a correct answer */
   let pendingRate = false;
@@ -322,7 +324,10 @@
       location.replace("login.html");
       return;
     }
-    if (name !== "play") clearRateDock();
+    if (name !== "play") {
+      clearRateDock();
+      stopTeachingSpeech();
+    }
     document.body.classList.toggle("at-gate", name === "gate");
     document.body.classList.toggle("at-play", name === "play");
     for (const el of document.querySelectorAll(".screen")) el.classList.remove("active");
@@ -676,7 +681,26 @@
     }
   }
 
+  function stopTeachingSpeech(opts) {
+    if (!wordSpeech) return;
+    try { wordSpeech.stop(opts || {}); } catch (_) {}
+  }
+
+  function bindTeachingSpeech() {
+    const api = window.QMPronunciation;
+    if (!api || typeof api.create !== "function") return;
+    try {
+      wordSpeech = api.create({
+        onBeforeSpeak: function () { speakGen += 1; },
+      });
+    } catch (_) {
+      wordSpeech = null;
+    }
+  }
+
   function cancelSpeech() {
+    // Drop a queued teaching utterance first. This call owns the one cancel.
+    stopTeachingSpeech({ cancelSpeech: false });
     speakGen++;
     try {
       if (window.speechSynthesis) speechSynthesis.cancel();
@@ -687,6 +711,7 @@
   function speakUtterance(u) {
     const ss = window.speechSynthesis;
     if (!ss || !u) return;
+    stopTeachingSpeech({ cancelSpeech: false });
     const gen = ++speakGen;
     try { ss.cancel(); } catch (_) {}
     setTimeout(() => {
@@ -729,6 +754,7 @@
     speechSynthesis.addEventListener("voiceschanged", pickEnglishVoice);
     pickEnglishVoice();
   }
+  bindTeachingSpeech();
 
   function resolveVoiceProfile(text, opts) {
     if (opts && (opts.rate != null || opts.pitch != null || opts.volume != null)) {
@@ -1317,6 +1343,9 @@
     const box = $("prompt-box");
     const doEnter = () => {
       if (gen !== playGen || challengeFailed) return;
+      // Silence the previous word before a spelling card, then speak the new one
+      // on a later turn so cancel() cannot clip the first syllable.
+      stopTeachingSpeech();
       currentCard = card;
       awaiting = false;
       fillCardContent();
@@ -1528,10 +1557,15 @@
     const plan = api.cardSpeechPlan(currentCard, sessionDirection);
     const parts = [];
     if (plan.showWord && currentCard.word) {
-      parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(currentCard.word) + '">🔊 读单词</button>');
+      parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(currentCard.word) + '" data-say-kind="word">🔊 读单词</button>');
     }
     if (plan.exampleSay) {
-      parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(plan.exampleSay) + '">🔊 读例句</button>');
+      parts.push('<button type="button" class="speak-btn" data-say="' + escapeHtml(plan.exampleSay) + '" data-say-kind="example">🔊 读例句</button>');
+    }
+    if (plan.showWord && currentCard.word) {
+      parts.push(slowSpeakButton(currentCard.word, "word"));
+    } else if (plan.exampleSay) {
+      parts.push(slowSpeakButton(plan.exampleSay, "example"));
     }
     if (!parts.length) {
       setCardSpeakVisible(false);
@@ -1541,13 +1575,14 @@
     row.innerHTML = parts.join("");
   }
 
-  /** English prompt only. speakLine respects voiceOn and avoids cancel+speak in one turn. */
+  /** English prompt only. Stays behind the streak-voice toggle and never plays a kill clip. */
   function maybeSpeakPrompt() {
     const api = window.QuizMarioCloze;
     if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") return;
     const plan = api.cardSpeechPlan(currentCard, sessionDirection);
     if (!plan.autoSpeakWord || sessionDirection !== "meaning" || !currentCard.word) return;
-    speakLine(currentCard.word, { lexicon: true, rate: 0.9 });
+    if (!voiceOn) return;
+    speakTeaching(currentCard.word, { example: false });
   }
 
   function bumpPractice(bucket, good) {
@@ -2413,7 +2448,27 @@
     return '<p class="stats-legend">' + line + "</p>";
   }
 
-  // ---- pronunciation (browser speechSynthesis, en-GB preferred) ----
+  // ---- pronunciation (browser speechSynthesis teaching voice, en-GB default) ----
+  function slowSpeakButton(text, kind) {
+    if (!text) return "";
+    return '<button type="button" class="speak-btn" data-say="' + escapeHtml(text) +
+      '" data-say-kind="' + kind + '" data-say-slow="1">慢速</button>';
+  }
+
+  /** Ranked teaching voice. Falls back to the first British voice if the helper is missing. */
+  function speakTeaching(text, opts) {
+    const spoken = String(text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+    if (!spoken) return false;
+    opts = opts || {};
+    if (wordSpeech) {
+      try {
+        if (wordSpeech.speak(spoken, { example: !!opts.example, slow: !!opts.slow })) return true;
+      } catch (_) {}
+    }
+    if (opts.slow) return false;
+    return sayEn(spoken);
+  }
+
   function pickGbVoice() {
     if (!("speechSynthesis" in window)) return null;
     const vs = readVoices();
@@ -2437,9 +2492,10 @@
     if (!card) return "";
     const exampleOk = card.example_en && !isPlaceholderExample(card.example_en);
     return '<div class="speak-row">' +
-      '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '">🔊 读单词</button>' +
-      (exampleOk ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '">🔊 读例句</button>' +
-        '<div class="fb-ex">例：' + escapeHtml(card.example_en) +
+      '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.word) + '" data-say-kind="word">🔊 读单词</button>' +
+      (exampleOk ? '<button type="button" class="speak-btn" data-say="' + escapeHtml(card.example_en) + '" data-say-kind="example">🔊 读例句</button>' : "") +
+      slowSpeakButton(card.word, "word") +
+      (exampleOk ? '<div class="fb-ex">例：' + escapeHtml(card.example_en) +
         (card.example_zh ? " " + escapeHtml(card.example_zh) : "") + "</div>" : "") +
       "</div>";
   }
@@ -2454,9 +2510,36 @@
     }
     document.addEventListener("click", (e) => {
       const b = e.target.closest && e.target.closest(".speak-btn");
-      if (b) { e.preventDefault(); sayEn(b.getAttribute("data-say")); }
+      if (!b) return;
+      e.preventDefault();
+      speakTeaching(b.getAttribute("data-say"), {
+        example: b.getAttribute("data-say-kind") === "example",
+        slow: b.getAttribute("data-say-slow") === "1",
+      });
     });
-    if ("speechSynthesis" in window) window.speechSynthesis.onvoiceschanged = () => {};
+    const accentBtn = $("btn-accent");
+    if (accentBtn) {
+      const syncAccentBtn = () => {
+        if (!wordSpeech) {
+          accentBtn.hidden = true;
+          return;
+        }
+        const us = wordSpeech.getState().accent === "en-US";
+        accentBtn.hidden = false;
+        accentBtn.textContent = us ? "美音" : "英音";
+        accentBtn.title = us ? "美式英语" : "英式英语";
+        accentBtn.setAttribute("aria-label", us
+          ? "当前美式英语发音，点按改为英式"
+          : "当前英式英语发音，点按改为美式");
+      };
+      syncAccentBtn();
+      accentBtn.addEventListener("click", () => {
+        if (!wordSpeech) return;
+        const next = wordSpeech.getState().accent === "en-US" ? "en-GB" : "en-US";
+        try { wordSpeech.setAccent(next); } catch (_) { return; }
+        syncAccentBtn();
+      });
+    }
     renderStats();
   }
 
