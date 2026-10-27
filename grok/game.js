@@ -26,6 +26,8 @@
   let currentTrack = "core";
   let LEVELS = TRACKS[0].sets || [];
   let LEVEL_COUNT = LEVELS.length;
+  let relatedIndex = null;
+  let relatedIndexLevels = null;
   const SRS = window.QuizMarioSRS;
   if (!SRS) throw new Error("srs-rules.js must load before game.js");
   const RQ = window.QuizMarioQueues;
@@ -320,6 +322,7 @@
   }
 
   function showScreen(name) {
+    closeRelatedPeek();
     if ((name === "gate" || name === "home") && !document.documentElement.classList.contains("session-ok") && !window.__QM_EXPECT_SESSION && !window.__QM_AUTH_PENDING) {
       location.replace("login.html");
       return;
@@ -436,7 +439,7 @@
   function enrichItem(w, levelIdx, idx) {
     const key = cardKey(levelIdx, w.word);
     const p = getProg(key);
-    return {
+    const item = {
       key,
       word: w.word,
       meaning_zh: w.meaning_zh,
@@ -454,6 +457,8 @@
       dueAt: p.due || 0,
       levelIdx: levelIdx,
     };
+    if (Array.isArray(w.related)) item.related = w.related;
+    return item;
   }
 
   function countSeenCards() {
@@ -1156,6 +1161,7 @@
     updateProgress();
     renderChoices();
     renderCardSpeech();
+    renderRelated(false);
   }
 
   function stopChallenge() {
@@ -1509,6 +1515,7 @@
     setTypeRowVisible(false);
     setUnknownVisible(false);
     setCardSpeakVisible(false);
+    hideRelatedRow();
   }
 
   function submitTypedSpelling() {
@@ -1573,6 +1580,215 @@
     }
     row.hidden = false;
     row.innerHTML = parts.join("");
+  }
+
+  function relatedApi() {
+    return window.QuizMarioRelated || null;
+  }
+
+  function relatedTrackIndex() {
+    const api = relatedApi();
+    if (!api || typeof api.indexTrack !== "function") return null;
+    if (relatedIndexLevels !== LEVELS) {
+      relatedIndexLevels = LEVELS;
+      try { relatedIndex = api.indexTrack(LEVELS); }
+      catch (_) { relatedIndex = null; }
+    }
+    return relatedIndex;
+  }
+
+  function hideRelatedRow() {
+    const row = $("card-related");
+    if (!row) return;
+    row.hidden = true;
+    while (row.firstChild) row.removeChild(row.firstChild);
+  }
+
+  function renderRelated(revealed) {
+    const row = $("card-related");
+    if (!row) return;
+    try {
+      const api = relatedApi();
+      const show = !!(api && currentCard && typeof api.visible === "function"
+        && api.visible(currentCard, sessionDirection, revealed));
+      if (!show) {
+        hideRelatedRow();
+        return;
+      }
+      const items = api.lemmas(currentCard);
+      if (!items.length) {
+        hideRelatedRow();
+        return;
+      }
+      const index = relatedTrackIndex();
+      const here = currentCard.levelIdx != null ? currentCard.levelIdx : (currentLevel - 1);
+      hideRelatedRow();
+      row.hidden = false;
+      row.setAttribute("role", "group");
+      row.setAttribute("aria-label", "相关词");
+      const label = document.createElement("span");
+      label.className = "related-label";
+      label.setAttribute("aria-hidden", "true");
+      label.textContent = "相关词";
+      row.appendChild(label);
+      for (let i = 0; i < items.length; i++) {
+        const lemma = items[i];
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "related-chip";
+        btn.textContent = lemma;
+        btn.setAttribute("data-related", lemma);
+        let hit = null;
+        try {
+          hit = index && typeof api.lookup === "function" ? api.lookup(index, lemma) : null;
+        } catch (_) {
+          hit = null;
+        }
+        if (hit && hit.levelIdx === here) btn.classList.add("is-here");
+        else if (!hit) btn.classList.add("is-plain");
+        btn.setAttribute("aria-label", hit ? ("相关词 " + lemma) : ("相关词 " + lemma + "，词库里没有单独词条"));
+        btn.title = "查看词库里的 " + lemma;
+        row.appendChild(btn);
+      }
+    } catch (_) {
+      hideRelatedRow();
+    }
+  }
+
+  function relatedPeekEl() {
+    return $("related-peek");
+  }
+
+  function closeRelatedPeek() {
+    const peek = relatedPeekEl();
+    if (!peek) return;
+    peek.hidden = true;
+    peek.removeAttribute("data-copy");
+    const card = peek.querySelector(".related-peek-card");
+    if (card) card.classList.remove("is-here");
+  }
+
+  function closeRelatedPeekOnKey(e) {
+    const peek = relatedPeekEl();
+    if (!peek || peek.hidden) return false;
+    if (e && e.key === "Escape") {
+      e.preventDefault();
+      closeRelatedPeek();
+    }
+    return true;
+  }
+
+  function setRelatedPeekText(id, text, hideIfEmpty) {
+    const el = $(id);
+    if (!el) return;
+    const value = text == null ? "" : String(text);
+    el.textContent = value;
+    if (hideIfEmpty) el.hidden = !value;
+  }
+
+  function openRelatedPeek(lemma) {
+    const peek = relatedPeekEl();
+    if (!peek) return;
+    const text = String(lemma || "").trim();
+    if (!text) return;
+    try {
+      const api = relatedApi();
+      const index = relatedTrackIndex();
+      const hit = api && index && typeof api.lookup === "function" ? api.lookup(index, text) : null;
+      const surface = hit && hit.word && hit.word.word ? hit.word.word : text;
+      const gloss = hit && hit.word && hit.word.meaning_zh ? String(hit.word.meaning_zh) : "";
+      const pos = hit && hit.word && hit.word.pos ? String(hit.word.pos) : "";
+      const exampleEn = hit && hit.word && hit.word.example_en ? String(hit.word.example_en) : "";
+      const exampleZh = hit && hit.word && hit.word.example_zh ? String(hit.word.example_zh) : "";
+      const here = currentCard && currentCard.levelIdx != null ? currentCard.levelIdx : (currentLevel - 1);
+      const inSet = !!(hit && hit.levelIdx === here);
+      setRelatedPeekText("related-peek-word", surface, false);
+      setRelatedPeekText(
+        "related-peek-meaning",
+        gloss ? ((pos ? pos + " · " : "") + gloss) : "当前词库里没有这个词条",
+        false
+      );
+      setRelatedPeekText(
+        "related-peek-example",
+        exampleEn ? (exampleEn + (exampleZh ? " " + exampleZh : "")) : "",
+        true
+      );
+      let where = "可以复制这个词，稍后再查";
+      if (hit) {
+        let title = "";
+        try { title = setTitle(hit.levelIdx + 1); } catch (_) { title = ""; }
+        where = inSet
+          ? ("就在本组" + (title ? " · " + title : ""))
+          : ("在「" + (title || "词库") + "」");
+      }
+      setRelatedPeekText("related-peek-where", where, false);
+      setRelatedPeekText("related-peek-status", "", false);
+      const sheet = peek.querySelector(".related-peek-card");
+      if (sheet) sheet.classList.toggle("is-here", inSet);
+      peek.setAttribute("data-copy", surface);
+      peek.hidden = false;
+      const close = $("related-peek-close");
+      if (close && typeof close.focus === "function") {
+        try { close.focus(); } catch (_) {}
+      }
+    } catch (_) {
+      closeRelatedPeek();
+    }
+  }
+
+  function copyRelatedLemma() {
+    const peek = relatedPeekEl();
+    const status = $("related-peek-status");
+    const text = peek ? String(peek.getAttribute("data-copy") || "") : "";
+    const done = (ok) => {
+      if (status) status.textContent = ok ? "已复制" : (text ? "没复制成，可以长按上面的单词" : "没有可复制的词");
+    };
+    if (!text) {
+      done(false);
+      return;
+    }
+    const fallback = () => {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        ta.remove();
+        done(!!ok);
+      } catch (_) {
+        done(false);
+      }
+    };
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        navigator.clipboard.writeText(text).then(() => done(true)).catch(fallback);
+        return;
+      }
+    } catch (_) {}
+    fallback();
+  }
+
+  function bindRelatedUi() {
+    document.addEventListener("click", (e) => {
+      const chip = e.target && e.target.closest && e.target.closest(".related-chip");
+      if (!chip) return;
+      e.preventDefault();
+      openRelatedPeek(chip.getAttribute("data-related") || "");
+    });
+    const peek = relatedPeekEl();
+    if (peek) {
+      peek.addEventListener("click", (e) => {
+        if (e.target === peek) closeRelatedPeek();
+      });
+    }
+    const copyBtn = $("related-peek-copy");
+    if (copyBtn) copyBtn.addEventListener("click", () => copyRelatedLemma());
+    const closeBtn = $("related-peek-close");
+    if (closeBtn) closeBtn.addEventListener("click", () => closeRelatedPeek());
   }
 
   /** English prompt only. Stays behind the streak-voice toggle and never plays a kill clip. */
@@ -1655,6 +1871,7 @@
         '<span class="rate-zh">继续</span><span class="rate-sub">Continue</span></button></div>';
       fb.className = (kind === "correct" ? "ok" : "bad") + " show";
     }
+    renderRelated(true);
     persist();
     const cont = $("btn-feedback-continue");
     if (cont) cont.addEventListener("click", () => {
@@ -1717,6 +1934,7 @@
         rateBtn("btn-rate-good", "good", "记住了", "Good", goodLabel) +
         rateBtn("btn-rate-easy", "easy", "太简单", "Easy", easyLabel)
       );
+      renderRelated(true);
 
       flashStage("ok");
       spawnPointsFloater(bonus);
@@ -1777,6 +1995,7 @@
       const title = kind === "unknown" ? "不会 · 先看答案" : "再想想 Not yet";
       fb.innerHTML = '<div class="fb-title">' + title + "</div>" + speakButtons(currentCard) + why;
       fb.className = "bad show";
+      renderRelated(true);
 
       flashStage("bad");
       animRestart($("prompt-box"), "shake");
@@ -2517,6 +2736,7 @@
         slow: b.getAttribute("data-say-slow") === "1",
       });
     });
+    bindRelatedUi();
     const accentBtn = $("btn-accent");
     if (accentBtn) {
       const syncAccentBtn = () => {
@@ -3203,6 +3423,7 @@
 
   // Number keys: Good/Easy while rating; else MC 1–4
   document.addEventListener("keydown", (e) => {
+    if (closeRelatedPeekOnKey(e)) return;
     const play = $("screen-play");
     if (!play || !play.classList.contains("active")) return;
     const cont = $("btn-feedback-continue");
