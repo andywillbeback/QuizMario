@@ -1,0 +1,516 @@
+lemma,type,tier,sources,variants
+be able to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:VT035,be able to
+be absent from,be_adj_prep,core,dingxiao603:ADJ050,be absent from
+be afraid of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ005;dingxiao603:P116;manual_zhongkao_classic_fill,be afraid of | be afraid of doing | be afraid of doing sth | be afraid of sth
+be amazed at,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ044,be amazed at
+be angry with,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ006;dingxiao603:P100;manual_zhongkao_classic_fill,be angry with | be angry with sb
+be bad at,be_adj_prep,core,dingxiao603:ADJ002,be bad at
+be bad for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ014,be bad for
+be based on,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,be based on
+be busy with,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ017;dingxiao603:P102;manual_zhongkao_classic_fill,be busy with
+be careful about,be_adj_prep,core,dingxiao603:ADJ023,be careful about
+be careful of,be_adj_prep,core,dingxiao603:ADJ027,be careful of
+be close to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ029,be close to
+be confident in,be_adj_prep,core,dingxiao603:ADJ043,be confident in
+be connected with,be_adj_prep,core,manual_zhongkao_classic_fill,be connected with
+be covered with,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ019;manual_zhongkao_classic_fill,be covered with
+be crazy about,be_adj_prep,core,dingxiao603:ADJ045,be crazy about
+be different from,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ011;manual_zhongkao_classic_fill,be different from
+be excited about,be_adj_prep,core,dingxiao603:ADJ022;manual_zhongkao_classic_fill,be excited about
+be familiar with,be_adj_prep,core,dingxiao603:ADJ039,be familiar with
+be famous for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ010;dingxiao603:P088;manual_zhongkao_classic_fill,be famous for
+be filled with,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P103;manual_zhongkao_classic_fill,be filled with
+be fond of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ026,be fond of
+be friendly to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ030,be friendly to
+be full of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ018;dingxiao603:P118;manual_zhongkao_classic_fill,be full of
+be good at,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ001;manual_zhongkao_classic_fill,be good at
+be good for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ013;dingxiao603:P089,be good for
+be harmful to,be_adj_prep,core,dingxiao603:ADJ031,be harmful to
+be interested in,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ003;manual_zhongkao_classic_fill,be interested in
+be known as,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,be known as
+be known for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,be known for
+be late for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ009;dingxiao603:P090;manual_zhongkao_classic_fill,be late for
+be made from,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,be made from
+be made in,be_adj_prep,core,manual_zhongkao_classic_fill,be made in
+be made of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P119;manual_zhongkao_classic_fill,be made of
+be nervous about,be_adj_prep,core,dingxiao603:ADJ046,be nervous about
+be patient with,be_adj_prep,core,dingxiao603:ADJ037,be patient with
+be pleased with,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ007;manual_zhongkao_classic_fill,be pleased with
+be polite to,be_adj_prep,core,dingxiao603:ADJ032,be polite to
+be popular with,be_adj_prep,core,dingxiao603:ADJ038;dingxiao603:P104;manual_zhongkao_classic_fill,be popular with
+be proud of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ004;dingxiao603:P117;manual_zhongkao_classic_fill,be proud of
+be ready for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ015;manual_zhongkao_classic_fill,be ready for
+be related to,be_adj_prep,core,manual_zhongkao_classic_fill,be related to
+be responsible for,be_adj_prep,core,dingxiao603:ADJ049,be responsible for
+be rude to,be_adj_prep,core,dingxiao603:ADJ033,be rude to
+be satisfied with,be_adj_prep,core,dingxiao603:ADJ020;manual_zhongkao_classic_fill,be satisfied with
+be serious about,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ047,be serious about
+be short of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ028;manual_zhongkao_classic_fill,be short of
+be similar to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ012;manual_zhongkao_classic_fill,be similar to
+be strict with,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ008;dingxiao603:P101;manual_zhongkao_classic_fill,be strict with | be strict with sb
+be successful in,be_adj_prep,core,dingxiao603:ADJ042,be successful in
+be supposed to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:VT054,be supposed to
+be sure about,be_adj_prep,core,dingxiao603:ADJ024,be sure about
+be surprised at,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,be surprised at
+be talented in,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ040,be talented in
+be thankful to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ034,be thankful to | be thankful to sb
+be thirsty for,be_adj_prep,core,dingxiao603:ADJ048,be thirsty for
+be tired of,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ025;manual_zhongkao_classic_fill,be tired of
+be used for,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P091,be used for
+be used to,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ016;dingxiao603:S037;dingxiao603:VT017;manual_zhongkao_classic_fill,be used to | be used to doing | be used to doing sth
+be useful to,be_adj_prep,core,dingxiao603:ADJ036,be useful to
+be weak in,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ041,be weak in
+be willing to,be_adj_prep,core,dingxiao603:ADJ035,be willing to
+be worried about,be_adj_prep,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:ADJ021;manual_zhongkao_classic_fill,be worried about
+above all,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M030;manual_zhongkao_classic_fill,above all
+again and again,connector_pattern,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M006;gd_syllabus_preview_A_2018_book118,again and again
+as soon as,connector_pattern,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S008;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,as soon as
+as...as,connector_pattern,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S007;gd_syllabus_preview_A_2018_book118,as...as
+both...and,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S005;manual_zhongkao_classic_fill,both...and
+compare...to,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V192,compare...to
+compare...with,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V191,compare...with
+day after day,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,day after day
+either...or,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S004;manual_zhongkao_classic_fill,either...or
+even if/though,connector_pattern,core,dingxiao603:S009,even if/though
+first of all,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P123;manual_zhongkao_classic_fill,first of all
+had better,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:VT026;manual_zhongkao_classic_fill,had better
+had better do,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S030;dingxiao603:V183,had better (not) do | had better do | had better do sth
+here and there,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M045;manual_zhongkao_classic_fill,here and there
+neither...nor,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S006;manual_zhongkao_classic_fill,neither...nor
+no longer,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M024;manual_zhongkao_classic_fill,no longer
+not only...but also,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S003;manual_zhongkao_classic_fill,not only...but also
+not...any more,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M025;manual_zhongkao_classic_fill,not...any more
+now and then,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M009;manual_zhongkao_classic_fill,now and then
+once upon a time,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M010;manual_zhongkao_classic_fill,once upon a time
+prefer...to,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V218;manual_zhongkao_classic_fill,prefer...to
+prevent...from,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V219,prevent...from | prevent...from doing sth
+rather than,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S013,rather than
+right away,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M021;manual_zhongkao_classic_fill,right away
+right now,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M020;manual_zhongkao_classic_fill,right now
+so that,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S011;manual_zhongkao_classic_fill,so that
+so...that,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S002,so...that
+sooner or later,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M012;manual_zhongkao_classic_fill,sooner or later
+such as,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M041;manual_zhongkao_classic_fill,such as
+such...that,connector_pattern,core,dingxiao603:S012,such...that
+the more...the more,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S015,the more...the more
+too...to,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:S001,too...to
+up and down,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M043;manual_zhongkao_classic_fill,up and down
+used to,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:VT053;manual_zhongkao_classic_fill,used to
+whether...or,connector_pattern,core,dingxiao603:S014,whether...or
+year after year,connector_pattern,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,year after year
+the day after tomorrow,other_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,the day after tomorrow
+the day before yesterday,other_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,the day before yesterday
+add to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P136,add to
+add up to,phrasal_verb_or_vp,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,add up to
+agree to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,agree to
+agree with,phrasal_verb_or_vp,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P096;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,agree with | agree with sb
+allow to,phrasal_verb_or_vp,core,dingxiao603:VT055,allow sb to
+argue with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P106,argue with
+arrive at,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,arrive at
+arrive at/in a place,phrasal_verb_or_vp,gd_official_partial,gd_syllabus_preview_A_2018_book118,arrive at/in a place
+arrive in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,arrive in
+ask for,phrasal_verb_or_vp,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P094;dingxiao603:V184;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,ask for
+begin with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P107,begin with
+belong to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P132;manual_zhongkao_classic_fill,belong to
+call back,phrasal_verb_or_vp,core,dingxiao603:V185,call back
+call up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V186,call up
+care about,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V187;manual_zhongkao_classic_fill,care about
+care for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P086;dingxiao603:V188;manual_zhongkao_classic_fill,care for
+carry on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V189,carry on
+carry out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V190,carry out
+catch a cold,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,catch a cold
+catch up with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P108,catch up with
+change mind,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,change one's mind
+cheer up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P146,cheer up
+clean up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P147,clean up
+come across,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V140,come across
+come along,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V138,come along
+come back,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V135,come back
+come down,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V143,come down
+come from,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V139;manual_zhongkao_classic_fill,come from
+come in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V137,come in
+come on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V134,come on
+come out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V133,come out
+come over,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V131,come over
+come to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V141,come to
+come true,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V132;manual_zhongkao_classic_fill,come true
+come up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V142,come up
+come up with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P099;dingxiao603:V136,come up with
+cut down,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V193,cut down
+cut off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V194,cut off
+cut up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V195,cut up
+dance to,phrasal_verb_or_vp,core,dingxiao603:P138,dance to
+day and night,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M011,day and night
+deal with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P110;dingxiao603:V196;manual_zhongkao_classic_fill,deal with
+depend on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V197;manual_zhongkao_classic_fill,depend on
+die from,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,die from
+die of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,die of
+die out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V198,die out
+do one’s best,phrasal_verb_or_vp,core,dingxiao603:V199,do one’s best
+do well in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V200,do well in
+dream of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V201,dream of
+dress up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P148;dingxiao603:V202,dress up
+end up with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P109,end up with
+enjoy oneself,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,enjoy oneself
+fall asleep,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V203;manual_zhongkao_classic_fill,fall asleep
+fall behind,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V204;manual_zhongkao_classic_fill,fall behind
+fall down,phrasal_verb_or_vp,core,dingxiao603:V205,fall down
+fall ill,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,fall ill
+fall in love with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V206,fall in love with
+find out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V207,find out
+get along with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,get along with
+get along/on with,phrasal_verb_or_vp,core,dingxiao603:V029,get along/on with
+get angry,phrasal_verb_or_vp,core,dingxiao603:V040,get angry
+get back,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V028,get back
+get close to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V042,get close to
+get dressed,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V038,get dressed
+get good grades,phrasal_verb_or_vp,core,dingxiao603:V043,get good grades
+get home,phrasal_verb_or_vp,core,dingxiao603:V044,get home
+get in the way,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V035,get in the way
+get in touch with,phrasal_verb_or_vp,core,manual_zhongkao_classic_fill,get in touch with
+get into,phrasal_verb_or_vp,core,dingxiao603:V030,get into
+get lost,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V039,get lost
+get mad,phrasal_verb_or_vp,core,dingxiao603:V045,get mad
+get married,phrasal_verb_or_vp,core,dingxiao603:V034,get married
+get off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V025,get off
+get on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V026,get on
+get on with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,get on with | get on with sb
+get out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V031,get out
+get over,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V027,get over
+get popular,phrasal_verb_or_vp,core,dingxiao603:V046,get popular
+get ready for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V033,get ready for
+get rid of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V047,get rid of
+get through,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V041,get through
+get to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V036,get to
+get together,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V032,get together
+get up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V024,get up
+get used to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V037,get used to | get used to doing | get used to doing sth
+give . a hand,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V054,give sb. a hand
+give . a lift,phrasal_verb_or_vp,core,dingxiao603:V057,give sb. a lift
+give a speech,phrasal_verb_or_vp,core,dingxiao603:V055,give a speech
+give away,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V050;manual_zhongkao_classic_fill,give away
+give back,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V051,give back
+give birth to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V056,give birth to
+give in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V052,give in
+give off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V053,give off
+give out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V049;manual_zhongkao_classic_fill,give out
+give up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P141;dingxiao603:V048;dingxiao603:VT022;manual_zhongkao_classic_fill,give up
+go ahead,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V144,go ahead
+go away,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V145,go away
+go by,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V146,go by
+go down,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V163,go down
+go fishing,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V155,go fishing
+go for a picnic,phrasal_verb_or_vp,core,dingxiao603:V164,go for a picnic
+go for a walk,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V156,go for a walk
+go home,phrasal_verb_or_vp,core,dingxiao603:V150,go home
+go on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V147;dingxiao603:V159;dingxiao603:V160;manual_zhongkao_classic_fill,go on | go on doing | go on doing sth | go on to do
+go out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V148,go out
+go over,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V149;manual_zhongkao_classic_fill,go over
+go shopping,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V154,go shopping
+go straight,phrasal_verb_or_vp,core,dingxiao603:V161,go straight
+go swimming,phrasal_verb_or_vp,core,dingxiao603:V153,go swimming
+go through,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V158,go through
+go to bed,phrasal_verb_or_vp,core,dingxiao603:V151,go to bed
+go to school,phrasal_verb_or_vp,core,dingxiao603:V152,go to school
+go up,phrasal_verb_or_vp,core,dingxiao603:V162,go up
+go wrong,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V157,go wrong
+grow up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P149;manual_zhongkao_classic_fill,grow up
+have a chance,phrasal_verb_or_vp,core,dingxiao603:V178,have a chance
+have a cold,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V165;manual_zhongkao_classic_fill,have a cold
+have a fever,phrasal_verb_or_vp,core,dingxiao603:V176,have a fever
+have a good time,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V166;manual_zhongkao_classic_fill,have a good time
+have a headache,phrasal_verb_or_vp,core,dingxiao603:V167,have a headache
+have a lesson,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V175,have a lesson
+have a look,phrasal_verb_or_vp,core,dingxiao603:V168,have a look
+have a party,phrasal_verb_or_vp,core,dingxiao603:V177,have a party
+have a picnic,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V179,have a picnic
+have a rest,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V169,have a rest
+have a talk,phrasal_verb_or_vp,core,dingxiao603:V170,have a talk
+have a test,phrasal_verb_or_vp,core,dingxiao603:V181,have a test
+have a try,phrasal_verb_or_vp,core,dingxiao603:V171,have a try
+have an idea,phrasal_verb_or_vp,core,dingxiao603:V182,have an idea
+have breakfast,phrasal_verb_or_vp,core,dingxiao603:V172,have breakfast
+have fun,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V173,have fun
+have sports,phrasal_verb_or_vp,core,dingxiao603:V180,have sports
+have to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V174,have to
+hear from,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V208;manual_zhongkao_classic_fill,hear from
+hear of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,hear of
+help . with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P105;dingxiao603:V209,help sb. with sth
+help oneself,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,help oneself
+hold on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V210,hold on
+hurry up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P150,hurry up
+join in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V211,join in
+just now,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M019,just now
+keep . from,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V095,keep sb. from doing sth
+keep away from,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V092,keep away from
+keep healthy/fit,phrasal_verb_or_vp,core,dingxiao603:V099,keep healthy/fit
+keep in mind,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V098,keep in mind
+keep in touch with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V097;manual_zhongkao_classic_fill,keep in touch with
+keep off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V091,keep off
+keep on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V089,keep on
+keep one’s cool,phrasal_verb_or_vp,core,dingxiao603:V100,keep one’s cool
+keep out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V090,keep out
+keep up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V096,keep up
+laugh at,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V212,laugh at
+lead to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P133,lead to
+learn from,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V213,learn from
+leave for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P093;manual_zhongkao_classic_fill,leave for
+less than,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M047,less than
+let down,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V214,let down
+listen to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P131;dingxiao603:V215;manual_zhongkao_classic_fill,listen to
+look after,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V005;manual_zhongkao_classic_fill,look after
+look ahead,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V011,look ahead
+look around,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V009,look around
+look at,phrasal_verb_or_vp,core,dingxiao603:V001;manual_zhongkao_classic_fill,look at
+look back,phrasal_verb_or_vp,core,dingxiao603:V013,look back
+look down on/upon,phrasal_verb_or_vp,core,dingxiao603:V012,look down on/upon
+look for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P084;dingxiao603:V002;manual_zhongkao_classic_fill,look for
+look forward to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P130;dingxiao603:V010;dingxiao603:VT007;manual_zhongkao_classic_fill,look forward to
+look into,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V008,look into
+look like,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V006;manual_zhongkao_classic_fill,look like
+look out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V004;manual_zhongkao_classic_fill,look out
+look over,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V014,look over
+look through,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V007;manual_zhongkao_classic_fill,look through
+look up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V003;manual_zhongkao_classic_fill,look up
+look up to,phrasal_verb_or_vp,core,dingxiao603:V015,look up to
+make . feel at home,phrasal_verb_or_vp,core,dingxiao603:V126,make sb. feel at home
+make a contribution to,phrasal_verb_or_vp,core,dingxiao603:V127,make a contribution to
+make a decision,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V114;manual_zhongkao_classic_fill,make a decision
+make a difference,phrasal_verb_or_vp,core,dingxiao603:V128,make a difference
+make a face,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V115,make a face
+make a living,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V119,make a living
+make a noise,phrasal_verb_or_vp,core,dingxiao603:V113,make a noise
+make a plan,phrasal_verb_or_vp,core,dingxiao603:V123,make a plan
+make a telephone call,phrasal_verb_or_vp,core,dingxiao603:V124,make a telephone call
+make a wish,phrasal_verb_or_vp,core,dingxiao603:V129,make a wish
+make an effort,phrasal_verb_or_vp,core,dingxiao603:V130,make an effort
+make friends,phrasal_verb_or_vp,core,dingxiao603:V118;manual_zhongkao_classic_fill,make friends
+make mistakes,phrasal_verb_or_vp,core,dingxiao603:V116,make mistakes
+make money,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V120,make money
+make progress,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V121,make progress
+make sure,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V122;manual_zhongkao_classic_fill,make sure
+make the bed,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V117,make the bed
+make up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V112,make up
+make up mind,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,make up one's mind | make up one's mind to do
+make up one’s mind,phrasal_verb_or_vp,core,dingxiao603:V125,make up one’s mind
+more than,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M048,more than
+once again,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M023,once again
+one after another,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M046,one after another
+pay attention to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V216;dingxiao603:VT015;manual_zhongkao_classic_fill,pay attention to
+pay for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P085,pay for
+pick up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,pick up
+play with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P097,play with
+point at,phrasal_verb_or_vp,core,manual_zhongkao_classic_fill,point at
+point out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V217;manual_zhongkao_classic_fill,point out
+point to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P134;manual_zhongkao_classic_fill,point to
+prepare for,phrasal_verb_or_vp,core,dingxiao603:P087,prepare for
+put away,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V018;manual_zhongkao_classic_fill,put away
+put down,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V020,put down
+put into,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V022,put into
+put off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V019;dingxiao603:VT019;manual_zhongkao_classic_fill,put off
+put on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V017;manual_zhongkao_classic_fill,put on
+put one’s heart into,phrasal_verb_or_vp,core,dingxiao603:V023,put one’s heart into
+put out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V021;manual_zhongkao_classic_fill,put out
+put up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P143;dingxiao603:V016;manual_zhongkao_classic_fill,put up
+run out of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V220;manual_zhongkao_classic_fill,run out of
+say sorry to,phrasal_verb_or_vp,core,dingxiao603:P135,say sorry to
+search for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P095,search for
+send for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,send for
+send up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,send up
+set off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,set off
+set out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,set out
+set up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P144;dingxiao603:V221;manual_zhongkao_classic_fill,set up
+share with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P098,share with
+show up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V222,show up
+so far,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M022,so far
+speak to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P139,speak to
+stand for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P092;dingxiao603:V223,stand for
+stick to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P137,stick to
+stop/keep/prevent from,phrasal_verb_or_vp,core,dingxiao603:VT009,stop/keep/prevent from
+take a break,phrasal_verb_or_vp,core,dingxiao603:V086,take a break
+take a message,phrasal_verb_or_vp,core,dingxiao603:V087,take a message
+take a photo,phrasal_verb_or_vp,core,dingxiao603:V076,take a photo
+take a rest,phrasal_verb_or_vp,core,dingxiao603:V072,take a rest
+take a shower,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V073,take a shower
+take a taxi,phrasal_verb_or_vp,core,dingxiao603:V082,take a taxi
+take a vacation,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V079,take a vacation
+take a walk,phrasal_verb_or_vp,core,dingxiao603:V085,take a walk
+take action,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V081,take action
+take after,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V064,take after
+take an interest in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V078,take an interest in
+take away,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V069,take away
+take care,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V066,take care
+take care of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P120;dingxiao603:V071;manual_zhongkao_classic_fill,take care of
+take down,phrasal_verb_or_vp,core,dingxiao603:V070,take down
+take medicine,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V080,take medicine
+take notes,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V084,take notes
+take off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V067;manual_zhongkao_classic_fill,take off
+take one’s advice,phrasal_verb_or_vp,core,dingxiao603:V083,take one’s advice
+take one’s temperature,phrasal_verb_or_vp,core,dingxiao603:V088,take one’s temperature
+take out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V068,take out
+take part in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V074;manual_zhongkao_classic_fill,take part in
+take place,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V065;manual_zhongkao_classic_fill,take place | take sb.s place
+take pride in,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V075;manual_zhongkao_classic_fill,take pride in
+take turns,phrasal_verb_or_vp,core,dingxiao603:V077,take turns
+take up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P142;dingxiao603:V063,take up
+talk about,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,talk about
+talk to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,talk to
+talk with,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,talk with
+think about,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V060;manual_zhongkao_classic_fill,think about
+think of,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P121;dingxiao603:V058;manual_zhongkao_classic_fill,think of
+think over,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V061,think over
+think twice,phrasal_verb_or_vp,core,dingxiao603:V062,think twice
+think up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V059,think up
+try best,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:VT044,try one's best | try one's best to do
+turn around,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V110,turn around
+turn back,phrasal_verb_or_vp,core,dingxiao603:V111,turn back
+turn down,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V104;manual_zhongkao_classic_fill,turn down
+turn into,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V107,turn into
+turn left/right,phrasal_verb_or_vp,core,dingxiao603:V106,turn left/right
+turn off,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V102;manual_zhongkao_classic_fill,turn off
+turn on,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V101;manual_zhongkao_classic_fill,turn on
+turn out,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V108,turn out
+turn over,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V105,turn over
+turn to,phrasal_verb_or_vp,core,dingxiao603:V109,turn to
+turn up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:V103;manual_zhongkao_classic_fill,turn up
+wait for,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P083;manual_zhongkao_classic_fill,wait for
+wake up,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P145;manual_zhongkao_classic_fill,wake up
+would like to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,would like to
+write to,phrasal_verb_or_vp,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P140,write to | write to sb
+after all,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M027;manual_zhongkao_classic_fill,after all
+after class,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,after class
+ahead of,prep_phrase,core,dingxiao603:P122,ahead of
+as a result,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,as a result
+as for,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M050,as for
+as usual,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M049;gd_syllabus_preview_A_2018_book118,as usual
+as well,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M028;gd_syllabus_preview_A_2018_book118,as well
+as well as,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M029;manual_zhongkao_classic_fill,as well as
+at a time,prep_phrase,core,dingxiao603:P062,at a time
+at birth,prep_phrase,core,dingxiao603:P063,at birth
+at christmas,prep_phrase,core,dingxiao603:P059,at christmas
+at first,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P046;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,at first
+at home,prep_phrase,core,dingxiao603:P055,at home
+at last,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P047;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,at last
+at least,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P048;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,at least
+at most,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,at most
+at night,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P056,at night
+at noon,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P065,at noon
+at once,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P049;gd_syllabus_preview_A_2018_book118;manual_zhongkao_classic_fill,at once
+at present,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P058,at present
+at school,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P050,at school
+at table,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P064,at table
+at that time,prep_phrase,core,dingxiao603:P061,at that time
+at the age of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P053,at the age of
+at the end of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P054,at the end of
+at the moment,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P060,at the moment
+at the same time,prep_phrase,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P052;gd_syllabus_preview_A_2018_book118,at the same time
+at times,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P057,at times
+at work,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P051,at work
+because of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M038;dingxiao603:P111;manual_zhongkao_classic_fill,because of
+by accident,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P071,by accident
+by air,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P066,by air
+by bike,prep_phrase,core,dingxiao603:P068,by bike
+by bus,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P067;manual_zhongkao_classic_fill,by bus
+by chance,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P079,by chance
+by hand,prep_phrase,core,dingxiao603:P072,by hand
+by mistake,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P069,by mistake
+by oneself,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P073,by oneself
+by ship,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P077,by ship
+by subway,prep_phrase,core,dingxiao603:P078,by subway
+by taxi,prep_phrase,core,dingxiao603:P075,by taxi
+by the end of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P074,by the end of
+by the way,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P070;manual_zhongkao_classic_fill,by the way
+by train,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P076,by train
+by turns,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P080,by turns
+close to,prep_phrase,core,dingxiao603:P128;manual_zhongkao_classic_fill,close to
+far from,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,far from
+for example,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P081;manual_zhongkao_classic_fill,for example
+for sure,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M033,for sure
+for the first time,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P082,for the first time
+from now on,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M007;manual_zhongkao_classic_fill,from now on
+from then on,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,from then on
+from time to time,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M008,from time to time
+in a hurry,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P011,in a hurry
+in a word,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M032,in a word
+in addition,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,in addition
+in all,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,in all
+in bed,prep_phrase,core,dingxiao603:P008,in bed
+in case of,prep_phrase,core,dingxiao603:P022,in case of
+in common,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P015,in common
+in control of,prep_phrase,core,dingxiao603:P023,in control of
+in danger,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P010;manual_zhongkao_classic_fill,in danger
+in english,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P001,in english
+in fact,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P009;manual_zhongkao_classic_fill,in fact
+in front of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P003;manual_zhongkao_classic_fill,in front of
+in general,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,in general
+in need,prep_phrase,core,manual_zhongkao_classic_fill,in need
+in need of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P006,in need of
+in order to,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P020;dingxiao603:S010;manual_zhongkao_classic_fill,in order to
+in pain,prep_phrase,core,dingxiao603:P025,in pain
+in person,prep_phrase,core,dingxiao603:P018,in person
+in public,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P012;manual_zhongkao_classic_fill,in public
+in return,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P024,in return
+in silence,prep_phrase,core,dingxiao603:P016;manual_zhongkao_classic_fill,in silence
+in surprise,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P017;manual_zhongkao_classic_fill,in surprise
+in that case,prep_phrase,core,dingxiao603:P021,in that case
+in the end,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P013;manual_zhongkao_classic_fill,in the end
+in the front of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P004,in the front of
+in the future,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P014,in the future
+in the middle of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,in the middle of
+in the morning,prep_phrase,core,dingxiao603:P005,in the morning
+in time,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P002;manual_zhongkao_classic_fill,in time
+in total,prep_phrase,core,dingxiao603:P019,in total
+in trouble,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P007;manual_zhongkao_classic_fill,in trouble
+instead of,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M039;dingxiao603:P112;manual_zhongkao_classic_fill,instead of
+next to,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P127;manual_zhongkao_classic_fill,next to
+of course,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M026;manual_zhongkao_classic_fill,of course
+on account of,prep_phrase,core,dingxiao603:P038,on account of
+on board,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P040,on board
+on business,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P035,on business
+on display,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P041,on display
+on duty,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P027,on duty
+on fire,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P036,on fire
+on foot,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P028;manual_zhongkao_classic_fill,on foot
+on hand,prep_phrase,core,dingxiao603:P039,on hand
+on one’s own,prep_phrase,core,dingxiao603:P037,on one’s own
+on sale,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P029,on sale
+on show,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P030,on show
+on the internet,prep_phrase,core,dingxiao603:P034,on the internet
+on the left/right,prep_phrase,core,dingxiao603:P033,on the left/right
+on the phone,prep_phrase,core,dingxiao603:P044,on the phone
+on the radio,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P043,on the radio
+on the wall,prep_phrase,core,dingxiao603:P045,on the wall
+on the way,prep_phrase,core,dingxiao603:P032,on the way
+on time,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P026;manual_zhongkao_classic_fill,on time
+on tv,prep_phrase,core,dingxiao603:P042,on tv
+on vacation,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P031,on vacation
+over and over again,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M044,over and over again
+thanks to,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M037;dingxiao603:P129;manual_zhongkao_classic_fill,thanks to
+to be honest,prep_phrase,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M035,to be honest
+to one’s surprise,prep_phrase,core,dingxiao603:M036,to one’s surprise
+without doubt,prep_phrase,core,dingxiao603:M034,without doubt
+a bit,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,a bit | a bit (of)
+a bit of,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M001,a bit of
+a couple of,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M017,a couple of
+a few,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,a few
+a good/great many,quantifier_set,gd_official_partial,gd_syllabus_preview_A_2018_book118,a good/great many
+a kind of,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M002;gd_syllabus_preview_A_2018_book118,a kind of
+a little,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,a little
+a lot of,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P113;gd_syllabus_preview_A_2018_book118,a lot of
+a number of,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M003;gd_syllabus_preview_A_2018_book118,a number of
+a pair of,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P115;gd_syllabus_preview_A_2018_book118,a pair of
+a piece of,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:P114;gd_syllabus_preview_A_2018_book118,a piece of
+a quarter past/to,quantifier_set,core,dingxiao603:M018,a quarter past/to
+all in all,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M031,all in all
+all kinds of,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M004;gd_syllabus_preview_A_2018_book118,all kinds of
+all of a sudden,quantifier_set,core,dingxiao603:P124,all of a sudden
+all over,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M005;gd_syllabus_preview_A_2018_book118,all over
+all over the world,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,all over the world
+all right,quantifier_set,gd_official_partial,2ndLA_english-phrases_junior_CC-BY-SA-4.0;gd_syllabus_preview_A_2018_book118,all right
+all the best,quantifier_set,gd_official_partial,gd_syllabus_preview_A_2018_book118,all the best
+all the time,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;manual_zhongkao_classic_fill,all the time
+and so on,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M042,and so on
+hundreds of,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M014,hundreds of
+more or less,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M013;manual_zhongkao_classic_fill,more or less
+plenty of,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M016;dingxiao603:P125,plenty of
+thousands of,quantifier_set,core,2ndLA_english-phrases_junior_CC-BY-SA-4.0;dingxiao603:M015,thousands of
