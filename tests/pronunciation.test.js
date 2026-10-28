@@ -499,11 +499,76 @@ const compactSam = voice("Samantha (Compact)", "en-GB");
   assert.strictEqual(rig.synth.spoken.length, 2, "a tap before the word starts speaks inside the gesture");
   assert.strictEqual(rig.synth.spoken[1].text, "apple");
   rig.synth.spoken[1].onstart();
+  const playing = rig.synth.spoken.length;
+  const cancelsPlaying = rig.synth.cancelled;
+  assert.strictEqual(rig.ctrl.speak("apple"), true, "auto-speak does not replay a word that already started");
+  assert.strictEqual(rig.synth.spoken.length, playing);
+  assert.strictEqual(rig.synth.cancelled, cancelsPlaying);
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true, "a tap while the word is audible is not a no-op");
+  assert.ok(rig.synth.cancelled > cancelsPlaying, "a tap cancels the word that already started");
+  assert.strictEqual(rig.synth.spoken.length, playing, "the restart waits out the cancel gap");
+  rig.clock.flush(39);
+  assert.strictEqual(rig.synth.spoken.length, playing);
+  rig.clock.flush(1);
+  assert.strictEqual(rig.synth.spoken.length, playing + 1, "a second tap force-replays a word that already started");
+  const replay = rig.synth.spoken[rig.synth.spoken.length - 1];
+  assert.strictEqual(replay.text, "apple");
+  assert.strictEqual(replay.rate, speech.WORD_RATE);
+  const duringGap = rig.synth.spoken.length;
+  replay.onstart();
   assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true);
-  assert.strictEqual(rig.synth.spoken.length, 2, "a second tap does not clip a word that already started");
+  assert.strictEqual(rig.ctrl.speak("apple"), true, "auto-speak does not replace a tap that is waiting to restart");
+  assert.strictEqual(rig.synth.spoken.length, duringGap);
+  rig.clock.flush(40);
+  assert.strictEqual(rig.synth.spoken.length, duringGap + 1, "only the gesture restart is spoken");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "apple");
+  const again = rig.synth.spoken[rig.synth.spoken.length - 1];
+  again.onstart();
+  again.onend();
+  rig.synth.speaking = false;
+  const finished = rig.synth.spoken.length;
+  const cancelsFinished = rig.synth.cancelled;
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true);
+  assert.strictEqual(rig.synth.cancelled, cancelsFinished, "a finished word does not need another cancel");
+  assert.strictEqual(rig.synth.spoken.length, finished + 1, "a tap after the word finishes speaks again");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "apple");
   rig.ctrl.speak("She ate an apple.", { example: true, gesture: true });
   assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "She ate an apple.");
   assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].rate, speech.EXAMPLE_RATE);
+  rig.ctrl.destroy();
+}
+
+{
+  const rig = mount([daniel]);
+  rig.ctrl.speak("apple", { slow: true });
+  assert.strictEqual(rig.synth.spoken[0].rate, speech.SLOW_RATE);
+  rig.synth.spoken[0].onstart();
+  assert.strictEqual(rig.ctrl.speak("apple", { slow: true, gesture: true }), true);
+  rig.clock.flush(40);
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "apple");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].rate, speech.SLOW_RATE, "a slow tap restarts at the slow rate");
+  rig.ctrl.destroy();
+}
+
+{
+  const rig = mount([daniel]);
+  rig.ctrl.speak("apple");
+  rig.synth.spoken[0].onstart();
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true);
+  const cancels = rig.synth.cancelled;
+  assert.strictEqual(rig.ctrl.speak("apple", { gesture: true }), true, "a second tap during the gap still requests a replay");
+  assert.strictEqual(rig.synth.cancelled, cancels, "the gap tap does not cancel the engine again");
+  rig.clock.flush(40);
+  const replay = rig.synth.spoken[rig.synth.spoken.length - 1];
+  assert.strictEqual(replay.text, "apple");
+  const length = rig.synth.spoken.length;
+  replay.onerror({ error: "interrupted" });
+  rig.clock.flush(39);
+  assert.strictEqual(rig.synth.spoken.length, length, "a cancel that lands on the force-replay waits out the gap");
+  rig.clock.flush(1);
+  assert.strictEqual(rig.synth.spoken.length, length + 1, "a dropped force-replay is spoken again");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "apple");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].rate, speech.WORD_RATE);
   rig.ctrl.destroy();
 }
 

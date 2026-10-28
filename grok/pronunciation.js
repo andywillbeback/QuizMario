@@ -401,14 +401,22 @@
       var example = !!opts.example;
       var gesture = !!opts.gesture;
       var same = request && request.text === text && request.slow === slow && request.example === example;
-      // A second tap while the line is already audible must not clip it.
-      // A not-yet-started duplicate from auto-speak stays queued. A button tap
-      // (gesture) speaks in this turn so the browser user-activation is kept.
-      if (same && (request.started || !gesture)) return true;
+      // Card enter may ask for the same line again. Leave that copy queued so
+      // auto-speak stays a single read. A 读单词 / 慢速 tap always starts
+      // another attempt, even when this line has already started or the
+      // engine still holds it after the student heard it finish.
+      if (same && !gesture) return true;
       if (typeof options.onBeforeSpeak === "function") {
         try { options.onBeforeSpeak(); } catch (_) {}
       }
       if (gesture) {
+        // Before the line starts, speak in this turn so the browser keeps
+        // the user activation, and do not cancel: cancel()+speak() in one
+        // turn hangs speechSynthesis. Once it has started, cancel that
+        // utterance and speak after the gap. Otherwise the tap returns
+        // success and stays queued behind the line already in the engine.
+        var replayStarted = !!(request && request.started);
+        var waitGap = replayStarted || cancelCooling;
         generation += 1;
         clearPlaybackTimers();
         detachUtterance(utterance);
@@ -429,7 +437,9 @@
         };
         request = tapped;
         last = { text: text, slow: slow, example: example };
-        begin(tapped);
+        if (replayStarted) cancelEngine();
+        if (waitGap) schedule("speak", function () { begin(tapped); }, CANCEL_GAP_MS);
+        else begin(tapped);
         return true;
       }
       // Card enter stops the previous word, then speaks the next one.
