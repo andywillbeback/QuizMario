@@ -5,6 +5,9 @@
  *
  * SUPABASE_URL      Project URL, like https://xxxxxxxx.supabase.co
  * SUPABASE_ANON_KEY anon / public key (legacy JWT eyJ… or sb_publishable_…)
+ * The value below is the live sb_publishable key. Leave it.
+ * A legacy anon JWT is only a fallback if this publishable key is rejected;
+ * do not replace the publishable key.
  * SITE_URL          Auth Site URL. Keep the trailing slash.
  */
 window.QUIZMARIO_CONFIG = {
