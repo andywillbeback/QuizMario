@@ -27,11 +27,44 @@
   }
 
   function configured() {
-    return CLIENT && CLIENT.isConfigured() && CLIENT.client();
+    return blockReason() === "";
   }
 
   function configHelp() {
     return "还不能登录：请在 config.js 填入 SUPABASE_URL 和 SUPABASE_ANON_KEY（见 README）。未登录不能选择中考或高考。";
+  }
+
+  function sdkHelp() {
+    return "还不能登录：页面没有加载到 Supabase 登录组件。请刷新后再试。这不是 config.js 未填写。";
+  }
+
+  function clientHelp() {
+    return "还不能登录：登录客户端没有创建成功。请刷新后再试。这不是 config.js 未填写。";
+  }
+
+  /* Config text only when QUIZMARIO_CONFIG URL/key fail isCloudConfigured.
+     A missing SDK or a failed createClient must not blame an empty config.js. */
+  function blockReason() {
+    var merge = window.QuizMarioMerge;
+    if (!merge || typeof merge.isCloudConfigured !== "function") return "sdk";
+    if (!merge.isCloudConfigured(window.QUIZMARIO_CONFIG || {})) return "config";
+    var lib = window.supabase;
+    if (!lib || typeof lib.createClient !== "function") return "sdk";
+    if (!CLIENT || typeof CLIENT.client !== "function") return "sdk";
+    try {
+      if (!CLIENT.client()) return "client";
+    } catch (_) {
+      return "client";
+    }
+    return "";
+  }
+
+  function setupHelp() {
+    var reason = blockReason();
+    if (reason === "config") return configHelp();
+    if (reason === "sdk") return sdkHelp();
+    if (reason === "client") return clientHelp();
+    return "";
   }
 
   function setMode(next) {
@@ -130,7 +163,7 @@
     if (!configured()) {
       if (banner) {
         banner.hidden = false;
-        banner.textContent = configHelp();
+        banner.textContent = setupHelp();
       }
       return;
     }
@@ -179,7 +212,7 @@
         }
       }
       if (!configured()) {
-        msg(configHelp(), "bad");
+        msg(setupHelp(), "bad");
         return;
       }
       var submit = $("btn-submit");
@@ -235,7 +268,7 @@
         return;
       }
       if (!configured()) {
-        msg(configHelp(), "bad");
+        msg(setupHelp(), "bad");
         return;
       }
       forgot.disabled = true;
@@ -286,7 +319,7 @@
         return;
       }
       if (!configured()) {
-        msg(configHelp(), "bad");
+        msg(setupHelp(), "bad");
         return;
       }
       var btn = $("btn-update-password");
