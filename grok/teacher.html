@@ -183,7 +183,7 @@
       <button type="button" class="ghost" id="btn-logout">退出</button>
     </div>
     <h2 class="class-only">教师看板 · 班级云进度</h2>
-    <p class="sub class-only">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。点学员可看个人图表、认词、搭配、产出、巩固，以及一段给家长的简短评价。样本少于 5 次时该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级，压缩包里每位学员有一页图文报告。用当前已加载的数据，不另取密钥。</p>
+    <p class="sub class-only">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。点学员可看个人图表、认词、搭配、产出、巩固，以及一段给家长的简短评价。样本少于 5 次时该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级。解压后先打开「请先打开学员报告.html」，或打开「学员」文件夹里的网页给家长看（图表和简短评价），不要先打开附表里的汇总表。用当前已加载的数据，不另取密钥。</p>
     <p id="cloud-status" role="status"></p>
     <div class="cards class-only" id="kpi-strip">
       <div><b id="kpi-students">—</b>学员数</div>
@@ -228,7 +228,7 @@
       <select id="board-class" aria-label="按班级筛选">
         <option value="*">全部班级</option>
       </select>
-      <p class="sub" id="class-note">没有填写班级的学员单独放在「未填班级」。下载一次只含一个班。</p>
+      <p class="sub" id="class-note">没有填写班级的学员单独放在「未填班级」。下载一次只含一个班。解压后打开「学员」里的网页，不要先打开附表。</p>
     </div>
     <div class="tbl-wrap">
       <table id="students">

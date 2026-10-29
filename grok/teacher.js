@@ -1269,6 +1269,49 @@
     return "学员/" + name + ".html";
   }
 
+  var PACK_INDEX = "请先打开学员报告.html";
+  var PACK_CSV = "附表/班级汇总.csv";
+
+  function packClassLabel(students) {
+    var seen = Object.create(null);
+    var labels = [];
+    students = students || [];
+    for (var i = 0; i < students.length; i++) {
+      var key = classKeyOf(students[i]);
+      if (seen[key]) continue;
+      seen[key] = true;
+      labels.push(classLabelOf(key));
+    }
+    if (!labels.length) return UNFILED_CLASS;
+    return labels.join("、");
+  }
+
+  function packLinkLabel(st, path) {
+    var who = st && st.name ? String(st.name).trim() : "";
+    if (who) return who;
+    return String(path || "").replace(/^学员\//, "").replace(/\.html$/, "") || "学员";
+  }
+
+  /** Root page of the class pack. Lists each 学员 HTML and tells parents to open those, not the spreadsheet. */
+  function packIndexHtml(label, when, entries) {
+    var items = (entries || []).map(function (entry) {
+      var st = entry.student || {};
+      var href = escHtml(entry.name || "");
+      var blurb = st.summary ? "<p class=\"muted\">" + escHtml(st.summary) + "</p>" : "";
+      return "<li><a href=\"" + href + "\">" + escHtml(packLinkLabel(st, entry.name)) + "的学情</a>" + blurb + "</li>";
+    }).join("");
+    if (!items) items = "<li>这个班级还没有学员报告。</li>";
+    return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" +
+      escHtml("聚光单词 · 请先打开学员报告 · " + (label || "")) + "</title><style>" +
+      "body{font-family:'PingFang SC','Noto Sans SC','Segoe UI',sans-serif;color:#1c2430;background:#fff;margin:0;padding:28px;line-height:1.65}" +
+      "h1{font-size:1.45rem;margin:0 0 8px}a{color:#1d4e89}" +
+      ".lead{background:#f7f4ec;border:1px solid #eadcba;border-radius:12px;padding:12px 14px}" +
+      ".muted{color:#5c677a;font-size:.9rem;margin:4px 0 0}ol{padding-left:1.2rem}li{margin:12px 0}" +
+      "</style></head><body><h1>" + escHtml((label || "班级") + " · 图文报告") + "</h1><p class=\"lead\">这是图文报告包，不是表格。请打开下面每位学员的网页，给家长看。每一页都有图表和简短评价。</p>" +
+      "<ol>" + items + "</ol><p class=\"muted\">学员网页在「学员」文件夹里。同包里的「" + escHtml(PACK_CSV) +
+      "」只是教师自用的汇总附表，不要先打开它，也不要把它当成给家长的报告。生成于 " + escHtml(when || "") + "。不含登录凭证。</p></body></html>";
+  }
+
   var UNFILED_CLASS = "未填班级";
 
   /** profile.cls, trimmed. Empty means the student has not filled a class. */
@@ -1335,21 +1378,37 @@
     };
   }
 
-  /** ZIP of a class CSV plus one printable HTML page per student. No ids, tokens, or raw emails. */
+  /**
+   * One 图文报告包 for the students on this board.
+   * Root file is the HTML index. Each student has 学员/<name>.html.
+   * The spreadsheet sits under 附表/ so a Mac does not open Excel first.
+   * No ids, tokens, or raw emails.
+   */
   function classZip(board, now) {
     var when = dayKey(now || new Date());
-    var files = [{
-      name: "班级学情.csv",
-      data: utf8Bytes("\ufeff" + classCsv(board)),
-    }];
-    var used = Object.create(null);
     var students = (board && board.students) || [];
+    var used = Object.create(null);
+    var reports = [];
     for (var i = 0; i < students.length; i++) {
-      files.push({
+      reports.push({
         name: reportFileName(students[i], i, used),
-        data: utf8Bytes(studentReportHtml(students[i], when)),
+        student: students[i],
       });
     }
+    var files = [{
+      name: PACK_INDEX,
+      data: utf8Bytes(packIndexHtml(packClassLabel(students), when, reports)),
+    }];
+    for (var r = 0; r < reports.length; r++) {
+      files.push({
+        name: reports[r].name,
+        data: utf8Bytes(studentReportHtml(reports[r].student, when)),
+      });
+    }
+    files.push({
+      name: PACK_CSV,
+      data: utf8Bytes("\ufeff" + classCsv(board)),
+    });
     return zipStore(files);
   }
 
@@ -1688,6 +1747,9 @@
     studentChartSpecs: studentChartSpecs,
     classCsv: classCsv,
     studentReportHtml: studentReportHtml,
+    packIndexHtml: packIndexHtml,
+    PACK_INDEX: PACK_INDEX,
+    PACK_CSV: PACK_CSV,
     classZip: classZip,
     UNFILED_CLASS: UNFILED_CLASS,
     classKeyOf: classKeyOf,
@@ -2396,8 +2458,8 @@
       link.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
       if (status) {
-        status.textContent = "已下载「" + pack.label + "」学情（" + pack.count +
-          " 名学员）。压缩包只含这个班，邮箱已掩码，没有登录密钥。";
+        status.textContent = "已下载「" + pack.label + "」图文报告（" + pack.count +
+          " 名学员）。请解压后先打开「请先打开学员报告.html」，或打开「学员」文件夹里的网页给家长看。每页都有图表和简短评价。附表里的汇总表不是主报告。";
       }
     } catch (err) {
       if (status) status.textContent = "下载失败。请再试一次。";
