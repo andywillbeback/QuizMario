@@ -919,6 +919,72 @@
     return "学员/" + name + ".html";
   }
 
+  var UNFILED_CLASS = "未填班级";
+
+  /** profile.cls, trimmed. Empty means the student has not filled a class. */
+  function classKeyOf(st) {
+    var cls = st && typeof st.cls === "string" ? st.cls.trim() : "";
+    return cls;
+  }
+
+  function classLabelOf(key) {
+    return key ? key : UNFILED_CLASS;
+  }
+
+  /** Same-class students stay together. Named classes sort by name; 未填班级 is last. */
+  function groupStudents(students) {
+    var map = Object.create(null);
+    var order = [];
+    students = students || [];
+    for (var i = 0; i < students.length; i++) {
+      var key = classKeyOf(students[i]);
+      if (!map[key]) {
+        map[key] = { key: key, label: classLabelOf(key), students: [] };
+        order.push(key);
+      }
+      map[key].students.push(students[i]);
+    }
+    order.sort(function (a, b) {
+      if (!a && b) return 1;
+      if (a && !b) return -1;
+      return a < b ? -1 : a > b ? 1 : 0;
+    });
+    var groups = [];
+    for (var g = 0; g < order.length; g++) groups.push(map[order[g]]);
+    return groups;
+  }
+
+  function studentsInClass(board, key) {
+    var students = (board && board.students) || [];
+    var out = [];
+    for (var i = 0; i < students.length; i++) {
+      if (classKeyOf(students[i]) === key) out.push(students[i]);
+    }
+    return out;
+  }
+
+  function zipSafe(name) {
+    var text = String(name || "").replace(/[\\/:*?"<>|\u0000-\u001f]/g, "").trim();
+    return text || UNFILED_CLASS;
+  }
+
+  /**
+   * One ZIP for a single 班级. key "" is 未填班级.
+   * Does not mix students from other classes.
+   */
+  function classPack(board, key, now) {
+    var students = studentsInClass(board, key);
+    var label = classLabelOf(key);
+    var when = dayKey(now || new Date());
+    return {
+      key: key,
+      label: label,
+      count: students.length,
+      filename: "聚光单词-学情-" + zipSafe(label) + "-" + when + ".zip",
+      bytes: classZip({ students: students }, now),
+    };
+  }
+
   /** ZIP of a class CSV plus one printable HTML page per student. No ids, tokens, or raw emails. */
   function classZip(board, now) {
     var when = dayKey(now || new Date());
@@ -1135,6 +1201,7 @@
     return {
       empty: order.length === 0,
       students: students,
+      groups: groupStudents(students),
       kpis: {
         students: students.length,
         active7: active7,
@@ -1265,6 +1332,10 @@
     classCsv: classCsv,
     studentReportHtml: studentReportHtml,
     classZip: classZip,
+    UNFILED_CLASS: UNFILED_CLASS,
+    classKeyOf: classKeyOf,
+    groupStudents: groupStudents,
+    classPack: classPack,
     modeLabel: modeLabel,
     dayKey: dayKey,
     decodeReport: decodeReport,
@@ -1281,6 +1352,8 @@
   var charts = {};
   var board = null;
   var selectedId = "";
+  /** null = every class. "" = 未填班级. */
+  var selectedClass = null;
   var PALETTE = ["#8eb7ff", "#e6c98a", "#7ddec8", "#f0a0c0", "#c9b6ff", "#f3d37a", "#9fd0ff"];
 
   function esc(s) {
@@ -1412,10 +1485,45 @@
     $("kpi-weak").textContent = String(data.kpis.weak);
   }
 
-  function renderTable(data) {
-    var body = $("student-body");
-    if (!body) return;
-    body.innerHTML = data.students.map(function (st) {
+  function optionValueForClass(key) {
+    return key ? key : "__none__";
+  }
+
+  function classKeyFromOption(value) {
+    if (!value || value === "*") return null;
+    if (value === "__none__") return "";
+    return value;
+  }
+
+  function visibleGroups(data) {
+    var groups = (data && data.groups) || api.groupStudents((data && data.students) || []);
+    if (selectedClass === null) return groups;
+    var picked = [];
+    for (var i = 0; i < groups.length; i++) {
+      if (groups[i].key === selectedClass) picked.push(groups[i]);
+    }
+    return picked;
+  }
+
+  function renderClassSelect(data) {
+    var sel = $("board-class");
+    if (!sel) return;
+    var groups = (data && data.groups) || [];
+    var html = '<option value="*">全部班级</option>';
+    var alive = selectedClass === null;
+    for (var i = 0; i < groups.length; i++) {
+      var group = groups[i];
+      if (group.key === selectedClass) alive = true;
+      html += '<option value="' + esc(optionValueForClass(group.key)) + '">' +
+        esc(group.label) + "（" + group.students.length + "）</option>";
+    }
+    if (!alive) selectedClass = null;
+    sel.innerHTML = html;
+    sel.value = selectedClass === null ? "*" : optionValueForClass(selectedClass);
+  }
+
+  function studentRows(list) {
+    return list.map(function (st) {
       return "<tr data-id=\"" + esc(st.id) + "\"" + (st.id === selectedId ? " class=\"is-on\"" : "") + ">" +
         "<td>" + esc(st.email) + "</td>" +
         "<td>" + esc(st.name || "—") + "</td>" +
@@ -1426,6 +1534,23 @@
         "<td>" + st.weakCount + "</td>" +
         "<td>" + (st.active7 ? "活跃" : "—") + "</td>" +
         "<td>" + esc(st.updatedAt || "—") + "</td></tr>";
+    }).join("");
+  }
+
+  function renderTable(data) {
+    var body = $("student-body");
+    if (!body) return;
+    var groups = visibleGroups(data);
+    if (!groups.length) {
+      body.innerHTML = "<tr class=\"class-row\"><td colspan=\"9\">这个班级还没有学员。</td></tr>";
+      return;
+    }
+    body.innerHTML = groups.map(function (group) {
+      var note = group.key ? "" : " · 学生可在学习首页改班级名";
+      return "<tr class=\"class-row\"><td colspan=\"9\"><strong>" + esc(group.label) + "</strong> · " +
+        group.students.length + " 人" + esc(note) +
+        "<button type=\"button\" class=\"ghost\" data-export-class=\"" + esc(optionValueForClass(group.key)) + "\">下载该班学情</button></td></tr>" +
+        studentRows(group.students);
     }).join("");
   }
 
@@ -1567,6 +1692,7 @@
 
   function paint(data) {
     board = data;
+    renderClassSelect(data);
     renderKpis(data);
     show("empty-state", data.empty);
     show("chart-grid", !data.empty);
@@ -1733,8 +1859,39 @@
       try { await client.auth.signOut(); } catch (e) {}
     }
     selectedId = "";
+    selectedClass = null;
     board = null;
     showLogin();
+  }
+
+  function downloadClass(key) {
+    var status = $("cloud-status");
+    if (!board) {
+      if (status) status.textContent = "还没有可下载的班级数据。请先刷新。";
+      return;
+    }
+    try {
+      var pack = api.classPack(board, key, new Date());
+      if (!pack.count) {
+        if (status) status.textContent = "这个班级还没有学员，没有打包。";
+        return;
+      }
+      var blob = new Blob([pack.bytes], { type: "application/zip" });
+      var link = document.createElement("a");
+      var url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = pack.filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+      if (status) {
+        status.textContent = "已下载「" + pack.label + "」学情（" + pack.count +
+          " 名学员）。压缩包只含这个班，邮箱已掩码，没有登录密钥。";
+      }
+    } catch (err) {
+      if (status) status.textContent = "下载失败。请再试一次。";
+    }
   }
 
   var out = $("btn-logout");
@@ -1757,30 +1914,46 @@
         if (status) status.textContent = "还没有可下载的班级数据。请先刷新。";
         return;
       }
-      try {
-        var bytes = api.classZip(board, new Date());
-        var blob = new Blob([bytes], { type: "application/zip" });
-        var link = document.createElement("a");
-        var url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = "聚光单词-班级学情-" + dayKey(new Date()) + ".zip";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
-        if (status) {
-          status.textContent = board.students.length
-            ? "已下载全班学情（" + board.students.length + " 名学员）。压缩包里有班级汇总表和每位学员的学情页。"
-            : "已下载班级汇总。当前没有学员明细。";
-        }
-      } catch (err) {
-        if (status) status.textContent = "下载失败。请再试一次。";
+      if (selectedClass !== null) {
+        downloadClass(selectedClass);
+        return;
+      }
+      var groups = board.groups || [];
+      if (groups.length === 1) {
+        downloadClass(groups[0].key);
+        return;
+      }
+      if (status) {
+        status.textContent = "一次只打包一个班级。请先在名单上方选定班级，或点该班的「下载该班学情」。";
+      }
+    });
+  }
+  var classSelect = $("board-class");
+  if (classSelect) {
+    classSelect.addEventListener("change", function () {
+      selectedClass = classKeyFromOption(classSelect.value);
+      if (board) renderTable(board);
+      if (selectedClass === null || !board) return;
+      var still = false;
+      var students = board.students || [];
+      for (var i = 0; i < students.length; i++) {
+        if (students[i].id === selectedId && api.classKeyOf(students[i]) === selectedClass) still = true;
+      }
+      if (!still) {
+        selectedId = "";
+        renderDetail(null);
       }
     });
   }
   var body = $("student-body");
   if (body) {
     body.addEventListener("click", function (ev) {
+      var exportBtn = ev.target.closest ? ev.target.closest("[data-export-class]") : null;
+      if (exportBtn) {
+        ev.preventDefault();
+        downloadClass(classKeyFromOption(exportBtn.getAttribute("data-export-class")));
+        return;
+      }
       var tr = ev.target.closest ? ev.target.closest("tr[data-id]") : null;
       if (!tr || !board) return;
       selectedId = tr.getAttribute("data-id");

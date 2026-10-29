@@ -114,6 +114,30 @@
     return save;
   }
 
+  /** Later edits replace 姓名 and 班级. Signup seeding stays write-once. */
+  function writeProfile(name, cls, storage) {
+    var store = storage;
+    if (!store) {
+      if (typeof localStorage === "undefined") return null;
+      store = localStorage;
+    }
+    var save = {};
+    try {
+      save = JSON.parse(store.getItem(STORAGE_KEY) || "{}") || {};
+    } catch (_) {
+      save = {};
+    }
+    if (!save || typeof save !== "object" || Array.isArray(save)) save = {};
+    if (!save.profile || typeof save.profile !== "object" || Array.isArray(save.profile)) {
+      save.profile = { name: "", cls: "" };
+    }
+    save.profile.name = name;
+    save.profile.cls = cls;
+    save.updatedAt = new Date().toISOString();
+    store.setItem(STORAGE_KEY, JSON.stringify(save));
+    return save;
+  }
+
   return {
     STORAGE_KEY: STORAGE_KEY,
     clean: clean,
@@ -126,6 +150,7 @@
     complete: complete,
     signupData: signupData,
     seedLocalProfile: seedLocalProfile,
+    writeProfile: writeProfile,
   };
 });
 
@@ -160,7 +185,8 @@ function install(root, api) {
       qm.setProfile(pair.name, pair.cls);
       return;
     }
-    api.seedLocalProfile(pair.name, pair.cls);
+    if (typeof api.writeProfile === "function") api.writeProfile(pair.name, pair.cls);
+    else api.seedLocalProfile(pair.name, pair.cls);
   }
 
   function pushMetadata(pair) {
@@ -238,17 +264,41 @@ function install(root, api) {
     return gate;
   }
 
-  function openPrompt() {
+  function openPrompt(editing) {
     try {
       var gate = $("profile-name-gate") || buildPrompt();
       var picked = currentProfile();
       var nameInput = $("profile-name-input");
       var clsInput = $("profile-class-input");
-      if (nameInput && !nameInput.value) nameInput.value = picked.name || "";
-      if (clsInput && !clsInput.value) clsInput.value = picked.cls || "";
+      if (nameInput) nameInput.value = picked.name || "";
+      if (clsInput) clsInput.value = picked.cls || "";
+      var editingNow = !!editing || api.complete(picked);
+      var title = gate.querySelector("h2");
+      var blurb = gate.querySelector("p");
+      if (title) title.textContent = editingNow ? "修改姓名和班级" : "填写姓名和班级";
+      if (blurb) {
+        blurb.textContent = editingNow
+          ? "改班级名会同步到云端，老师看板按新的班级分组。"
+          : "两项都要填，才能进入中考或高考。";
+      }
       gate.hidden = false;
       if (nameInput && typeof nameInput.focus === "function") nameInput.focus();
     } catch (_) {}
+  }
+
+  function bindEdit() {
+    var host = $("stats-panel");
+    if (!host || $("btn-edit-profile")) return;
+    var btn = doc.createElement("button");
+    btn.type = "button";
+    btn.id = "btn-edit-profile";
+    btn.className = "ghost";
+    btn.textContent = "修改姓名和班级";
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      openPrompt(true);
+    });
+    host.appendChild(btn);
   }
 
   function onGateClick(e) {
@@ -278,6 +328,7 @@ function install(root, api) {
   }
 
   bindGate();
+  bindEdit();
   var qm = root.__QM;
   if (qm) {
     var prev = qm.onSessionReady;
@@ -285,6 +336,7 @@ function install(root, api) {
       try { if (typeof prev === "function") prev(); } catch (_) {}
       try {
         bindGate();
+        bindEdit();
         if (!identityReady()) openPrompt();
       } catch (_) {}
     };
