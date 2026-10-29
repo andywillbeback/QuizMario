@@ -29,6 +29,11 @@ assert.ok(html.includes('id="chart-modes"'), "mode donut");
 assert.ok(html.includes('id="chart-weak"'), "weak-word chart");
 assert.ok(html.includes('id="students"') && html.includes('id="empty-state"') && html.includes('id="detail"'));
 assert.ok(html.includes('id="chart-student"'), "personal line");
+assert.ok(html.includes('id="chart-radar"'), "ability radar");
+assert.ok(html.includes('id="chart-student-mastery"'), "per-student mastery bars");
+assert.ok(html.includes('id="detail-summary"'), "parent summary");
+assert.ok(html.includes("一键下载全班学情"), "class export button");
+assert.ok(html.includes("样本不足"), "thin-sample copy");
 assert.ok(html.includes("chart.js"), "Chart.js CDN");
 assert.ok(html.includes("<h2>教师看板"), "board heading");
 assert.ok(html.includes("导入报告码") && html.includes("QMR1"), "legacy paste stays available");
@@ -180,6 +185,15 @@ assert.strictEqual(student.lineSource, "daily");
 assert.strictEqual(student.line[student.line.length - 1], 4);
 assert.strictEqual(student.timeline[0].word, "add");
 assert.ok(student.timeline.some(function (row) { return row.word === "advice" && row.label === "答错"; }));
+assert.strictEqual(student.abilities.length, 4);
+assert.deepStrictEqual(student.abilities.map(function (axis) { return axis.id; }), ["recognition", "collocation", "production", "retention"]);
+assert.strictEqual(student.abilities[0].score, null, "one recognition event is not a score");
+assert.ok(student.abilities.every(function (axis) { return axis.score == null; }));
+assert.ok(student.summary.indexOf("小王") === 0);
+assert.ok(student.summary.indexOf("样本不足") > 0);
+assert.ok(student.summary.indexOf("advice") > 0);
+assert.ok(student.summary.indexOf("anchor@") === -1);
+assert.deepStrictEqual(student.masteryBins, [0, 1, 0, 0, 1]);
 
 const quiet = board.students[1];
 assert.strictEqual(quiet.mastery, null);
@@ -193,6 +207,260 @@ assert.strictEqual(empty.kpis.active7, 0);
 assert.strictEqual(empty.kpis.mastery, null);
 assert.strictEqual(empty.kpis.weak, 0);
 assert.deepStrictEqual(empty.activity.counts, [0, 0, 0, 0, 0, 0, 0]);
+
+function axisById(list, id) {
+  return list.filter(function (row) { return row.id === id; })[0];
+}
+
+assert.strictEqual(api.axisOf({
+  event_type: "vocab.answer_correct",
+  headword: "be able to",
+  payload: { task_direction: "meaning", evidence_kind: "mc_recognition" },
+}), "collocation");
+assert.strictEqual(api.axisOf({
+  event_type: "vocab.answer_correct",
+  headword: "cat",
+  evidence_kind: "typed_spelling",
+  payload: {},
+}), "production");
+assert.strictEqual(api.axisOf({
+  event_type: "vocab.answer_wrong",
+  headword: "cat",
+  payload: { task_direction_detail: "cloze" },
+}), "production");
+assert.strictEqual(api.axisOf({ event_type: "vocab.due_review", headword: "cat", payload: {} }), "");
+assert.strictEqual(api.axisOf({
+  event_type: "vocab.answer_correct",
+  headword: "cat",
+  payload: { task_direction: "meaning" },
+}), "recognition");
+assert.strictEqual(api.modeLabel({
+  event_type: "vocab.answer_correct",
+  payload: { task_direction: "meaning" },
+}), "看英选义");
+assert.strictEqual(api.modeLabel({
+  event_type: "vocab.answer_wrong",
+  payload: { task_direction: "spelling" },
+}), "拼写");
+assert.strictEqual(api.modeLabel({
+  event_type: "vocab.answer_correct",
+  evidence_kind: "mc_production",
+  payload: { task_direction: "form" },
+}), "看义产出");
+
+function answer(type, word, payload) {
+  return { learner_id: "rich", event_type: type, headword: word, payload: payload || {}, created_at: now.toISOString() };
+}
+
+const richEvents = [
+  answer("vocab.answer_correct", "alpha", { task_direction: "recognition", task_direction_detail: "meaning" }),
+  answer("vocab.answer_correct", "beta", { task_direction: "meaning", evidence_kind: "mc_recognition" }),
+  answer("vocab.answer_correct", "gamma", { evidence_kind: "mc_recognition" }),
+  answer("vocab.answer_correct", "delta", { task_direction_detail: "meaning" }),
+  answer("vocab.answer_wrong", "epsilon", { task_direction: "meaning" }),
+  answer("vocab.answer_correct", "be able to", { task_direction: "meaning" }),
+  answer("vocab.answer_correct", "be afraid of", { task_direction: "form" }),
+  answer("vocab.answer_correct", "look after", { evidence_kind: "typed_spelling" }),
+  answer("vocab.answer_correct", "be good at", { task_direction: "collocation" }),
+  answer("vocab.answer_wrong", "be angry with", { task_direction_detail: "phrase" }),
+];
+
+const richSave = {
+  track: "zhongkao",
+  profile: { name: "小李", cls: "2" },
+  practice: { meaning: { n: 20, good: 20 }, spelling: { n: 20, good: 20 } },
+  cards: {
+    "z|0::alpha": { state: "review", interval: 2, mastery: 3, mastered: true, correct: 4, wrong: 0, reps: 4 },
+    "z|0::beta": { state: "review", interval: 2, mastery: 3, mastered: true, correct: 3, wrong: 0, reps: 4 },
+    "z|0::gamma": { state: "review", interval: 2, mastery: 3, mastered: true, correct: 3, wrong: 0, reps: 4 },
+    "z|0::delta": { state: "review", interval: 2, mastery: 3, mastered: true, correct: 2, wrong: 0, reps: 3 },
+    "z|0::cat": {
+      state: "learning",
+      interval: 0,
+      mastery: 0.5,
+      correct: 1,
+      wrong: 0,
+      reps: 1,
+      spelling: {
+        typed: { correct: 3, wrong: 2, unknown: 0 },
+        mc: { correct: 9, wrong: 0, unknown: 0 },
+      },
+    },
+  },
+  daily: { "2026-10-20": { c: 4, w: 1, rc: 4, rw: 1, n: 0, unk: 0 } },
+};
+const rich = api.buildBoard([{ user_id: "rich", updated_at: now.toISOString(), save: richSave }], richEvents, [
+  { user_id: "rich", masked_email: "lihua@school.com" },
+], now);
+const li = rich.students[0];
+assert.strictEqual(li.name, "小李");
+assert.strictEqual(axisById(li.abilities, "recognition").score, 80);
+assert.strictEqual(axisById(li.abilities, "recognition").basis, "events");
+assert.strictEqual(axisById(li.abilities, "recognition").n, 5);
+assert.strictEqual(axisById(li.abilities, "collocation").score, 80);
+assert.strictEqual(axisById(li.abilities, "collocation").n, 5);
+assert.strictEqual(axisById(li.abilities, "production").score, 60);
+assert.strictEqual(axisById(li.abilities, "production").basis, "typed");
+assert.strictEqual(axisById(li.abilities, "retention").score, 80);
+assert.strictEqual(axisById(li.abilities, "retention").basis, "learned+retention");
+assert.ok(li.summary.indexOf("小李") === 0);
+assert.ok(li.summary.indexOf("80分") > 0);
+assert.ok(li.summary.indexOf("lihua@") === -1);
+
+const csv = api.classCsv(rich);
+assert.ok(csv.indexOf("姓名,邮箱,班级,词库") === 0);
+assert.ok(csv.indexOf("小李") > 0);
+assert.ok(csv.indexOf("li***@school.com") > 0);
+assert.ok(csv.indexOf("lihua@school.com") === -1);
+assert.ok(csv.indexOf("rich") === -1);
+assert.ok(csv.indexOf("80") > 0);
+const quoted = api.classCsv({ students: [{ name: "=1+1", email: "a***@x.com", abilities: [], weak: [], line: [], mastery: null }] });
+assert.ok(quoted.indexOf("'=1+1") > 0);
+
+const page = api.studentReportHtml(li, "2026-10-24");
+assert.ok(page.indexOf("<svg") > 0);
+assert.ok(page.indexOf("学情雷达") > 0);
+assert.ok(page.indexOf("近7日") > 0);
+assert.ok(page.indexOf("掌握度") > 0);
+assert.ok(page.indexOf("薄弱词") > 0);
+assert.ok(page.indexOf("li***@school.com") > 0);
+assert.ok(page.indexOf("lihua@school.com") === -1);
+assert.ok(page.indexOf("<script") === -1);
+assert.ok(page.indexOf("rich") === -1);
+const escaped = api.studentReportHtml({
+  name: "<b>",
+  email: "a***@x.com",
+  summary: "安全",
+  abilities: li.abilities,
+  weak: [],
+  line: [1],
+  lineLabels: ["10-24"],
+  masteryBins: [0, 0, 0, 0, 0],
+  lineSource: "daily",
+}, "2026-10-24");
+assert.ok(escaped.indexOf("&lt;b&gt;") > 0);
+assert.ok(escaped.indexOf("<b>") === -1);
+
+const zip = Buffer.from(api.classZip(board, now));
+assert.strictEqual(zip[0], 0x50);
+assert.strictEqual(zip[1], 0x4b);
+const zipText = zip.toString("utf8");
+assert.ok(zipText.indexOf("班级学情.csv") > 0);
+assert.ok(zipText.indexOf("学员/小王.html") > 0);
+assert.ok(zipText.indexOf("样本不足") > 0);
+assert.ok(zipText.indexOf("an***@school.com") > 0);
+assert.ok(zipText.indexOf("anchor@school.com") === -1);
+assert.ok(zipText.indexOf("student-a") === -1);
+assert.ok(!/eyJ[A-Za-z0-9_-]{10,}\./.test(zipText));
+
+const phrases = [];
+for (let i = 0; i < 5; i++) {
+  phrases.push({ event_type: "vocab.answer_correct", headword: "be able to", payload: { task_direction: "meaning" } });
+}
+const split = api.scoreAbilities({
+  events: phrases,
+  save: { practice: { meaning: { n: 10, good: 10 } } },
+  cards: {},
+  touched: 0,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(split, "collocation").score, 100);
+assert.strictEqual(axisById(split, "recognition").score, null);
+
+const fromPractice = api.scoreAbilities({
+  events: [],
+  save: { practice: { meaning: { n: 8, good: 6 }, spelling: { n: 5, good: 2 } }, daily: {} },
+  cards: {},
+  touched: 0,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(fromPractice, "recognition").score, 75);
+assert.strictEqual(axisById(fromPractice, "recognition").basis, "practice");
+assert.strictEqual(axisById(fromPractice, "production").score, 40);
+assert.strictEqual(axisById(fromPractice, "production").basis, "practice");
+assert.strictEqual(axisById(fromPractice, "collocation").score, null);
+assert.strictEqual(axisById(fromPractice, "retention").score, null);
+
+const mcOnly = api.scoreAbilities({
+  events: [],
+  save: {},
+  cards: {
+    "0::cat": {
+      state: "learning",
+      reps: 1,
+      correct: 0,
+      wrong: 0,
+      spelling: { typed: { correct: 0, wrong: 0, unknown: 0 }, mc: { correct: 8, wrong: 1, unknown: 0 } },
+    },
+  },
+  touched: 1,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(mcOnly, "production").score, null);
+
+const phraseCard = api.scoreAbilities({
+  events: [],
+  save: {},
+  cards: {
+    "z|1::be able to": { state: "learning", reps: 5, correct: 4, wrong: 1, unknown: 0, mastery: 1 },
+  },
+  touched: 1,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(phraseCard, "collocation").score, 80);
+assert.strictEqual(axisById(phraseCard, "collocation").basis, "cards");
+assert.strictEqual(axisById(phraseCard, "recognition").score, null);
+
+const zeroed = api.scoreAbilities({
+  events: [],
+  save: { daily: {} },
+  cards: {},
+  touched: 5,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(zeroed, "retention").score, 0);
+assert.strictEqual(axisById(zeroed, "retention").basis, "learned+solid");
+
+const reviewEvents = [];
+for (let r = 0; r < 4; r++) {
+  reviewEvents.push({
+    event_type: "vocab.answer_correct",
+    headword: "cat",
+    payload: { review_interval_days: 2, task_direction: "form" },
+  });
+}
+reviewEvents.push({
+  event_type: "vocab.answer_wrong",
+  headword: "cat",
+  payload: { review_interval_days: 2, task_direction: "form" },
+});
+const fromReview = api.scoreAbilities({
+  events: reviewEvents,
+  save: { daily: { "2026-10-01": { rc: 1, rw: 0 } } },
+  cards: {},
+  touched: 0,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(fromReview, "retention").score, 80);
+assert.strictEqual(axisById(fromReview, "retention").basis, "review-events");
+assert.strictEqual(axisById(fromReview, "production").score, 80);
+
+const dailyWins = api.scoreAbilities({
+  events: reviewEvents,
+  save: { daily: { "2026-10-01": { rc: 5, rw: 0 } } },
+  cards: {},
+  touched: 0,
+  learned: 0,
+  solid: 0,
+});
+assert.strictEqual(axisById(dailyWins, "retention").score, 100);
+assert.strictEqual(axisById(dailyWins, "retention").basis, "retention");
 
 const report = api.decodeReport("QMR1." + Buffer.from(JSON.stringify({
   v: 1, n: "a", k: "c", at: "2026-01-01", tr: { core: [1, 10, [1]] }, wk: [["cat", "猫", 2]],

@@ -171,10 +171,13 @@
 
   function modeLabel(ev) {
     var payload = asObject(ev && ev.payload);
-    var dir = String(payload.task_direction || "");
-    var detail = String(payload.task_direction_detail || "");
-    if (dir === "recognition" || detail === "meaning") return "看英选义";
-    if (dir === "production" || detail === "spelling" || detail === "form") return "看义产出";
+    var dir = String((ev && ev.task_direction) || payload.task_direction || "");
+    var detail = String((ev && ev.task_direction_detail) || payload.task_direction_detail || "");
+    var kind = String((ev && ev.evidence_kind) || payload.evidence_kind || "");
+    if (dir === "recognition" || dir === "meaning" || detail === "meaning" || kind === "mc_recognition") return "看英选义";
+    if (dir === "spelling" || detail === "spelling" || kind === "typed_spelling") return "拼写";
+    if (dir === "cloze" || detail === "cloze" || kind === "cloze") return "完形";
+    if (dir === "production" || dir === "form" || detail === "form" || kind === "mc_production") return "看义产出";
     if (dir) return dir;
     var type = ev && ev.event_type;
     return EVENT_LABELS[type] || type || "其他";
@@ -264,6 +267,677 @@
   }
 
   /**
+   * Four parent-facing scores, each 0–100. Fewer than MIN_SAMPLE attempts
+   * stays null (样本不足), never a fake 0.
+   *
+   * 认词  Answer events tagged recognition / meaning / mc_recognition.
+   *       Phrase and collocation rows are not counted here.
+   *       Below 5 events, use save.practice.meaning when collocation
+   *       evidence is still thin. Event rows and the save bucket are not added.
+   * 搭配  Collocation / related-item rows: evidence or direction
+   *       collocation|related|related_item|phrase, payload.scene containing 搭配,
+   *       payload.related/collocation true, or a headword with whitespace
+   *       (中考固定搭配 cards are multi-word). Below 5 events, use those cards'
+   *       correct / (correct+wrong+unknown) plus typed-spelling attempts.
+   * 产出  spelling / cloze / production: typed_spelling, mc_production, cloze,
+   *       or direction form|spelling|production|cloze.
+   *       Below 5 events, use spelling.typed on single-word cards.
+   *       spelling.mc is legacy multiple choice and is ignored.
+   *       save.practice.spelling is the last resort, and only when phrase
+   *       cards have not already filled 搭配.
+   * 巩固  Average of the parts that have a real sample:
+   *       learned/touched when touched >= 5 (已学会 uses the board rule),
+   *       and review stability. Stability prefers all-time daily rc/(rc+rw)
+   *       when that pair is >= 5, else answer events whose
+   *       review_interval_days >= 1, else solid/touched (review, interval >= 1).
+   *       One part alone is the score. Neither part → null.
+   * 不会 counts in the denominator and not as correct.
+   * vocab.due_review and vocab.wrong_book_add are not accuracy attempts.
+   */
+  var MIN_SAMPLE = 5;
+  var COLLOCATION_TAGS = {
+    collocation: true,
+    related: true,
+    related_item: true,
+    phrase: true,
+  };
+
+  function clampScore(value) {
+    var n = Math.round(num(value));
+    if (n < 0) return 0;
+    if (n > 100) return 100;
+    return n;
+  }
+
+  function fieldOf(ev, key) {
+    if (!ev) return "";
+    var top = ev[key];
+    if (top != null && top !== "") return top;
+    var payload = asObject(ev.payload);
+    if (payload[key] != null && payload[key] !== "") return payload[key];
+    return "";
+  }
+
+  function answerOutcome(ev) {
+    var type = ev && ev.event_type;
+    if (type === "vocab.answer_correct") return "correct";
+    if (type === "vocab.answer_wrong") return "wrong";
+    if (type === "vocab.answer_unknown") return "unknown";
+    return "";
+  }
+
+  function isPhraseHeadword(word) {
+    return /\s/.test(String(word || "").trim());
+  }
+
+  function isCollocationEvent(ev) {
+    var payload = asObject(ev && ev.payload);
+    var fields = [
+      fieldOf(ev, "evidence_kind"),
+      fieldOf(ev, "task_direction"),
+      fieldOf(ev, "task_direction_detail"),
+      payload.item_kind,
+      payload.card_kind,
+      payload.kind,
+      payload.task,
+    ];
+    for (var i = 0; i < fields.length; i++) {
+      var key = String(fields[i] || "").trim().toLowerCase();
+      if (COLLOCATION_TAGS[key]) return true;
+    }
+    if (payload.related === true || payload.collocation === true) return true;
+    if (/搭配/.test(String(payload.scene || ""))) return true;
+    return isPhraseHeadword(eventHeadword(ev));
+  }
+
+  function isProductionEvent(ev) {
+    var kind = String(fieldOf(ev, "evidence_kind") || "").toLowerCase();
+    var dir = String(fieldOf(ev, "task_direction") || "").toLowerCase();
+    var detail = String(fieldOf(ev, "task_direction_detail") || "").toLowerCase();
+    if (kind === "typed_spelling" || kind === "mc_production" || kind === "cloze") return true;
+    if (detail === "form" || detail === "spelling" || detail === "cloze") return true;
+    if (dir === "production" || dir === "form" || dir === "spelling" || dir === "cloze") return true;
+    return false;
+  }
+
+  function isRecognitionEvent(ev) {
+    var kind = String(fieldOf(ev, "evidence_kind") || "").toLowerCase();
+    var dir = String(fieldOf(ev, "task_direction") || "").toLowerCase();
+    var detail = String(fieldOf(ev, "task_direction_detail") || "").toLowerCase();
+    if (kind === "mc_recognition") return true;
+    if (detail === "meaning") return true;
+    if (dir === "recognition" || dir === "meaning") return true;
+    return false;
+  }
+
+  /** recognition | collocation | production | "" for one answer event. */
+  function axisOf(ev) {
+    if (!answerOutcome(ev)) return "";
+    if (isCollocationEvent(ev)) return "collocation";
+    if (isProductionEvent(ev)) return "production";
+    if (isRecognitionEvent(ev)) return "recognition";
+    return "";
+  }
+
+  function tallyAnswers(events) {
+    var out = {
+      recognition: { n: 0, good: 0 },
+      collocation: { n: 0, good: 0 },
+      production: { n: 0, good: 0 },
+    };
+    var list = events || [];
+    for (var i = 0; i < list.length; i++) {
+      var outcome = answerOutcome(list[i]);
+      if (!outcome) continue;
+      var id = axisOf(list[i]);
+      if (!out[id]) continue;
+      out[id].n++;
+      if (outcome === "correct") out[id].good++;
+    }
+    return out;
+  }
+
+  function practiceBucket(save, name) {
+    var practice = asObject(save && save.practice);
+    var row = practice[name];
+    if (!row || typeof row !== "object") return { n: 0, good: 0 };
+    return { n: num(row.n), good: num(row.good) };
+  }
+
+  function typedAttempt(spell) {
+    if (!spell || typeof spell !== "object") return { n: 0, good: 0 };
+    var typed = spell.typed;
+    if (typed && typeof typed === "object") {
+      var n = num(typed.correct) + num(typed.wrong) + num(typed.unknown);
+      if (n > 0) return { n: n, good: num(typed.correct) };
+    }
+    return { n: 0, good: 0 };
+  }
+
+  function addAttempt(into, part) {
+    into.n += part.n;
+    into.good += part.good;
+  }
+
+  function collocationFromCards(cards) {
+    var out = { n: 0, good: 0 };
+    cards = asObject(cards);
+    var keys = Object.keys(cards);
+    for (var i = 0; i < keys.length; i++) {
+      if (!isPhraseHeadword(headwordFromKey(keys[i]))) continue;
+      var card = cards[keys[i]];
+      if (!card || typeof card !== "object") continue;
+      addAttempt(out, {
+        n: num(card.correct) + num(card.wrong) + num(card.unknown),
+        good: num(card.correct),
+      });
+      addAttempt(out, typedAttempt(card.spelling));
+    }
+    return out;
+  }
+
+  function typedSpellingTotals(cards) {
+    var out = { n: 0, good: 0 };
+    cards = asObject(cards);
+    var keys = Object.keys(cards);
+    for (var i = 0; i < keys.length; i++) {
+      if (isPhraseHeadword(headwordFromKey(keys[i]))) continue;
+      var card = cards[keys[i]];
+      if (!card || typeof card !== "object") continue;
+      addAttempt(out, typedAttempt(card.spelling));
+    }
+    return out;
+  }
+
+  function pickSample(primary, fallback, primaryBasis, fallbackBasis) {
+    if (primary && primary.n >= MIN_SAMPLE) {
+      return { n: primary.n, good: primary.good, basis: primaryBasis };
+    }
+    if (fallback && fallback.n >= MIN_SAMPLE) {
+      return { n: fallback.n, good: fallback.good, basis: fallbackBasis };
+    }
+    var pn = primary ? primary.n : 0;
+    var fn = fallback ? fallback.n : 0;
+    var usePrimary = pn >= fn;
+    return {
+      n: usePrimary ? pn : fn,
+      good: usePrimary ? num(primary && primary.good) : num(fallback && fallback.good),
+      basis: "thin",
+    };
+  }
+
+  function finishRatio(id, label, sample) {
+    var n = num(sample && sample.n);
+    var good = num(sample && sample.good);
+    var thin = n < MIN_SAMPLE;
+    return {
+      id: id,
+      label: label,
+      score: thin ? null : clampScore(good / n * 100),
+      n: n,
+      good: good,
+      basis: thin ? "thin" : (sample.basis || ""),
+    };
+  }
+
+  function dailyRetention(save) {
+    var daily = asObject(save && save.daily);
+    var keys = Object.keys(daily);
+    var n = 0;
+    var good = 0;
+    for (var i = 0; i < keys.length; i++) {
+      var bucket = daily[keys[i]];
+      if (!bucket || typeof bucket !== "object") continue;
+      good += num(bucket.rc);
+      n += num(bucket.rc) + num(bucket.rw);
+    }
+    return { n: n, good: good };
+  }
+
+  function reviewEventTotals(events) {
+    var n = 0;
+    var good = 0;
+    var list = events || [];
+    for (var i = 0; i < list.length; i++) {
+      var outcome = answerOutcome(list[i]);
+      if (!outcome) continue;
+      if (!(num(fieldOf(list[i], "review_interval_days")) >= 1)) continue;
+      n++;
+      if (outcome === "correct") good++;
+    }
+    return { n: n, good: good };
+  }
+
+  function retentionAxis(save, events, touched, learned, solid) {
+    var learnedOk = touched >= MIN_SAMPLE;
+    var daily = dailyRetention(save);
+    var reviewed = reviewEventTotals(events);
+    var stability = null;
+    var basis = "";
+    if (daily.n >= MIN_SAMPLE) {
+      stability = daily.good / daily.n;
+      basis = "retention";
+    } else if (reviewed.n >= MIN_SAMPLE) {
+      stability = reviewed.good / reviewed.n;
+      basis = "review-events";
+    } else if (learnedOk) {
+      stability = solid / touched;
+      basis = "solid";
+    }
+    var learnedRatio = learnedOk ? (touched ? learned / touched : 0) : null;
+    if (learnedRatio == null && stability == null) {
+      return {
+        id: "retention",
+        label: "巩固",
+        score: null,
+        n: Math.max(touched, daily.n, reviewed.n),
+        good: learned,
+        basis: "thin",
+      };
+    }
+    var parts = [];
+    if (learnedRatio != null) parts.push(learnedRatio);
+    if (stability != null) parts.push(stability);
+    var avg = 0;
+    for (var i = 0; i < parts.length; i++) avg += parts[i];
+    avg /= parts.length;
+    var labelBasis = learnedRatio != null && stability != null
+      ? (basis === "solid" ? "learned+solid" : "learned+" + basis)
+      : (learnedRatio != null ? "learned" : basis);
+    var n = learnedOk ? touched : 0;
+    if (basis === "retention") n = Math.max(n, daily.n);
+    else if (basis === "review-events") n = Math.max(n, reviewed.n);
+    else n = Math.max(n, touched);
+    var good = basis === "retention" ? daily.good : (basis === "review-events" ? reviewed.good : learned);
+    return {
+      id: "retention",
+      label: "巩固",
+      score: clampScore(avg * 100),
+      n: n,
+      good: good,
+      basis: labelBasis,
+    };
+  }
+
+  function productionFallback(cards, save) {
+    var typed = typedSpellingTotals(cards);
+    if (typed.n >= MIN_SAMPLE) return { n: typed.n, good: typed.good, basis: "typed" };
+    if (collocationFromCards(cards).n >= MIN_SAMPLE) return { n: typed.n, good: typed.good, basis: "thin" };
+    var practice = practiceBucket(save, "spelling");
+    if (practice.n >= MIN_SAMPLE) return { n: practice.n, good: practice.good, basis: "practice" };
+    return {
+      n: Math.max(typed.n, practice.n),
+      good: typed.n >= practice.n ? typed.good : practice.good,
+      basis: "thin",
+    };
+  }
+
+  function scoreAbilities(input) {
+    input = input || {};
+    var events = input.events || [];
+    var save = input.save || {};
+    var cards = input.cards || {};
+    var tallies = tallyAnswers(events);
+    var colloCards = collocationFromCards(cards);
+    var collo = pickSample(tallies.collocation, colloCards, "events", "cards");
+    var recogFallback = collo.n >= MIN_SAMPLE
+      ? { n: tallies.recognition.n, good: tallies.recognition.good }
+      : practiceBucket(save, "meaning");
+    var recognition = pickSample(tallies.recognition, recogFallback, "events", "practice");
+    var produced = pickSample(tallies.production, productionFallback(cards, save), "events", "fallback");
+    if (produced.basis === "fallback") {
+      var typed = typedSpellingTotals(cards);
+      produced.basis = typed.n >= MIN_SAMPLE ? "typed" : "practice";
+    }
+    return [
+      finishRatio("recognition", "认词", recognition),
+      finishRatio("collocation", "搭配", collo),
+      finishRatio("production", "产出", produced),
+      retentionAxis(save, events, num(input.touched), num(input.learned), num(input.solid)),
+    ];
+  }
+
+  function abilityPhrase(axis) {
+    var plain = {
+      recognition: "看英文认意思",
+      collocation: "词组搭配",
+      production: "拼写和按中文产出",
+      retention: "隔天巩固",
+    }[axis.id] || axis.label;
+    if (axis.score == null) return plain + "：样本不足";
+    if (axis.score >= 85) return plain + "比较稳（" + axis.score + "分）";
+    if (axis.score >= 60) return plain + "正在变熟（" + axis.score + "分）";
+    return plain + "还需要多练（" + axis.score + "分）";
+  }
+
+  function parentSummary(st) {
+    st = st || {};
+    var name = st.name ? st.name : "这位同学";
+    var track = st.trackLabel && st.trackLabel !== "—" ? st.trackLabel : "";
+    var touched = num(st.touched);
+    var open = name + (track ? "正在使用" + track + "词库" : "的单词练习");
+    open += "，已接触 " + touched + " 个词";
+    if (touched > 0) open += "，已学会 " + num(st.learned) + " 个";
+    open += "。";
+    var axes = st.abilities || [];
+    var bits = [];
+    for (var i = 0; i < axes.length; i++) bits.push(abilityPhrase(axes[i]));
+    var recent = num(st.answers7) || num(st.practice7);
+    var activity = st.active7
+      ? "近 7 天有练习，记录到约 " + recent + " 次答题。"
+      : "近 7 天还没有新的练习。";
+    var weakLine;
+    var weak = st.weak || [];
+    if (weak.length) {
+      var words = [];
+      var limit = Math.min(5, weak.length);
+      for (var w = 0; w < limit; w++) {
+        words.push(weak[w].gloss ? weak[w].word + "（" + weak[w].gloss + "）" : weak[w].word);
+      }
+      weakLine = "建议在家再认一认这些词：" + words.join("、") + "。";
+    } else if (touched > 0) {
+      weakLine = "目前没有特别集中的薄弱词。";
+    } else {
+      weakLine = "练习记录还很少，可以先看哪几项是样本不足。";
+    }
+    return open + bits.join("，") + "。" + activity + weakLine;
+  }
+
+  function escHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  function svgPoint(cx, cy, radius, index, count, scale) {
+    var ang = -Math.PI / 2 + (index * 2 * Math.PI / count);
+    return [cx + Math.cos(ang) * radius * scale, cy + Math.sin(ang) * radius * scale];
+  }
+
+  function svgRadar(abilities) {
+    var list = abilities || [];
+    var cx = 160;
+    var cy = 148;
+    var radius = 78;
+    var n = list.length || 4;
+    var grid = "";
+    for (var g = 1; g <= 4; g++) {
+      var ring = [];
+      for (var i = 0; i < n; i++) {
+        var rp = svgPoint(cx, cy, radius, i, n, g / 4);
+        ring.push(rp[0].toFixed(1) + "," + rp[1].toFixed(1));
+      }
+      grid += '<polygon points="' + ring.join(" ") + '" fill="none" stroke="#d5dbe8" stroke-width="1"/>';
+    }
+    var spokes = "";
+    var poly = [];
+    var dots = "";
+    var labels = "";
+    for (var s = 0; s < n; s++) {
+      var axis = list[s] || { label: "", score: null };
+      var end = svgPoint(cx, cy, radius, s, n, 1);
+      var thin = axis.score == null;
+      spokes += '<line x1="' + cx + '" y1="' + cy + '" x2="' + end[0].toFixed(1) + '" y2="' + end[1].toFixed(1) + '" stroke="' + (thin ? "#b7becc" : "#8aa0c4") + '" stroke-width="' + (thin ? "4" : "1") + '"/>';
+      if (!thin) {
+        var scale = Math.max(0, Math.min(100, num(axis.score))) / 100;
+        var p = svgPoint(cx, cy, radius, s, n, scale);
+        poly.push(p[0].toFixed(1) + "," + p[1].toFixed(1));
+        dots += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="#2e6fc4"/>';
+      }
+      var lp = svgPoint(cx, cy, radius, s, n, 1.24);
+      var text = thin ? axis.label + " 样本不足" : axis.label + " " + axis.score;
+      labels += '<text x="' + lp[0].toFixed(1) + '" y="' + lp[1].toFixed(1) + '" font-size="12" text-anchor="middle" fill="' + (thin ? "#8b93a7" : "#1c2430") + '">' + escHtml(text) + "</text>";
+    }
+    var shape = "";
+    if (poly.length >= 3) {
+      shape = '<polygon points="' + poly.join(" ") + '" fill="rgba(46,111,196,.22)" stroke="#2e6fc4" stroke-width="2"/>';
+    } else if (poly.length === 2) {
+      shape = '<polyline points="' + poly.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>';
+    }
+    return '<svg viewBox="0 0 320 300" role="img" aria-label="学情雷达">' + grid + spokes + shape + dots + labels + "</svg>";
+  }
+
+  function svgLine(labels, values) {
+    labels = labels || [];
+    values = values || [];
+    var w = 360;
+    var h = 168;
+    var padL = 28;
+    var padB = 28;
+    var padT = 14;
+    var padR = 28;
+    var max = 1;
+    for (var i = 0; i < values.length; i++) if (num(values[i]) > max) max = num(values[i]);
+    var innerW = w - padL - padR;
+    var innerH = h - padT - padB;
+    var pts = [];
+    var circles = "";
+    var labs = "";
+    var count = values.length || 1;
+    for (var j = 0; j < values.length; j++) {
+      var x = padL + (count === 1 ? innerW / 2 : j * innerW / (count - 1));
+      var y = padT + innerH - (num(values[j]) / max) * innerH;
+      pts.push(x.toFixed(1) + "," + y.toFixed(1));
+      circles += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#2e6fc4"/>';
+      labs += '<text x="' + x.toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="#5c677a">' + escHtml(labels[j] || "") + "</text>";
+    }
+    return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="近7日练习"><polyline points="' +
+      pts.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>' + circles + labs + "</svg>";
+  }
+
+  function svgBars(labels, values) {
+    labels = labels || [];
+    values = values || [];
+    var w = 360;
+    var h = 168;
+    var padL = 28;
+    var padB = 28;
+    var padT = 14;
+    var padR = 10;
+    var max = 1;
+    for (var i = 0; i < values.length; i++) if (num(values[i]) > max) max = num(values[i]);
+    var innerW = w - padL - padR;
+    var innerH = h - padT - padB;
+    var slot = labels.length ? innerW / labels.length : innerW;
+    var barW = Math.max(8, slot * 0.56);
+    var bars = "";
+    var labs = "";
+    for (var j = 0; j < labels.length; j++) {
+      var bh = (num(values[j]) / max) * innerH;
+      var x = padL + j * slot + (slot - barW) / 2;
+      var y = padT + innerH - bh;
+      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="4" fill="#2f9e8f"/>';
+      labs += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="#5c677a">' + escHtml(labels[j]) + "</text>";
+    }
+    return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="掌握度">' + bars + labs + "</svg>";
+  }
+
+  function scoreCell(axis) {
+    if (!axis || axis.score == null) return "样本不足";
+    return String(axis.score);
+  }
+
+  function csvCell(value) {
+    var s = String(value == null ? "" : value);
+    if (/^[=+\-@]/.test(s)) s = "'" + s;
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function weakText(rows) {
+    var bits = [];
+    var list = rows || [];
+    for (var i = 0; i < list.length; i++) {
+      bits.push(list[i].gloss ? list[i].word + "（" + list[i].gloss + "）" : list[i].word);
+    }
+    return bits.join("、");
+  }
+
+  function classCsv(board) {
+    var headers = ["姓名", "邮箱", "班级", "词库", "已接触", "已学会", "掌握%", "认词", "搭配", "产出", "巩固", "近7日答题", "薄弱词", "更新"];
+    var lines = [headers.join(",")];
+    var students = (board && board.students) || [];
+    for (var i = 0; i < students.length; i++) {
+      var st = students[i];
+      var axes = {};
+      var list = st.abilities || [];
+      for (var a = 0; a < list.length; a++) axes[list[a].id] = list[a];
+      lines.push([
+        st.name || "",
+        st.email || "",
+        st.cls || "",
+        st.trackLabel || "",
+        st.touched,
+        st.learned,
+        st.mastery == null ? "" : st.mastery,
+        scoreCell(axes.recognition),
+        scoreCell(axes.collocation),
+        scoreCell(axes.production),
+        scoreCell(axes.retention),
+        sum(st.line || []),
+        weakText(st.weak),
+        st.updatedAt || "",
+      ].map(csvCell).join(","));
+    }
+    return lines.join("\n");
+  }
+
+  function studentReportHtml(st, generated) {
+    st = st || {};
+    var name = st.name || "学员";
+    var axes = st.abilities || [];
+    var weakRows = st.weak || [];
+    var weakHtml = weakRows.length
+      ? weakRows.map(function (row) {
+        return "<tr><td>" + escHtml(row.word) + "</td><td>" + escHtml(row.gloss || "—") + "</td><td>" + num(row.score) + "</td></tr>";
+      }).join("")
+      : "<tr><td colspan=\"3\">目前没有特别集中的薄弱词。</td></tr>";
+    var lineNote = st.lineSource === "daily"
+      ? "折线是近 7 天每天的答题次数。"
+      : "近 7 天存档里没有每日答题，折线改用练习事件次数。";
+    return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><title>" +
+      escHtml("聚光单词 · 学情 · " + name) + "</title><style>" +
+      "body{font-family:'PingFang SC','Noto Sans SC','Segoe UI',sans-serif;color:#1c2430;background:#fff;margin:0;padding:28px;line-height:1.65}" +
+      "h1{font-size:1.4rem;margin:0 0 4px}h2{font-size:1.05rem;margin:22px 0 6px}" +
+      ".muted{color:#5c677a;font-size:.9rem}.summary{background:#f7f4ec;border:1px solid #eadcba;border-radius:12px;padding:12px 14px}" +
+      "svg{width:100%;max-width:420px;height:auto}table{border-collapse:collapse;width:100%;max-width:520px}td,th{border-bottom:1px solid #e4e8f0;padding:6px 8px;text-align:left}" +
+      "</style></head><body><h1>" + escHtml(name) + "的学情</h1><p class=\"muted\">账号 " +
+      escHtml(st.email || "—") + (st.cls ? " · 班级 " + escHtml(st.cls) : "") + " · 词库 " +
+      escHtml(st.trackLabel || "—") + " · " + escHtml(generated || "") + "</p><p class=\"summary\">" +
+      escHtml(st.summary || "") + "</p><h2>学情雷达</h2>" + svgRadar(axes) +
+      "<h2>近7日练习</h2><p class=\"muted\">" + escHtml(lineNote) + "</p>" + svgLine(st.lineLabels, st.line) +
+      "<h2>掌握度</h2><p class=\"muted\">已接触词的掌握星级：0、0.5、1、2、3。未学的新词不在图里。</p>" +
+      svgBars(MASTERY_LABELS, st.masteryBins || [0, 0, 0, 0, 0]) +
+      "<h2>薄弱词</h2><table><tr><th>单词</th><th>释义</th><th>信号</th></tr>" + weakHtml +
+      "</table><p class=\"muted\">本页由聚光单词教师看板根据已经加载的学习记录生成，给家长阅读。不含登录凭证。</p></body></html>";
+  }
+
+  function utf8Bytes(text) {
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(String(text == null ? "" : text));
+    var s = unescape(encodeURIComponent(String(text == null ? "" : text)));
+    var out = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return out;
+  }
+
+  function crc32(bytes) {
+    if (!crc32.table) {
+      var table = new Uint32Array(256);
+      for (var i = 0; i < 256; i++) {
+        var c = i;
+        for (var k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        table[i] = c >>> 0;
+      }
+      crc32.table = table;
+    }
+    var crc = 0xffffffff;
+    for (var j = 0; j < bytes.length; j++) crc = crc32.table[(crc ^ bytes[j]) & 0xff] ^ (crc >>> 8);
+    return (crc ^ 0xffffffff) >>> 0;
+  }
+
+  function concatBytes(parts) {
+    var n = 0;
+    for (var i = 0; i < parts.length; i++) n += parts[i].length;
+    var out = new Uint8Array(n);
+    var offset = 0;
+    for (var j = 0; j < parts.length; j++) {
+      out.set(parts[j], offset);
+      offset += parts[j].length;
+    }
+    return out;
+  }
+
+  function le16(n) {
+    return new Uint8Array([n & 255, (n >> 8) & 255]);
+  }
+
+  function le32(n) {
+    return new Uint8Array([n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >> 24) & 255]);
+  }
+
+  function zipStore(files) {
+    var locals = [];
+    var centrals = [];
+    var offset = 0;
+    for (var i = 0; i < files.length; i++) {
+      var name = utf8Bytes(files[i].name);
+      var data = files[i].data;
+      var crc = crc32(data);
+      var local = concatBytes([
+        le32(0x04034b50), le16(20), le16(0x0800), le16(0), le16(0), le16(0),
+        le32(crc), le32(data.length), le32(data.length), le16(name.length), le16(0),
+        name, data,
+      ]);
+      var central = concatBytes([
+        le32(0x02014b50), le16(20), le16(20), le16(0x0800), le16(0), le16(0), le16(0),
+        le32(crc), le32(data.length), le32(data.length), le16(name.length), le16(0),
+        le16(0), le16(0), le16(0), le32(0), le32(offset), name,
+      ]);
+      locals.push(local);
+      centrals.push(central);
+      offset += local.length;
+    }
+    var centralBlob = concatBytes(centrals);
+    var eocd = concatBytes([
+      le32(0x06054b50), le16(0), le16(0), le16(files.length), le16(files.length),
+      le32(centralBlob.length), le32(offset), le16(0),
+    ]);
+    return concatBytes(locals.concat([centralBlob, eocd]));
+  }
+
+  function reportFileName(st, index, used) {
+    var base = st && st.name ? String(st.name).trim() : "";
+    base = base.replace(/[\\/:*?"<>|\u0000-\u001f]/g, "").slice(0, 40);
+    if (!base) base = "学员" + (index + 1);
+    var name = base;
+    var n = 2;
+    while (used[name]) {
+      name = base + "-" + n;
+      n++;
+    }
+    used[name] = true;
+    return "学员/" + name + ".html";
+  }
+
+  /** ZIP of a class CSV plus one printable HTML page per student. No ids, tokens, or raw emails. */
+  function classZip(board, now) {
+    var when = dayKey(now || new Date());
+    var files = [{
+      name: "班级学情.csv",
+      data: utf8Bytes("\ufeff" + classCsv(board)),
+    }];
+    var used = Object.create(null);
+    var students = (board && board.students) || [];
+    for (var i = 0; i < students.length; i++) {
+      files.push({
+        name: reportFileName(students[i], i, used),
+        data: utf8Bytes(studentReportHtml(students[i], when)),
+      });
+    }
+    return zipStore(files);
+  }
+
+  /**
    * progressRows: {user_id, save, updated_at}[]
    * events: learner_events rows
    * directory: {user_id, masked_email}[] (already masked; masked again on the client)
@@ -324,13 +998,18 @@
       var touched = 0;
       var credit = 0;
       var learned = 0;
+      var solid = 0;
+      var masteryBins = [0, 0, 0, 0, 0];
       for (var c = 0; c < cardKeys.length; c++) {
         var card = cards[cardKeys[c]];
         if (!cardTouched(card)) continue;
         touched++;
         credit += cardCredit(card);
         if (isLearned(card)) learned++;
-        masteryCounts[masteryBin(card.mastery)]++;
+        if (isSolid(card)) solid++;
+        var bin = masteryBin(card.mastery);
+        masteryBins[bin]++;
+        masteryCounts[bin]++;
         var wrongs = num(card.wrong) + spellingWrong(card.spelling);
         if (wrongs > 0) {
           touchWeak(weakMap, headwordFromKey(cardKeys[c]), id, { wrong: wrongs });
@@ -398,7 +1077,15 @@
       if (isActive) active7++;
       var personal = sum(daily7) > 0 ? daily7 : event7;
       var studentWeak = weakList(weakMap, id);
-      students.push({
+      var abilities = scoreAbilities({
+        events: evs,
+        save: save,
+        cards: cards,
+        touched: touched,
+        learned: learned,
+        solid: solid,
+      });
+      var studentRow = {
         id: id,
         email: learnerLabel(id, maskedById[id]),
         name: profile.name,
@@ -413,7 +1100,7 @@
         points: num(save.points),
         bookActive: bookActive,
         weakCount: studentWeak.length,
-        weak: studentWeak.slice(0, 8),
+        weak: studentWeak.slice(0, 20),
         active7: isActive,
         updatedAt: pack.updatedAt ? formatWhen(pack.updatedAt) : "",
         line: personal,
@@ -422,7 +1109,12 @@
         practice7: sum(event7),
         answers7: sum(daily7),
         timeline: timeline,
-      });
+        masteryBins: masteryBins,
+        abilities: abilities,
+        summary: "",
+      };
+      studentRow.summary = parentSummary(studentRow);
+      students.push(studentRow);
     }
 
     students.sort(function (a, b) {
@@ -565,7 +1257,14 @@
     cardTouched: cardTouched,
     cardCredit: cardCredit,
     isLearned: isLearned,
+    MIN_SAMPLE: MIN_SAMPLE,
     buildBoard: buildBoard,
+    axisOf: axisOf,
+    scoreAbilities: scoreAbilities,
+    parentSummary: parentSummary,
+    classCsv: classCsv,
+    studentReportHtml: studentReportHtml,
+    classZip: classZip,
     modeLabel: modeLabel,
     dayKey: dayKey,
     decodeReport: decodeReport,
@@ -626,7 +1325,12 @@
     }
     showFallback(id, "");
     destroyChart(id);
-    charts[id] = new root.Chart(canvas, config);
+    try {
+      charts[id] = new root.Chart(canvas, config);
+    } catch (err) {
+      destroyChart(id);
+      showFallback(id, fallback);
+    }
   }
 
   function axisColor() {
@@ -725,13 +1429,82 @@
     }).join("");
   }
 
+  function abilityLegend(st) {
+    var el = $("ability-legend");
+    if (!el) return;
+    var axes = (st && st.abilities) || [];
+    el.innerHTML = axes.map(function (axis) {
+      var thin = axis.score == null;
+      var text = thin ? "样本不足" : axis.score + "分";
+      return "<span" + (thin ? " class=\"is-thin\"" : "") + ">" + esc(axis.label) + " " + text + "</span>";
+    }).join("");
+  }
+
+  function renderRadar(st) {
+    var axes = st.abilities || [];
+    var fallback = axes.map(function (axis) {
+      return axis.label + " " + (axis.score == null ? "样本不足" : axis.score);
+    }).join("\n");
+    var labelColors = axes.map(function (axis) {
+      return axis.score == null ? "#8b93a7" : "#d5e2fb";
+    });
+    mountChart("chart-radar", {
+      type: "radar",
+      data: {
+        labels: axes.map(function (axis) { return axis.label; }),
+        datasets: [{
+          label: "学情",
+          data: axes.map(function (axis) { return axis.score; }),
+          borderColor: "#8eb7ff",
+          backgroundColor: "rgba(142,183,255,.22)",
+          pointBackgroundColor: "#e6c98a",
+          pointRadius: 4,
+          spanGaps: false,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                var axis = axes[ctx.dataIndex];
+                if (!axis || axis.score == null) return "样本不足";
+                return axis.score + "分";
+              },
+            },
+          },
+        },
+        scales: {
+          r: {
+            min: 0,
+            max: 100,
+            ticks: { display: false, stepSize: 25 },
+            grid: { color: "rgba(190,214,255,.2)" },
+            angleLines: { color: "rgba(190,214,255,.28)" },
+            pointLabels: { color: labelColors, font: { size: 12 } },
+          },
+        },
+      },
+    }, fallback);
+  }
+
   function renderDetail(st) {
     show("detail", !!st);
     if (!st) {
       destroyChart("chart-student");
+      destroyChart("chart-radar");
+      destroyChart("chart-student-mastery");
+      var legend = $("ability-legend");
+      if (legend) legend.innerHTML = "";
       return;
     }
-    $("detail-title").textContent = st.email + (st.name ? " · " + st.name : "");
+    $("detail-title").textContent = (st.name ? st.name + " · " : "") + st.email;
+    var summary = $("detail-summary");
+    if (summary) summary.textContent = st.summary || "";
+    abilityLegend(st);
     $("detail-progress").textContent =
       "词库 " + st.trackLabel +
       " · 积分 " + st.points +
@@ -747,6 +1520,23 @@
     $("detail-line-hint").textContent = st.lineSource === "daily"
       ? "折线是存档 daily 的答题次数（答对 + 答错 + 不会）。"
       : "这份存档近 7 日没有 daily 答题，折线改用该学员的练习事件。";
+    renderRadar(st);
+    var bins = st.masteryBins || [0, 0, 0, 0, 0];
+    var binSum = 0;
+    for (var bi = 0; bi < bins.length; bi++) binSum += num(bins[bi]);
+    if (binSum > 0) {
+      mountChart("chart-student-mastery", {
+        type: "bar",
+        data: {
+          labels: MASTERY_LABELS.slice(),
+          datasets: [{ label: "词条", data: bins, backgroundColor: "#7ddec8", borderRadius: 6 }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
+      }, MASTERY_LABELS.map(function (label, i) { return label + "星 " + bins[i]; }).join("\n"));
+    } else {
+      destroyChart("chart-student-mastery");
+      showFallback("chart-student-mastery", "还没有已接触的词");
+    }
     mountChart("chart-student", {
       type: "line",
       data: {
@@ -763,8 +1553,9 @@
       },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
     }, st.lineLabels.map(function (label, i) { return label + " " + st.line[i]; }).join("\n"));
+    var weakRows = (st.weak || []).slice(0, 20);
     $("student-weak").innerHTML = "<tr><th>单词</th><th>释义</th><th>信号</th></tr>" +
-      (st.weak.length ? st.weak.map(function (row) {
+      (weakRows.length ? weakRows.map(function (row) {
         return "<tr><td>" + esc(row.word) + "</td><td>" + esc(row.gloss || "—") + "</td><td>" + row.score + "</td></tr>";
       }).join("") : "<tr><td colspan=\"3\">没有薄弱词</td></tr>");
     $("student-timeline").innerHTML = st.timeline.length
@@ -956,6 +1747,35 @@
       var client = clientOrNull();
       if (!client) return;
       currentUser(client).then(function (user) { return openBoard(client, user); });
+    });
+  }
+  var exportClass = $("btn-export-class");
+  if (exportClass) {
+    exportClass.addEventListener("click", function () {
+      var status = $("cloud-status");
+      if (!board) {
+        if (status) status.textContent = "还没有可下载的班级数据。请先刷新。";
+        return;
+      }
+      try {
+        var bytes = api.classZip(board, new Date());
+        var blob = new Blob([bytes], { type: "application/zip" });
+        var link = document.createElement("a");
+        var url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = "聚光单词-班级学情-" + dayKey(new Date()) + ".zip";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+        if (status) {
+          status.textContent = board.students.length
+            ? "已下载全班学情（" + board.students.length + " 名学员）。压缩包里有班级汇总表和每位学员的学情页。"
+            : "已下载班级汇总。当前没有学员明细。";
+        }
+      } catch (err) {
+        if (status) status.textContent = "下载失败。请再试一次。";
+      }
     });
   }
   var body = $("student-body");

@@ -95,6 +95,17 @@
   .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   #student-timeline { margin: 0; padding-left: 1.1rem; }
   #student-timeline li { margin: 4px 0; }
+  .parent-summary {
+    margin: 8px 0 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(230, 201, 138, 0.08);
+    border: 1px solid rgba(230, 201, 138, 0.28);
+    line-height: 1.65;
+    font-size: .92rem;
+  }
+  .ability-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 4px 0 0; font-size: .8rem; }
+  .ability-legend .is-thin { color: #8b93a7; }
   #cloud-status, #legacy-status, #gate-msg { font-size: .85rem; margin-top: 6px; color: var(--gold); min-height: 1.2em; }
   #gate-msg.is-bad { color: #ffb4c0; }
   details { margin-top: 22px; }
@@ -142,11 +153,12 @@
   <section id="board" hidden aria-label="班级图表">
     <div class="toolbar">
       <span class="who" id="who"></span>
+      <button type="button" id="btn-export-class">一键下载全班学情</button>
       <button type="button" class="ghost" id="btn-refresh">刷新</button>
       <button type="button" class="ghost" id="btn-logout">退出</button>
     </div>
     <h2>教师看板 · 班级云进度</h2>
-    <p class="sub">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。</p>
+    <p class="sub">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。点学员可看认词、搭配、产出、巩固四项学情。样本少于 5 次时该项显示样本不足，坐标轴为灰色。一键下载用当前已加载的数据打包，不另取密钥。</p>
     <p id="cloud-status" role="status"></p>
     <div class="cards" id="kpi-strip">
       <div><b id="kpi-students">—</b>学员数</div>
@@ -199,12 +211,26 @@
       <button type="button" class="ghost" id="btn-detail-back">返回列表</button>
       <h3 id="detail-title">学员</h3>
       <p class="sub" id="detail-progress"></p>
+      <p class="parent-summary" id="detail-summary"></p>
       <div class="detail-grid">
+        <article class="panel">
+          <h3>学情雷达</h3>
+          <p class="hint" id="detail-radar-hint">认词、搭配、产出、巩固。样本少于 5 次时该项为样本不足，坐标轴为灰色。</p>
+          <div class="chart-box"><canvas id="chart-radar" aria-label="学情雷达"></canvas></div>
+          <p class="ability-legend" id="ability-legend"></p>
+          <p class="fallback" id="chart-radar-fallback" hidden></p>
+        </article>
         <article class="panel">
           <h3>个人近7日</h3>
           <p class="hint" id="detail-line-hint">答题次数</p>
           <div class="chart-box"><canvas id="chart-student" aria-label="个人近7日"></canvas></div>
           <p class="fallback" id="chart-student-fallback" hidden></p>
+        </article>
+        <article class="panel">
+          <h3>掌握度</h3>
+          <p class="hint">该学员已接触词条的掌握星级。0 / 0.5 / 1 / 2 / 3。</p>
+          <div class="chart-box"><canvas id="chart-student-mastery" aria-label="个人掌握度"></canvas></div>
+          <p class="fallback" id="chart-student-mastery-fallback" hidden></p>
         </article>
         <article class="panel">
           <h3>薄弱词</h3>
