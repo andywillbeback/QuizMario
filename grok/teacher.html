@@ -104,6 +104,7 @@
   .detail-head h3 { margin: 0; }
   .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   #detail .panel { min-width: 0; }
+  #detail [data-personal-chart] .chart-box { height: 260px; min-height: 260px; }
   #student-timeline { margin: 0; padding-left: 1.1rem; }
   #student-timeline li { margin: 4px 0; }
   .summary-kicker { margin: 12px 0 6px; color: var(--gold); font-size: .82rem; letter-spacing: .08em; }
@@ -250,18 +251,24 @@
       <div class="stat-row" id="detail-stats"></div>
       <p class="sub" id="detail-progress"></p>
       <div class="detail-grid">
+        <article class="panel" data-personal-chart="modes">
+          <h3>题型占比</h3>
+          <p class="hint" id="detail-modes-hint">只统计该学员的答题。到期信号不计入。没有答题就不编造占比。</p>
+          <div class="chart-box"><canvas id="chart-student-modes" aria-label="个人题型占比"></canvas></div>
+          <p class="fallback" id="chart-student-modes-fallback" hidden></p>
+        </article>
+        <article class="panel" data-personal-chart="accuracy">
+          <h3>近7日正确率</h3>
+          <p class="hint" id="detail-accuracy-hint">按天计算。当天答题少于 5 次就留空，不画成 0。优先用存档 daily，不够才用当天答题事件，两套数字不相加。</p>
+          <div class="chart-box"><canvas id="chart-student-accuracy" aria-label="个人近7日正确率"></canvas></div>
+          <p class="fallback" id="chart-student-accuracy-fallback" hidden></p>
+        </article>
         <article class="panel">
           <h3>学情雷达</h3>
           <p class="hint" id="detail-radar-hint">认词、搭配、产出、巩固。样本少于 5 次时该项为样本不足，坐标轴为灰色，不记成 0 分。</p>
           <div class="chart-box"><canvas id="chart-radar" aria-label="学情雷达"></canvas></div>
           <p class="ability-legend" id="ability-legend"></p>
           <p class="fallback" id="chart-radar-fallback" hidden></p>
-        </article>
-        <article class="panel">
-          <h3>近7日正确率</h3>
-          <p class="hint" id="detail-accuracy-hint">按天计算。当天答题少于 5 次就留空，不画成 0。优先用存档 daily，不够才用当天答题事件，两套数字不相加。</p>
-          <div class="chart-box"><canvas id="chart-student-accuracy" aria-label="个人近7日正确率"></canvas></div>
-          <p class="fallback" id="chart-student-accuracy-fallback" hidden></p>
         </article>
         <article class="panel">
           <h3>个人近7日</h3>
@@ -274,12 +281,6 @@
           <p class="hint">该学员已接触词条的掌握星级。0 / 0.5 / 1 / 2 / 3。</p>
           <div class="chart-box"><canvas id="chart-student-mastery" aria-label="个人掌握度"></canvas></div>
           <p class="fallback" id="chart-student-mastery-fallback" hidden></p>
-        </article>
-        <article class="panel">
-          <h3>题型占比</h3>
-          <p class="hint">只统计该学员的答题。到期信号不计入。没有答题就不画。</p>
-          <div class="chart-box"><canvas id="chart-student-modes" aria-label="个人题型占比"></canvas></div>
-          <p class="fallback" id="chart-student-modes-fallback" hidden></p>
         </article>
         <article class="panel">
           <h3>薄弱词</h3>

@@ -701,6 +701,40 @@
     };
   }
 
+  /**
+   * This student's question mix. Answer events first.
+   * vocab.due_review is never a slice. If that student has no answer events,
+   * use save.practice counts (meaning / spelling / cloze) when those are real.
+   * The two sources are not added together.
+   */
+  function studentModeMix(events, save) {
+    var fromEvents = answerModeMix(events);
+    var eventTotal = 0;
+    var i;
+    for (i = 0; i < fromEvents.counts.length; i++) eventTotal += fromEvents.counts[i];
+    if (eventTotal > 0) {
+      return { labels: fromEvents.labels, counts: fromEvents.counts, basis: "events" };
+    }
+    var practice = asObject(save && save.practice);
+    var pairs = [
+      ["看英选义", practice.meaning],
+      ["拼写", practice.spelling],
+      ["完形", practice.cloze],
+      ["看义产出", practice.production],
+    ];
+    var labels = [];
+    var counts = [];
+    for (i = 0; i < pairs.length; i++) {
+      var row = pairs[i][1];
+      var n = row && typeof row === "object" ? num(row.n) : 0;
+      if (n > 0) {
+        labels.push(pairs[i][0]);
+        counts.push(n);
+      }
+    }
+    return { labels: labels, counts: counts, basis: counts.length ? "practice" : "empty" };
+  }
+
   function dailyAttempt(bucket) {
     if (!bucket || typeof bucket !== "object") return { n: 0, good: 0 };
     return {
@@ -755,8 +789,9 @@
     return [cx + Math.cos(ang) * radius * scale, cy + Math.sin(ang) * radius * scale];
   }
 
-  function svgOpen(w, h, label) {
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + " " + h + '" width="' + w + '" height="' + h + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + escHtml(label) + '">';
+  function svgOpen(w, h, label, chartName) {
+    var chart = chartName ? ' data-chart="' + escHtml(chartName) + '"' : "";
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + " " + h + '" width="' + w + '" height="' + h + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + escHtml(label) + '"' + chart + ">";
   }
 
   function svgNote(w, h, label, message) {
@@ -900,7 +935,12 @@
     var total = 0;
     var i;
     for (i = 0; i < values.length; i++) total += num(values[i]);
-    if (!total) return svgNote(w, h, "题型占比", "还没有答题记录，不编造题型占比");
+    if (!total) {
+      return svgOpen(w, h, "题型占比", "modes") +
+        '<circle cx="110" cy="92" r="54" fill="none" stroke="#d5dbe8" stroke-width="22"/>' +
+        '<text x="110" y="96" font-size="13" text-anchor="middle" fill="#5c677a">暂无答题</text>' +
+        '<text x="180" y="178" font-size="12" text-anchor="middle" fill="#5c677a">还没有答题记录，不编造题型占比</text></svg>';
+    }
     var cx = 96;
     var cy = 100;
     var r = 70;
@@ -932,7 +972,7 @@
       legend += '<rect x="188" y="' + (ly - 10) + '" width="12" height="12" rx="2" fill="' + DONUT_COLORS[k % DONUT_COLORS.length] + '"/>';
       legend += '<text x="206" y="' + ly + '" font-size="12" fill="#1c2430">' + escHtml(labels[k] + " " + num(values[k])) + "</text>";
     }
-    return svgOpen(w, h, "题型占比") + paths + legend + "</svg>";
+    return svgOpen(w, h, "题型占比", "modes") + paths + legend + "</svg>";
   }
 
   /**
@@ -947,7 +987,6 @@
     var any = false;
     var i;
     for (i = 0; i < scores.length; i++) if (scores[i] != null) any = true;
-    if (!any) return svgNote(w, h, "近7日正确率", "近7日正确率样本不足，不画成0");
     var padL = 32;
     var padB = 28;
     var padT = 18;
@@ -980,7 +1019,8 @@
       marks += '<text x="' + x.toFixed(1) + '" y="' + (y - 8).toFixed(1) + '" font-size="11" text-anchor="middle" fill="#1c2430">' + num(scores[j]) + "</text>";
     }
     if (seg.length) marks += '<polyline points="' + seg.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>';
-    return svgOpen(w, h, "近7日正确率") + grid + marks + labs + "</svg>";
+    var note = any ? "" : '<text x="' + (w / 2) + '" y="' + (padT + innerH / 2) + '" font-size="13" text-anchor="middle" fill="#5c677a">近7日正确率样本不足，不画成0</text>';
+    return svgOpen(w, h, "近7日正确率", "accuracy") + grid + marks + labs + note + "</svg>";
   }
 
   function scoreCell(axis) {
@@ -1487,7 +1527,7 @@
         answers7: sum(daily7),
         timeline: timeline,
         masteryBins: masteryBins,
-        modes: answerModeMix(evs),
+        modes: studentModeMix(evs, save),
         accuracy: accuracySeries(save, evs, now),
         abilities: abilities,
         summary: "",
@@ -1643,6 +1683,7 @@
     scoreAbilities: scoreAbilities,
     parentSummary: parentSummary,
     answerModeMix: answerModeMix,
+    studentModeMix: studentModeMix,
     accuracySeries: accuracySeries,
     studentChartSpecs: studentChartSpecs,
     classCsv: classCsv,
@@ -1959,6 +2000,23 @@
     }, fallback);
   }
 
+  var personalEmptyPlugin = {
+    id: "personalEmpty",
+    afterDraw: function (chart) {
+      var msg = chart.options && chart.options.plugins && chart.options.plugins.personalEmpty;
+      if (!msg) return;
+      var area = chart.chartArea || { left: 0, right: chart.width, top: 0, bottom: chart.height };
+      var ctx = chart.ctx;
+      ctx.save();
+      ctx.fillStyle = "#d5e2fb";
+      ctx.font = "13px sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(msg, (area.left + area.right) / 2, (area.top + area.bottom) / 2);
+      ctx.restore();
+    },
+  };
+
   function statChip(label, value) {
     return "<span><b>" + esc(value) + "</b>" + esc(label) + "</span>";
   }
@@ -2059,65 +2117,77 @@
         scales: baseScales(),
       },
     }, specs.activity.labels.map(function (label, i) { return label + " " + specs.activity.data[i]; }).join("\n"));
-    if (!specs.modes.empty) {
-      var modeColors = specs.modes.labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; });
-      mountChart(specs.modes.id, {
-        type: "doughnut",
-        data: { labels: specs.modes.labels, datasets: [{ data: specs.modes.data, backgroundColor: modeColors, borderWidth: 0 }] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: "62%",
-          plugins: { legend: { position: "bottom", labels: { color: axisColor(), boxWidth: 12 } } },
-        },
-      }, specs.modes.labels.map(function (label, i) { return label + " " + specs.modes.data[i]; }).join("\n"));
-    } else {
-      destroyChart(specs.modes.id);
-      showFallback(specs.modes.id, "还没有答题记录，不编造题型占比");
+    var modesHint = $("detail-modes-hint");
+    if (modesHint) {
+      modesHint.textContent = st.modes && st.modes.basis === "practice"
+        ? "事件里没有题型，这张图用存档里的练习次数。到期信号不计入，也不和事件相加。"
+        : "只统计该学员的答题。到期信号不计入。没有答题就不编造占比。";
     }
-    if (!specs.accuracy.empty) {
-      mountChart(specs.accuracy.id, {
-        type: "line",
-        data: {
-          labels: specs.accuracy.labels,
-          datasets: [{
-            label: "正确率",
-            data: specs.accuracy.data,
-            borderColor: "#e6c98a",
-            backgroundColor: "rgba(230,201,138,.16)",
-            fill: false,
-            tension: 0.25,
-            spanGaps: false,
-            pointRadius: 4,
-          }],
+    var modeColors = specs.modes.labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; });
+    var modeNote = specs.modes.empty ? "暂无答题，不编造占比" : "";
+    mountChart(specs.modes.id, {
+      type: "doughnut",
+      data: {
+        labels: specs.modes.labels,
+        datasets: [{ data: specs.modes.data, backgroundColor: modeColors, borderWidth: 0 }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: { display: !specs.modes.empty, position: "bottom", labels: { color: axisColor(), boxWidth: 12 } },
+          personalEmpty: modeNote,
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function (ctx) {
-                  if (ctx.raw == null) return "样本不足";
-                  return ctx.raw + "分";
-                },
+      },
+      plugins: [personalEmptyPlugin],
+    }, specs.modes.labels.length
+      ? specs.modes.labels.map(function (label, i) { return label + " " + specs.modes.data[i]; }).join("\n")
+      : modeNote);
+    var accuracyHint = $("detail-accuracy-hint");
+    if (accuracyHint && specs.accuracy.empty) {
+      accuracyHint.textContent = "近 7 日没有一天达到 " + api.MIN_SAMPLE + " 次答题。坐标还在，缺口不是 0 分。";
+    }
+    mountChart(specs.accuracy.id, {
+      type: "line",
+      data: {
+        labels: specs.accuracy.labels,
+        datasets: [{
+          label: "正确率",
+          data: specs.accuracy.data,
+          borderColor: "#e6c98a",
+          backgroundColor: "rgba(230,201,138,.16)",
+          fill: false,
+          tension: 0.25,
+          spanGaps: false,
+          pointRadius: function (ctx) { return ctx.raw == null ? 0 : 4; },
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          personalEmpty: specs.accuracy.empty ? "样本不足，不画成 0" : "",
+          tooltip: {
+            callbacks: {
+              label: function (ctx) {
+                if (ctx.raw == null) return "样本不足";
+                return ctx.raw + "分";
               },
             },
           },
-          scales: {
-            x: { ticks: { color: axisColor() }, grid: { color: "rgba(190,214,255,.12)" } },
-            y: { min: 0, max: 100, ticks: { color: axisColor(), stepSize: 25 }, grid: { color: "rgba(190,214,255,.12)" } },
-          },
         },
-      }, specs.accuracy.labels.map(function (label, i) {
-        var score = specs.accuracy.data[i];
-        return label + " " + (score == null ? "样本不足" : score);
-      }).join("\n"));
-    } else {
-      destroyChart(specs.accuracy.id);
-      showFallback(specs.accuracy.id, "近 7 日没有一天达到 " + api.MIN_SAMPLE + " 次答题，正确率不画成 0。");
-    }
+        scales: {
+          x: { ticks: { color: axisColor() }, grid: { color: "rgba(190,214,255,.12)" } },
+          y: { min: 0, max: 100, ticks: { color: axisColor(), stepSize: 25 }, grid: { color: "rgba(190,214,255,.12)" } },
+        },
+      },
+      plugins: [personalEmptyPlugin],
+    }, specs.accuracy.labels.map(function (label, i) {
+      var score = specs.accuracy.data[i];
+      return label + " " + (score == null ? "样本不足" : score);
+    }).join("\n"));
     var weakRows = (st.weak || []).slice(0, 20);
     $("student-weak").innerHTML = "<tr><th>单词</th><th>释义</th><th>信号</th></tr>" +
       (weakRows.length ? weakRows.map(function (row) {
