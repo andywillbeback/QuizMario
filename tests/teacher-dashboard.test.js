@@ -45,6 +45,11 @@ assert.ok(js.includes("studentChartSpecs"), "detail charts go through the render
 assert.ok(js.includes("spanGaps: false"), "thin radar points stay gaps");
 assert.ok(js.includes("不画成 0"), "accuracy copy refuses a fake zero");
 assert.ok(html.includes("一键下载全班学情"), "class export button");
+assert.ok(html.includes("请先打开学员报告.html"), "teachers are told to open the report index");
+assert.ok(html.includes("打开「学员」文件夹里的网页"), "download copy points at 学员 HTML");
+assert.ok(html.includes("不要先打开附表"), "spreadsheet is not the lead file");
+assert.ok(js.includes("请解压后先打开「请先打开学员报告.html」"), "status after download names the index");
+assert.ok(js.includes("打开「学员」文件夹里的网页给家长看"), "status tells teachers to open 学员 pages");
 assert.ok(html.includes('id="board-class"'), "class filter");
 assert.ok(html.includes("未填班级"));
 assert.ok(js.includes("下载该班学情"), "per-class zip button");
@@ -477,11 +482,68 @@ const escaped = api.studentReportHtml({
 assert.ok(escaped.indexOf("&lt;b&gt;") > 0);
 assert.ok(escaped.indexOf("<b>") === -1);
 
+function zipEntries(buf) {
+  const entries = [];
+  let o = 0;
+  while (o + 30 <= buf.length && buf.readUInt32LE(o) === 0x04034b50) {
+    const nameLen = buf.readUInt16LE(o + 26);
+    const extraLen = buf.readUInt16LE(o + 28);
+    const size = buf.readUInt32LE(o + 18);
+    const name = buf.slice(o + 30, o + 30 + nameLen).toString("utf8");
+    const start = o + 30 + nameLen + extraLen;
+    entries.push({ name: name, data: buf.slice(start, start + size).toString("utf8") });
+    o = start + size;
+  }
+  return entries;
+}
+
+function assertReportPack(entries, studentNames) {
+  assert.ok(entries.length >= 2, "index plus at least one student, or index plus csv");
+  assert.strictEqual(entries[0].name, "请先打开学员报告.html", "root file is the report index, not a spreadsheet");
+  assert.strictEqual(entries[entries.length - 1].name, "附表/班级汇总.csv", "csv is buried and is not the first entry");
+  assert.ok(entries[0].data.indexOf("图文报告") > 0);
+  assert.ok(entries[0].data.indexOf("给家长看") > 0);
+  assert.ok(entries[0].data.indexOf("简短评价") > 0);
+  assert.ok(entries[0].data.indexOf("不要先打开") > 0);
+  assert.ok(entries[0].data.indexOf("<script") === -1);
+  const csvNames = entries.filter(function (entry) { return /\.csv$/i.test(entry.name); }).map(function (entry) { return entry.name; });
+  assert.deepStrictEqual(csvNames, ["附表/班级汇总.csv"]);
+  assert.ok(!entries.some(function (entry) {
+    return entry.name === "班级学情.csv" || (!entry.name.includes("/") && /\.csv$/i.test(entry.name));
+  }), "no root csv for Excel to open first");
+  const pages = entries.filter(function (entry) { return entry.name.indexOf("学员/") === 0 && entry.name.endsWith(".html"); });
+  assert.strictEqual(pages.length, studentNames.length);
+  studentNames.forEach(function (name) {
+    const page = pages.filter(function (entry) { return entry.name === "学员/" + name + ".html"; })[0];
+    assert.ok(page, "missing " + name);
+    assert.ok(entries[0].data.indexOf("学员/" + name + ".html") > 0, "index lists " + name);
+    assert.ok(page.data.indexOf("简短评价") > 0, name);
+    assert.ok(page.data.indexOf("学情雷达") > 0, name);
+    assert.ok(page.data.indexOf("题型占比") > 0, name);
+    assert.ok(page.data.indexOf("近7日正确率") > 0, name);
+    assert.ok(page.data.indexOf("掌握度") > 0, name);
+    assert.ok(page.data.indexOf("<svg") > 0, name);
+    assert.ok(page.data.indexOf("<script") === -1, name);
+  });
+}
+
+const classOneEntries = zipEntries(Buffer.from(classOne.bytes));
+assertReportPack(classOneEntries, ["小王"]);
+assert.ok(classOneEntries[0].data.indexOf("1 · 图文报告") > 0);
+assert.ok(classOneEntries[0].data.indexOf("学员2") === -1);
+assert.strictEqual(classOneEntries.filter(function (entry) { return entry.name.indexOf("学员/") === 0; }).length, 1);
+assert.ok(classOneEntries[classOneEntries.length - 1].data.indexOf("小王") > 0);
+assert.ok(classOneEntries[classOneEntries.length - 1].data.indexOf("student-b") === -1);
+
 const zip = Buffer.from(api.classZip(board, now));
 assert.strictEqual(zip[0], 0x50);
 assert.strictEqual(zip[1], 0x4b);
+const entries = zipEntries(zip);
+assertReportPack(entries, ["小王", "学员2"]);
 const zipText = zip.toString("utf8");
-assert.ok(zipText.indexOf("班级学情.csv") > 0);
+assert.ok(zipText.indexOf("班级学情.csv") === -1);
+assert.ok(zipText.indexOf("附表/班级汇总.csv") > 0);
+assert.ok(zipText.indexOf("请先打开学员报告.html") > 0);
 assert.ok(zipText.indexOf("学员/小王.html") > 0);
 assert.ok(zipText.indexOf("样本不足") > 0);
 assert.ok(zipText.indexOf("简短评价") > 0);
@@ -492,6 +554,16 @@ assert.ok(zipText.indexOf("an***@school.com") > 0);
 assert.ok(zipText.indexOf("anchor@school.com") === -1);
 assert.ok(zipText.indexOf("student-a") === -1);
 assert.ok(!/eyJ[A-Za-z0-9_-]{10,}\./.test(zipText));
+
+const escapedPack = zipEntries(Buffer.from(api.classZip({
+  students: [{ name: "<b>", email: "a***@x.com", summary: "安全<script>", cls: "2", abilities: [], weak: [], line: [] }],
+}, now)));
+assert.ok(escapedPack[0].data.indexOf("&lt;b&gt;") > 0);
+assert.ok(escapedPack[0].data.indexOf("<b>") === -1);
+assert.ok(escapedPack[0].data.indexOf("<script>") === -1);
+assert.ok(escapedPack[0].data.indexOf("学员/b.html") > 0);
+assert.ok(escapedPack[1].data.indexOf("&lt;b&gt;") > 0);
+assert.ok(escapedPack[1].data.indexOf("<script") === -1);
 
 const phrases = [];
 for (let i = 0; i < 5; i++) {
