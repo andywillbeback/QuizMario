@@ -33,6 +33,12 @@ assert.ok(html.includes('id="chart-radar"'), "ability radar");
 assert.ok(html.includes('id="chart-student-mastery"'), "per-student mastery bars");
 assert.ok(html.includes('id="chart-student-modes"'), "personal question mix");
 assert.ok(html.includes('id="chart-student-accuracy"'), "personal accuracy trend");
+assert.ok(html.includes('data-personal-chart="modes"') && html.includes('data-personal-chart="accuracy"'));
+assert.ok(html.indexOf('id="chart-student-modes"') < html.indexOf('id="chart-radar"'), "type mix is in the personal panel, above the radar");
+assert.ok(html.indexOf('id="chart-student-accuracy"') < html.indexOf('id="chart-student"'), "accuracy chart is in the personal panel");
+assert.ok(js.includes("mountChart(specs.modes.id"), "type mix is always mounted");
+assert.ok(js.includes("mountChart(specs.accuracy.id"), "accuracy chart is always mounted");
+assert.ok(!js.includes("destroyChart(specs.modes.id)") && !js.includes("destroyChart(specs.accuracy.id)"), "thin samples do not remove the personal charts");
 assert.ok(html.includes('id="detail-summary"'), "parent summary");
 assert.ok(html.includes("简短评价"), "written evaluation label");
 assert.ok(js.includes("studentChartSpecs"), "detail charts go through the render hook");
@@ -266,6 +272,31 @@ function sentenceCount(text) {
   return String(text || "").split("。").filter(function (part) { return part.trim(); }).length;
 }
 
+function svgByChart(html, name) {
+  const key = 'data-chart="' + name + '"';
+  const at = html.indexOf(key);
+  assert.ok(at > 0, name + " svg");
+  const start = html.lastIndexOf("<svg", at);
+  const end = html.indexOf("</svg>", at);
+  return html.slice(start, end + 6);
+}
+
+const dueMix = api.answerModeMix([
+  { event_type: "vocab.due_review", headword: "cat", payload: { task_direction: "meaning" } },
+  { event_type: "vocab.answer_wrong", headword: "cat", payload: { task_direction: "spelling" } },
+]);
+assert.deepStrictEqual(dueMix.labels, ["拼写"]);
+assert.deepStrictEqual(dueMix.counts, [1]);
+const practiceMix = api.studentModeMix([], { practice: { meaning: { n: 8, good: 6 }, spelling: { n: 2, good: 1 } } });
+assert.strictEqual(practiceMix.basis, "practice");
+assert.deepStrictEqual(practiceMix.labels, ["看英选义", "拼写"]);
+assert.deepStrictEqual(practiceMix.counts, [8, 2]);
+const dueSaved = api.studentModeMix([
+  { event_type: "vocab.due_review", headword: "cat", payload: {} },
+], { practice: { meaning: { n: 6, good: 5 } } });
+assert.deepStrictEqual(dueSaved.labels, ["看英选义"]);
+assert.strictEqual(dueSaved.basis, "practice");
+
 assert.strictEqual(api.axisOf({
   event_type: "vocab.answer_correct",
   headword: "be able to",
@@ -403,6 +434,10 @@ assert.ok(page.indexOf("不画成0") === -1, "a real accuracy series is drawn");
 assert.ok(page.indexOf(">80<") > 0, "accuracy point is labeled on the static chart");
 assert.ok(page.indexOf("rgba(46,111,196,.22)") > 0, "full sample draws the radar shape");
 assert.ok(page.indexOf('class="chart wide"') > 0);
+assert.ok(page.indexOf('data-chart="modes"') > 0);
+assert.ok(page.indexOf('data-chart="accuracy"') > 0);
+assert.ok(svgByChart(page, "accuracy").indexOf("<circle") > 0, "a real accuracy day is a point on the ZIP chart");
+assert.ok(svgByChart(page, "modes").indexOf("看英选义") > 0);
 assert.ok(page.indexOf("li***@school.com") > 0);
 assert.ok(page.indexOf("lihua@school.com") === -1);
 assert.ok(page.indexOf("<script") === -1);
@@ -411,6 +446,19 @@ const thinPage = api.studentReportHtml(student, "2026-10-24");
 assert.ok(thinPage.indexOf(student.summary) > 0);
 assert.ok(thinPage.indexOf("样本不足") > 0);
 assert.ok(thinPage.indexOf("不画成0") > 0);
+assert.ok(thinPage.indexOf('data-chart="modes"') > 0);
+assert.ok(thinPage.indexOf('data-chart="accuracy"') > 0);
+const thinAccuracy = svgByChart(thinPage, "accuracy");
+assert.ok(thinAccuracy.indexOf("<circle") === -1, "days under 5 attempts are gaps, not zero dots");
+assert.ok(thinAccuracy.indexOf(">100<") > 0, "accuracy chart still draws the 0–100 axis");
+const thinModes = svgByChart(thinPage, "modes");
+assert.ok(thinModes.indexOf("看英选义") > 0);
+assert.ok(thinModes.indexOf("到期") === -1);
+const quietPage = api.studentReportHtml(quiet, "2026-10-24");
+assert.ok(quietPage.indexOf('data-chart="modes"') > 0);
+assert.ok(quietPage.indexOf('data-chart="accuracy"') > 0);
+assert.ok(svgByChart(quietPage, "modes").indexOf("<circle") > 0, "empty mix is still a chart, with no invented slice count");
+assert.ok(svgByChart(quietPage, "accuracy").indexOf("<circle") === -1);
 assert.ok(thinPage.indexOf("rgba(46,111,196,.22)") === -1, "thin axes do not invent a radar shape");
 assert.ok(thinPage.indexOf("advice") > 0);
 assert.ok(thinPage.indexOf("看英选义") > 0);
