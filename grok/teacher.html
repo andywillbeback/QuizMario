@@ -74,8 +74,9 @@
   }
   .panel h3 { margin: 0 0 4px; }
   .panel .hint { margin: 0 0 8px; color: rgba(226,234,248,.62); font-size: .75rem; line-height: 1.4; }
-  .chart-box { position: relative; height: 240px; }
+  .chart-box { position: relative; height: 240px; width: 100%; min-width: 0; }
   .chart-box.tall { height: 280px; }
+  .chart-box canvas { display: block; max-width: 100%; }
   .span-2 { grid-column: 1 / -1; }
   .fallback { margin: 8px 0 0; font-size: .8rem; color: var(--cyan); white-space: pre-wrap; }
   .tbl-wrap { overflow-x: auto; }
@@ -98,19 +99,33 @@
     border: 1px dashed rgba(230,201,138,.45);
     background: rgba(9,14,28,.35);
   }
-  #detail { border-style: solid; border-color: rgba(255,255,255,.16); }
+  #detail { border-style: solid; border-color: rgba(255,255,255,.16); max-width: 100%; }
+  .detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .detail-head h3 { margin: 0; }
   .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #detail .panel { min-width: 0; }
   #student-timeline { margin: 0; padding-left: 1.1rem; }
   #student-timeline li { margin: 4px 0; }
+  .summary-kicker { margin: 12px 0 6px; color: var(--gold); font-size: .82rem; letter-spacing: .08em; }
   .parent-summary {
-    margin: 8px 0 12px;
-    padding: 12px 14px;
+    margin: 0 0 12px;
+    padding: 14px 16px;
     border-radius: 14px;
-    background: rgba(230, 201, 138, 0.08);
-    border: 1px solid rgba(230, 201, 138, 0.28);
-    line-height: 1.65;
-    font-size: .92rem;
+    background: rgba(230, 201, 138, 0.1);
+    border: 1px solid rgba(230, 201, 138, 0.35);
+    line-height: 1.7;
+    font-size: 1rem;
   }
+  .stat-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  .stat-row span {
+    background: rgba(9,14,28,.46);
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: .75rem;
+    color: rgba(226,234,248,.72);
+  }
+  .stat-row b { display: block; color: var(--gold); font-size: 1rem; }
   .ability-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 4px 0 0; font-size: .8rem; }
   .ability-legend .is-thin { color: #8b93a7; }
   #cloud-status, #legacy-status, #gate-msg { font-size: .85rem; margin-top: 6px; color: var(--gold); min-height: 1.2em; }
@@ -128,6 +143,8 @@
   @media (max-width: 800px) {
     .cards, .chart-grid, .detail-grid { grid-template-columns: 1fr; }
     .span-2 { grid-column: auto; }
+    body.student-open .class-only { display: none !important; }
+    #detail .chart-box { height: 230px; }
   }
   @media (max-width: 420px) {
     .gold-sign { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
@@ -164,20 +181,20 @@
       <button type="button" class="ghost" id="btn-refresh">刷新</button>
       <button type="button" class="ghost" id="btn-logout">退出</button>
     </div>
-    <h2>教师看板 · 班级云进度</h2>
-    <p class="sub">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。点学员可看认词、搭配、产出、巩固四项学情。样本少于 5 次时该项显示样本不足，坐标轴为灰色。名单按班级分组。一键下载一次只打包一个班级，用当前已加载的数据，不另取密钥。</p>
+    <h2 class="class-only">教师看板 · 班级云进度</h2>
+    <p class="sub class-only">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。点学员可看个人图表、认词、搭配、产出、巩固，以及一段给家长的简短评价。样本少于 5 次时该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级，压缩包里每位学员有一页图文报告。用当前已加载的数据，不另取密钥。</p>
     <p id="cloud-status" role="status"></p>
-    <div class="cards" id="kpi-strip">
+    <div class="cards class-only" id="kpi-strip">
       <div><b id="kpi-students">—</b>学员数</div>
       <div><b id="kpi-active">—</b>近7日活跃</div>
       <div><b id="kpi-mastery">—</b>平均掌握%</div>
       <div><b id="kpi-weak">—</b>薄弱词数</div>
     </div>
-    <div id="empty-state" hidden>
+    <div id="empty-state" class="class-only" hidden>
       <h3>还没有学员云端进度</h3>
       <p class="sub">学生用自己的邮箱登录并练习后，这里会画出掌握度、近 7 日练习、题型占比和薄弱词。现在没有任何云端行。</p>
     </div>
-    <div id="chart-grid" class="chart-grid">
+    <div id="chart-grid" class="chart-grid class-only">
       <article class="panel">
         <h3>掌握度分布</h3>
         <p class="hint">已接触词条的 mastery 星级。0 / 0.5 / 1 / 2 / 3。</p>
@@ -203,6 +220,7 @@
         <p class="fallback" id="chart-weak-fallback" hidden></p>
       </article>
     </div>
+    <div id="roster" class="class-only">
     <h3>学员</h3>
     <div class="class-filter">
       <label for="board-class">班级</label>
@@ -221,18 +239,29 @@
         <tbody id="student-body"></tbody>
       </table>
     </div>
+    </div>
     <section id="detail" hidden aria-live="polite">
-      <button type="button" class="ghost" id="btn-detail-back">返回列表</button>
-      <h3 id="detail-title">学员</h3>
-      <p class="sub" id="detail-progress"></p>
+      <div class="detail-head">
+        <button type="button" class="ghost" id="btn-detail-back">返回列表</button>
+        <h3 id="detail-title">学员</h3>
+      </div>
+      <p class="summary-kicker">简短评价</p>
       <p class="parent-summary" id="detail-summary"></p>
+      <div class="stat-row" id="detail-stats"></div>
+      <p class="sub" id="detail-progress"></p>
       <div class="detail-grid">
         <article class="panel">
           <h3>学情雷达</h3>
-          <p class="hint" id="detail-radar-hint">认词、搭配、产出、巩固。样本少于 5 次时该项为样本不足，坐标轴为灰色。</p>
+          <p class="hint" id="detail-radar-hint">认词、搭配、产出、巩固。样本少于 5 次时该项为样本不足，坐标轴为灰色，不记成 0 分。</p>
           <div class="chart-box"><canvas id="chart-radar" aria-label="学情雷达"></canvas></div>
           <p class="ability-legend" id="ability-legend"></p>
           <p class="fallback" id="chart-radar-fallback" hidden></p>
+        </article>
+        <article class="panel">
+          <h3>近7日正确率</h3>
+          <p class="hint" id="detail-accuracy-hint">按天计算。当天答题少于 5 次就留空，不画成 0。优先用存档 daily，不够才用当天答题事件，两套数字不相加。</p>
+          <div class="chart-box"><canvas id="chart-student-accuracy" aria-label="个人近7日正确率"></canvas></div>
+          <p class="fallback" id="chart-student-accuracy-fallback" hidden></p>
         </article>
         <article class="panel">
           <h3>个人近7日</h3>
@@ -245,6 +274,12 @@
           <p class="hint">该学员已接触词条的掌握星级。0 / 0.5 / 1 / 2 / 3。</p>
           <div class="chart-box"><canvas id="chart-student-mastery" aria-label="个人掌握度"></canvas></div>
           <p class="fallback" id="chart-student-mastery-fallback" hidden></p>
+        </article>
+        <article class="panel">
+          <h3>题型占比</h3>
+          <p class="hint">只统计该学员的答题。到期信号不计入。没有答题就不画。</p>
+          <div class="chart-box"><canvas id="chart-student-modes" aria-label="个人题型占比"></canvas></div>
+          <p class="fallback" id="chart-student-modes-fallback" hidden></p>
         </article>
         <article class="panel">
           <h3>薄弱词</h3>

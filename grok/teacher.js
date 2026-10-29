@@ -178,6 +178,7 @@
     if (dir === "spelling" || detail === "spelling" || kind === "typed_spelling") return "拼写";
     if (dir === "cloze" || detail === "cloze" || kind === "cloze") return "完形";
     if (dir === "production" || dir === "form" || detail === "form" || kind === "mc_production") return "看义产出";
+    if (dir === "collocation" || dir === "related" || dir === "related_item" || dir === "phrase" || detail === "collocation" || detail === "phrase") return "搭配";
     if (dir) return dir;
     var type = ev && ev.event_type;
     return EVENT_LABELS[type] || type || "其他";
@@ -597,17 +598,54 @@
     ];
   }
 
-  function abilityPhrase(axis) {
-    var plain = {
+  function plainAxis(axis) {
+    return {
       recognition: "看英文认意思",
       collocation: "词组搭配",
       production: "拼写和按中文产出",
       retention: "隔天巩固",
-    }[axis.id] || axis.label;
-    if (axis.score == null) return plain + "：样本不足";
-    if (axis.score >= 85) return plain + "比较稳（" + axis.score + "分）";
-    if (axis.score >= 60) return plain + "正在变熟（" + axis.score + "分）";
-    return plain + "还需要多练（" + axis.score + "分）";
+    }[axis && axis.id] || (axis && axis.label) || "这项";
+  }
+
+  /** Wording only. The score itself still comes from scoreAbilities. */
+  function bandOf(score) {
+    if (score >= 85) return "steady";
+    if (score >= 70) return "growing";
+    return "weak";
+  }
+
+  function bandTail(band, score) {
+    if (band === "steady") return "比较稳（" + score + "分）";
+    if (band === "growing") return "正在变熟（" + score + "分）";
+    return "还需要多练（" + score + "分）";
+  }
+
+  /** One sentence. Thin axes stay 样本不足; a real 0 is said as 0分. */
+  function axisSentence(axes) {
+    var clauses = [];
+    var i = 0;
+    axes = axes || [];
+    while (i < axes.length) {
+      if (axes[i].score == null) {
+        var thin = [];
+        while (i < axes.length && axes[i].score == null) {
+          thin.push(plainAxis(axes[i]));
+          i++;
+        }
+        clauses.push(thin.join("、") + (thin.length > 1 ? "都还是样本不足，先不打分" : "样本不足，先不打分"));
+      } else {
+        var score = axes[i].score;
+        var band = bandOf(score);
+        var names = [];
+        while (i < axes.length && axes[i].score != null && axes[i].score === score && bandOf(axes[i].score) === band) {
+          names.push(plainAxis(axes[i]));
+          i++;
+        }
+        clauses.push(names.join("、") + bandTail(band, score));
+      }
+    }
+    if (!clauses.length) return "四项学情样本不足，先不打分。";
+    return clauses.join("；") + "。";
   }
 
   function parentSummary(st) {
@@ -619,13 +657,16 @@
     open += "，已接触 " + touched + " 个词";
     if (touched > 0) open += "，已学会 " + num(st.learned) + " 个";
     open += "。";
-    var axes = st.abilities || [];
-    var bits = [];
-    for (var i = 0; i < axes.length; i++) bits.push(abilityPhrase(axes[i]));
-    var recent = num(st.answers7) || num(st.practice7);
-    var activity = st.active7
-      ? "近 7 天有练习，记录到约 " + recent + " 次答题。"
-      : "近 7 天还没有新的练习。";
+    var activity;
+    if (!st.active7) {
+      activity = "近 7 天还没有新的练习。";
+    } else if (num(st.answers7) > 0 && num(st.practice7) > 0 && num(st.answers7) !== num(st.practice7)) {
+      activity = "近 7 天有练习，存档里有 " + num(st.answers7) + " 次答题，另外记到 " + num(st.practice7) + " 次练习事件。";
+    } else if (num(st.answers7) > 0) {
+      activity = "近 7 天有练习，存档里有 " + num(st.answers7) + " 次答题。";
+    } else {
+      activity = "近 7 天有练习，记录到 " + num(st.practice7) + " 次练习事件。";
+    }
     var weakLine;
     var weak = st.weak || [];
     if (weak.length) {
@@ -640,7 +681,67 @@
     } else {
       weakLine = "练习记录还很少，可以先看哪几项是样本不足。";
     }
-    return open + bits.join("，") + "。" + activity + weakLine;
+    return open + activity + axisSentence(st.abilities) + weakLine;
+  }
+
+  /** Answer events only. due_review and the wrong-book signal are not question types. */
+  function answerModeMix(events) {
+    var map = Object.create(null);
+    var list = events || [];
+    for (var i = 0; i < list.length; i++) {
+      if (!answerOutcome(list[i])) continue;
+      var label = modeLabel(list[i]);
+      map[label] = (map[label] || 0) + 1;
+    }
+    var labels = Object.keys(map);
+    labels.sort(function (a, b) { return map[b] - map[a] || (a < b ? -1 : 1); });
+    return {
+      labels: labels,
+      counts: labels.map(function (label) { return map[label]; }),
+    };
+  }
+
+  function dailyAttempt(bucket) {
+    if (!bucket || typeof bucket !== "object") return { n: 0, good: 0 };
+    return {
+      n: num(bucket.c) + num(bucket.w) + num(bucket.unk),
+      good: num(bucket.c),
+    };
+  }
+
+  /**
+   * One point per day in the window. A day with fewer than MIN_SAMPLE attempts
+   * is null, never 0. Daily counts and event counts are not added together.
+   * 不会 sits in the denominator.
+   */
+  function accuracySeries(save, events, now) {
+    var window7 = dayWindow(now, 7);
+    var daily = asObject(save && save.daily);
+    var byDay = Object.create(null);
+    var list = events || [];
+    for (var i = 0; i < list.length; i++) {
+      var outcome = answerOutcome(list[i]);
+      if (!outcome) continue;
+      var key = dayKey(list[i].created_at);
+      if (!byDay[key]) byDay[key] = { n: 0, good: 0 };
+      byDay[key].n++;
+      if (outcome === "correct") byDay[key].good++;
+    }
+    var labels = [];
+    var scores = [];
+    var ns = [];
+    for (var d = 0; d < window7.labels.length; d++) {
+      var day = window7.labels[d];
+      var fromDaily = dailyAttempt(daily[day]);
+      var fromEvents = byDay[day] || { n: 0, good: 0 };
+      var sample = null;
+      if (fromDaily.n >= MIN_SAMPLE) sample = fromDaily;
+      else if (fromEvents.n >= MIN_SAMPLE) sample = fromEvents;
+      labels.push(shortDay(day));
+      ns.push(sample ? sample.n : Math.max(fromDaily.n, fromEvents.n));
+      scores.push(sample ? clampScore(sample.good / sample.n * 100) : null);
+    }
+    return { labels: labels, scores: scores, ns: ns };
   }
 
   function escHtml(s) {
@@ -654,11 +755,21 @@
     return [cx + Math.cos(ang) * radius * scale, cy + Math.sin(ang) * radius * scale];
   }
 
+  function svgOpen(w, h, label) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + " " + h + '" width="' + w + '" height="' + h + '" preserveAspectRatio="xMidYMid meet" role="img" aria-label="' + escHtml(label) + '">';
+  }
+
+  function svgNote(w, h, label, message) {
+    return svgOpen(w, h, label) +
+      '<rect x="0" y="0" width="' + w + '" height="' + h + '" rx="12" fill="#f4f7fb"/>' +
+      '<text x="' + (w / 2) + '" y="' + (h / 2) + '" font-size="13" text-anchor="middle" fill="#5c677a">' + escHtml(message) + "</text></svg>";
+  }
+
   function svgRadar(abilities) {
     var list = abilities || [];
-    var cx = 160;
-    var cy = 148;
-    var radius = 78;
+    var cx = 180;
+    var cy = 150;
+    var radius = 70;
     var n = list.length || 4;
     var grid = "";
     for (var g = 1; g <= 4; g++) {
@@ -689,40 +800,67 @@
       labels += '<text x="' + lp[0].toFixed(1) + '" y="' + lp[1].toFixed(1) + '" font-size="12" text-anchor="middle" fill="' + (thin ? "#8b93a7" : "#1c2430") + '">' + escHtml(text) + "</text>";
     }
     var shape = "";
-    if (poly.length >= 3) {
+    if (poly.length === n && n >= 3) {
       shape = '<polygon points="' + poly.join(" ") + '" fill="rgba(46,111,196,.22)" stroke="#2e6fc4" stroke-width="2"/>';
-    } else if (poly.length === 2) {
-      shape = '<polyline points="' + poly.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>';
     }
-    return '<svg viewBox="0 0 320 300" role="img" aria-label="学情雷达">' + grid + spokes + shape + dots + labels + "</svg>";
+    return svgOpen(360, 300, "学情雷达") + grid + spokes + shape + dots + labels + "</svg>";
   }
 
-  function svgLine(labels, values) {
+  function lineXs(count, padL, innerW) {
+    var xs = [];
+    var n = count || 1;
+    for (var j = 0; j < count; j++) {
+      xs.push(padL + (n === 1 ? innerW / 2 : j * innerW / (n - 1)));
+    }
+    return xs;
+  }
+
+  /** Activity counts. Zero is a real count. extraValues draws the practice-event line. */
+  function svgLine(labels, values, extraValues) {
     labels = labels || [];
     values = values || [];
+    extraValues = extraValues || null;
     var w = 360;
-    var h = 168;
+    var h = 188;
     var padL = 28;
     var padB = 28;
-    var padT = 14;
-    var padR = 28;
+    var padT = 22;
+    var padR = 16;
     var max = 1;
-    for (var i = 0; i < values.length; i++) if (num(values[i]) > max) max = num(values[i]);
+    var i;
+    for (i = 0; i < values.length; i++) if (num(values[i]) > max) max = num(values[i]);
+    if (extraValues) {
+      for (i = 0; i < extraValues.length; i++) if (num(extraValues[i]) > max) max = num(extraValues[i]);
+    }
     var innerW = w - padL - padR;
     var innerH = h - padT - padB;
-    var pts = [];
-    var circles = "";
-    var labs = "";
-    var count = values.length || 1;
-    for (var j = 0; j < values.length; j++) {
-      var x = padL + (count === 1 ? innerW / 2 : j * innerW / (count - 1));
-      var y = padT + innerH - (num(values[j]) / max) * innerH;
-      pts.push(x.toFixed(1) + "," + y.toFixed(1));
-      circles += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="#2e6fc4"/>';
-      labs += '<text x="' + x.toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="#5c677a">' + escHtml(labels[j] || "") + "</text>";
+    var count = Math.max(values.length, extraValues ? extraValues.length : 0);
+    var xs = lineXs(count, padL, innerW);
+    function series(data, color, dash) {
+      var pts = [];
+      var circles = "";
+      for (var j = 0; j < data.length; j++) {
+        var x = xs[j];
+        var y = padT + innerH - (num(data[j]) / max) * innerH;
+        pts.push(x.toFixed(1) + "," + y.toFixed(1));
+        circles += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3" fill="' + color + '"/>';
+        if (num(data[j]) > 0) {
+          var ly = y < padT + 16 ? y + 14 : y - 8;
+          circles += '<text x="' + x.toFixed(1) + '" y="' + ly.toFixed(1) + '" font-size="10" text-anchor="middle" fill="' + color + '">' + num(data[j]) + "</text>";
+        }
+      }
+      var dashAttr = dash ? ' stroke-dasharray="5 4"' : "";
+      return '<polyline points="' + pts.join(" ") + '" fill="none" stroke="' + color + '" stroke-width="2"' + dashAttr + "/>" + circles;
     }
-    return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="近7日练习"><polyline points="' +
-      pts.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>' + circles + labs + "</svg>";
+    var labs = "";
+    for (var j = 0; j < count; j++) {
+      labs += '<text x="' + xs[j].toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="#5c677a">' + escHtml(labels[j] || "") + "</text>";
+    }
+    var legend = extraValues
+      ? '<text x="' + padL + '" y="14" font-size="10" fill="#2e6fc4">答题</text><text x="' + (padL + 36) + '" y="14" font-size="10" fill="#b8860b">练习事件</text>'
+      : "";
+    return svgOpen(w, h, "近7日练习") + legend + series(values, "#2e6fc4", false) +
+      (extraValues ? series(extraValues, "#b8860b", true) : "") + labs + "</svg>";
   }
 
   function svgBars(labels, values) {
@@ -746,10 +884,103 @@
       var bh = (num(values[j]) / max) * innerH;
       var x = padL + j * slot + (slot - barW) / 2;
       var y = padT + innerH - bh;
-      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="4" fill="#2f9e8f"/>';
+      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(0, bh).toFixed(1) + '" rx="4" fill="#2f9e8f"/>';
       labs += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="#5c677a">' + escHtml(labels[j]) + "</text>";
     }
-    return '<svg viewBox="0 0 ' + w + " " + h + '" role="img" aria-label="掌握度">' + bars + labs + "</svg>";
+    return svgOpen(w, h, "掌握度") + bars + labs + "</svg>";
+  }
+
+  var DONUT_COLORS = ["#2e6fc4", "#2f9e8f", "#c9842e", "#c45b7a", "#6b5bb8", "#b89a2e", "#3d8fb5"];
+
+  function svgDonut(labels, values) {
+    labels = labels || [];
+    values = values || [];
+    var w = 360;
+    var h = 200;
+    var total = 0;
+    var i;
+    for (i = 0; i < values.length; i++) total += num(values[i]);
+    if (!total) return svgNote(w, h, "题型占比", "还没有答题记录，不编造题型占比");
+    var cx = 96;
+    var cy = 100;
+    var r = 70;
+    var ir = 42;
+    var angle = -Math.PI / 2;
+    var paths = "";
+    for (i = 0; i < values.length; i++) {
+      var frac = num(values[i]) / total;
+      if (frac <= 0) continue;
+      var color = DONUT_COLORS[i % DONUT_COLORS.length];
+      if (frac >= 0.999) {
+        paths += '<circle cx="' + cx + '" cy="' + cy + '" r="' + ((r + ir) / 2) + '" fill="none" stroke="' + color + '" stroke-width="' + (r - ir) + '"/>';
+        break;
+      }
+      var a0 = angle;
+      var a1 = angle + frac * Math.PI * 2;
+      angle = a1;
+      var large = (a1 - a0) > Math.PI ? 1 : 0;
+      var p = function (rad, radius) {
+        return (cx + Math.cos(rad) * radius).toFixed(1) + " " + (cy + Math.sin(rad) * radius).toFixed(1);
+      };
+      paths += '<path d="M ' + p(a0, r) + " A " + r + " " + r + " 0 " + large + " 1 " + p(a1, r) +
+        " L " + p(a1, ir) + " A " + ir + " " + ir + " 0 " + large + " 0 " + p(a0, ir) + ' Z" fill="' + color + '"/>';
+    }
+    var legend = "";
+    var shown = Math.min(labels.length, 6);
+    for (var k = 0; k < shown; k++) {
+      var ly = 36 + k * 24;
+      legend += '<rect x="188" y="' + (ly - 10) + '" width="12" height="12" rx="2" fill="' + DONUT_COLORS[k % DONUT_COLORS.length] + '"/>';
+      legend += '<text x="206" y="' + ly + '" font-size="12" fill="#1c2430">' + escHtml(labels[k] + " " + num(values[k])) + "</text>";
+    }
+    return svgOpen(w, h, "题型占比") + paths + legend + "</svg>";
+  }
+
+  /**
+   * Fixed 0–100 scale. Null days are gaps, not zeros.
+   * A plotted 0 means every sampled answer that day was wrong.
+   */
+  function svgAccuracy(labels, scores) {
+    labels = labels || [];
+    scores = scores || [];
+    var w = 360;
+    var h = 188;
+    var any = false;
+    var i;
+    for (i = 0; i < scores.length; i++) if (scores[i] != null) any = true;
+    if (!any) return svgNote(w, h, "近7日正确率", "近7日正确率样本不足，不画成0");
+    var padL = 32;
+    var padB = 28;
+    var padT = 18;
+    var padR = 12;
+    var innerW = w - padL - padR;
+    var innerH = h - padT - padB;
+    var xs = lineXs(scores.length, padL, innerW);
+    var grid = "";
+    for (var g = 0; g <= 2; g++) {
+      var gy = padT + innerH - (g / 2) * innerH;
+      grid += '<line x1="' + padL + '" y1="' + gy.toFixed(1) + '" x2="' + (w - padR) + '" y2="' + gy.toFixed(1) + '" stroke="#e4e8f0" stroke-width="1"/>';
+      grid += '<text x="4" y="' + (gy + 4).toFixed(1) + '" font-size="10" fill="#8b93a7">' + (g * 50) + "</text>";
+    }
+    var seg = [];
+    var marks = "";
+    var labs = "";
+    for (var j = 0; j < scores.length; j++) {
+      var x = xs[j];
+      labs += '<text x="' + x.toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="' + (scores[j] == null ? "#b7becc" : "#5c677a") + '">' + escHtml(labels[j] || "") + "</text>";
+      if (scores[j] == null) {
+        if (seg.length) {
+          marks += '<polyline points="' + seg.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>';
+          seg = [];
+        }
+        continue;
+      }
+      var y = padT + innerH - (Math.max(0, Math.min(100, num(scores[j]))) / 100) * innerH;
+      seg.push(x.toFixed(1) + "," + y.toFixed(1));
+      marks += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="3.5" fill="#2e6fc4"/>';
+      marks += '<text x="' + x.toFixed(1) + '" y="' + (y - 8).toFixed(1) + '" font-size="11" text-anchor="middle" fill="#1c2430">' + num(scores[j]) + "</text>";
+    }
+    if (seg.length) marks += '<polyline points="' + seg.join(" ") + '" fill="none" stroke="#2e6fc4" stroke-width="2"/>';
+    return svgOpen(w, h, "近7日正确率") + grid + marks + labs + "</svg>";
   }
 
   function scoreCell(axis) {
@@ -802,33 +1033,112 @@
     return lines.join("\n");
   }
 
+  function sameSeries(a, b) {
+    if (!a || !b || a.length !== b.length) return false;
+    for (var i = 0; i < a.length; i++) if (num(a[i]) !== num(b[i])) return false;
+    return true;
+  }
+
+  function activityExtra(st) {
+    if (!st || st.lineSource !== "daily") return null;
+    if (!(sum(st.eventLine || []) > 0)) return null;
+    if (sameSeries(st.line, st.eventLine)) return null;
+    return st.eventLine;
+  }
+
+  function studentChartSpecs(st) {
+    st = st || {};
+    var axes = st.abilities || [];
+    var bins = st.masteryBins || [0, 0, 0, 0, 0];
+    var modes = st.modes || { labels: [], counts: [] };
+    var accuracy = st.accuracy || { labels: [], scores: [], ns: [] };
+    var scores = accuracy.scores || [];
+    var modeCounts = modes.counts || [];
+    return {
+      minSample: MIN_SAMPLE,
+      radar: {
+        id: "chart-radar",
+        type: "radar",
+        labels: axes.map(function (axis) { return axis.label; }),
+        data: axes.map(function (axis) { return axis.score == null ? null : axis.score; }),
+        thin: axes.map(function (axis) { return axis.score == null; }),
+      },
+      activity: {
+        id: "chart-student",
+        type: "line",
+        labels: st.lineLabels || [],
+        data: st.line || [],
+        eventData: activityExtra(st),
+      },
+      mastery: {
+        id: "chart-student-mastery",
+        type: "bar",
+        labels: MASTERY_LABELS.slice(),
+        data: bins,
+        empty: sum(bins) === 0,
+      },
+      modes: {
+        id: "chart-student-modes",
+        type: "doughnut",
+        labels: modes.labels || [],
+        data: modeCounts,
+        empty: sum(modeCounts) === 0,
+      },
+      accuracy: {
+        id: "chart-student-accuracy",
+        type: "line",
+        labels: accuracy.labels || [],
+        data: scores.map(function (score) { return score == null ? null : score; }),
+        ns: accuracy.ns || [],
+        empty: !scores.some(function (score) { return score != null; }),
+      },
+    };
+  }
+
   function studentReportHtml(st, generated) {
     st = st || {};
     var name = st.name || "学员";
     var axes = st.abilities || [];
     var weakRows = st.weak || [];
+    var modes = st.modes || { labels: [], counts: [] };
+    var accuracy = st.accuracy || { labels: [], scores: [] };
+    var specs = studentChartSpecs(st);
     var weakHtml = weakRows.length
       ? weakRows.map(function (row) {
         return "<tr><td>" + escHtml(row.word) + "</td><td>" + escHtml(row.gloss || "—") + "</td><td>" + num(row.score) + "</td></tr>";
       }).join("")
       : "<tr><td colspan=\"3\">目前没有特别集中的薄弱词。</td></tr>";
     var lineNote = st.lineSource === "daily"
-      ? "折线是近 7 天每天的答题次数。"
+      ? (specs.activity.eventData ? "蓝线是每天的答题次数，金线是练习事件。两套数字不相加。" : "折线是近 7 天每天的答题次数。")
       : "近 7 天存档里没有每日答题，折线改用练习事件次数。";
-    return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><title>" +
+    var accuracyNote = specs.accuracy.empty
+      ? "近 7 日没有一天达到 " + MIN_SAMPLE + " 次答题，正确率不画成 0。"
+      : "纵轴是 0 到 100。少于 " + MIN_SAMPLE + " 次的日期留空，不记成 0 分。图上的 0 表示那天答完的题都错了。";
+    return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" +
       escHtml("聚光单词 · 学情 · " + name) + "</title><style>" +
       "body{font-family:'PingFang SC','Noto Sans SC','Segoe UI',sans-serif;color:#1c2430;background:#fff;margin:0;padding:28px;line-height:1.65}" +
-      "h1{font-size:1.4rem;margin:0 0 4px}h2{font-size:1.05rem;margin:22px 0 6px}" +
-      ".muted{color:#5c677a;font-size:.9rem}.summary{background:#f7f4ec;border:1px solid #eadcba;border-radius:12px;padding:12px 14px}" +
-      "svg{width:100%;max-width:420px;height:auto}table{border-collapse:collapse;width:100%;max-width:520px}td,th{border-bottom:1px solid #e4e8f0;padding:6px 8px;text-align:left}" +
+      "h1{font-size:1.45rem;margin:0 0 4px}h2{font-size:1.05rem;margin:0 0 6px}" +
+      ".muted{color:#5c677a;font-size:.88rem;margin:4px 0 8px}" +
+      ".summary{background:#f7f4ec;border:1px solid #eadcba;border-radius:12px;padding:12px 14px;margin:0}" +
+      ".charts{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;align-items:start}" +
+      ".chart{min-width:0;margin:0 0 8px}.wide{grid-column:1 / -1}.wide svg{max-width:720px}" +
+      "svg{width:100%;max-width:420px;height:auto;display:block;background:#f4f7fb;border-radius:12px}" +
+      "table{border-collapse:collapse;width:100%;max-width:640px}td,th{border-bottom:1px solid #e4e8f0;padding:6px 8px;text-align:left}" +
+      "@media (max-width:640px){.charts{grid-template-columns:1fr}.wide{grid-column:auto}}" +
       "</style></head><body><h1>" + escHtml(name) + "的学情</h1><p class=\"muted\">账号 " +
       escHtml(st.email || "—") + (st.cls ? " · 班级 " + escHtml(st.cls) : "") + " · 词库 " +
-      escHtml(st.trackLabel || "—") + " · " + escHtml(generated || "") + "</p><p class=\"summary\">" +
-      escHtml(st.summary || "") + "</p><h2>学情雷达</h2>" + svgRadar(axes) +
-      "<h2>近7日练习</h2><p class=\"muted\">" + escHtml(lineNote) + "</p>" + svgLine(st.lineLabels, st.line) +
-      "<h2>掌握度</h2><p class=\"muted\">已接触词的掌握星级：0、0.5、1、2、3。未学的新词不在图里。</p>" +
+      escHtml(st.trackLabel || "—") + " · " + escHtml(generated || "") + "</p><h2>简短评价</h2><p class=\"summary\">" +
+      escHtml(st.summary || "") + "</p><div class=\"charts\"><section class=\"chart\"><h2>学情雷达</h2><p class=\"muted\">认词、搭配、产出、巩固。样本少于 " +
+      MIN_SAMPLE + " 次为样本不足，坐标轴为灰色，不记成 0 分。</p>" + svgRadar(axes) +
+      "</section><section class=\"chart\"><h2>近7日练习</h2><p class=\"muted\">" + escHtml(lineNote) + "</p>" +
+      svgLine(st.lineLabels, st.line, specs.activity.eventData) +
+      "</section><section class=\"chart\"><h2>掌握度</h2><p class=\"muted\">已接触词的掌握星级：0、0.5、1、2、3。未学的新词不在图里。</p>" +
       svgBars(MASTERY_LABELS, st.masteryBins || [0, 0, 0, 0, 0]) +
-      "<h2>薄弱词</h2><table><tr><th>单词</th><th>释义</th><th>信号</th></tr>" + weakHtml +
+      "</section><section class=\"chart\"><h2>题型占比</h2><p class=\"muted\">只统计答题。到期信号不计入。</p>" +
+      svgDonut(modes.labels, modes.counts) +
+      "</section><section class=\"chart wide\"><h2>近7日正确率</h2><p class=\"muted\">" + escHtml(accuracyNote) + "</p>" +
+      svgAccuracy(accuracy.labels, accuracy.scores) +
+      "</section></div><h2>薄弱词</h2><table><tr><th>单词</th><th>释义</th><th>信号</th></tr>" + weakHtml +
       "</table><p class=\"muted\">本页由聚光单词教师看板根据已经加载的学习记录生成，给家长阅读。不含登录凭证。</p></body></html>";
   }
 
@@ -1172,10 +1482,13 @@
         line: personal,
         lineSource: sum(daily7) > 0 ? "daily" : "events",
         lineLabels: window7.labels.map(shortDay),
+        eventLine: event7,
         practice7: sum(event7),
         answers7: sum(daily7),
         timeline: timeline,
         masteryBins: masteryBins,
+        modes: answerModeMix(evs),
+        accuracy: accuracySeries(save, evs, now),
         abilities: abilities,
         summary: "",
       };
@@ -1329,6 +1642,9 @@
     axisOf: axisOf,
     scoreAbilities: scoreAbilities,
     parentSummary: parentSummary,
+    answerModeMix: answerModeMix,
+    accuracySeries: accuracySeries,
+    studentChartSpecs: studentChartSpecs,
     classCsv: classCsv,
     studentReportHtml: studentReportHtml,
     classZip: classZip,
@@ -1389,11 +1705,32 @@
     el.textContent = lines || "";
   }
 
-  function mountChart(id, config, fallback) {
+  function chartBoxWidth(id) {
+    var canvas = $(id);
+    var box = canvas && canvas.parentNode;
+    return box ? box.clientWidth : 0;
+  }
+
+  function resizeCharts() {
+    var ids = Object.keys(charts);
+    for (var i = 0; i < ids.length; i++) {
+      if (charts[ids[i]] && charts[ids[i]].resize) {
+        try { charts[ids[i]].resize(); } catch (e) {}
+      }
+    }
+  }
+
+  /** Defer one frame when the panel was hidden, so Chart.js does not lock in a 0-width canvas. */
+  function mountChart(id, config, fallback, attempt) {
+    attempt = attempt || 0;
     var canvas = $(id);
     if (!canvas || !root.Chart) {
       destroyChart(id);
       showFallback(id, fallback);
+      return;
+    }
+    if (chartBoxWidth(id) === 0 && attempt < 4 && root.requestAnimationFrame) {
+      root.requestAnimationFrame(function () { mountChart(id, config, fallback, attempt + 1); });
       return;
     }
     showFallback(id, "");
@@ -1565,21 +1902,21 @@
     }).join("");
   }
 
-  function renderRadar(st) {
-    var axes = st.abilities || [];
+  function renderRadar(st, spec) {
+    var axes = (st && st.abilities) || [];
+    spec = spec || { data: [], thin: [], labels: [] };
     var fallback = axes.map(function (axis) {
       return axis.label + " " + (axis.score == null ? "样本不足" : axis.score);
     }).join("\n");
-    var labelColors = axes.map(function (axis) {
-      return axis.score == null ? "#8b93a7" : "#d5e2fb";
-    });
-    mountChart("chart-radar", {
+    var allThin = spec.thin.length > 0;
+    for (var t = 0; t < spec.thin.length; t++) if (!spec.thin[t]) allThin = false;
+    mountChart(spec.id || "chart-radar", {
       type: "radar",
       data: {
-        labels: axes.map(function (axis) { return axis.label; }),
+        labels: spec.labels,
         datasets: [{
           label: "学情",
-          data: axes.map(function (axis) { return axis.score; }),
+          data: spec.data,
           borderColor: "#8eb7ff",
           backgroundColor: "rgba(142,183,255,.22)",
           pointBackgroundColor: "#e6c98a",
@@ -1607,77 +1944,180 @@
             min: 0,
             max: 100,
             ticks: { display: false, stepSize: 25 },
-            grid: { color: "rgba(190,214,255,.2)" },
-            angleLines: { color: "rgba(190,214,255,.28)" },
-            pointLabels: { color: labelColors, font: { size: 12 } },
+            grid: { color: allThin ? "rgba(139,147,167,.35)" : "rgba(190,214,255,.2)" },
+            angleLines: { color: allThin ? "rgba(139,147,167,.9)" : "rgba(190,214,255,.28)", lineWidth: allThin ? 2 : 1 },
+            pointLabels: {
+              color: function (ctx) {
+                var i = ctx && ctx.index != null ? ctx.index : 0;
+                return spec.thin[i] ? "#8b93a7" : "#d5e2fb";
+              },
+              font: { size: 13 },
+            },
           },
         },
       },
     }, fallback);
   }
 
+  function statChip(label, value) {
+    return "<span><b>" + esc(value) + "</b>" + esc(label) + "</span>";
+  }
+
+  function clearStudentCharts() {
+    destroyChart("chart-student");
+    destroyChart("chart-radar");
+    destroyChart("chart-student-mastery");
+    destroyChart("chart-student-modes");
+    destroyChart("chart-student-accuracy");
+  }
+
   function renderDetail(st) {
+    if (document.body) document.body.classList.toggle("student-open", !!st);
     show("detail", !!st);
     if (!st) {
-      destroyChart("chart-student");
-      destroyChart("chart-radar");
-      destroyChart("chart-student-mastery");
+      clearStudentCharts();
       var legend = $("ability-legend");
       if (legend) legend.innerHTML = "";
+      var cleared = $("detail-stats");
+      if (cleared) cleared.innerHTML = "";
+      if (root.requestAnimationFrame) root.requestAnimationFrame(resizeCharts);
       return;
     }
+    var specs = api.studentChartSpecs(st);
     $("detail-title").textContent = (st.name ? st.name + " · " : "") + st.email;
     var summary = $("detail-summary");
     if (summary) summary.textContent = st.summary || "";
+    var stats = $("detail-stats");
+    if (stats) {
+      stats.innerHTML = [
+        statChip("词库", st.trackLabel || "—"),
+        statChip("已接触", st.touched),
+        statChip("掌握", st.mastery == null ? "—" : st.mastery + "%"),
+        statChip("已学会", st.learned),
+        statChip("近7日答题", st.answers7),
+        statChip("薄弱词", st.weakCount),
+      ].join("");
+    }
     abilityLegend(st);
     $("detail-progress").textContent =
-      "词库 " + st.trackLabel +
-      " · 积分 " + st.points +
+      (st.cls ? "班级 " + st.cls + " · " : "") +
+      "积分 " + st.points +
       " · 连续打卡 " + st.streak +
       " · 最佳 " + st.bestStreak +
-      " · 已接触 " + st.touched +
-      " · 掌握 " + (st.mastery == null ? "—" : st.mastery + "%") +
-      " · 已学会 " + st.learned +
       " · 错词本 " + st.bookActive +
-      " · 近7日存档答题 " + st.answers7 +
-      " · 近7日练习事件 " + st.practice7 +
-      (st.cls ? " · 班级 " + st.cls : "");
-    $("detail-line-hint").textContent = st.lineSource === "daily"
-      ? "折线是存档 daily 的答题次数（答对 + 答错 + 不会）。"
-      : "这份存档近 7 日没有 daily 答题，折线改用该学员的练习事件。";
-    renderRadar(st);
-    var bins = st.masteryBins || [0, 0, 0, 0, 0];
-    var binSum = 0;
-    for (var bi = 0; bi < bins.length; bi++) binSum += num(bins[bi]);
-    if (binSum > 0) {
-      mountChart("chart-student-mastery", {
+      " · 近7日练习事件 " + st.practice7;
+    var lineHint = $("detail-line-hint");
+    if (lineHint) {
+      lineHint.textContent = specs.activity.eventData
+        ? "实线是存档 daily 的答题次数（答对 + 答错 + 不会）。虚线是练习事件。两套数字不相加。"
+        : (st.lineSource === "daily"
+          ? "折线是存档 daily 的答题次数（答对 + 答错 + 不会）。"
+          : "这份存档近 7 日没有 daily 答题，折线改用该学员的练习事件。");
+    }
+    renderRadar(st, specs.radar);
+    if (!specs.mastery.empty) {
+      mountChart(specs.mastery.id, {
         type: "bar",
         data: {
-          labels: MASTERY_LABELS.slice(),
-          datasets: [{ label: "词条", data: bins, backgroundColor: "#7ddec8", borderRadius: 6 }],
+          labels: specs.mastery.labels,
+          datasets: [{ label: "词条", data: specs.mastery.data, backgroundColor: "#7ddec8", borderRadius: 6 }],
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
-      }, MASTERY_LABELS.map(function (label, i) { return label + "星 " + bins[i]; }).join("\n"));
+      }, specs.mastery.labels.map(function (label, i) { return label + "星 " + specs.mastery.data[i]; }).join("\n"));
     } else {
-      destroyChart("chart-student-mastery");
-      showFallback("chart-student-mastery", "还没有已接触的词");
+      destroyChart(specs.mastery.id);
+      showFallback(specs.mastery.id, "还没有已接触的词");
     }
-    mountChart("chart-student", {
+    var activitySets = [{
+      label: st.lineSource === "daily" ? "答题" : "练习",
+      data: specs.activity.data,
+      borderColor: "#8eb7ff",
+      backgroundColor: "rgba(142,183,255,.18)",
+      fill: !specs.activity.eventData,
+      tension: 0.3,
+      pointRadius: 3,
+    }];
+    if (specs.activity.eventData) {
+      activitySets.push({
+        label: "练习事件",
+        data: specs.activity.eventData,
+        borderColor: "#e6c98a",
+        backgroundColor: "transparent",
+        fill: false,
+        borderDash: [5, 4],
+        tension: 0.3,
+        pointRadius: 3,
+      });
+    }
+    mountChart(specs.activity.id, {
       type: "line",
-      data: {
-        labels: st.lineLabels,
-        datasets: [{
-          label: "次数",
-          data: st.line,
-          borderColor: "#8eb7ff",
-          backgroundColor: "rgba(142,183,255,.18)",
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3,
-        }],
+      data: { labels: specs.activity.labels, datasets: activitySets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: !!specs.activity.eventData, labels: { color: axisColor(), boxWidth: 12 } } },
+        scales: baseScales(),
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
-    }, st.lineLabels.map(function (label, i) { return label + " " + st.line[i]; }).join("\n"));
+    }, specs.activity.labels.map(function (label, i) { return label + " " + specs.activity.data[i]; }).join("\n"));
+    if (!specs.modes.empty) {
+      var modeColors = specs.modes.labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; });
+      mountChart(specs.modes.id, {
+        type: "doughnut",
+        data: { labels: specs.modes.labels, datasets: [{ data: specs.modes.data, backgroundColor: modeColors, borderWidth: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "62%",
+          plugins: { legend: { position: "bottom", labels: { color: axisColor(), boxWidth: 12 } } },
+        },
+      }, specs.modes.labels.map(function (label, i) { return label + " " + specs.modes.data[i]; }).join("\n"));
+    } else {
+      destroyChart(specs.modes.id);
+      showFallback(specs.modes.id, "还没有答题记录，不编造题型占比");
+    }
+    if (!specs.accuracy.empty) {
+      mountChart(specs.accuracy.id, {
+        type: "line",
+        data: {
+          labels: specs.accuracy.labels,
+          datasets: [{
+            label: "正确率",
+            data: specs.accuracy.data,
+            borderColor: "#e6c98a",
+            backgroundColor: "rgba(230,201,138,.16)",
+            fill: false,
+            tension: 0.25,
+            spanGaps: false,
+            pointRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function (ctx) {
+                  if (ctx.raw == null) return "样本不足";
+                  return ctx.raw + "分";
+                },
+              },
+            },
+          },
+          scales: {
+            x: { ticks: { color: axisColor() }, grid: { color: "rgba(190,214,255,.12)" } },
+            y: { min: 0, max: 100, ticks: { color: axisColor(), stepSize: 25 }, grid: { color: "rgba(190,214,255,.12)" } },
+          },
+        },
+      }, specs.accuracy.labels.map(function (label, i) {
+        var score = specs.accuracy.data[i];
+        return label + " " + (score == null ? "样本不足" : score);
+      }).join("\n"));
+    } else {
+      destroyChart(specs.accuracy.id);
+      showFallback(specs.accuracy.id, "近 7 日没有一天达到 " + api.MIN_SAMPLE + " 次答题，正确率不画成 0。");
+    }
     var weakRows = (st.weak || []).slice(0, 20);
     $("student-weak").innerHTML = "<tr><th>单词</th><th>释义</th><th>信号</th></tr>" +
       (weakRows.length ? weakRows.map(function (row) {
@@ -1964,7 +2404,7 @@
       }
       renderDetail(st);
       var panel = $("detail");
-      if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      if (panel && panel.scrollIntoView) panel.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
   var back = $("btn-detail-back");
@@ -1973,6 +2413,8 @@
       selectedId = "";
       if (board) renderTable(board);
       renderDetail(null);
+      var roster = $("roster");
+      if (roster && roster.scrollIntoView) roster.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
