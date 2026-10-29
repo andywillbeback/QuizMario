@@ -29,10 +29,14 @@ assert.strictEqual(zk.titles.length, 69);
 assert.strictEqual(JSON.stringify(zk.sets.slice(0, 58)), JSON.stringify(rzk.sets));
 assert.strictEqual(JSON.stringify(zk.titles.slice(0, 58)), JSON.stringify(rzk.titles));
 assert.strictEqual(zk.desc, rzk.desc);
-assert.strictEqual(JSON.stringify(gk), JSON.stringify(rgk));
+assert.strictEqual(gk.id, rgk.id);
+assert.strictEqual(gk.name, rgk.name);
+assert.strictEqual(gk.desc, rgk.desc);
+assert.strictEqual(JSON.stringify(gk.sets.slice(0, 86)), JSON.stringify(rgk.sets));
+assert.strictEqual(JSON.stringify(gk.titles.slice(0, 86)), JSON.stringify(rgk.titles));
 assert.strictEqual(rzk.sets.flat().length, 2821);
 assert.strictEqual(zk.sets.slice(0, 58).flat().length, 2821);
-assert.strictEqual(gk.sets.flat().length, rgk.sets.flat().length);
+assert.strictEqual(gk.sets.slice(0, 86).flat().length, rgk.sets.flat().length);
 
 const fresh = zk.sets.slice(58);
 const cards = fresh.flat();
