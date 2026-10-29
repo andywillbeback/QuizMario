@@ -31,7 +31,13 @@ assert.ok(html.includes('id="students"') && html.includes('id="empty-state"') &&
 assert.ok(html.includes('id="chart-student"'), "personal line");
 assert.ok(html.includes('id="chart-radar"'), "ability radar");
 assert.ok(html.includes('id="chart-student-mastery"'), "per-student mastery bars");
+assert.ok(html.includes('id="chart-student-modes"'), "personal question mix");
+assert.ok(html.includes('id="chart-student-accuracy"'), "personal accuracy trend");
 assert.ok(html.includes('id="detail-summary"'), "parent summary");
+assert.ok(html.includes("简短评价"), "written evaluation label");
+assert.ok(js.includes("studentChartSpecs"), "detail charts go through the render hook");
+assert.ok(js.includes("spanGaps: false"), "thin radar points stay gaps");
+assert.ok(js.includes("不画成 0"), "accuracy copy refuses a fake zero");
 assert.ok(html.includes("一键下载全班学情"), "class export button");
 assert.ok(html.includes('id="board-class"'), "class filter");
 assert.ok(html.includes("未填班级"));
@@ -193,16 +199,43 @@ assert.strictEqual(student.abilities.length, 4);
 assert.deepStrictEqual(student.abilities.map(function (axis) { return axis.id; }), ["recognition", "collocation", "production", "retention"]);
 assert.strictEqual(student.abilities[0].score, null, "one recognition event is not a score");
 assert.ok(student.abilities.every(function (axis) { return axis.score == null; }));
+assert.ok(student.summary.indexOf("4 次答题") > 0);
+assert.ok(student.summary.indexOf("3 次练习事件") > 0);
 assert.ok(student.summary.indexOf("小王") === 0);
 assert.ok(student.summary.indexOf("样本不足") > 0);
 assert.ok(student.summary.indexOf("advice") > 0);
 assert.ok(student.summary.indexOf("anchor@") === -1);
+assert.ok(student.summary.indexOf("student-a") === -1);
+assert.ok(!/0分/.test(student.summary), "thin axes are not written as 0分");
+assert.ok(sentenceCount(student.summary) >= 2 && sentenceCount(student.summary) <= 4, student.summary);
 assert.deepStrictEqual(student.masteryBins, [0, 1, 0, 0, 1]);
+assert.strictEqual(student.eventLine.length, 7);
+assert.strictEqual(student.eventLine.reduce(function (a, b) { return a + b; }, 0), student.practice7);
+assert.deepStrictEqual(student.modes.labels.slice().sort(), ["看英选义", "答错"].sort());
+assert.ok(student.accuracy.scores.every(function (score) { return score == null; }), "4 answers in a day stay 样本不足");
+assert.ok(student.accuracy.ns.some(function (n) { return n > 0 && n < api.MIN_SAMPLE; }));
+const thinSpecs = api.studentChartSpecs(student);
+assert.strictEqual(thinSpecs.minSample, 5);
+assert.strictEqual(thinSpecs.radar.type, "radar");
+assert.ok(thinSpecs.radar.data.every(function (score) { return score == null; }));
+assert.ok(thinSpecs.radar.data.indexOf(0) === -1);
+assert.strictEqual(thinSpecs.activity.type, "line");
+assert.strictEqual(thinSpecs.mastery.type, "bar");
+assert.strictEqual(thinSpecs.modes.type, "doughnut");
+assert.strictEqual(thinSpecs.modes.empty, false);
+assert.strictEqual(thinSpecs.accuracy.type, "line");
+assert.strictEqual(thinSpecs.accuracy.empty, true);
+assert.ok(thinSpecs.accuracy.data.every(function (score) { return score == null; }));
 
 const quiet = board.students[1];
 assert.strictEqual(quiet.mastery, null);
 assert.strictEqual(quiet.touched, 0);
 assert.ok(quiet.email.indexOf("@") === -1, "missing directory entry does not invent an email");
+assert.ok(quiet.summary.indexOf("样本不足") > 0);
+assert.ok(!/0分/.test(quiet.summary));
+assert.ok(sentenceCount(quiet.summary) >= 2 && sentenceCount(quiet.summary) <= 4, quiet.summary);
+assert.strictEqual(api.studentChartSpecs(quiet).modes.empty, true);
+assert.strictEqual(api.studentChartSpecs(quiet).accuracy.empty, true);
 assert.deepStrictEqual(board.groups.map(function (group) { return group.label; }), ["1", "未填班级"]);
 assert.strictEqual(board.groups[0].students[0].name, "小王");
 assert.strictEqual(board.groups[1].students.length, 1);
@@ -227,6 +260,10 @@ assert.deepStrictEqual(empty.activity.counts, [0, 0, 0, 0, 0, 0, 0]);
 
 function axisById(list, id) {
   return list.filter(function (row) { return row.id === id; })[0];
+}
+
+function sentenceCount(text) {
+  return String(text || "").split("。").filter(function (part) { return part.trim(); }).length;
 }
 
 assert.strictEqual(api.axisOf({
@@ -320,9 +357,25 @@ assert.strictEqual(axisById(li.abilities, "production").score, 60);
 assert.strictEqual(axisById(li.abilities, "production").basis, "typed");
 assert.strictEqual(axisById(li.abilities, "retention").score, 80);
 assert.strictEqual(axisById(li.abilities, "retention").basis, "learned+retention");
+assert.ok(li.summary.indexOf("5 次答题") > 0);
+assert.ok(li.summary.indexOf("10 次练习事件") > 0);
 assert.ok(li.summary.indexOf("小李") === 0);
 assert.ok(li.summary.indexOf("80分") > 0);
 assert.ok(li.summary.indexOf("lihua@") === -1);
+assert.ok(li.summary.indexOf("rich") === -1);
+assert.ok(sentenceCount(li.summary) >= 2 && sentenceCount(li.summary) <= 4, li.summary);
+assert.ok(li.modes.labels.indexOf("看英选义") >= 0);
+assert.ok(li.modes.labels.indexOf("搭配") >= 0);
+assert.ok(li.accuracy.scores.indexOf(80) >= 0);
+assert.ok(li.accuracy.scores.some(function (score) { return score == null; }), "thin days stay null beside a real 80");
+const richSpecs = api.studentChartSpecs(li);
+assert.strictEqual(richSpecs.radar.data[0], 80);
+assert.ok(richSpecs.radar.data.indexOf(null) === -1, "小李 has a sample on every axis");
+assert.strictEqual(richSpecs.modes.empty, false);
+assert.strictEqual(richSpecs.accuracy.empty, false);
+assert.ok(richSpecs.accuracy.data.indexOf(80) >= 0);
+assert.ok(richSpecs.accuracy.data.some(function (score) { return score == null; }));
+assert.ok(richSpecs.activity.eventData, "daily answers and practice events both draw");
 
 const csv = api.classCsv(rich);
 assert.ok(csv.indexOf("姓名,邮箱,班级,词库") === 0);
@@ -335,15 +388,33 @@ const quoted = api.classCsv({ students: [{ name: "=1+1", email: "a***@x.com", ab
 assert.ok(quoted.indexOf("'=1+1") > 0);
 
 const page = api.studentReportHtml(li, "2026-10-24");
-assert.ok(page.indexOf("<svg") > 0);
+assert.ok((page.match(/<svg/g) || []).length >= 5, "radar, activity, mastery, mix, accuracy");
 assert.ok(page.indexOf("学情雷达") > 0);
 assert.ok(page.indexOf("近7日") > 0);
 assert.ok(page.indexOf("掌握度") > 0);
+assert.ok(page.indexOf("题型占比") > 0);
+assert.ok(page.indexOf("近7日正确率") > 0);
+assert.ok(page.indexOf("简短评价") > 0);
+assert.ok(page.indexOf(li.summary) > 0);
 assert.ok(page.indexOf("薄弱词") > 0);
+assert.ok(page.indexOf('width="360" height="300"') > 0, "radar svg has an explicit size so a parent page still paints it");
+assert.ok(page.indexOf("看英选义") > 0);
+assert.ok(page.indexOf("不画成0") === -1, "a real accuracy series is drawn");
+assert.ok(page.indexOf(">80<") > 0, "accuracy point is labeled on the static chart");
+assert.ok(page.indexOf("rgba(46,111,196,.22)") > 0, "full sample draws the radar shape");
+assert.ok(page.indexOf('class="chart wide"') > 0);
 assert.ok(page.indexOf("li***@school.com") > 0);
 assert.ok(page.indexOf("lihua@school.com") === -1);
 assert.ok(page.indexOf("<script") === -1);
 assert.ok(page.indexOf("rich") === -1);
+const thinPage = api.studentReportHtml(student, "2026-10-24");
+assert.ok(thinPage.indexOf(student.summary) > 0);
+assert.ok(thinPage.indexOf("样本不足") > 0);
+assert.ok(thinPage.indexOf("不画成0") > 0);
+assert.ok(thinPage.indexOf("rgba(46,111,196,.22)") === -1, "thin axes do not invent a radar shape");
+assert.ok(thinPage.indexOf("advice") > 0);
+assert.ok(thinPage.indexOf("看英选义") > 0);
+assert.ok(thinPage.indexOf("<script") === -1);
 const escaped = api.studentReportHtml({
   name: "<b>",
   email: "a***@x.com",
@@ -365,6 +436,10 @@ const zipText = zip.toString("utf8");
 assert.ok(zipText.indexOf("班级学情.csv") > 0);
 assert.ok(zipText.indexOf("学员/小王.html") > 0);
 assert.ok(zipText.indexOf("样本不足") > 0);
+assert.ok(zipText.indexOf("简短评价") > 0);
+assert.ok(zipText.indexOf("题型占比") > 0);
+assert.ok(zipText.indexOf("近7日正确率") > 0);
+assert.ok(zipText.indexOf("不画成0") > 0);
 assert.ok(zipText.indexOf("an***@school.com") > 0);
 assert.ok(zipText.indexOf("anchor@school.com") === -1);
 assert.ok(zipText.indexOf("student-a") === -1);
@@ -478,6 +553,36 @@ const dailyWins = api.scoreAbilities({
 });
 assert.strictEqual(axisById(dailyWins, "retention").score, 100);
 assert.strictEqual(axisById(dailyWins, "retention").basis, "retention");
+
+const fourRight = api.accuracySeries({ daily: { "2026-10-24": { c: 4, w: 0, unk: 0 } } }, [], now);
+assert.ok(fourRight.scores.every(function (score) { return score == null; }), "4 correct answers are not a 100");
+const fiveRight = api.accuracySeries({ daily: { "2026-10-24": { c: 5, w: 0, unk: 0 } } }, [], now);
+assert.strictEqual(fiveRight.scores[fiveRight.scores.length - 1], 100);
+const fiveMiss = [];
+for (let m = 0; m < 5; m++) {
+  fiveMiss.push({
+    learner_id: "miss",
+    event_type: "vocab.answer_wrong",
+    headword: "cat",
+    payload: { task_direction: "meaning" },
+    created_at: now.toISOString(),
+  });
+}
+const missBoard = api.buildBoard([{
+  user_id: "miss",
+  updated_at: now.toISOString(),
+  save: { profile: { name: "小周" }, cards: {}, daily: {} },
+}], fiveMiss, [], now);
+const zhou = missBoard.students[0];
+assert.ok(zhou.accuracy.scores.indexOf(0) >= 0, "five wrong answers are a real 0, not a gap");
+assert.ok(zhou.summary.indexOf("0分") > 0);
+assert.ok(zhou.summary.indexOf("样本不足") > 0);
+assert.ok(sentenceCount(zhou.summary) >= 2 && sentenceCount(zhou.summary) <= 4, zhou.summary);
+assert.strictEqual(api.studentChartSpecs(zhou).accuracy.empty, false);
+assert.ok(api.studentChartSpecs(zhou).accuracy.data.indexOf(0) >= 0);
+const zhouPage = api.studentReportHtml(zhou, "2026-10-24");
+assert.ok(zhouPage.indexOf("不画成0") === -1);
+assert.ok(zhouPage.indexOf(zhou.summary) > 0);
 
 const report = api.decodeReport("QMR1." + Buffer.from(JSON.stringify({
   v: 1, n: "a", k: "c", at: "2026-01-01", tr: { core: [1, 10, [1]] }, wk: [["cat", "猫", 2]],
