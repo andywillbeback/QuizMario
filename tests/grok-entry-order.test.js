@@ -448,6 +448,7 @@ async function main() {
           ctaVisible,
           linkVisible,
           continue: !!document.getElementById("btn-continue"),
+          editProfile: !!document.getElementById("btn-edit-profile"),
           banned: /学习报告码|QMR1|教师看板|ALS 学习信号/.test(document.body.innerText || "")
         };
       })()`);
@@ -457,6 +458,7 @@ async function main() {
     assert.strictEqual(home.ctaVisible, false, "登录 / 注册 is not the step after choosing an exam");
     assert.strictEqual(home.linkVisible, false, "the account-bar login link is not the step after choosing an exam");
     assert.strictEqual(home.continue, true);
+    assert.strictEqual(home.editProfile, true, "home can reopen the name and class prompt");
     assert.strictEqual(home.banned, false, "student home shows report, teacher, or ALS copy");
   } finally {
     try { if (launched.chrome) launched.chrome.kill("SIGKILL"); } catch (_) {}

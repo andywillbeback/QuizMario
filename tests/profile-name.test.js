@@ -52,6 +52,11 @@ assert.deepStrictEqual(seeded.profile, { name: "小王", cls: "1班" });
 profile.seedLocalProfile("别人", "别班", mem);
 assert.strictEqual(JSON.parse(mem.raw).profile.name, "小王");
 assert.strictEqual(JSON.parse(mem.raw).profile.cls, "1班");
+const edited = profile.writeProfile("小王", "初三2班", mem);
+assert.strictEqual(edited.profile.name, "小王");
+assert.strictEqual(edited.profile.cls, "初三2班");
+assert.strictEqual(edited.points, 3);
+assert.ok(edited.updatedAt);
 
 const login = read("grok/login.html");
 const auth = read("grok/auth-page.js");
@@ -67,6 +72,15 @@ assert.ok(auth.includes('options:') && auth.includes("data: signupData"));
 assert.ok(index.indexOf('src="game.js"') < index.indexOf('src="profile-name.js"'));
 assert.ok(index.indexOf('src="profile-name.js"') < index.indexOf('src="sync.js"'));
 assert.ok(sync.includes("stampIdentity"));
+assert.ok(helper.includes("writeProfile"));
+assert.ok(helper.includes("btn-edit-profile"));
+assert.ok(helper.includes("修改姓名和班级"));
+assert.ok(helper.includes('host = $("stats-panel")') || helper.includes("stats-panel"));
+const game = read("grok/game.js");
+const setAt = game.indexOf("setProfile(name, cls)");
+assert.ok(setAt > 0);
+assert.ok(game.indexOf("save.profile.cls = nextCls", setAt) > setAt);
+assert.ok(game.indexOf("persist()", setAt) > setAt && game.indexOf("persist()", setAt) < setAt + 800);
 assert.ok(!/QMR1|教师看板|ALS 学习信号|学习报告码/.test(login + auth + helper));
 
 console.log("profile-name ok");
