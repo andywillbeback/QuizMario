@@ -17,14 +17,24 @@
  * the row. JSONL repeats those fields on the line for the ALS ingester.
  * Lines with no schema_version are v1 and stay valid.
  *
+ * Q2 / Grok版本: task_direction separates en→meaning (recognition),
+ * zh→en form recognition (production + detail zh_en), and independent
+ * spelling (task_direction=spelling — not folded into production).
+ * sense_id uses the shared QuizMarioSense contract (bank or provisional).
+ *
  * Also require()-able from node tests. Browser storage attaches when document exists.
  */
 (function (root, factory) {
-  var api = factory();
+  var Sense = null;
+  if (typeof require === "function") {
+    try { Sense = require("./sense-id"); } catch (_) {}
+  }
+  if (!Sense && root && root.QuizMarioSense) Sense = root.QuizMarioSense;
+  var api = factory(Sense);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.QuizMarioLearnerEvents = api;
   if (root && root.document) api.installBrowser(root);
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (Sense) {
   var SOURCE = "quizmario";
   var ALS_SOURCE = "als";
   var ALS_RETURN_TYPES = ["sense_return", "vocab.sense_return", "als.sense_return"];
@@ -102,6 +112,7 @@
 
   /** Bank POS tags look like "v." / "adj.". The sense key stores them without the trailing dot. */
   function posToken(pos) {
+    if (Sense && typeof Sense.posToken === "function") return Sense.posToken(pos);
     var p = String(pos || "").trim().toLowerCase();
     if (p.charAt(p.length - 1) === ".") p = p.slice(0, -1);
     return p;
@@ -110,10 +121,12 @@
   /**
    * Provisional sense key when the card has no bank sense_id.
    * lemma.pos.gloss_zh, POS trailing dot stripped.
-   * Missing POS keeps the empty slot: lemma..gloss_zh.
-   * Gloss-only or lemma-only callers get a shorter key; kind says which.
+   * Q2: same contract as QuizMarioSense / ALS ingest.
    */
   function provisionalSenseId(lemma, pos, gloss) {
+    if (Sense && typeof Sense.provisionalSenseId === "function") {
+      return Sense.provisionalSenseId(lemma, pos, gloss);
+    }
     var l = headwordOf(lemma);
     var p = posToken(pos);
     var g = String(gloss || "").trim().replace(/\s+/g, " ");
@@ -125,6 +138,17 @@
   }
 
   function resolveSense(input, lemma, pos, gloss) {
+    if (Sense && typeof Sense.resolveSenseKey === "function") {
+      var via = Sense.resolveSenseKey({
+        sense_id: input.sense_id,
+        sense_id_kind: input.sense_id_kind,
+        lemma: lemma,
+        pos: pos,
+        gloss_zh: gloss,
+      });
+      if (via) return via;
+      if (!lemma && !gloss) return null;
+    }
     var explicit = input.sense_id != null ? String(input.sense_id).trim() : "";
     if (explicit) {
       return {
@@ -140,19 +164,30 @@
     return { sense_id: id, sense_id_kind: kind };
   }
 
+  /**
+   * Q2 direction split:
+   *   recognition + en_zh  — 英文→词义
+   *   production + zh_en   — 中文→英文识别 (MC form)
+   *   spelling (+ spelling|typed) — 独立拼写, NOT folded into production
+   */
   function resolveDirection(input) {
     var raw = input.task_direction != null ? input.task_direction : input.direction;
     if (raw == null || String(raw).trim() === "") return null;
     var v = String(raw).trim().toLowerCase();
     if (v === "recognition" || v === "meaning" || v === "en-zh" || v === "en_zh") {
-      return {
-        task_direction: "recognition",
-        task_direction_detail: v === "recognition" ? "" : v,
-      };
+      var enDetail = "";
+      if (v === "meaning" || v === "en-zh" || v === "en_zh") enDetail = "en_zh";
+      return { task_direction: "recognition", task_direction_detail: enDetail };
     }
-    if (v === "production" || v === "form" || v === "spelling" || v === "zh-en" || v === "zh_en") {
-      var detail = (v === "form" || v === "spelling") ? v : "";
-      return { task_direction: "production", task_direction_detail: detail };
+    if (v === "form" || v === "zh-en" || v === "zh_en" || v === "form_recognition") {
+      return { task_direction: "production", task_direction_detail: "zh_en" };
+    }
+    if (v === "spelling" || v === "typed" || v === "typed_spelling") {
+      var spellDetail = (v === "typed" || v === "typed_spelling") ? "typed" : "spelling";
+      return { task_direction: "spelling", task_direction_detail: spellDetail };
+    }
+    if (v === "production") {
+      return { task_direction: "production", task_direction_detail: "" };
     }
     return null;
   }

@@ -14,7 +14,9 @@
   var RADAR_MIN = 8;
 
   function directionLabel(direction) {
-    return direction === "meaning" ? "看英文选中文" : "看中文选英文";
+    if (direction === "meaning" || direction === "en_zh") return "看英文选中文";
+    if (direction === "spelling") return "独立拼写";
+    return "看中文选英文";
   }
 
   function hintLine(outcome, hintSeen) {
@@ -30,7 +32,11 @@
    */
   function describeAttempt(attempt) {
     var a = attempt || {};
-    var direction = a.direction === "meaning" ? "meaning" : (a.direction === "spelling" ? "spelling" : "form");
+    var raw = a.direction;
+    // Q2 canonical keys must not fall through to the ZH→EN label.
+    var direction = (raw === "meaning" || raw === "en_zh")
+      ? "meaning"
+      : ((raw === "spelling" || raw === "typed") ? "spelling" : "form");
     var outcome = a.outcome || "wrong";
     var word = a.word || "";
     var meaning = a.meaning || "";
