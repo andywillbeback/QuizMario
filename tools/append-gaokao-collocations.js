@@ -1,5 +1,7 @@
 /* Append independent 高考·固定搭配 sets onto grok/exam-tracks.js.
- * Does not rebuild 中考, does not rewrite the existing 86 高考 sets.
+ * Does not rebuild 中考, does not rewrite glosses on the existing 86 高考 sets.
+ * Ordinary single-word cards then gain related[] from
+ * data/gaokao-lemma-to-colloc.json (same-track phrases only, cap 5).
  * Run: node tools/append-gaokao-collocations.js
  */
 "use strict";
@@ -7,7 +9,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
-const { relatedLemmas, indexSingleWordBank, normToken } = require("./zhongkao-collocation-related");
+const { relatedLemmas, indexSingleWordBank, normToken, applyReverseCollocLinks } = require("./zhongkao-collocation-related");
 const { exampleCoversLemma } = require("./zhongkao-collocation-examples");
 const { isTemplateExample } = require("./example-templates");
 
@@ -206,6 +208,12 @@ function main() {
     throw new Error("according to / due to leaked into the new sets");
   }
 
+  const lemmaToColloc = JSON.parse(fs.readFileSync(
+    path.join(root, "data", "gaokao-lemma-to-colloc.json"),
+    "utf8"
+  ));
+  const reverse = applyReverseCollocLinks(gk, lemmaToColloc);
+
   const body = "window.VOCAB_EXAM_TRACKS = " + JSON.stringify(tracks) + ";\n" +
     "(function () {\n" +
     "  var extra = window.VOCAB_EXAM_TRACKS || [];\n" +
@@ -223,6 +231,8 @@ function main() {
     gaokaoCards: gk.sets.flat().length,
     relatedCards,
     zhongkaoCards: zk.sets.flat().length,
+    reverseLemmas: reverse.lemmas,
+    reverseChips: reverse.chips,
   }, null, 2));
 }
 

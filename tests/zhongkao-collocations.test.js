@@ -17,6 +17,15 @@ function load(file, name) {
   return ctx.window[name];
 }
 
+function stripRelatedSets(sets) {
+  return sets.map((set) => set.map((card) => {
+    if (!card || !Object.prototype.hasOwnProperty.call(card, "related")) return card;
+    const copy = Object.assign({}, card);
+    delete copy.related;
+    return copy;
+  }));
+}
+
 const grok = load("grok/exam-tracks.js", "VOCAB_EXAM_TRACKS");
 const rootTracks = load("exam-tracks.js", "VOCAB_EXAM_TRACKS");
 const zk = grok.find((t) => t.id === "zhongkao");
@@ -26,13 +35,13 @@ const rgk = rootTracks.find((t) => t.id === "gaokao");
 
 assert.strictEqual(zk.sets.length, 69);
 assert.strictEqual(zk.titles.length, 69);
-assert.strictEqual(JSON.stringify(zk.sets.slice(0, 58)), JSON.stringify(rzk.sets));
+assert.strictEqual(JSON.stringify(stripRelatedSets(zk.sets.slice(0, 58))), JSON.stringify(rzk.sets));
 assert.strictEqual(JSON.stringify(zk.titles.slice(0, 58)), JSON.stringify(rzk.titles));
 assert.strictEqual(zk.desc, rzk.desc);
 assert.strictEqual(gk.id, rgk.id);
 assert.strictEqual(gk.name, rgk.name);
 assert.strictEqual(gk.desc, rgk.desc);
-assert.strictEqual(JSON.stringify(gk.sets.slice(0, 86)), JSON.stringify(rgk.sets));
+assert.strictEqual(JSON.stringify(stripRelatedSets(gk.sets.slice(0, 86))), JSON.stringify(rgk.sets));
 assert.strictEqual(JSON.stringify(gk.titles.slice(0, 86)), JSON.stringify(rgk.titles));
 assert.strictEqual(rzk.sets.flat().length, 2821);
 assert.strictEqual(zk.sets.slice(0, 58).flat().length, 2821);
@@ -76,7 +85,14 @@ for (const card of cards) {
     seen.add(normToken(item));
   }
 }
-assert.ok(zk.sets.slice(0, 58).flat().every((c) => !Object.prototype.hasOwnProperty.call(c, "related")));
+for (const card of zk.sets.slice(0, 58).flat()) {
+  if (!Object.prototype.hasOwnProperty.call(card, "related")) continue;
+  assert.ok(!/\s/.test(card.word), card.word);
+  assert.ok(Array.isArray(card.related) && card.related.length <= 5, card.word);
+  for (const item of card.related) {
+    assert.ok(/\s/.test(item) || item.includes("..."), card.word + " -> " + item);
+  }
+}
 
 assert.strictEqual(JSON.stringify(cards.find((c) => c.word === "take part in").related), JSON.stringify(["take", "part"]));
 assert.strictEqual(JSON.stringify(cards.find((c) => c.word === "look forward to").related), JSON.stringify(["look", "forward"]));

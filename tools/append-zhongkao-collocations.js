@@ -1,5 +1,7 @@
 /* Append independent 中考·固定搭配 sets onto grok/exam-tracks.js.
- * Does not rebuild 高考, does not rewrite the existing 58 中考 sets.
+ * Does not rebuild 高考, does not rewrite glosses on the existing 58 中考 sets.
+ * Ordinary single-word cards then gain related[] from
+ * data/zhongkao-lemma-to-colloc.json (same-track phrases only, cap 5).
  * Run: node tools/append-zhongkao-collocations.js
  */
 "use strict";
@@ -7,7 +9,7 @@
 const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
-const { relatedLemmas, indexSingleWordBank, normToken } = require("./zhongkao-collocation-related");
+const { relatedLemmas, indexSingleWordBank, normToken, applyReverseCollocLinks } = require("./zhongkao-collocation-related");
 const { exampleCoversLemma } = require("./zhongkao-collocation-examples");
 const { isTemplateExample } = require("./example-templates");
 
@@ -161,6 +163,12 @@ function main() {
   if (JSON.stringify(zk.titles.slice(0, 58)) !== baseTitles) throw new Error("Base titles changed");
   if (JSON.stringify(gk) !== gaokaoJson) throw new Error("高考 track changed");
 
+  const lemmaToColloc = JSON.parse(fs.readFileSync(
+    path.join(root, "data", "zhongkao-lemma-to-colloc.json"),
+    "utf8"
+  ));
+  const reverse = applyReverseCollocLinks(zk, lemmaToColloc);
+
   const body = "window.VOCAB_EXAM_TRACKS = " + JSON.stringify(tracks) + ";\n" +
     "(function () {\n" +
     "  var extra = window.VOCAB_EXAM_TRACKS || [];\n" +
@@ -176,6 +184,8 @@ function main() {
     zhongkaoSets: zk.sets.length,
     zhongkaoCards: zk.sets.flat().length,
     gaokaoCards: gk.sets.flat().length,
+    reverseLemmas: reverse.lemmas,
+    reverseChips: reverse.chips,
   }, null, 2));
 }
 

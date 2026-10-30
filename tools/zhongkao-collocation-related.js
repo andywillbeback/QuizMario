@@ -91,9 +91,87 @@ function indexSingleWordBank(words) {
   return bank;
 }
 
+/* Ordinary single-word cards point at 固定搭配 phrases.
+ * The map is { lemma: [phrase, ...] } already capped at 5
+ * (shorter length, then code-point order). Missing phrases are skipped.
+ * No stemming. Phrase cards and their lemma-shaped related[] are left alone.
+ */
+const REVERSE_CAP = 5;
+const COLLOC_TITLE = "·固定搭配";
+
+function byLengthThenAlpha(a, b) {
+  if (a.length !== b.length) return a.length - b.length;
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+function enforceReverseCap(list) {
+  if (list.length <= REVERSE_CAP) return list.slice();
+  return list.slice().sort(byLengthThenAlpha).slice(0, REVERSE_CAP);
+}
+
+function indexCollocPhrases(track) {
+  const phrases = new Map();
+  const titles = track && track.titles || [];
+  const sets = track && track.sets || [];
+  for (let i = 0; i < sets.length; i++) {
+    if (!String(titles[i] || "").includes(COLLOC_TITLE)) continue;
+    for (const card of sets[i] || []) {
+      if (!card || typeof card.word !== "string") continue;
+      const key = normToken(card.word);
+      if (key && !phrases.has(key)) phrases.set(key, card.word);
+    }
+  }
+  return phrases;
+}
+
+function applyReverseCollocLinks(track, map) {
+  const phrases = indexCollocPhrases(track);
+  const byLemma = new Map();
+  for (const [lemma, list] of Object.entries(map || {})) {
+    const key = normToken(lemma);
+    if (key) byLemma.set(key, Array.isArray(list) ? list : []);
+  }
+  const titles = track.titles || [];
+  let lemmas = 0;
+  let chips = 0;
+  const seenLemma = new Set();
+  for (let i = 0; i < track.sets.length; i++) {
+    if (String(titles[i] || "").includes(COLLOC_TITLE)) continue;
+    for (const card of track.sets[i] || []) {
+      if (!card || typeof card.word !== "string" || /\s/.test(card.word)) continue;
+      const key = normToken(card.word);
+      if (!byLemma.has(key)) continue;
+      const kept = [];
+      const seen = new Set();
+      for (const phrase of byLemma.get(key)) {
+        if (typeof phrase !== "string") continue;
+        const surface = phrases.get(normToken(phrase));
+        if (!surface) continue;
+        const phraseKey = normToken(surface);
+        if (!phraseKey || seen.has(phraseKey)) continue;
+        seen.add(phraseKey);
+        kept.push(surface);
+      }
+      const capped = enforceReverseCap(kept);
+      if (!capped.length) continue;
+      card.related = capped;
+      chips += capped.length;
+      if (!seenLemma.has(key)) {
+        seenLemma.add(key);
+        lemmas += 1;
+      }
+    }
+  }
+  return { lemmas, chips };
+}
+
 module.exports = {
   GLUE,
   normToken,
   relatedLemmas,
   indexSingleWordBank,
+  REVERSE_CAP,
+  applyReverseCollocLinks,
 };
