@@ -236,7 +236,7 @@ function clean(now) {
   assert.strictEqual(starred.scheduledAt, stamp);
 }
 
-/* Leaving 错词本 does not remove the SM-2 card. */
+/* Leaving 错词本 does not remove the SM-2 card. Q3: need a delayed correct. */
 {
   const card = fresh();
   srs.schedule(card, 1, day1);
@@ -244,8 +244,13 @@ function clean(now) {
   const book = {};
   const entry = { lemmaKey: "core::gate", lemma: "gate", track: "core", levelIdx: 0, cardKey: "0::gate", now: day1 };
   queues.touchWrongBook(book, entry, card, "miss");
-  queues.noteWrongBookCorrect(book, entry.lemmaKey, card.wrong || 0);
-  const done = queues.noteWrongBookCorrect(book, entry.lemmaKey, card.wrong || 0);
+  const sameDay = queues.noteWrongBookCorrect(book, entry.lemmaKey, card.wrong || 0, { now: day1 + 500 });
+  assert.strictEqual(sameDay.graduated, false);
+  const sameDay2 = queues.noteWrongBookCorrect(book, entry.lemmaKey, card.wrong || 0, { now: day1 + 1500 });
+  assert.strictEqual(sameDay2.graduated, false, "same-day streak is session_clear only");
+  assert.strictEqual(sameDay2.sessionCleared, true);
+  assert.strictEqual(book[entry.lemmaKey].active, true);
+  const done = queues.noteWrongBookCorrect(book, entry.lemmaKey, card.wrong || 0, { now: day1 + srs.DAY_MS });
   assert.strictEqual(done.graduated, true);
   assert.strictEqual(book[entry.lemmaKey].active, false);
   assert.strictEqual(card.state, "review");
