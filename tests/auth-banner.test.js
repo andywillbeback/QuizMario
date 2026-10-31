@@ -43,7 +43,7 @@ function staticGuards() {
 
   const expectedUrl = {
     "config.js": LIVE_URL,
-    "grok/config.js": GROK_PROXY_URL,
+    "grok/config.js": LIVE_URL,
   };
   for (const file of ["config.js", "grok/config.js"]) {
     const src = read(file);
@@ -55,13 +55,40 @@ function staticGuards() {
     assert.ok(!/eyJ[A-Za-z0-9_-]{10,}\./.test(src), file + " must not embed a JWT");
   }
 
+  const grokConfig = read("grok/config.js");
+  assert.strictEqual(
+    grokConfig.match(/SITE_URL:\s*"([^"]+)"/)[1],
+    "https://andywillbeback.github.io/QuizMario/grok/",
+    "grok SITE_URL stays the grok Pages path"
+  );
+  assert.ok(
+    /workers\.dev is blocked for many CN mobile networks/.test(grokConfig),
+    "grok config notes workers.dev is blocked on many CN mobile networks"
+  );
+  assert.ok(
+    /custom-domain proxy is future work/i.test(grokConfig),
+    "grok config leaves a custom-domain proxy as future work"
+  );
+  assert.ok(
+    !/SUPABASE_URL\s+CF reverse proxy/.test(grokConfig),
+    "grok config does not describe SUPABASE_URL as the CF reverse proxy"
+  );
+
   const grokMerge = require(path.join(root, "grok/sync-merge.js"));
   const proxyConfig = {
     SUPABASE_URL: GROK_PROXY_URL,
     SUPABASE_ANON_KEY: LIVE_KEY,
     SITE_URL: "https://andywillbeback.github.io/QuizMario/grok/",
   };
-  assert.strictEqual(grokMerge.isCloudConfigured(proxyConfig), true, "grok accepts the CF proxy base URL");
+  assert.strictEqual(grokMerge.isCloudConfigured({
+    SUPABASE_URL: LIVE_URL,
+    SUPABASE_ANON_KEY: LIVE_KEY,
+  }), true, "grok accepts the direct supabase.co project host");
+  assert.strictEqual(grokMerge.isCloudConfigured({
+    SUPABASE_URL: LIVE_URL + "/",
+    SUPABASE_ANON_KEY: LIVE_KEY,
+  }), true, "trailing slash on the project host is stripped before the host check");
+  assert.strictEqual(grokMerge.isCloudConfigured(proxyConfig), true, "grok still accepts the exact CF proxy host");
   assert.strictEqual(grokMerge.isCloudConfigured({
     SUPABASE_URL: GROK_PROXY_URL + "/",
     SUPABASE_ANON_KEY: LIVE_KEY,

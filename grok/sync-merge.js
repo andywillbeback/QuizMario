@@ -80,7 +80,8 @@
     var url = String(cfg.SUPABASE_URL || "").trim().replace(/\/+$/, "");
     var key = String(cfg.SUPABASE_ANON_KEY || "").trim();
     var direct = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url);
-    // Exact host: the live CF reverse proxy in grok/config.js (CN reachability).
+    // Exact workers.dev host stays allowlisted. It is not the live Pages URL:
+    // workers.dev is blocked for many CN mobile networks. Custom-domain proxy is future work.
     var proxy = url === "https://quizmario-supabase-proxy.juguang-qm.workers.dev";
     if (!direct && !proxy) return false;
     if (/YOUR_PROJECT|YOUR_SUPABASE|placeholder/i.test(url)) return false;
