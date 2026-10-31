@@ -58,6 +58,12 @@
       }
     }
     if (save.daily && Object.keys(save.daily).length) return false;
+    if (save.studyDaily && typeof save.studyDaily === "object") {
+      var studyDays = Object.keys(save.studyDaily);
+      for (var s = 0; s < studyDays.length; s++) {
+        if ((Number(save.studyDaily[studyDays[s]]) || 0) > 0) return false;
+      }
+    }
     if (studiedCount(save) > 0) return false;
     if (save.wrongBook && typeof save.wrongBook === "object") {
       var lemmas = Object.keys(save.wrongBook);

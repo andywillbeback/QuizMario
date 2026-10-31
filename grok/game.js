@@ -150,6 +150,10 @@
     sv.trackUnlock = data.trackUnlock || {};
     sv.trackStars = data.trackStars || {};
     sv.daily = data.daily || {};
+    sv.studyDaily = {};
+    if (data.studyDaily && typeof data.studyDaily === "object" && !Array.isArray(data.studyDaily)) {
+      for (const day of Object.keys(data.studyDaily)) sv.studyDaily[day] = data.studyDaily[day];
+    }
     sv.profile = data.profile || { name: "", cls: "" };
     sv.wrongBook = Sense.migrateWrongBook(
       (data.wrongBook && typeof data.wrongBook === "object" && !Array.isArray(data.wrongBook))
@@ -3691,5 +3695,49 @@
     }
   } catch (_) {}
   initV6Ui();
+  bindStudyDuration();
   showScreen("gate");
+
+  /**
+   * Focused minutes only. Visible + recent pointer/key. Hidden and idle
+   * gaps are dropped. Writes save.studyDaily and session.start / session.end.
+   * Does not create a save.daily key, so a minutes-only day is not a streak day.
+   */
+  function bindStudyDuration() {
+    const Session = window.QuizMarioSession;
+    if (!Session || typeof Session.createClock !== "function" || typeof Session.addStudyMs !== "function") return;
+    let visible = true;
+    try { visible = document.visibilityState !== "hidden"; } catch (_) {}
+    const clock = Session.createClock({ visible: visible });
+    function applyStudy(result) {
+      if (!result) return;
+      if (result.pendingMs > 0) {
+        Session.addStudyMs(save, result.at || Date.now(), result.pendingMs);
+        try { persist(); } catch (_) {}
+      }
+      const events = result.events || [];
+      if (!events.length) return;
+      const LE = learnerEvents();
+      if (!LE || typeof LE.record !== "function") return;
+      for (let i = 0; i < events.length; i++) {
+        try { LE.record(events[i]); } catch (_) {}
+      }
+    }
+    const mark = function () {
+      try { applyStudy(clock.activity(Date.now())); } catch (_) {}
+    };
+    document.addEventListener("pointerdown", mark);
+    document.addEventListener("keydown", mark);
+    document.addEventListener("visibilitychange", function () {
+      try {
+        applyStudy(clock.setVisible(document.visibilityState !== "hidden", Date.now()));
+      } catch (_) {}
+    });
+    window.addEventListener("pagehide", function () {
+      try { applyStudy(clock.end(Date.now(), "pagehide")); } catch (_) {}
+    });
+    setInterval(function () {
+      try { applyStudy(clock.tick(Date.now())); } catch (_) {}
+    }, 15000);
+  }
 })();

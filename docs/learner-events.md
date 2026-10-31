@@ -17,6 +17,8 @@ Same Supabase email and password as ALS. Both `learner_id` and `user_id` are the
 | `vocab.wrong_book_add` | The lemma **enters** 错词本 (a new miss, or a cumulative `wrong >= 2` scan). A later miss while it is already in the book does not emit again. | `headword`, `track`, `gloss_zh` |
 | `vocab.due_review` | The home screen builds today's due queue, or the student opens 今日到期 / continue-into-due. Same card + `due_at` is emitted once. | `headword`, `due_at` (ISO-8601 UTC), `track`, `gloss_zh` |
 | `vocab.answer_correct` | A multiple-choice pick is correct (before Good / Easy). Good / Easy only moves the QM clock. | `headword`, `track`, `gloss_zh` |
+| `session.start` | A visible, recently active study slice opens. Hidden time does not open one. | `started_at`. No headword. Not an answer and not a due signal. |
+| `session.end` | That slice closes (tab hidden, idle past the last pointer/key, or leaving the page). `duration_ms` is the whole slice, including any part already folded into `save.studyDaily`. | `duration_ms`, `duration_sec`, `started_at`, `ended_at`, optional `end_reason` (`hidden`, `idle`, `pagehide`). The teacher board sums `save.studyDaily` and does not add these durations on top. |
 
 Top-level fields on every row: `event_id`, `learner_id`, `user_id`, `source`, `event_type`, `created_at`, `headword`, optional `item_id` (QM card key), optional `cefr_level` (`ket` → `A2`, `pet` → `B1` only).
 

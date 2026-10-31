@@ -25,6 +25,8 @@
     UNKNOWN: "vocab.answer_unknown",
     DUE: "vocab.due_review",
     WRONG_BOOK: "vocab.wrong_book_add",
+    SESSION_START: "session.start",
+    SESSION_END: "session.end",
   };
   var EPOCH_DUE = "1970-01-01T00:00:00.000Z";
   var EVIDENCE_KIND = {
@@ -114,7 +116,27 @@
     if (gloss) payload.gloss_zh = gloss;
     if (type === TYPES.DUE) payload.due_at = normalizeIso(input.due_at) || dueAtIso(input.due_ms != null ? input.due_ms : input.dueAt) || created;
     if (type === TYPES.WRONG && input.answer) payload.answer = String(input.answer).trim();
-    if (input.outcome && type !== TYPES.DUE) payload.outcome = String(input.outcome);
+    if (input.outcome && type !== TYPES.DUE && type !== TYPES.SESSION_START && type !== TYPES.SESSION_END) {
+      payload.outcome = String(input.outcome);
+    }
+    if (type === TYPES.SESSION_START && input.started_at) {
+      payload.started_at = normalizeIso(input.started_at) || String(input.started_at);
+    }
+    if (type === TYPES.SESSION_END) {
+      var durMs = Number(input.duration_ms);
+      if (!isFinite(durMs) || durMs < 0) durMs = 0;
+      if (!durMs && input.duration_sec != null) {
+        var sec = Number(input.duration_sec);
+        if (isFinite(sec) && sec > 0) durMs = sec * 1000;
+      }
+      if (durMs > 0) {
+        payload.duration_ms = Math.round(durMs);
+        payload.duration_sec = Math.round(durMs / 1000);
+      }
+      if (input.started_at) payload.started_at = normalizeIso(input.started_at) || String(input.started_at);
+      if (input.ended_at) payload.ended_at = normalizeIso(input.ended_at) || String(input.ended_at);
+      if (input.end_reason) payload.end_reason = String(input.end_reason);
+    }
     var ev = {
       event_id: input.event_id || newId(),
       learner_id: learner,

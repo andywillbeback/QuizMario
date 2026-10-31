@@ -29,7 +29,11 @@
     "vocab.answer_unknown": "不会",
     "vocab.wrong_book_add": "错词本",
     "vocab.due_review": "到期信号",
+    "session.start": "开始学习",
+    "session.end": "学习结束",
   };
+  var FORGET_LABELS = ["今日到期", "逾期", "学习中", "已巩固"];
+  var FORGET_COLORS = ["#c9842e", "#c45b7a", "#2e6fc4", "#2f9e8f"];
   var MASTERY_LABELS = ["0", "0.5", "1", "2", "3"];
   var DENIED_MESSAGE = "这个账号不是教师，不能打开班级看板。授权只认 app_metadata 里的 role=teacher，不认 user_metadata。";
 
@@ -206,6 +210,147 @@
   function dailyAnswers(bucket) {
     if (!bucket || typeof bucket !== "object") return 0;
     return num(bucket.c) + num(bucket.w) + num(bucket.unk);
+  }
+
+  function round1(value) {
+    return Math.round(num(value) * 10) / 10;
+  }
+
+  /** One decimal minute. Matches grok/session-duration.js. */
+  function msToMinutes(ms) {
+    var n = num(ms);
+    if (n <= 0) return 0;
+    return round1(n / 60000);
+  }
+
+  function isSessionEvent(type) {
+    return type === "session.start" || type === "session.end";
+  }
+
+  function localDayStart(now) {
+    var d = now instanceof Date ? new Date(now.getTime()) : new Date(now || Date.now());
+    if (isNaN(d.getTime())) d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+
+  /** Same new-card rule as srs-rules.js, so a lapsed learning card stays in the queue. */
+  function cardIsNew(card) {
+    if (!card || typeof card !== "object") return true;
+    if (card.state === "learning" || card.state === "review") return false;
+    if (card.state === "new") return true;
+    return num(card.reps) === 0 && num(card.correct) === 0 && num(card.wrong) === 0 && !(num(card.unknown) > 0);
+  }
+
+  function cardIsSolid(card) {
+    return !!(card && card.state === "review" && num(card.interval) >= 1);
+  }
+
+  function cardIsLearning(card) {
+    if (!card || cardIsNew(card) || cardIsSolid(card)) return false;
+    if (card.state === "learning") return true;
+    return num(card.interval) < 1 && num(card.reps) > 0;
+  }
+
+  /**
+   * One bucket per card. 逾期 wins, then 今日到期 (due now, not before today),
+   * then a future learning step, then a future solid card. New cards are omitted.
+   * This is not a fifth radar axis.
+   */
+  function forgetBucket(card, now) {
+    if (!card || cardIsNew(card)) return "";
+    var due = num(card.due);
+    var start = localDayStart(now);
+    var at = now instanceof Date ? now.getTime() : num(now) || Date.now();
+    if (due > 0 && due < start) return "overdue";
+    if (!due || due <= at) return "due";
+    if (cardIsLearning(card)) return "learning";
+    if (cardIsSolid(card)) return "solid";
+    return "learning";
+  }
+
+  function emptyForget() {
+    return { due: 0, overdue: 0, learning: 0, solid: 0, lapsed: 0 };
+  }
+
+  function forgetCounts(cards, now) {
+    var counts = emptyForget();
+    var obj = asObject(cards);
+    var keys = Object.keys(obj);
+    for (var i = 0; i < keys.length; i++) {
+      var card = obj[keys[i]];
+      var bucket = forgetBucket(card, now);
+      if (!bucket) continue;
+      counts[bucket] += 1;
+      if (num(card && card.lapses) > 0) counts.lapsed += 1;
+    }
+    return counts;
+  }
+
+  function forgetSeries(counts) {
+    counts = counts || emptyForget();
+    return {
+      labels: FORGET_LABELS.slice(),
+      counts: [num(counts.due), num(counts.overdue), num(counts.learning), num(counts.solid)],
+      due: num(counts.due),
+      overdue: num(counts.overdue),
+      learning: num(counts.learning),
+      solid: num(counts.solid),
+      lapsed: num(counts.lapsed),
+    };
+  }
+
+  function addForget(into, part) {
+    into.due += num(part.due);
+    into.overdue += num(part.overdue);
+    into.learning += num(part.learning);
+    into.solid += num(part.solid);
+    into.lapsed += num(part.lapsed);
+    return into;
+  }
+
+  /** session.end durations for one local day. Ignored when the save already has that day. */
+  function sessionEndMs(events, day) {
+    var total = 0;
+    var list = events || [];
+    for (var i = 0; i < list.length; i++) {
+      var ev = list[i];
+      if (!ev || ev.event_type !== "session.end") continue;
+      if (dayKey(ev.created_at) !== day) continue;
+      var payload = asObject(ev.payload);
+      var ms = num(payload.duration_ms);
+      if (!ms && payload.duration_sec) ms = num(payload.duration_sec) * 1000;
+      if (ms > 0) total += ms;
+    }
+    return total;
+  }
+
+  /**
+   * Prefer save.studyDaily, then an existing daily.studyMs mirror.
+   * session.end is only the fallback for a day the save does not name,
+   * so a heartbeat plus a later end event is not added twice.
+   */
+  function studyMsForDay(save, events, day) {
+    var study = asObject(save && save.studyDaily);
+    if (Object.prototype.hasOwnProperty.call(study, day)) return Math.max(0, num(study[day]));
+    var bucket = asObject(save && save.daily)[day];
+    if (bucket && typeof bucket === "object" && Object.prototype.hasOwnProperty.call(bucket, "studyMs")) {
+      return Math.max(0, num(bucket.studyMs));
+    }
+    return sessionEndMs(events, day);
+  }
+
+  function studyMinuteSeries(save, events, now) {
+    var window7 = dayWindow(now, 7);
+    var minutes = [];
+    for (var i = 0; i < window7.labels.length; i++) {
+      minutes.push(msToMinutes(studyMsForDay(save, events, window7.labels[i])));
+    }
+    return {
+      labels: window7.labels.map(shortDay),
+      minutes: minutes,
+      total: round1(minutes.reduce(function (sum, n) { return sum + num(n); }, 0)),
+    };
   }
 
   function blankWeak() {
@@ -851,7 +996,7 @@
   }
 
   /** Activity counts. Zero is a real count. extraValues draws the practice-event line. */
-  function svgLine(labels, values, extraValues) {
+  function svgLine(labels, values, extraValues, title, chartName) {
     labels = labels || [];
     values = values || [];
     extraValues = extraValues || null;
@@ -894,11 +1039,11 @@
     var legend = extraValues
       ? '<text x="' + padL + '" y="14" font-size="10" fill="#2e6fc4">答题</text><text x="' + (padL + 36) + '" y="14" font-size="10" fill="#b8860b">练习事件</text>'
       : "";
-    return svgOpen(w, h, "近7日练习") + legend + series(values, "#2e6fc4", false) +
+    return svgOpen(w, h, title || "近7日练习", chartName) + legend + series(values, "#2e6fc4", false) +
       (extraValues ? series(extraValues, "#b8860b", true) : "") + labs + "</svg>";
   }
 
-  function svgBars(labels, values) {
+  function svgBars(labels, values, title, chartName, colors) {
     labels = labels || [];
     values = values || [];
     var w = 360;
@@ -919,10 +1064,14 @@
       var bh = (num(values[j]) / max) * innerH;
       var x = padL + j * slot + (slot - barW) / 2;
       var y = padT + innerH - bh;
-      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(0, bh).toFixed(1) + '" rx="4" fill="#2f9e8f"/>';
+      var fill = colors && colors[j] ? colors[j] : "#2f9e8f";
+      bars += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + Math.max(0, bh).toFixed(1) + '" rx="4" fill="' + fill + '"/>';
+      if (num(values[j]) > 0) {
+        bars += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + Math.max(padT + 10, y - 4).toFixed(1) + '" font-size="11" text-anchor="middle" fill="#1c2430">' + num(values[j]) + "</text>";
+      }
       labs += '<text x="' + (x + barW / 2).toFixed(1) + '" y="' + (h - 8) + '" font-size="10" text-anchor="middle" fill="#5c677a">' + escHtml(labels[j]) + "</text>";
     }
-    return svgOpen(w, h, "掌握度") + bars + labs + "</svg>";
+    return svgOpen(w, h, title || "掌握度", chartName) + bars + labs + "</svg>";
   }
 
   var DONUT_COLORS = ["#2e6fc4", "#2f9e8f", "#c9842e", "#c45b7a", "#6b5bb8", "#b89a2e", "#3d8fb5"];
@@ -1045,7 +1194,7 @@
   }
 
   function classCsv(board) {
-    var headers = ["姓名", "邮箱", "班级", "词库", "已接触", "已学会", "掌握%", "认词", "搭配", "产出", "巩固", "近7日答题", "薄弱词", "更新"];
+    var headers = ["姓名", "邮箱", "班级", "词库", "已接触", "已学会", "掌握%", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
     var lines = [headers.join(",")];
     var students = (board && board.students) || [];
     for (var i = 0; i < students.length; i++) {
@@ -1066,6 +1215,11 @@
         scoreCell(axes.production),
         scoreCell(axes.retention),
         sum(st.line || []),
+        st.minutes7 == null ? "" : st.minutes7,
+        st.forget ? st.forget.due : "",
+        st.forget ? st.forget.overdue : "",
+        st.forget ? st.forget.learning : "",
+        st.forget ? st.forget.solid : "",
         weakText(st.weak),
         st.updatedAt || "",
       ].map(csvCell).join(","));
@@ -1132,6 +1286,19 @@
         ns: accuracy.ns || [],
         empty: !scores.some(function (score) { return score != null; }),
       },
+      duration: {
+        id: "chart-student-duration",
+        type: "line",
+        labels: st.minutesLabels || st.lineLabels || [],
+        data: st.minutes || [],
+      },
+      forget: {
+        id: "chart-student-forget",
+        type: "bar",
+        labels: (st.forget && st.forget.labels) || FORGET_LABELS.slice(),
+        data: (st.forget && st.forget.counts) || [0, 0, 0, 0],
+        lapsed: st.forget ? num(st.forget.lapsed) : 0,
+      },
     };
   }
 
@@ -1172,6 +1339,10 @@
       MIN_SAMPLE + " 次为样本不足，坐标轴为灰色，不记成 0 分。</p>" + svgRadar(axes) +
       "</section><section class=\"chart\"><h2>近7日练习</h2><p class=\"muted\">" + escHtml(lineNote) + "</p>" +
       svgLine(st.lineLabels, st.line, specs.activity.eventData) +
+      "</section><section class=\"chart\"><h2>近7日学习分钟</h2><p class=\"muted\">可见且最近有操作的练习时间。切到别的标签页、或超过 3 分钟没有点击，都不计入。单位是分钟。</p>" +
+      svgLine(specs.duration.labels, specs.duration.data, null, "近7日学习分钟", "duration") +
+      "</section><section class=\"chart\"><h2>遗忘节点</h2><p class=\"muted\">今日到期、逾期、学习中、已巩固。一张卡只进一栏。这四栏不是雷达的第五轴。雷达仍是认词、搭配、产出、巩固。</p>" +
+      svgBars(specs.forget.labels, specs.forget.data, "遗忘节点", "forget", FORGET_COLORS) +
       "</section><section class=\"chart\"><h2>掌握度</h2><p class=\"muted\">已接触词的掌握星级：0、0.5、1、2、3。未学的新词不在图里。</p>" +
       svgBars(MASTERY_LABELS, st.masteryBins || [0, 0, 0, 0, 0]) +
       "</section><section class=\"chart\"><h2>题型占比</h2><p class=\"muted\">只统计答题。到期信号不计入。</p>" +
@@ -1462,6 +1633,8 @@
     var students = [];
     var masteryValues = [];
     var active7 = 0;
+    var durationCounts = [0, 0, 0, 0, 0, 0, 0];
+    var forgetTotals = emptyForget();
 
     for (var s = 0; s < order.length; s++) {
       var id = order[s];
@@ -1524,13 +1697,15 @@
         var when = dayKey(one.created_at);
         var slot = window7.index[when];
         var type = one.event_type;
+        var sessionEvent = isSessionEvent(type);
         if (slot != null) {
           eventActive = true;
-          if (PRACTICE_TYPES[type]) {
+          if (!sessionEvent && PRACTICE_TYPES[type]) {
             event7[slot]++;
             activity[slot]++;
           }
         }
+        if (sessionEvent) continue;
         if (WEAK_EVENT_TYPES[type]) {
           var payload = asObject(one.payload);
           touchWeak(weakMap, eventHeadword(one), id, { events: 1, gloss: payload.gloss_zh || "" });
@@ -1548,6 +1723,13 @@
 
       var mastery = touched ? Math.round((credit / touched) * 100) : null;
       if (mastery != null) masteryValues.push(mastery);
+      var studied = studyMinuteSeries(save, evs, now);
+      if (studied.total > 0) dailyActive = true;
+      for (var mi = 0; mi < studied.minutes.length && mi < durationCounts.length; mi++) {
+        durationCounts[mi] = round1(durationCounts[mi] + studied.minutes[mi]);
+      }
+      var fq = forgetCounts(cards, now);
+      addForget(forgetTotals, fq);
       var isActive = dailyActive || eventActive;
       if (isActive) active7++;
       var personal = sum(daily7) > 0 ? daily7 : event7;
@@ -1589,6 +1771,10 @@
         modes: studentModeMix(evs, save),
         accuracy: accuracySeries(save, evs, now),
         abilities: abilities,
+        minutes: studied.minutes,
+        minutesLabels: studied.labels,
+        minutes7: studied.total,
+        forget: forgetSeries(fq),
         summary: "",
       };
       studentRow.summary = parentSummary(studentRow);
@@ -1622,6 +1808,8 @@
       },
       mastery: { labels: MASTERY_LABELS.slice(), counts: masteryCounts },
       activity: { labels: window7.labels.map(shortDay), counts: activity },
+      duration: { labels: window7.labels.map(shortDay), counts: durationCounts },
+      forget: forgetSeries(forgetTotals),
       modes: {
         labels: modeLabels,
         counts: modeLabels.map(function (label) { return modeMap[label]; }),
@@ -1751,6 +1939,10 @@
     PACK_INDEX: PACK_INDEX,
     PACK_CSV: PACK_CSV,
     classZip: classZip,
+    forgetBucket: forgetBucket,
+    forgetCounts: forgetCounts,
+    studyMinuteSeries: studyMinuteSeries,
+    msToMinutes: msToMinutes,
     UNFILED_CLASS: UNFILED_CLASS,
     classKeyOf: classKeyOf,
     groupStudents: groupStudents,
@@ -1916,6 +2108,39 @@
       destroyChart("chart-weak");
       showFallback("chart-weak", "还没有薄弱词");
     }
+
+    var duration = data.duration || { labels: [], counts: [] };
+    mountChart("chart-duration", {
+      type: "line",
+      data: {
+        labels: duration.labels,
+        datasets: [{
+          label: "学习分钟",
+          data: duration.counts,
+          borderColor: "#7ddec8",
+          backgroundColor: "rgba(125,222,200,.18)",
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
+    }, (duration.labels || []).map(function (label, i) { return label + " " + duration.counts[i] + "分钟"; }).join("\n"));
+
+    var forget = data.forget || { labels: [], counts: [] };
+    mountChart("chart-forget", {
+      type: "bar",
+      data: {
+        labels: forget.labels,
+        datasets: [{
+          label: "词条",
+          data: forget.counts,
+          backgroundColor: ["#c9842e", "#c45b7a", "#8eb7ff", "#7ddec8"],
+          borderRadius: 6,
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
+    }, (forget.labels || []).map(function (label, i) { return label + " " + forget.counts[i]; }).join("\n"));
   }
 
   function renderKpis(data) {
@@ -2089,6 +2314,8 @@
     destroyChart("chart-student-mastery");
     destroyChart("chart-student-modes");
     destroyChart("chart-student-accuracy");
+    destroyChart("chart-student-duration");
+    destroyChart("chart-student-forget");
   }
 
   function renderDetail(st) {
@@ -2115,6 +2342,8 @@
         statChip("掌握", st.mastery == null ? "—" : st.mastery + "%"),
         statChip("已学会", st.learned),
         statChip("近7日答题", st.answers7),
+        statChip("近7日分钟", st.minutes7 == null ? "—" : st.minutes7),
+        statChip("逾期", st.forget ? st.forget.overdue : 0),
         statChip("薄弱词", st.weakCount),
       ].join("");
     }
@@ -2125,7 +2354,8 @@
       " · 连续打卡 " + st.streak +
       " · 最佳 " + st.bestStreak +
       " · 错词本 " + st.bookActive +
-      " · 近7日练习事件 " + st.practice7;
+      " · 近7日练习事件 " + st.practice7 +
+      (st.forget ? " · 今日到期 " + st.forget.due + " · 学习中 " + st.forget.learning + " · 已巩固 " + st.forget.solid : "");
     var lineHint = $("detail-line-hint");
     if (lineHint) {
       lineHint.textContent = specs.activity.eventData
@@ -2179,6 +2409,35 @@
         scales: baseScales(),
       },
     }, specs.activity.labels.map(function (label, i) { return label + " " + specs.activity.data[i]; }).join("\n"));
+    mountChart(specs.duration.id, {
+      type: "line",
+      data: {
+        labels: specs.duration.labels,
+        datasets: [{
+          label: "学习分钟",
+          data: specs.duration.data,
+          borderColor: "#7ddec8",
+          backgroundColor: "rgba(125,222,200,.16)",
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
+    }, specs.duration.labels.map(function (label, i) { return label + " " + specs.duration.data[i] + "分钟"; }).join("\n"));
+    mountChart(specs.forget.id, {
+      type: "bar",
+      data: {
+        labels: specs.forget.labels,
+        datasets: [{
+          label: "词条",
+          data: specs.forget.data,
+          backgroundColor: ["#c9842e", "#c45b7a", "#8eb7ff", "#7ddec8"],
+          borderRadius: 6,
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: baseScales() },
+    }, specs.forget.labels.map(function (label, i) { return label + " " + specs.forget.data[i]; }).join("\n"));
     var modesHint = $("detail-modes-hint");
     if (modesHint) {
       modesHint.textContent = st.modes && st.modes.basis === "practice"
