@@ -168,7 +168,7 @@ function earlyScript() {
     window.fetch = function (input, init) {
       var url = typeof input === "string" ? input : (input && input.url) || "";
       var method = ((init && init.method) || (input && input.method) || "GET").toUpperCase();
-      if (!/supabase\\.co/i.test(url)) {
+      if (!/supabase\\.co|quizmario-supabase-proxy\\.juguang-qm\\.workers\\.dev/i.test(url)) {
         if (!orig) return Promise.reject(new Error("no fetch"));
         return orig(input, init);
       }
