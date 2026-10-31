@@ -1,8 +1,9 @@
 /* Primary collocation hard gate on the EN→ZH practice path.
  * Run: node tests/colloc-gate.test.js
  *
- * Primary = the first related[] entry that is collocation-shaped (whitespace
- * or "...") and resolves to a same-track card with a non-empty meaning_zh.
+ * Primary prefers a fixed verb phrase that contains the lemma as a whole
+ * token (light verb, or an ellipsis pattern). Otherwise the first
+ * phrase-shaped related entry with a card and a non-empty gloss.
  * Single-word reverse links are not gates. A missing card or blank gloss is
  * skipped. No usable entry means the lemma advances as it does today.
  */
@@ -71,13 +72,50 @@ function cardIn(track, word) {
 
   const advantage = cardIn(gaokao, "advantage");
   assert.ok(gaokao.sets[0].some((c) => c.word === "advantage"));
+  assert.deepStrictEqual(related.lemmas(advantage), ["advantage over", "take advantage of"]);
   const advGate = related.primaryCollocation(advantage, gkIndex);
-  assert.strictEqual(advGate.lemma, "advantage over", "primary is the first usable related entry");
-  assert.strictEqual(advGate.gloss, "胜过……的优势");
-  assert.deepStrictEqual(advGate.rest, ["take advantage of"]);
+  assert.strictEqual(advGate.lemma, "take advantage of", "a fixed verb phrase that uses the lemma beats a near-synonym headed by it");
+  assert.strictEqual(advGate.gloss, "利用（机会）");
+  assert.deepStrictEqual(advGate.rest, ["advantage over"]);
   const take = cardIn(gaokao, "take advantage of");
   assert.strictEqual(take.meaning_zh, "利用（机会）");
   assert.strictEqual(related.primaryCollocation(take, gkIndex), null);
+}
+
+{
+  const index = related.indexTrack([
+    [{ word: "advantage", meaning_zh: "优势" }],
+    [
+      { word: "advantage over", meaning_zh: "胜过……的优势" },
+      { word: "take advantage of", meaning_zh: "利用（机会）" },
+      { word: "keep quiet", meaning_zh: "保持安静" },
+      { word: "side note", meaning_zh: "附注" },
+      { word: "keep alpha safe", meaning_zh: "保护甲" },
+    ],
+  ]);
+  const both = related.primaryCollocation({
+    word: "advantage",
+    related: ["advantage over", "take advantage of"],
+  }, index);
+  assert.strictEqual(both.lemma, "take advantage of");
+  assert.strictEqual(both.gloss, "利用（机会）");
+  assert.deepStrictEqual(both.rest, ["advantage over"]);
+  const nearOnly = related.primaryCollocation({
+    word: "advantage",
+    related: ["advantage over"],
+  }, index);
+  assert.strictEqual(nearOnly.lemma, "advantage over", "with no fixed verb phrase, the first usable phrase remains the gate");
+  const lightMiss = related.primaryCollocation({
+    word: "alpha",
+    related: ["side note", "keep quiet"],
+  }, index);
+  assert.strictEqual(lightMiss.lemma, "side note", "a light verb that does not use the lemma does not jump the queue");
+  const lightHit = related.primaryCollocation({
+    word: "alpha",
+    related: ["side note", "keep alpha safe"],
+  }, index);
+  assert.strictEqual(lightHit.lemma, "keep alpha safe");
+  assert.deepStrictEqual(lightHit.rest, ["side note"]);
 }
 
 {
@@ -632,20 +670,22 @@ async function browserCheck() {
     const advOpen = await clickGloss("优势");
     assert.strictEqual(advOpen.ok, true, JSON.stringify(advOpen));
     const advGate = await snap();
-    assert.strictEqual(advGate.prompt, "advantage over");
-    assert.strictEqual(advGate.gate, "advantage over");
-    assert.deepStrictEqual(advGate.chips, ["take advantage of"]);
+    assert.strictEqual(advGate.prompt, "take advantage of");
+    assert.strictEqual(advGate.gate, "take advantage of");
+    assert.deepStrictEqual(advGate.chips, ["advantage over"]);
     assert.strictEqual(advGate.good, false);
+    await sleep(400);
+    await shot("colloc-gate-advantage");
     assert.ok(advGate.hint.indexOf("胜过") === -1, advGate.hint);
     assert.ok(advGate.hint.indexOf("利用") === -1, advGate.hint);
-    const advWrong = advGate.choices.find((c) => c.text !== "胜过……的优势").text;
+    const advWrong = advGate.choices.find((c) => c.text !== "利用（机会）").text;
     await clickGloss(advWrong);
     const advStay = await snap();
-    assert.strictEqual(advStay.prompt, "advantage over");
+    assert.strictEqual(advStay.prompt, "take advantage of");
     assert.strictEqual(advStay.meaningN, 0);
     assert.strictEqual(advStay.correct, 0);
     assert.strictEqual(advStay.good, false);
-    await clickGloss("胜过……的优势");
+    await clickGloss("利用（机会）");
     const advRated = await snap();
     assert.strictEqual(advRated.good, true);
     assert.strictEqual(advRated.prompt, "advantage");

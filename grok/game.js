@@ -7,7 +7,8 @@
  * 通关 is 看英文选中文. 拼写 is typed; old MC spelling is not independent mastery.
  * 今日必练: due cards first, then 错词本 fill-in (review-queues.js). ZH→EN, still schedule().
  * After a correct EN→ZH lemma, one primary related collocation (related-links.js)
- * must be answered before that lemma is graded. No usable related entry skips the gate.
+ * must be answered before that lemma is graded. Prefer a fixed verb phrase that
+ * uses the lemma; otherwise the first usable phrase. No usable entry skips the gate.
  * schedule() remains the only SRS write, and it still waits for Good / Easy.
  * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
  * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
