@@ -377,13 +377,59 @@
     return n;
   }
 
+  /** Titles containing 固定搭配 stay playable. Other sets still follow unlockedLevel. */
+  function titleAlwaysUnlocked(title) {
+    return String(title || "").includes("固定搭配");
+  }
+
+  function setIsLocked(levelNum, unlockedLevel, title) {
+    const n = Math.floor(Number(levelNum) || 0);
+    const unlocked = Math.max(1, Math.floor(Number(unlockedLevel) || 1));
+    if (n < 1) return true;
+    if (titleAlwaysUnlocked(title)) return false;
+    return n > unlocked;
+  }
+
+  /** Clearing the frontier opens the next set. Clearing a set ahead of it does not. */
+  function frontierAfterClear(levelNum, unlockedLevel, levelCount) {
+    const from = Math.floor(Number(levelNum) || 0);
+    const unlocked = Math.max(1, Math.floor(Number(unlockedLevel) || 1));
+    const count = Math.max(0, Math.floor(Number(levelCount) || 0));
+    if (from !== unlocked) return unlocked;
+    if (count < 1) return unlocked;
+    return Math.min(count, from + 1);
+  }
+
+  function isAlwaysUnlockedSet(levelNum) {
+    return titleAlwaysUnlocked(setTitle(levelNum));
+  }
+
+  function isSetLocked(levelNum) {
+    return setIsLocked(levelNum, save.unlockedLevel, setTitle(levelNum));
+  }
+
+  function isSetPlayable(levelNum) {
+    const n = Math.floor(Number(levelNum) || 0);
+    if (n < 1 || n > LEVEL_COUNT) return false;
+    return !isSetLocked(n);
+  }
+
+  function advanceFrontier(levelNum) {
+    const next = frontierAfterClear(levelNum, save.unlockedLevel, LEVEL_COUNT);
+    if (next === save.unlockedLevel) return false;
+    save.unlockedLevel = next;
+    if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
+    save.trackUnlock[currentTrack] = save.unlockedLevel;
+    return true;
+  }
+
   function renderLevels() {
     const grid = $("level-grid");
     if (!grid) return;
     grid.innerHTML = "";
     for (let i = 1; i <= LEVEL_COUNT; i++) {
       const words = LEVELS[i - 1] || [];
-      const locked = i > save.unlockedLevel;
+      const locked = isSetLocked(i);
       const stars = levelStars(i);
       const mastered = levelMasteredCount(i);
       const card = document.createElement("div");
@@ -541,6 +587,9 @@
 
   function startLevel(levelNum, opts) {
     opts = opts || {};
+    const n = Math.floor(Number(levelNum) || 0);
+    if (!isSetPlayable(n)) return;
+    levelNum = n;
     collocFlow.abandon();
     playGen += 1;
     levelClearing = false;
@@ -2105,12 +2154,8 @@
       clearAnim($("stat-mastered"), "points-pop", 450);
     }
 
-    // Unlock next set only when this set meets the clearance bar
-    if (isLevelClear(currentLevel) && currentLevel >= save.unlockedLevel) {
-      save.unlockedLevel = Math.min(LEVEL_COUNT, currentLevel + 1);
-      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
-      save.trackUnlock[currentTrack] = save.unlockedLevel;
-    }
+    // Frontier only. An early 固定搭配 clear must not open the vocab sets in between.
+    if (isLevelClear(currentLevel)) advanceFrontier(currentLevel);
     persist();
     updateProgress();
     setTimeout(nextCard, 700);
@@ -2413,11 +2458,7 @@
     stopChallenge();
     const stars = levelStars(currentLevel);
     save.levelStars[String(currentLevel)] = Math.max(save.levelStars[String(currentLevel)] || 0, stars);
-    if (currentLevel >= save.unlockedLevel) {
-      save.unlockedLevel = Math.min(LEVEL_COUNT, currentLevel + 1);
-      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
-      save.trackUnlock[currentTrack] = save.unlockedLevel;
-    }
+    advanceFrontier(currentLevel);
     save.points += 50;
     persist();
     const cs = levelClearStats(currentLevel);
@@ -3005,6 +3046,16 @@
     return Math.min(LEVELS.length, Math.max(1, save.unlockedLevel || 1));
   }
 
+  /** Frontier groups plus every 固定搭配 set. Does not rewrite unlockedLevel. */
+  function openedLevelIdxs() {
+    const limit = openedGroupLimit();
+    const idxs = [];
+    for (let li = 0; li < LEVELS.length; li++) {
+      if (li < limit || isAlwaysUnlockedSet(li + 1)) idxs.push(li);
+    }
+    return idxs;
+  }
+
   function learnerEvents() {
     return window.QuizMarioLearnerEvents || null;
   }
@@ -3093,8 +3144,9 @@
       if (book[k] && book[k].active) before.add(k);
     }
     const entries = [];
-    const limit = openedGroupLimit();
-    for (let li = 0; li < limit; li++) {
+    const opened = openedLevelIdxs();
+    for (let oi = 0; oi < opened.length; oi++) {
+      const li = opened[oi];
       const words = LEVELS[li] || [];
       for (const w of words) {
         const key = cardKey(li, w.word);
@@ -3128,12 +3180,15 @@
   }
 
   function dueQueueItems(now) {
-    const limit = openedGroupLimit();
-    const groups = [];
-    for (let li = 0; li < limit; li++) groups.push({ levelIdx: li, words: LEVELS[li] || [] });
+    const idxs = openedLevelIdxs();
+    const groups = idxs.map((li) => ({ levelIdx: li, words: LEVELS[li] || [] }));
+    // collectDue keeps levelIdx < unlockedLevel. Raise that ceiling to the last
+    // included index so a 固定搭配 set is due-eligible without writing trackUnlock.
+    let openedThrough = Math.max(1, save.unlockedLevel || 1);
+    for (let i = 0; i < idxs.length; i++) openedThrough = Math.max(openedThrough, idxs[i] + 1);
     const rows = RQ.collectDue({
       groups: groups,
-      unlockedLevel: save.unlockedLevel,
+      unlockedLevel: openedThrough,
       cards: save.cards,
       now: now || Date.now(),
       cardKey: function (levelIdx, word) { return cardKey(levelIdx, word); },
@@ -3554,12 +3609,8 @@
   $("btn-next-level").addEventListener("click", () => {
     const cleared = isLevelClear(currentLevel);
     let next = cleared ? Math.min(LEVEL_COUNT, currentLevel + 1) : currentLevel;
-    if (cleared && next > save.unlockedLevel) {
-      save.unlockedLevel = next;
-      if (!save.trackUnlock || typeof save.trackUnlock !== "object") save.trackUnlock = {};
-      save.trackUnlock[currentTrack] = save.unlockedLevel;
-      persist();
-    }
+    if (cleared && advanceFrontier(currentLevel)) persist();
+    if (!isSetPlayable(next)) next = currentLevel;
     // A false clear (巩固 0/need) used to refuse Next or skip into another
     // empty clear screen. Resume this set, or open the next one when it really passed.
     startLevel(next);
