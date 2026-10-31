@@ -6,6 +6,9 @@
  * 继续闯关 is regular study with no clock. 12分钟挑战 is the only timed mode (CHALLENGE_MS).
  * 通关 is 看英文选中文. 拼写 is typed; old MC spelling is not independent mastery.
  * 今日必练: due cards first, then 错词本 fill-in (review-queues.js). ZH→EN, still schedule().
+ * After a correct EN→ZH lemma, one primary related collocation (related-links.js)
+ * must be answered before that lemma is graded. No usable related entry skips the gate.
+ * schedule() remains the only SRS write, and it still waits for Good / Easy.
  * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
  * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
@@ -92,6 +95,8 @@
   let pendingRate = false;
   /** Options from the correct tap, applied when Good / Easy schedules the card. */
   let pendingAttempt = null;
+  /** Collocation hard gate. Holds the lemma until its primary phrase is answered. */
+  const collocFlow = bindCollocFlow();
 
   const KILL_LINES = {
     1: "First blood",
@@ -323,6 +328,10 @@
 
   function showScreen(name) {
     closeRelatedPeek();
+    if (name !== "play") {
+      collocFlow.abandon();
+      clearCollocChrome();
+    }
     if ((name === "gate" || name === "home") && !document.documentElement.classList.contains("session-ok") && !window.__QM_EXPECT_SESSION && !window.__QM_AUTH_PENDING) {
       location.replace("login.html");
       return;
@@ -531,6 +540,7 @@
 
   function startLevel(levelNum, opts) {
     opts = opts || {};
+    collocFlow.abandon();
     playGen += 1;
     levelClearing = false;
     sessionKind = "level";
@@ -1111,6 +1121,7 @@
   }
 
   function fillCardContent() {
+    clearCollocChrome();
     const meaningMode = sessionDirection === "meaning";
     const promptLabel = $("prompt-label");
     if (promptLabel) {
@@ -1243,6 +1254,8 @@
   }
 
   function nextCard() {
+    collocFlow.abandon();
+    clearCollocChrome();
     clearRateDock();
     if (challengeFailed) return;
     const play = $("screen-play");
@@ -1610,13 +1623,18 @@
     if (!row) return;
     try {
       const api = relatedApi();
+      const gate = collocFlow.phase() === "gate" ? collocFlow.gate() : null;
       const show = !!(api && currentCard && typeof api.visible === "function"
         && api.visible(currentCard, sessionDirection, revealed));
-      if (!show) {
+      if (!api || !currentCard || (!show && !gate)) {
         hideRelatedRow();
         return;
       }
-      const items = api.lemmas(currentCard);
+      let items = api.lemmas(currentCard);
+      if (gate && gate.primary && gate.primary.lemma) {
+        const skip = api.norm(gate.primary.lemma);
+        items = items.filter((item) => api.norm(item) !== skip);
+      }
       if (!items.length) {
         hideRelatedRow();
         return;
@@ -1890,7 +1908,29 @@
       gradeSpelling(correct, chosen, outcome);
       return;
     }
+    // Hold SM-2 until the primary collocation is correct. No related entry falls through.
+    if (collocFlow.phase() === "gate") {
+      const passed = collocFlow.onCollocAnswer((outcome || (correct ? "correct" : "wrong")) === "correct") === "complete";
+      if (!passed) {
+        showCollocRetry();
+        return;
+      }
+      correct = true;
+      easy = false;
+      chosen = "";
+      outcome = "correct";
+    } else {
+      const preview = outcome || (correct ? "correct" : "wrong");
+      if (preview === "correct" && sessionDirection === "meaning") {
+        const gateEffect = collocFlow.onLemmaCorrect(currentCard, relatedTrackIndex(), sessionDirection);
+        if (gateEffect === "open") {
+          renderCollocGate();
+          return;
+        }
+      }
+    }
     awaiting = true;
+    restoreLemmaPrompt();
     setUnknownVisible(false);
     renderCardSpeech(true);
     const kind = outcome || (correct ? "correct" : "wrong");
@@ -2075,6 +2115,109 @@
     setTimeout(nextCard, 700);
   }
 
+  function bindCollocFlow() {
+    const api = window.QuizMarioRelated;
+    if (api && typeof api.createCollocGate === "function") return api.createCollocGate();
+    return {
+      phase: function () { return "idle"; },
+      gate: function () { return null; },
+      onLemmaCorrect: function () { return "complete"; },
+      onCollocAnswer: function () { return "ignore"; },
+      abandon: function () {},
+    };
+  }
+
+  function clearCollocChrome() {
+    const box = $("prompt-box");
+    if (!box) return;
+    box.classList.remove("is-colloc-gate");
+    box.removeAttribute("data-colloc-gate");
+  }
+
+  function restoreLemmaPrompt() {
+    const box = $("prompt-box");
+    const wasGate = !!(box && box.classList.contains("is-colloc-gate"));
+    clearCollocChrome();
+    if (!currentCard) return;
+    const meaningMode = sessionDirection === "meaning";
+    const promptLabel = $("prompt-label");
+    if (promptLabel) {
+      promptLabel.textContent = meaningMode
+        ? "英文 → 中文意思"
+        : (sessionDirection === "spelling" ? "拼写 · 中文 → 键入英文" : "中文意思 → 英文单词");
+    }
+    const promptMain = $("prompt-main");
+    if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
+    if (wasGate) {
+      const hintEl = $("prompt-hint");
+      if (hintEl) hintEl.textContent = "";
+    }
+  }
+
+  function showCollocRetry() {
+    const fb = $("feedback");
+    if (fb) {
+      fb.innerHTML =
+        '<div class="fb-title">搭配再想想</div>' +
+        '<div class="fb-meta">选对这个搭配的中文意思后，才会进入下一个词。</div>';
+      fb.className = "bad show";
+    }
+    flashStage("bad");
+    const box = $("prompt-box");
+    if (box) {
+      animRestart(box, "shake");
+      clearAnim(box, "shake", 500);
+    }
+  }
+
+  function renderCollocGate() {
+    const gate = collocFlow.gate();
+    if (!gate || !gate.primary) return;
+    const phrase = gate.primary;
+    closeRelatedPeek();
+    awaiting = false;
+    pendingRate = false;
+    clearRateDock();
+    setTypeRowVisible(false);
+    setCardSpeakVisible(false);
+    const box = $("prompt-box");
+    if (box) {
+      box.classList.add("is-colloc-gate");
+      box.setAttribute("data-colloc-gate", phrase.lemma);
+    }
+    const promptLabel = $("prompt-label");
+    if (promptLabel) promptLabel.textContent = "搭配 · 英文 → 中文意思";
+    const promptMain = $("prompt-main");
+    if (promptMain) promptMain.textContent = phrase.lemma;
+    const hintEl = $("prompt-hint");
+    if (hintEl) {
+      const host = gate.hostWord || "";
+      hintEl.textContent = host
+        ? ("「" + host + "」对了 · 选出这个搭配的意思")
+        : "选出这个搭配的意思";
+    }
+    const fb = $("feedback");
+    if (fb) {
+      fb.innerHTML = "";
+      fb.className = "";
+    }
+    const target = {
+      word: phrase.lemma,
+      meaning_zh: phrase.gloss,
+      pos: phrase.card && phrase.card.pos ? phrase.card.pos : "",
+    };
+    const correct = phrase.gloss;
+    const opts = [correct, ...pickMeaningDistractors(target, 3)].filter((opt) => String(opt || "").trim());
+    while (opts.length < 4) {
+      const filler = "（其他义项 " + opts.length + "）";
+      if (opts.indexOf(filler) === -1) opts.push(filler);
+      else break;
+    }
+    paintChoices(opts, correct, meaningsMatch);
+    setUnknownVisible(false);
+    renderRelated(true);
+  }
+
   /** Hard MC distractors: same POS / scene / root_group / similar length·spelling */
   function scoreDistractor(candidate, target, levelWords) {
     let score = 0;
@@ -2207,9 +2350,10 @@
       b.className = "choice";
       b.textContent = i + 1 + ".  " + opt;
       b.addEventListener("click", () => {
-        if (awaiting) return;
+        if (awaiting || b.disabled) return;
         const ok = match(opt, correct);
         b.classList.add(ok ? "ok" : "bad");
+        if (!ok && collocFlow.phase() === "gate") b.disabled = true;
         grade(ok, false, opt, ok ? "correct" : "wrong");
       });
       box.appendChild(b);
@@ -3218,6 +3362,7 @@
   }
 
   function startQueueSession(kind, items) {
+    collocFlow.abandon();
     playGen += 1;
     levelClearing = false;
     sessionKind = kind;
