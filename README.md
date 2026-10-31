@@ -84,6 +84,8 @@ where lower(email) = 'teacher@example.com';
 5. 薄弱词 Top 10（`cards.wrong`、错词本 `active`、`vocab.answer_wrong`、`vocab.wrong_book_add`）
 6. 学员表（掩码邮箱）。点一行看进度、个人近 7 日答题、薄弱词和最近事件
 7. 没有任何云端行时显示空状态
+8. 近 7 日学习分钟（`save.studyDaily`，可见且 3 分钟内有操作；不把 `session.end` 再加一遍）
+9. 遗忘节点：今日到期 / 逾期 / 学习中 / 已巩固。一张卡只进一栏。不增加雷达的第五轴
 
 掌握%是已接触词条的进度均值：`state = review` 且 `interval >= 1` 天记 1，其余练过的记 0.5。已学会沿用存档规则：`mastered` 为真且已经巩固；旧档没有 `mastered` 时，要巩固并且 `mastery >= 3`。近 7 日活跃算存档 `daily` 或任意学习事件落在这 7 天里的学员。
 

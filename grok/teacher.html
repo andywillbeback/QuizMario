@@ -183,7 +183,7 @@
       <button type="button" class="ghost" id="btn-logout">退出</button>
     </div>
     <h2 class="class-only">教师看板 · 班级云进度</h2>
-    <p class="sub class-only">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号。点学员可看个人图表、认词、搭配、产出、巩固，以及一段给家长的简短评价。样本少于 5 次时该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级。解压后先打开「请先打开学员报告.html」，或打开「学员」文件夹里的网页给家长看（图表和简短评价），不要先打开附表里的汇总表。用当前已加载的数据，不另取密钥。</p>
+    <p class="sub class-only">图表来自云端 user_progress 和 learner_events。掌握%只计算已经接触过的词条；未学新词不计入。近 7 日折线是练习事件，不含到期信号，也不含学习分钟。学习分钟和遗忘节点（今日到期、逾期、学习中、已巩固）是另外两张图，不进入认词、搭配、产出、巩固雷达。点学员可看个人图表，以及一段给家长的简短评价。样本少于 5 次时雷达该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级。解压后先打开「请先打开学员报告.html」，或打开「学员」文件夹里的网页给家长看（图表和简短评价），不要先打开附表里的汇总表。用当前已加载的数据，不另取密钥。</p>
     <p id="cloud-status" role="status"></p>
     <div class="cards class-only" id="kpi-strip">
       <div><b id="kpi-students">—</b>学员数</div>
@@ -219,6 +219,18 @@
         <p class="hint">存档错次、错词本和错题事件合计。</p>
         <div class="chart-box tall"><canvas id="chart-weak" aria-label="薄弱词 Top10"></canvas></div>
         <p class="fallback" id="chart-weak-fallback" hidden></p>
+      </article>
+      <article class="panel">
+        <h3>近7日学习分钟</h3>
+        <p class="hint">全班每天的可见练习时间，单位是分钟。切走页面或超过 3 分钟没有操作的时间不计入。来自存档 studyDaily，不把 session.end 再加一遍。</p>
+        <div class="chart-box"><canvas id="chart-duration" aria-label="近7日学习分钟"></canvas></div>
+        <p class="fallback" id="chart-duration-fallback" hidden></p>
+      </article>
+      <article class="panel">
+        <h3>遗忘节点</h3>
+        <p class="hint">今日到期、逾期、学习中、已巩固。一张卡只进一栏。逾期是本地零点前就到期的卡。这四栏不是雷达的第五轴。</p>
+        <div class="chart-box"><canvas id="chart-forget" aria-label="遗忘节点"></canvas></div>
+        <p class="fallback" id="chart-forget-fallback" hidden></p>
       </article>
     </div>
     <div id="roster" class="class-only">
@@ -275,6 +287,18 @@
           <p class="hint" id="detail-line-hint">答题次数</p>
           <div class="chart-box"><canvas id="chart-student" aria-label="个人近7日"></canvas></div>
           <p class="fallback" id="chart-student-fallback" hidden></p>
+        </article>
+        <article class="panel" data-personal-chart="duration">
+          <h3>近7日学习分钟</h3>
+          <p class="hint" id="detail-duration-hint">可见且最近有操作的时间。隐藏标签页和发呆超过 3 分钟不计入。0 就是没学到一分钟，不是样本不足。</p>
+          <div class="chart-box"><canvas id="chart-student-duration" aria-label="个人近7日学习分钟"></canvas></div>
+          <p class="fallback" id="chart-student-duration-fallback" hidden></p>
+        </article>
+        <article class="panel" data-personal-chart="forget">
+          <h3>遗忘节点</h3>
+          <p class="hint" id="detail-forget-hint">今日到期、逾期、学习中、已巩固。一张卡只进一栏，不进入认词 / 搭配 / 产出 / 巩固雷达。</p>
+          <div class="chart-box"><canvas id="chart-student-forget" aria-label="个人遗忘节点"></canvas></div>
+          <p class="fallback" id="chart-student-forget-fallback" hidden></p>
         </article>
         <article class="panel">
           <h3>掌握度</h3>
