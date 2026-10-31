@@ -73,7 +73,10 @@
     cfg = cfg || {};
     var url = String(cfg.SUPABASE_URL || "").trim().replace(/\/+$/, "");
     var key = String(cfg.SUPABASE_ANON_KEY || "").trim();
-    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return false;
+    var direct = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url);
+    // Exact host: the live CF reverse proxy in grok/config.js (CN reachability).
+    var proxy = url === "https://quizmario-supabase-proxy.juguang-qm.workers.dev";
+    if (!direct && !proxy) return false;
     if (/YOUR_PROJECT|YOUR_SUPABASE|placeholder/i.test(url)) return false;
     if (key.length < 20) return false;
     if (/YOUR_|PASTE_HERE|placeholder|changeme/i.test(key)) return false;

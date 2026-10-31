@@ -25,6 +25,7 @@ const SDK_HELP = "还不能登录：页面没有加载到 Supabase 登录组件�
 const CLIENT_HELP = "还不能登录：登录客户端没有创建成功。请刷新后再试。这不是 config.js 未填写。";
 const LIVE_KEY = "sb_publishable_wXq1t1Ynsj9o1qGpU5T3IQ_7M5EC1ZK";
 const LIVE_URL = "https://cmainasvlfdynidabunp.supabase.co";
+const GROK_PROXY_URL = "https://quizmario-supabase-proxy.juguang-qm.workers.dev";
 
 function staticGuards() {
   for (const file of ["login.html", "index.html", "grok/login.html", "grok/index.html"]) {
@@ -40,15 +41,39 @@ function staticGuards() {
   assert.ok(grokUmd.includes('.version="2.49.4"'), "vendored file is supabase-js 2.49.4");
   assert.ok(grokUmd.includes("createClient"), "vendored file exposes createClient");
 
+  const expectedUrl = {
+    "config.js": LIVE_URL,
+    "grok/config.js": GROK_PROXY_URL,
+  };
   for (const file of ["config.js", "grok/config.js"]) {
     const src = read(file);
     const url = src.match(/SUPABASE_URL:\s*"([^"]+)"/)[1];
     const key = src.match(/SUPABASE_ANON_KEY:\s*"([^"]+)"/)[1];
-    assert.strictEqual(url, LIVE_URL, file + " URL");
+    assert.strictEqual(url, expectedUrl[file], file + " URL");
     assert.strictEqual(key, LIVE_KEY, file + " keeps the publishable key");
     assert.ok(!/service_role\s*[:=]\s*['"][^'"]+['"]/.test(src), file);
     assert.ok(!/eyJ[A-Za-z0-9_-]{10,}\./.test(src), file + " must not embed a JWT");
   }
+
+  const grokMerge = require(path.join(root, "grok/sync-merge.js"));
+  const proxyConfig = {
+    SUPABASE_URL: GROK_PROXY_URL,
+    SUPABASE_ANON_KEY: LIVE_KEY,
+    SITE_URL: "https://andywillbeback.github.io/QuizMario/grok/",
+  };
+  assert.strictEqual(grokMerge.isCloudConfigured(proxyConfig), true, "grok accepts the CF proxy base URL");
+  assert.strictEqual(grokMerge.isCloudConfigured({
+    SUPABASE_URL: GROK_PROXY_URL + "/",
+    SUPABASE_ANON_KEY: LIVE_KEY,
+  }), true, "trailing slash is stripped before the host check");
+  assert.strictEqual(grokMerge.isCloudConfigured({
+    SUPABASE_URL: "https://evil.workers.dev",
+    SUPABASE_ANON_KEY: LIVE_KEY,
+  }), false, "an arbitrary workers.dev host stays unconfigured");
+  assertBanner("grok/auth-page.js", {
+    config: proxyConfig,
+    supabase: { createClient() { return authClient(); } },
+  }, null);
 
   const grokAuth = read("grok/auth-page.js");
   assert.ok(grokAuth.includes(CONFIG_GROK), "grok config-missing sentence stays");
