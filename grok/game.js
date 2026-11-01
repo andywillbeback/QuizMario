@@ -506,6 +506,7 @@
       example_en: w.example_en || "",
       example_zh: w.example_zh || "",
       pos: w.pos || "",
+      ipa: w.ipa || "",
       roots: w.roots || "",
       affix: w.affix || "",
       root_group: w.root_group || "",
@@ -1174,6 +1175,14 @@
     speakLine("Shut down");
   }
 
+  function renderPromptIpa(ipa) {
+    const el = $("prompt-ipa");
+    if (!el) return;
+    const text = ipa == null ? "" : String(ipa).trim();
+    el.textContent = text;
+    el.hidden = !text;
+  }
+
   function fillCardContent() {
     clearCollocChrome();
     const meaningMode = sessionDirection === "meaning";
@@ -1185,6 +1194,7 @@
     }
     const promptMain = $("prompt-main");
     if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
+    renderPromptIpa(currentCard && currentCard.ipa);
     const prog = getProg(currentCard.key);
     const filled = Math.floor(prog.mastery || 0);
     const starsHtml =
@@ -1776,6 +1786,7 @@
       const here = currentCard && currentCard.levelIdx != null ? currentCard.levelIdx : (currentLevel - 1);
       const inSet = !!(hit && hit.levelIdx === here);
       setRelatedPeekText("related-peek-word", surface, false);
+      setRelatedPeekText("related-peek-ipa", hit && hit.word && hit.word.ipa ? String(hit.word.ipa) : "", true);
       setRelatedPeekText(
         "related-peek-meaning",
         gloss ? ((pos ? pos + " · " : "") + gloss) : "当前词库里没有这个词条",
@@ -1888,6 +1899,11 @@
     sessionWrongs.push(word);
   }
 
+  function ipaLine(card) {
+    if (!card || !card.ipa) return "";
+    return '<div class="fb-ipa">' + escapeHtml(card.ipa) + "</div>";
+  }
+
   function feedbackHtml(view) {
     return (view && view.lines || []).map((line) => '<div class="fb-meta">' + escapeHtml(line) + "</div>").join("");
   }
@@ -1937,6 +1953,7 @@
       fb.innerHTML =
         '<div class="fb-title">' + title + indep + "</div>" +
         '<div class="fb-answer">' + escapeHtml(currentCard.word) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
+        ipaLine(currentCard) +
         feedbackHtml(view) +
         extraExampleHtml(currentCard) +
         speakButtons(currentCard) +
@@ -2019,6 +2036,7 @@
       if (choiceBox) choiceBox.hidden = true;
       fb.innerHTML =
         '<div class="fb-title">Correct! +' + bonus + " · " + escapeHtml(currentCard.word) + "</div>" +
+        ipaLine(currentCard) +
         '<div class="fb-detail">' +
         feedbackHtml(viewFor("correct", "", "答对后选「记住了」或「太简单」", "")) +
         '<div class="fb-meta">选下次再练的时间</div>' +
@@ -2071,6 +2089,7 @@
       let why =
         "<div class=\"fb-explain\"><b>答案</b> " + escapeHtml(currentCard.word) +
         " — " + escapeHtml(currentCard.meaning_zh) + "</div>" +
+        ipaLine(currentCard) +
         "<div class=\"fb-explain\">" + escapeHtml(explain) + "</div>";
       if (currentCard.scene) {
         why += '<div class="fb-meta">场景：' + escapeHtml(currentCard.scene) + "</div>";
@@ -2198,6 +2217,7 @@
     }
     const promptMain = $("prompt-main");
     if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
+    renderPromptIpa(currentCard && currentCard.ipa);
     if (wasGate) {
       const hintEl = $("prompt-hint");
       if (hintEl) hintEl.textContent = "";
@@ -2239,6 +2259,7 @@
     if (promptLabel) promptLabel.textContent = "搭配 · 英文 → 中文意思";
     const promptMain = $("prompt-main");
     if (promptMain) promptMain.textContent = phrase.lemma;
+    renderPromptIpa(phrase.card && phrase.card.ipa);
     const hintEl = $("prompt-hint");
     if (hintEl) {
       const host = gate.hostWord || "";

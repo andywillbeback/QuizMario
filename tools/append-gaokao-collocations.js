@@ -3,6 +3,11 @@
  * Ordinary single-word cards then gain related[] from
  * data/gaokao-lemma-to-colloc.json (same-track phrases only, cap 5).
  * Run: node tools/append-gaokao-collocations.js
+ *
+ * Each new card gets ipa from data/ipa-bre.json (tools/generate-ipa.js).
+ * The authored tuples stay gloss + example; re-running this script does not
+ * drop ipa. Ordinary cards already on the file keep whatever fields they have,
+ * including ipa.
  */
 "use strict";
 
@@ -12,6 +17,7 @@ const vm = require("vm");
 const { relatedLemmas, indexSingleWordBank, normToken, applyReverseCollocLinks } = require("./zhongkao-collocation-related");
 const { exampleCoversLemma } = require("./zhongkao-collocation-examples");
 const { isTemplateExample } = require("./example-templates");
+const { loadMap, ipaFor } = require("./ipa-lookup");
 
 const root = path.join(__dirname, "..");
 const examPath = path.join(root, "grok", "exam-tracks.js");
@@ -104,6 +110,7 @@ function posFor(item) {
 }
 
 function buildCards(baseWords) {
+  const ipaMap = loadMap();
   const authored = new Map();
   for (const row of loadRows()) {
     const [lemma, meaning_zh, example_en, example_zh] = row;
@@ -148,6 +155,8 @@ function buildCards(baseWords) {
     const pos = posFor(item);
     const related = relatedLemmas(item.lemma, bank);
     if (!related.length) problems.push("Empty related list: " + item.lemma);
+    const ipa = ipaFor(item.lemma, pos, ipaMap);
+    if (!ipa) problems.push("Missing ipa: " + item.lemma);
     cards.push({
       word: item.lemma,
       pos,
@@ -156,6 +165,7 @@ function buildCards(baseWords) {
       example_zh: row.example_zh,
       scene: "高考",
       root_group: pos,
+      ipa,
       related,
     });
   }

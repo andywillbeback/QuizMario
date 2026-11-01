@@ -388,9 +388,10 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     margin: 0; font-size: .72rem; letter-spacing: .14em; color: var(--cyan); font-weight: 700;
   }
   #related-peek-word {
-    margin: 6px 0 8px; font-size: 1.8rem; line-height: 1.25; color: var(--gold);
+    margin: 6px 0 2px; font-size: 1.8rem; line-height: 1.25; color: var(--gold);
     user-select: text; -webkit-user-select: text;
   }
+  #related-peek-ipa { margin: 0 0 8px; }
   #related-peek-meaning { margin: 0; font-size: 1.05rem; font-weight: 600; }
   #related-peek-example {
     margin: 8px 0 0; font-size: .9rem; font-weight: 500; line-height: 1.45; opacity: .88;
@@ -490,6 +491,11 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   #prompt-label { font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; color: var(--cyan); opacity: .9; }
   #prompt-box.is-colloc-gate #prompt-label { color: var(--gold); opacity: 1; }
   #prompt-main { font-size: 1.85rem; font-weight: 700; margin: 8px 0 4px; line-height: 1.35; }
+  #prompt-ipa {
+    font-size: .95rem; font-weight: 500; color: var(--cyan); opacity: .9;
+    margin: 0 0 4px; line-height: 1.35; letter-spacing: .01em;
+  }
+  #prompt-ipa[hidden] { display: none !important; }
   #prompt-hint { font-size: .9rem; opacity: .65; min-height: 1.2em; }
   #prompt-hint .mastery-star-anim {
     display: inline-block;
@@ -824,6 +830,10 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 
   #feedback .fb-title { font-size: 1.05rem; margin-bottom: 4px; }
   #feedback .fb-answer { opacity: .9; font-weight: 600; }
+  #feedback .fb-ipa, #related-peek-ipa {
+    margin: 2px 0 0; font-size: .92rem; font-weight: 500; color: var(--cyan); opacity: .9;
+  }
+  #related-peek-ipa[hidden] { display: none !important; }
   #feedback .fb-explain {
     font-weight: 500; opacity: .92; font-size: .92rem;
     line-height: 1.45; margin-top: 4px; color: #ffe8e8;
@@ -884,6 +894,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     .sort-bar { gap: 6px; }
     .sort-btn { font-size: .75rem; padding: 6px 8px; }
     #prompt-main { font-size: 1.35rem; }
+    #prompt-ipa { font-size: .82rem; }
   }
   @media (max-width: 420px) {
     .gold-sign { font-size: 0.68rem; letter-spacing: 0.1em; padding-left: 0.1em; }
@@ -1158,6 +1169,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
       animation-duration: 1.35s;
     }
     body.at-play #prompt-main { font-size: 1.28rem; margin: 0; }
+    body.at-play #prompt-ipa { font-size: .72rem; margin: 0; line-height: 1.25; }
     body.at-play #prompt-hint {
       font-size: .72rem;
       line-height: 1.3;
@@ -1194,6 +1206,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     padding: 10px 12px;
   }
   body.at-play #prompt-main { font-size: clamp(1.2rem, 4vw, 1.7rem); margin: 0; }
+  body.at-play #prompt-ipa { font-size: .78rem; margin: 0; line-height: 1.25; }
   body.at-play #prompt-hint {
     font-size: .78rem;
     line-height: 1.3;
@@ -1344,6 +1357,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
       <div id="prompt-box">
         <div id="prompt-label">英文 → 中文意思</div>
         <div id="prompt-main">—</div>
+        <div id="prompt-ipa" hidden></div>
         <div id="prompt-hint"></div>
         <div id="card-related" hidden></div>
         <div id="card-speak" class="speak-row" hidden></div>
@@ -1434,6 +1448,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <div class="related-peek-card" role="dialog" aria-modal="true" aria-labelledby="related-peek-word">
     <p class="related-kicker">相关词</p>
     <h2 id="related-peek-word"></h2>
+    <p id="related-peek-ipa" hidden></p>
     <p id="related-peek-meaning"></p>
     <p id="related-peek-example" hidden></p>
     <p id="related-peek-where" class="sub"></p>
