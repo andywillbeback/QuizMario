@@ -1183,17 +1183,28 @@
     el.hidden = !text;
   }
 
+  function promptFacing() {
+    if (!currentCard) return { label: "", main: "" };
+    if (sessionDirection === "polysemy") {
+      return { label: "一词多义 · 选出这个语境的意思", main: currentCard.word || "" };
+    }
+    if (sessionDirection === "meaning") {
+      return { label: "英文 → 中文意思", main: currentCard.word || "" };
+    }
+    if (sessionDirection === "spelling") {
+      return { label: "拼写 · 中文 → 键入英文", main: currentCard.meaning_zh || "" };
+    }
+    return { label: "中文意思 → 英文单词", main: currentCard.meaning_zh || "" };
+  }
+
   function fillCardContent() {
     clearCollocChrome();
     const meaningMode = sessionDirection === "meaning";
+    const facing = promptFacing();
     const promptLabel = $("prompt-label");
-    if (promptLabel) {
-      promptLabel.textContent = meaningMode
-        ? "英文 → 中文意思"
-        : (sessionDirection === "spelling" ? "拼写 · 中文 → 键入英文" : "中文意思 → 英文单词");
-    }
+    if (promptLabel) promptLabel.textContent = facing.label;
     const promptMain = $("prompt-main");
-    if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
+    if (promptMain) promptMain.textContent = facing.main;
     renderPromptIpa(currentCard && currentCard.ipa);
     const prog = getProg(currentCard.key);
     const filled = Math.floor(prog.mastery || 0);
@@ -1214,15 +1225,18 @@
     metaBits.unshift(srsTag);
     if (currentCard.pos) metaBits.push(currentCard.pos);
     if (sessionDirection === "spelling") metaBits.push("键入拼写 · 不计入通关");
+    if (sessionDirection === "polysemy") metaBits.push("一词多义 · 不计入通关");
     let hint = "";
-    if (meaningMode) {
+    if (sessionDirection === "polysemy") {
+      hint = currentCard.senseContext || "";
+    } else if (meaningMode) {
       if (currentCard.example_en && !isPlaceholderExample(currentCard.example_en)) {
         hint = softenHint(currentCard.example_en, currentCard.word);
       }
     } else {
       hint = hintForCard(currentCard);
     }
-    const exampleZh = !meaningMode && currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
+    const exampleZh = !meaningMode && sessionDirection !== "polysemy" && currentCard.example_zh ? "  ·  例：" + escapeHtml(currentCard.example_zh) : "";
     const hintEl = $("prompt-hint");
     if (hintEl) {
       hintEl.innerHTML =
@@ -1597,7 +1611,7 @@
 
   function submitTypedSpelling() {
     if (awaiting || pendingRate || !currentCard) return;
-    if (sessionKind !== "spelling" && sessionDirection !== "spelling") return;
+    if (!Practice.sessionAnswerMode(sessionKind, sessionDirection).typed) return;
     const input = $("answer-input");
     const raw = input ? String(input.value || "") : "";
     if (!String(raw).trim()) return;
@@ -2010,11 +2024,15 @@
     const fb = $("feedback");
     const opts = attemptOpts(currentCard, { outcome: kind, correct: kind === "correct" });
     const nowMs = opts.now;
+    const countsClearance = Practice.affectsClearance(sessionKind, sessionDirection);
     if (kind !== "correct") rememberWrongWord(currentCard.word);
-    if (sessionDirection === "meaning") bumpPractice("meaning", kind === "correct");
-    bumpPractice("hint", kind === "correct" && !(currentCard && currentCard._hintSeen));
-
-    logAnswer(kind === "correct", prog, opts);
+    if (countsClearance) {
+      if (sessionDirection === "meaning") bumpPractice("meaning", kind === "correct");
+      bumpPractice("hint", kind === "correct" && !(currentCard && currentCard._hintSeen));
+      logAnswer(kind === "correct", prog, opts);
+    } else if (Practice.notePolysemy) {
+      Practice.notePolysemy(prog, kind, nowMs);
+    }
     if (kind === "correct") {
       pendingAttempt = opts;
       emitLearnerAnswer(true, currentCard, "", "correct");
@@ -2026,8 +2044,8 @@
       save.points += bonus;
       pendingRate = true;
 
-      const goodLabel = previewScheduleLabel(prog, 1);
-      const easyLabel = previewScheduleLabel(prog, 2);
+      const goodLabel = countsClearance ? previewScheduleLabel(prog, 1) : "不计入通关";
+      const easyLabel = countsClearance ? previewScheduleLabel(prog, 2) : "不计入通关";
       const rateBtn = (id, cls, zh, en, when) =>
         '<button type="button" class="rate-btn ' + cls + '" id="' + id + '">' +
         '<span class="rate-zh">' + zh + "</span>" +
@@ -2038,8 +2056,8 @@
         '<div class="fb-title">Correct! +' + bonus + " · " + escapeHtml(currentCard.word) + "</div>" +
         ipaLine(currentCard) +
         '<div class="fb-detail">' +
-        feedbackHtml(viewFor("correct", "", "答对后选「记住了」或「太简单」", "")) +
-        '<div class="fb-meta">选下次再练的时间</div>' +
+        feedbackHtml(viewFor("correct", "", countsClearance ? "答对后选「记住了」或「太简单」" : "不计入通关", "")) +
+        '<div class="fb-meta">' + (countsClearance ? "选下次再练的时间" : "这题不计入通关") + "</div>" +
         speakButtons(currentCard) +
         "</div>";
       fb.className = "ok show";
@@ -2066,8 +2084,10 @@
       bindRate("btn-rate-good", 1);
       bindRate("btn-rate-easy", 2);
     } else {
-      schedule(prog, 0, nowMs, opts);
-      rememberMiss(currentCard, prog);
+      if (countsClearance) {
+        schedule(prog, 0, nowMs, opts);
+        rememberMiss(currentCard, prog);
+      }
       emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind);
       save.streak = 0;
       const brokenStreak = killStreak;
@@ -2094,7 +2114,9 @@
       if (currentCard.scene) {
         why += '<div class="fb-meta">场景：' + escapeHtml(currentCard.scene) + "</div>";
       }
-      if (kind === "unknown") {
+      if (!countsClearance) {
+        why += '<div class="fb-meta">一词多义单独记，不改变本组通关，也不改这张卡的复习时间。</div>';
+      } else if (kind === "unknown") {
         why += '<div class="fb-meta">这题记成「不会」，不算选错。稍后还会再出现。</div>';
       } else {
         why += '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
@@ -2120,7 +2142,7 @@
       // The repeat already saw the answer, so it cannot count as a clean recall.
       const alreadyWaiting = requeueSoon.some((r) => r.card && r.card.key === currentCard.key)
         || queue.some((c) => c.key === currentCard.key && c._repeat);
-      if (!alreadyWaiting) {
+      if (countsClearance && !alreadyWaiting) {
         const delay = 1 + Math.floor(Math.random() * 2);
         requeueSoon.push({
           appearAt: stepCounter + delay,
@@ -2142,6 +2164,23 @@
     if (!pendingRate || !currentCard) return;
     clearRateDock();
     pendingRate = false;
+    if (!Practice.affectsClearance(sessionKind, sessionDirection)) {
+      pendingAttempt = null;
+      const fb = $("feedback");
+      const qName = quality === 2 ? "太简单" : "记住了";
+      if (fb) {
+        fb.innerHTML =
+          '<div class="fb-title">Correct · ' + qName + "</div>" +
+          '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+          ipaLine(currentCard) +
+          '<div class="fb-meta">一词多义单独记，不改变本组通关。</div>';
+        fb.className = "ok show";
+      }
+      persist();
+      updateProgress();
+      setTimeout(nextCard, 700);
+      return;
+    }
     const prog = getProg(currentCard.key);
     const opts = pendingAttempt || attemptOpts(currentCard, { outcome: "correct", correct: true });
     pendingAttempt = null;
@@ -2208,15 +2247,11 @@
     const wasGate = !!(box && box.classList.contains("is-colloc-gate"));
     clearCollocChrome();
     if (!currentCard) return;
-    const meaningMode = sessionDirection === "meaning";
+    const facing = promptFacing();
     const promptLabel = $("prompt-label");
-    if (promptLabel) {
-      promptLabel.textContent = meaningMode
-        ? "英文 → 中文意思"
-        : (sessionDirection === "spelling" ? "拼写 · 中文 → 键入英文" : "中文意思 → 英文单词");
-    }
+    if (promptLabel) promptLabel.textContent = facing.label;
     const promptMain = $("prompt-main");
-    if (promptMain) promptMain.textContent = meaningMode ? (currentCard.word || "") : (currentCard.meaning_zh || "");
+    if (promptMain) promptMain.textContent = facing.main;
     renderPromptIpa(currentCard && currentCard.ipa);
     if (wasGate) {
       const hintEl = $("prompt-hint");
@@ -2413,7 +2448,8 @@
     if (!box) return;
     shuffle(opts);
     box.hidden = false;
-    box.setAttribute("aria-label", sessionDirection === "meaning" ? "选择中文意思" : "选择英文单词");
+    const choosingMeaning = sessionDirection === "meaning" || sessionDirection === "polysemy";
+    box.setAttribute("aria-label", choosingMeaning ? "选择中文意思" : "选择英文单词");
     box.innerHTML = "";
     opts.forEach((opt, i) => {
       const b = document.createElement("button");
@@ -2440,6 +2476,13 @@
       return;
     }
     setTypeRowVisible(false);
+    if (sessionDirection === "polysemy") {
+      const correct = currentCard.senseCorrect || currentCard.meaning_zh || "";
+      const opts = currentCard.senseOptions ? currentCard.senseOptions.slice() : [correct];
+      if (correct && opts.indexOf(correct) === -1) opts.unshift(correct);
+      paintChoices(opts.filter((opt) => String(opt || "").trim()), correct, meaningsMatch);
+      return;
+    }
     if (sessionDirection === "meaning") {
       const correct = currentCard.meaning_zh || "";
       const opts = [correct, ...pickMeaningDistractors(currentCard, 3)].filter((opt) => String(opt || "").trim());
@@ -2705,6 +2748,7 @@
     save.unlockedLevel = Math.max(1, save.trackUnlock[t.id] || 1);
     save.levelStars = save.trackStars[t.id] || {};
     currentLevel = Math.min(currentLevel || 1, LEVEL_COUNT || 1);
+    syncSpellingButton();
     const sel = $("track-select");
     if (sel) sel.value = t.id;
     const d = $("track-desc");
@@ -3271,8 +3315,16 @@
   function queueModeLabel(kind) {
     if (kind === "must") return "今日必练";
     if (kind === "due") return "今日到期";
-    if (kind === "spelling") return "拼写";
+    if (kind === "spelling") return sessionDirection === "polysemy" ? "一词多义" : "拼写";
     return "错词本";
+  }
+
+  function syncSpellingButton() {
+    const btn = $("btn-spelling");
+    if (!btn) return;
+    const poly = window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack);
+    btn.textContent = poly ? "一词多义" : "拼写";
+    btn.setAttribute("aria-label", poly ? "高考一词多义" : "拼写");
   }
 
   function todayKey(now) {
@@ -3421,7 +3473,38 @@
     refreshHomeQueues();
   }
 
+  function startPolysemySession() {
+    const api = window.QuizMarioPolysemy;
+    const built = [];
+    if (api && typeof api.optionSet === "function") {
+      for (let li = 0; li < LEVELS.length; li++) {
+        const words = LEVELS[li] || [];
+        for (let i = 0; i < words.length; i++) {
+          const builtSense = api.optionSet(words[i]);
+          if (!builtSense) continue;
+          const item = enrichItem(words[i], li, i);
+          item.senseContext = builtSense.context;
+          item.senseCorrect = builtSense.correct;
+          item.senseOptions = builtSense.options.slice();
+          if (builtSense.ipa) item.ipa = builtSense.ipa;
+          built.push(item);
+        }
+      }
+    }
+    if (!built.length) {
+      showQueueEmpty("高考词库里还没有对得上的一词多义。");
+      return;
+    }
+    hideQueueEmpty();
+    shuffle(built);
+    startQueueSession("spelling", built.slice(0, 8), { direction: "polysemy" });
+  }
+
   function startSpellingSession() {
+    if (window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack)) {
+      startPolysemySession();
+      return;
+    }
     const lvl = Math.min(Math.max(1, save.unlockedLevel || 1), LEVEL_COUNT);
     currentLevel = lvl;
     const words = LEVELS[lvl - 1] || [];
@@ -3453,12 +3536,13 @@
     startQueueSession("spelling", batch);
   }
 
-  function startQueueSession(kind, items) {
+  function startQueueSession(kind, items, opts) {
+    opts = opts || {};
     collocFlow.abandon();
     playGen += 1;
     levelClearing = false;
     sessionKind = kind;
-    sessionDirection = kind === "spelling" ? "spelling" : "form";
+    sessionDirection = opts.direction || (kind === "spelling" ? "spelling" : "form");
     sessionMode = "study";
     sessionWrongs = [];
     sessionStartedClear = true;
@@ -3543,8 +3627,13 @@
       if (title) title.textContent = "今日到期练完了";
       if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
     } else if (kind === "spelling") {
-      if (title) title.textContent = "这轮拼写练完了";
-      if (msg) msg.textContent = "键入拼写单独记，不改变本组通关。旧的选择成绩不算独立拼写。";
+      if (sessionDirection === "polysemy") {
+        if (title) title.textContent = "这轮一词多义练完了";
+        if (msg) msg.textContent = "一词多义单独记，不改变本组通关。中考拼写仍是键入英文。";
+      } else {
+        if (title) title.textContent = "这轮拼写练完了";
+        if (msg) msg.textContent = "键入拼写单独记，不改变本组通关。旧的选择成绩不算独立拼写。";
+      }
     } else {
       const left = wrongBookQueueItems().length;
       if (title) title.textContent = left ? "这轮错词练完了" : "错词本清空了";

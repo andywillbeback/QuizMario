@@ -46,9 +46,12 @@
     return mode === "challenge";
   }
 
-  /** 拼写 does not move the SM-2 card that 通关 reads. */
-  function affectsClearance(sessionKind) {
-    return sessionKind !== "spelling";
+  /** 拼写 and 一词多义 do not move the SM-2 card that 通关 reads. */
+  function affectsClearance(sessionKind, sessionDirection) {
+    if (sessionKind === "spelling" || sessionDirection === "spelling" || sessionDirection === "polysemy") {
+      return false;
+    }
+    return true;
   }
 
   function blankBucket() {
@@ -195,11 +198,26 @@
   }
 
   /**
+   * Record one 一词多义 attempt. Does not read or write state, interval, reps,
+   * due, mastery, wrong, or the typed-spelling buckets.
+   */
+  function notePolysemy(prog, outcome, now) {
+    if (!prog || typeof prog !== "object") return null;
+    if (!prog.polysemy || typeof prog.polysemy !== "object") prog.polysemy = blankBucket();
+    applyOutcome(prog.polysemy, outcome, now);
+    return prog.polysemy;
+  }
+
+  /**
    * How this session collects an answer.
-   * 拼写 is typed. Meaning, challenge, and 今日必练 (form) stay multiple choice.
-   * Direction wins over kind when they disagree, except spelling, which is always typed.
+   * 拼写 is typed. 高考一词多义 is multiple choice even though the session kind
+   * stays "spelling" so it does not count toward 通关.
+   * Meaning, challenge, and 今日必练 (form) stay multiple choice.
    */
   function sessionAnswerMode(sessionKind, sessionDirection) {
+    if (sessionDirection === "polysemy") {
+      return { typed: false, evidence_kind: "mc_polysemy" };
+    }
     if (sessionKind === "spelling" || sessionDirection === "spelling") {
       return { typed: true, evidence_kind: "typed_spelling" };
     }
@@ -261,6 +279,7 @@
     mcSpellingSignal: mcSpellingSignal,
     isIndependentSpelling: isIndependentSpelling,
     noteSpelling: noteSpelling,
+    notePolysemy: notePolysemy,
     hasSpellingPractice: hasSpellingPractice,
     sessionAnswerMode: sessionAnswerMode,
     summarizeSpelling: summarizeSpelling,

@@ -13,7 +13,7 @@ alter table public.learner_events
   add column if not exists task_direction text;
 
 comment on column public.learner_events.evidence_kind is
-  'typed_spelling, mc_recognition, or mc_production. Also stored in payload.';
+  'typed_spelling, mc_recognition, mc_production, or mc_polysemy. Also stored in payload.';
 comment on column public.learner_events.independent is
   'Whether the attempt is independent typed spelling. false is stored. Also stored in payload.';
 comment on column public.learner_events.task_direction is

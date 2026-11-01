@@ -1332,7 +1332,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         </div>
         <p id="continue-hint" class="sub continue-hint" hidden></p>
         <p class="sub" style="margin-top:18px;font-size:.85rem">
-          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 拼写改为键入英文，旧选择成绩不算独立拼写；拼写另算，不挡住第一次通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>（拼写时不选）· 拼写时 <kbd>Enter</kbd>=检查 · 看完解析后 <kbd>Enter</kbd>=继续
+          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 中考拼写仍是键入英文，另算，不挡住第一次通关 · 高考这个按钮是一词多义选择题，同样不计入通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>（拼写时不选）· 拼写时 <kbd>Enter</kbd>=检查 · 看完解析后 <kbd>Enter</kbd>=继续
         </p>
 
         <div id="stats-panel" class="panel">
@@ -1347,7 +1347,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     <section id="screen-levels" class="screen">
       <div class="title-card">
         <h2>选择关卡 Word sets</h2>
-        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；拼写改为键入，单独记，不挡住第一次通关。</p>
+        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；中考拼写改为键入，单独记，不挡住第一次通关。高考一词多义也单独记，不计入通关。</p>
         <div id="level-grid" class="level-grid"></div>
         <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
       </div>
@@ -1491,6 +1491,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="cloze.js"></script>
   <script src="sense-examples.js"></script>
   <script src="practice.js"></script>
+  <script src="polysemy.js"></script>
   <script src="feedback.js"></script>
   <script src="share-card.js"></script>
   <script src="kill-streak.js"></script>
