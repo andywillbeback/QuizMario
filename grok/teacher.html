@@ -107,6 +107,17 @@
   #detail [data-personal-chart] .chart-box { height: 260px; min-height: 260px; }
   #student-timeline { margin: 0; padding-left: 1.1rem; }
   #student-timeline li { margin: 4px 0; }
+  #student-inventory { display: grid; gap: 14px; margin: 8px 0 14px; }
+  #student-inventory h4 { margin: 0; font-size: .95rem; }
+  #student-inventory .own-hint,
+  #student-inventory .own-empty,
+  #student-inventory .own-rest { margin: 4px 0; color: rgba(226,234,248,.62); font-size: .75rem; }
+  #student-inventory table { margin-top: 4px; }
+  #student-inventory tbody tr { cursor: default; }
+  #student-inventory td { white-space: normal; }
+  #student-inventory tr.own-more { display: none; }
+  #student-inventory .own-bucket.is-open tr.own-more { display: table-row; }
+  #student-inventory button { margin-top: 6px; }
   .summary-kicker { margin: 12px 0 6px; color: var(--gold); font-size: .82rem; letter-spacing: .08em; }
   .parent-summary {
     margin: 0 0 12px;
@@ -307,8 +318,9 @@
           <p class="fallback" id="chart-student-mastery-fallback" hidden></p>
         </article>
         <article class="panel">
-          <h3>薄弱词</h3>
-          <div class="tbl-wrap"><table id="student-weak"></table></div>
+          <h3>练习与掌握</h3>
+          <p class="hint">已练习是接触过的词。熟练 · 已学会是已经学会的词。不熟练 · 薄弱词是错得比较多或还在错词本里的词。一个词可以同时出现在已练习和另外一栏。</p>
+          <div id="student-inventory"></div>
           <h3>最近事件</h3>
           <ul id="student-timeline"></ul>
         </article>
@@ -342,6 +354,7 @@
 <script src="sync-merge.js"></script>
 <script src="cloud-client.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
+<script src="study-metrics.js"></script>
 <script src="teacher.js"></script>
 </body>
 </html>
