@@ -33,6 +33,7 @@
     typed_spelling: true,
     mc_recognition: true,
     mc_production: true,
+    mc_polysemy: true,
   };
   /** Top-level columns public.learner_events accepts.
    *  Keep this list aligned with supabase/learner_events.sql.

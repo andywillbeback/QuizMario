@@ -184,6 +184,7 @@
     if (dir === "cloze" || detail === "cloze" || kind === "cloze") return "完形";
     if (dir === "production" || dir === "form" || detail === "form" || kind === "mc_production") return "看义产出";
     if (dir === "collocation" || dir === "related" || dir === "related_item" || dir === "phrase" || detail === "collocation" || detail === "phrase") return "搭配";
+    if (dir === "polysemy" || kind === "mc_polysemy") return "一词多义";
     if (dir) return dir;
     var type = ev && ev.event_type;
     return EVENT_LABELS[type] || type || "其他";

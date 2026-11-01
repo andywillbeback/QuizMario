@@ -16,6 +16,7 @@
   function directionLabel(direction) {
     if (direction === "meaning") return "看英文选中文";
     if (direction === "spelling") return "看中文键入英文";
+    if (direction === "polysemy") return "一词多义";
     return "看中文选英文";
   }
 
@@ -32,7 +33,9 @@
    */
   function describeAttempt(attempt) {
     var a = attempt || {};
-    var direction = a.direction === "meaning" ? "meaning" : (a.direction === "spelling" ? "spelling" : "form");
+    var direction = a.direction === "meaning"
+      ? "meaning"
+      : (a.direction === "spelling" ? "spelling" : (a.direction === "polysemy" ? "polysemy" : "form"));
     var outcome = a.outcome || "wrong";
     var word = a.word || "";
     var meaning = a.meaning || "";
@@ -49,6 +52,8 @@
         lines.push("错向：" + dirLabel + " · 选了「" + (picked || "（空）") + "」，应是「" + meaning + "」");
       } else if (direction === "spelling") {
         lines.push("错向：" + dirLabel + " · 输入了「" + (picked || "（空）") + "」，应是「" + word + "」");
+      } else if (direction === "polysemy") {
+        lines.push("错向：" + dirLabel + " · 选了「" + (picked || "（空）") + "」，应是「" + meaning + "」");
       } else {
         lines.push("错向：" + dirLabel + " · 选了「" + (picked || "（空）") + "」，应是「" + word + "」");
       }
@@ -60,6 +65,9 @@
 
     if (direction === "spelling") {
       lines.push("拼写(键入)：" + (a.spellingSignal || "在练") + " · 不计入通关 · 旧选择不算独立");
+      lines.push("下次复习：词义进度未改");
+    } else if (direction === "polysemy") {
+      lines.push("一词多义：不计入通关 · 词义进度未改");
       lines.push("下次复习：词义进度未改");
     } else {
       lines.push("下次复习：" + (a.dueLabel || "待定"));

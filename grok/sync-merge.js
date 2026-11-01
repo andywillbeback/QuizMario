@@ -33,7 +33,9 @@
       var p = save.cards[keys[i]];
       if (!p || typeof p !== "object") continue;
       var spelled = spellingTouched(p.spelling);
-      if (spelled || (p.reps || 0) > 0 || (p.correct || 0) > 0 || (p.wrong || 0) > 0 || (p.unknown || 0) > 0 || (p.mastery || 0) > 0) n++;
+      var poly = p.polysemy;
+      var polyTouched = !!(poly && ((poly.correct || 0) + (poly.wrong || 0) + (poly.unknown || 0) > 0));
+      if (spelled || polyTouched || (p.reps || 0) > 0 || (p.correct || 0) > 0 || (p.wrong || 0) > 0 || (p.unknown || 0) > 0 || (p.mastery || 0) > 0) n++;
     }
     return n;
   }
