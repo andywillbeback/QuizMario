@@ -20,9 +20,13 @@ function load(file, name) {
 
 function stripRelatedSets(sets) {
   return sets.map((set) => set.map((card) => {
-    if (!card || !Object.prototype.hasOwnProperty.call(card, "related")) return card;
+    if (!card) return card;
+    if (!Object.prototype.hasOwnProperty.call(card, "related") && !Object.prototype.hasOwnProperty.call(card, "ipa")) {
+      return card;
+    }
     const copy = Object.assign({}, card);
     delete copy.related;
+    delete copy.ipa;
     return copy;
   }));
 }
