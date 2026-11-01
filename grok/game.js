@@ -2817,7 +2817,17 @@
       retention: retentionEvidence(),
       hint: save.practice && save.practice.hint,
     });
-    const radar = axes ? ('<div class="stats-radar-wrap">' + FB.radarSvg(axes) + "</div>") : "";
+    let ownStudy = "";
+    try {
+      if (window.QuizMarioOwnStudy && typeof window.QuizMarioOwnStudy.render === "function") {
+        let ownEvents = [];
+        if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.list === "function") {
+          ownEvents = window.QuizMarioLearnerEvents.list() || [];
+        }
+        ownStudy = window.QuizMarioOwnStudy.render({ save: save, events: ownEvents }) || "";
+      }
+    } catch (_) { ownStudy = ""; }
+    const radar = ownStudy ? "" : (axes ? ('<div class="stats-radar-wrap">' + FB.radarSvg(axes) + "</div>") : "");
     box.innerHTML =
       '<div class="stats-grid">' +
       "<div><b>" + st.streak + "</b>连续打卡(天)</div>" +
@@ -2829,6 +2839,7 @@
       '<p class="stats-legend">通关是一组里已经巩固的词够了（间隔至少 1 天）。已学会要等下一天、第一次就认对，而且之前没看到答案。保持率只算这些隔天复习。点「不会」单独记下，不算选错。拼写改为键入；旧选择成绩不算独立拼写，不挡住第一次通关。</p>' +
       spellLine +
       radar +
+      ownStudy +
       '<ul class="stats-tracks">' + tr + "</ul>";
   }
 

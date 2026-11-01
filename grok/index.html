@@ -969,6 +969,20 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   .stats-chart { width: 100%; height: auto; margin-top: 8px; }
   .stats-legend { font-size: .75rem !important; opacity: .75; }
   .stats-tracks { margin: 4px 0 0; padding-left: 18px; font-size: .82rem; line-height: 1.6; }
+  .own-study { margin-top: 14px; }
+  .own-study h4 { margin: 10px 0 4px; font-size: .95rem; color: var(--gold); }
+  .own-charts, .own-lists { display: grid; gap: 12px; }
+  .own-chart svg { width: 100%; height: auto; background: #f4f7fb; border-radius: 12px; }
+  .own-hint, .own-empty, .own-rest { margin: 4px 0; font-size: .75rem; opacity: .8; }
+  .own-bucket table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 4px; }
+  .own-bucket th, .own-bucket td {
+    text-align: left; padding: 4px 6px; border-bottom: 1px solid rgba(255,255,255,.12); white-space: normal;
+  }
+  .own-bucket th { color: var(--cyan); }
+  .own-bucket tr.own-more { display: none; }
+  .own-bucket.is-open tr.own-more { display: table-row; }
+  .own-bucket button { margin-top: 6px; }
+  .own-bucket button[hidden] { display: none !important; }
   .speak-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .speak-btn { padding: 6px 10px; font-size: .85rem; border-radius: 999px; }
   .speak-row .fb-ex { flex-basis: 100%; }
@@ -1467,6 +1481,8 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="kill-streak.js"></script>
   <script src="pronunciation.js"></script>
   <script src="related-links.js"></script>
+  <script src="study-metrics.js"></script>
+  <script src="own-study.js"></script>
   <script src="game.js"></script>
   <script src="profile-name.js"></script>
   <script src="sync.js"></script>
