@@ -994,6 +994,12 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   .own-bucket.is-open tr.own-more { display: table-row; }
   .own-bucket button { margin-top: 6px; }
   .own-bucket button[hidden] { display: none !important; }
+  .universe-entry { margin: 8px 0; }
+  .universe-entry a {
+    display: inline-block; padding: 8px 14px; border-radius: 999px;
+    font-weight: 800; text-decoration: none; color: #041018;
+    background: linear-gradient(180deg, #d7f6ff, #7fd4ff);
+  }
   .speak-row { margin: 6px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; }
   .speak-btn { padding: 6px 10px; font-size: .85rem; border-radius: 999px; }
   .speak-row .fb-ex { flex-basis: 100%; }
@@ -1337,6 +1343,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 
         <div id="stats-panel" class="panel">
           <h3>📈 我的学习数据</h3>
+          <p class="universe-entry"><a href="word-universe.html">单词记忆宇宙 · beta</a></p>
           <div id="stats-body"></div>
         </div>
 
