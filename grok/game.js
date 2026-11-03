@@ -2566,6 +2566,33 @@
       playPartClearCue(currentLevel);
     }
     offerSetShare("level");
+    openClearedSetUniverse();
+  }
+
+  /** 1-based set, same number as 第N组. Core and other tracks stay on 通关. */
+  function clearedSetUniverseHref() {
+    if (currentTrack !== "zhongkao" && currentTrack !== "gaokao") return "";
+    const setNum = Math.floor(Number(currentLevel) || 0);
+    if (setNum < 1) return "";
+    return "word-universe.html?track=" + encodeURIComponent(currentTrack) + "&set=" + setNum;
+  }
+
+  function openClearedSetUniverse() {
+    const href = clearedSetUniverseHref();
+    const link = $("btn-clear-universe");
+    if (!href) {
+      if (link) link.hidden = true;
+      return;
+    }
+    if (link) {
+      link.href = href;
+      link.hidden = false;
+    }
+    // Clear UI is already up. The next turn hard-loads 本组 so colors read
+    // the save persist() just wrote. Read-only: the universe does not write it.
+    setTimeout(() => {
+      try { location.assign(href); } catch (_) {}
+    }, 0);
   }
 
 

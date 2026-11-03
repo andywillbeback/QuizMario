@@ -25,6 +25,13 @@
  * nodes fit under the cap; it is not a second score.
  * LIFE / TECHNOLOGY keep a few showcase lemmas so an empty save still has
  * the two seed cores. Those nodes use real mastery when the save has it.
+ *
+ * No set in the query keeps that whole-track graph. ?track=gaokao&set=12
+ * (1-based, same number as 第N组) limits lemma nodes to that set. 固定搭配
+ * still resolve on click from the whole track. A set that fits the cap shows
+ * every lemma. Over the cap, 不熟练 then 未学 come before high mastery.
+ * Showcase seeds are only the whole-track empty state, or a set that has
+ * no single-word lemmas.
  */
 (function (root, factory) {
   var api = factory(root);
@@ -259,19 +266,27 @@
     return list[0] || null;
   }
 
-  function flatten(track) {
+  /* setIndex null: whole track. A number keeps lemmas from that set only.
+   * byNorm always covers the track so a click can still resolve 固定搭配. */
+  function flatten(track, setIndex) {
     var lemmas = [];
     var byNorm = Object.create(null);
+    var lemmaSeen = Object.create(null);
     var sets = track && track.sets || [];
+    var scoped = setIndex != null;
     for (var s = 0; s < sets.length; s++) {
       var row = sets[s] || [];
       for (var i = 0; i < row.length; i++) {
         var card = row[i];
         if (!card || typeof card.word !== "string") continue;
         var key = norm(card.word);
-        if (!key || byNorm[key]) continue;
-        byNorm[key] = card;
-        if (!isPhrase(card.word)) lemmas.push(card);
+        if (!key) continue;
+        if (!byNorm[key]) byNorm[key] = card;
+        if (isPhrase(card.word)) continue;
+        if (scoped && s !== setIndex) continue;
+        if (lemmaSeen[key]) continue;
+        lemmaSeen[key] = true;
+        lemmas.push(card);
       }
     }
     return { lemmas: lemmas, byNorm: byNorm };
@@ -359,6 +374,55 @@
     return a.word < b.word ? -1 : a.word > b.word ? 1 : 0;
   }
 
+  /* Set cap: weak, then never-practiced, then lower mastery. Whole-track
+   * selection still uses compareWeak (scored before unscored). */
+  function compareSetFocus(a, b) {
+    if (a.weak !== b.weak) return a.weak ? -1 : 1;
+    if (a.scored !== b.scored) return a.scored ? 1 : -1;
+    if (a.scored && b.scored && a.mastery !== b.mastery) return a.mastery - b.mastery;
+    return a.word < b.word ? -1 : a.word > b.word ? 1 : 0;
+  }
+
+  function parseScope(search) {
+    var out = { trackId: "", set: null };
+    var text = String(search || "");
+    var q = text.indexOf("?");
+    if (q >= 0) text = text.slice(q + 1);
+    if (!text) return out;
+    var parts = text.split("&");
+    for (var i = 0; i < parts.length; i++) {
+      if (!parts[i]) continue;
+      var cut = parts[i].indexOf("=");
+      var rawKey = cut >= 0 ? parts[i].slice(0, cut) : parts[i];
+      var rawVal = cut >= 0 ? parts[i].slice(cut + 1) : "";
+      var key = "";
+      var val = "";
+      try {
+        key = decodeURIComponent(rawKey.replace(/\+/g, " "));
+        val = decodeURIComponent(rawVal.replace(/\+/g, " "));
+      } catch (e) {
+        continue;
+      }
+      if (key === "track" && (val === "gaokao" || val === "zhongkao")) out.trackId = val;
+      if (key === "set" && val !== "" && isFinite(Number(val))) {
+        var n = Math.floor(Number(val));
+        if (n >= 1) out.set = n;
+      }
+    }
+    return out;
+  }
+
+  /** 1-based set number, matching 第N组 / currentLevel. */
+  function resolveSet(track, set) {
+    if (set == null || set === "") return null;
+    var n = Number(set);
+    if (!isFinite(n)) return null;
+    var num = Math.floor(n);
+    if (num < 1) return null;
+    var count = track && track.sets ? track.sets.length : 0;
+    return { number: num, index: num - 1, missing: num > count };
+  }
+
   function orbitPoint(i, n, radius) {
     if (n <= 1) return { x: radius * 0.85, y: 0.35, z: 0.2 };
     var y = 1 - (i / (n - 1)) * 2;
@@ -408,7 +472,11 @@
       masteryOk: false,
     };
     if (!track) return empty;
-    var flat = flatten(track);
+    var spec = resolveSet(track, opt.set);
+    var scoped = !!spec;
+    var bank = flatten(track, null);
+    var pool = scoped ? flatten(track, spec.missing ? -1 : spec.index) : bank;
+    var flat = { lemmas: pool.lemmas, byNorm: bank.byNorm };
     var related = root.QuizMarioRelated;
     var index = null;
     if (related && typeof related.indexTrack === "function") {
@@ -416,30 +484,37 @@
       catch (e) { index = null; }
     }
     var mastery = masteryIndex(opt.save, opt.events, opt.learnerId);
-    var rows = [];
-    var rowByKey = Object.create(null);
-    for (var i = 0; i < flat.lemmas.length; i++) {
-      var card = flat.lemmas[i];
-      var key = norm(card.word);
-      var theme = themeOf(card.word, card.meaning_zh || "");
-      var hit = mastery.byWord[key];
-      var scored = !!(hit && hit.score != null && isFinite(hit.score));
-      var row = {
-        key: key,
-        word: card.word,
-        gloss: String(card.meaning_zh || "").trim(),
-        ipa: card.ipa || "",
-        pos: card.pos || "",
-        themeId: theme.id,
-        mastery: scored ? hit.score : null,
-        scored: scored,
-        weak: !!mastery.weak[key],
-        phraseCount: phraseCountOf(card, flat.byNorm),
-        card: card,
-      };
-      rows.push(row);
-      rowByKey[key] = row;
+    function rowsFrom(cards, phraseNorm) {
+      var list = [];
+      var byKey = Object.create(null);
+      for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        var key = norm(card.word);
+        if (!key || byKey[key]) continue;
+        var theme = themeOf(card.word, card.meaning_zh || "");
+        var hit = mastery.byWord[key];
+        var scored = !!(hit && hit.score != null && isFinite(hit.score));
+        var row = {
+          key: key,
+          word: card.word,
+          gloss: String(card.meaning_zh || "").trim(),
+          ipa: card.ipa || "",
+          pos: card.pos || "",
+          themeId: theme.id,
+          mastery: scored ? hit.score : null,
+          scored: scored,
+          weak: !!mastery.weak[key],
+          phraseCount: phraseCountOf(card, phraseNorm),
+          card: card,
+        };
+        list.push(row);
+        byKey[key] = row;
+      }
+      return { rows: list, rowByKey: byKey };
     }
+    var built = rowsFrom(flat.lemmas, flat.byNorm);
+    var rows = built.rows;
+    var rowByKey = built.rowByKey;
     var cap = opt.cap > 0 ? opt.cap : 48;
     var seedPer = opt.seedPer != null ? opt.seedPer : Math.min(6, Math.max(4, Math.floor(cap / 8)));
     var perTheme = opt.perTheme != null ? opt.perTheme : 14;
@@ -452,30 +527,43 @@
       selected.push(row);
       return true;
     }
-    var seedIds = ["life", "technology"];
-    for (var s = 0; s < seedIds.length; s++) {
-      var names = SHOWCASE[seedIds[s]] || [];
-      var nSeed = 0;
-      for (var n = 0; n < names.length && nSeed < seedPer; n++) {
-        if (push(rowByKey[norm(names[n])])) nSeed++;
+    function takeSeeds(lookup) {
+      var seedIds = ["life", "technology"];
+      for (var s = 0; s < seedIds.length; s++) {
+        var names = SHOWCASE[seedIds[s]] || [];
+        var nSeed = 0;
+        for (var n = 0; n < names.length && nSeed < seedPer; n++) {
+          if (push(lookup[norm(names[n])])) nSeed++;
+        }
       }
     }
-    var ranked = rows.slice().sort(compareWeak);
-    var counts = Object.create(null);
-    for (var c = 0; c < selected.length; c++) {
-      counts[selected[c].themeId] = (counts[selected[c].themeId] || 0) + 1;
-    }
-    function take(respect) {
-      for (var r = 0; r < ranked.length; r++) {
-        var row = ranked[r];
-        if (!row.scored && !row.weak) continue;
-        if (respect && (counts[row.themeId] || 0) >= perTheme) continue;
-        if (push(row)) counts[row.themeId] = (counts[row.themeId] || 0) + 1;
-        if (selected.length >= cap) return;
+    if (!scoped) {
+      takeSeeds(rowByKey);
+      var ranked = rows.slice().sort(compareWeak);
+      var counts = Object.create(null);
+      for (var c = 0; c < selected.length; c++) {
+        counts[selected[c].themeId] = (counts[selected[c].themeId] || 0) + 1;
+      }
+      var take = function (respect) {
+        for (var r = 0; r < ranked.length; r++) {
+          var row = ranked[r];
+          if (!row.scored && !row.weak) continue;
+          if (respect && (counts[row.themeId] || 0) >= perTheme) continue;
+          if (push(row)) counts[row.themeId] = (counts[row.themeId] || 0) + 1;
+          if (selected.length >= cap) return;
+        }
+      };
+      take(true);
+      take(false);
+    } else if (!rows.length && !spec.missing) {
+      var bankRows = rowsFrom(bank.lemmas, bank.byNorm);
+      takeSeeds(bankRows.rowByKey);
+    } else {
+      var setRanked = rows.slice().sort(compareSetFocus);
+      for (var sr = 0; sr < setRanked.length; sr++) {
+        if (!push(setRanked[sr])) break;
       }
     }
-    take(true);
-    take(false);
 
     function attachLinks(list) {
       for (var a = 0; a < list.length; a++) {
@@ -584,6 +672,8 @@
       trackName: track.name || track.id,
       legend: LEGEND,
       unscoredNote: UNSCORED_NOTE,
+      scopeLabel: spec ? ("本组学情 · Set " + spec.number) : "",
+      setNumber: spec ? spec.number : null,
       themes: themes,
       lemmas: lemmas,
       spokes: spokes,
@@ -638,15 +728,26 @@
     function setStatus(text) {
       if (statusEl) statusEl.textContent = text;
     }
+    var opened = parseScope((root.location && root.location.search) || "");
+    var trackId = opened.trackId || readLocal().trackId;
+    var setNumber = opened.set;
+    var titleEl = doc.getElementById("universe-title");
+    function paintTitle(label) {
+      var text = label || "单词记忆宇宙 · beta";
+      if (titleEl) titleEl.textContent = text;
+      doc.title = label ? (label + " · 单词记忆宇宙") : "单词记忆宇宙 · beta";
+    }
+    if (setNumber) paintTitle("本组学情 · Set " + setNumber);
+    var scopePrefix = setNumber ? ("本组学情 · Set " + setNumber + " · ") : "";
     if (!root.THREE) {
-      setStatus("3D 引擎没有加载。单词记忆宇宙需要 WebGL。");
+      setStatus(scopePrefix + "3D 引擎没有加载。单词记忆宇宙需要 WebGL。");
       return;
     }
     var canvas = doc.createElement("canvas");
     var gl = null;
     try { gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl"); } catch (e) { gl = null; }
     if (!gl) {
-      setStatus("这台设备没有可用的 WebGL，单词记忆宇宙需要真 3D。");
+      setStatus(scopePrefix + "这台设备没有可用的 WebGL，单词记忆宇宙需要真 3D。");
       return;
     }
 
@@ -701,7 +802,6 @@
     var pickables = [];
     var focused = null;
     var graph = null;
-    var trackId = readLocal().trackId;
     var dragging = false;
     var moved = false;
     var lastX = 0;
@@ -920,9 +1020,16 @@
     function statusFor(g, focusedWord) {
       if (!g) return "";
       var tail = g.masteryOk ? "" : " · 学情模块没读到，颜色先按未学";
-      var base = g.trackName + " · 显示 " + g.stats.shown + " 个单词（上限 " + g.stats.cap +
+      var scope = g.scopeLabel ? (g.scopeLabel + " · ") : "";
+      var base = scope + g.trackName + " · 显示 " + g.stats.shown + " 个单词（上限 " + g.stats.cap +
         "，优先不熟练）· 词库单词 " + g.stats.bankLemmas + " · 已有学情 " + g.stats.touched + tail;
-      if (!g.stats.touched) base += " · 还没有练习记录，LIFE / TECHNOLOGY 是种子主题";
+      if (!g.stats.touched) {
+        if (g.setNumber) {
+          if (!g.stats.bankLemmas) base += " · 这一组没有单独单词";
+        } else {
+          base += " · 还没有练习记录，LIFE / TECHNOLOGY 是种子主题";
+        }
+      }
       if (focusedWord) return "已展开「" + focusedWord + "」的固定搭配 · " + base;
       return "首屏只有主题和单词 · " + base;
     }
@@ -1018,11 +1125,13 @@
       graph = buildGraph({
         tracks: root.VOCAB_EXAM_TRACKS || [],
         trackId: trackId || local.trackId,
+        set: setNumber,
         save: local.save,
         events: local.events,
         learnerId: local.learnerId,
         cap: cap,
       });
+      paintTitle(graph.scopeLabel);
       var buttons = doc.querySelectorAll("[data-universe-track]");
       for (var b = 0; b < buttons.length; b++) {
         buttons[b].setAttribute("aria-pressed", buttons[b].getAttribute("data-universe-track") === graph.trackId ? "true" : "false");
@@ -1203,6 +1312,15 @@
       var next = btn.getAttribute("data-universe-track");
       if (!next || next === trackId) return;
       trackId = next;
+      setNumber = null;
+      try {
+        if (root.history && root.location) {
+          var url = new URL(root.location.href);
+          url.searchParams.set("track", trackId);
+          url.searchParams.delete("set");
+          root.history.replaceState(null, "", url.pathname + url.search + url.hash);
+        }
+      } catch (eUrl) {}
       rebuild();
     });
     doc.addEventListener("keydown", function (ev) {
@@ -1253,9 +1371,10 @@
     visualOf: visualOf,
     hslToHex: hslToHex,
     buildGraph: buildGraph,
+    parseScope: parseScope,
     readLocal: readLocal,
     mount: mount,
-    CLUSTER_RULE: "Heuristic theme buckets in fixed order (technology, school, nature, life, feeling, travel, time, society, else 其他). Match exact English lemma, then stem (prefix if length >= 4, substring if length >= 5), then an exact Chinese gloss segment. First paint is cores plus lemma words only. Click adds phrase cards already in related[] that resolve to a glossed track card; primary is primaryCollocation. Co-lemmas are single-word related[] entries on those cards. Function-word co-lemmas (on/of/to/over/…) stay in the detail list and do not take an orbit. Mastery color is QMStudy inventory.practiced score (0–3, same as 三栏). Unscored stays gray. Weak-list membership only prioritizes which nodes fit the cap.",
+    CLUSTER_RULE: "Heuristic theme buckets in fixed order (technology, school, nature, life, feeling, travel, time, society, else 其他). Match exact English lemma, then stem (prefix if length >= 4, substring if length >= 5), then an exact Chinese gloss segment. First paint is cores plus lemma words only. Click adds phrase cards already in related[] that resolve to a glossed track card; primary is primaryCollocation. Co-lemmas are single-word related[] entries on those cards. Function-word co-lemmas (on/of/to/over/…) stay in the detail list and do not take an orbit. Mastery color is QMStudy inventory.practiced score (0–3, same as 三栏). Unscored stays gray. Weak-list membership only prioritizes which nodes fit the cap. A set query limits lemmas to that set; 固定搭配 still resolve from the whole track. Over the set cap, 不熟练 and 未学 come before high mastery. No set query keeps the whole track.",
   };
   return api;
 });

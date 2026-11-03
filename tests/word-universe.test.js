@@ -188,4 +188,179 @@ const phone = stopGraph.lemmas.find(function (n) { return n.word === "phone"; })
 assert.ok(phone && phone.phrases.some(function (p) { return p.word === "on the phone" && p.primary; }));
 assert.ok(phone.coLemmas.indexOf("on") >= 0);
 
+assert.deepStrictEqual(uni.parseScope(""), { trackId: "", set: null });
+assert.deepStrictEqual(uni.parseScope("?track=gaokao&set=12"), { trackId: "gaokao", set: 12 });
+assert.deepStrictEqual(uni.parseScope("word-universe.html?track=zhongkao&set=3"), { trackId: "zhongkao", set: 3 });
+assert.strictEqual(uni.parseScope("?set=0").set, null);
+assert.strictEqual(uni.parseScope("?track=ket&set=4").trackId, "");
+assert.strictEqual(uni.parseScope("?set=12.9").set, 12);
+
+const scopeTrack = [{
+  id: "gaokao",
+  name: "高考",
+  sets: [
+    [
+      { word: "life", meaning_zh: "生活" },
+      { word: "way", meaning_zh: "方式" },
+    ],
+    [
+      { word: "advantage", meaning_zh: "优势", related: ["take advantage of", "way"] },
+      { word: "take advantage of", meaning_zh: "利用", related: ["take", "advantage"] },
+      { word: "ghost", meaning_zh: "幽灵" },
+      { word: "brave", meaning_zh: "勇敢" },
+      { word: "quilt", meaning_zh: "被子" },
+      { word: "zebra", meaning_zh: "斑马" },
+    ],
+    [
+      { word: "be able to", meaning_zh: "能够" },
+    ],
+  ],
+}];
+const scopeSave = {
+  cards: {
+    "gaokao|1::advantage": { state: "learning", reps: 2, wrong: 2, correct: 0, mastery: 0, interval: 0 },
+    "gaokao|1::brave": { state: "review", reps: 4, wrong: 0, correct: 4, mastery: 3, interval: 3 },
+    "gaokao|1::quilt": { state: "learning", reps: 2, wrong: 0, correct: 2, mastery: 1, interval: 0 },
+  },
+};
+const set2 = uni.buildGraph({
+  tracks: scopeTrack,
+  trackId: "gaokao",
+  set: 2,
+  save: scopeSave,
+  events: [],
+  cap: 3,
+  seedPer: 4,
+  neighborPer: 2,
+});
+assert.strictEqual(set2.setNumber, 2);
+assert.strictEqual(set2.scopeLabel, "本组学情 · Set 2");
+assert.strictEqual(set2.lemmas.length, 3);
+assert.deepStrictEqual(set2.lemmas.map(function (n) { return n.word; }).sort(), ["advantage", "ghost", "zebra"]);
+assert.ok(!set2.lemmas.some(function (n) { return n.word === "brave" || n.word === "quilt" || n.word === "life" || n.word === "way"; }));
+const set2Adv = set2.lemmas.find(function (n) { return n.word === "advantage"; });
+assert.ok(set2Adv.weak);
+assert.deepStrictEqual(set2Adv.phrases.map(function (p) { return p.word; }), ["take advantage of"]);
+assert.ok(set2Adv.coLemmas.indexOf("way") >= 0, "a co-lemma outside the set stays on the click list");
+assert.ok(set2.lemmas.every(function (n) { return !uni.isPhrase(n.word); }));
+
+const set2All = uni.buildGraph({
+  tracks: scopeTrack,
+  trackId: "gaokao",
+  set: 2,
+  save: scopeSave,
+  events: [],
+  cap: 52,
+  seedPer: 6,
+  neighborPer: 2,
+});
+assert.strictEqual(set2All.stats.bankLemmas, 5);
+assert.strictEqual(set2All.lemmas.length, 5, "a set under the cap shows every lemma");
+assert.ok(set2All.lemmas.some(function (n) { return n.word === "brave"; }));
+assert.ok(!set2All.lemmas.some(function (n) { return n.word === "life" || n.word === "way" || n.word === "technology"; }));
+
+const set1 = uni.buildGraph({
+  tracks: scopeTrack,
+  trackId: "gaokao",
+  set: 1,
+  save: { cards: {} },
+  events: [],
+  cap: 52,
+  seedPer: 6,
+});
+assert.deepStrictEqual(set1.lemmas.map(function (n) { return n.word; }).sort(), ["life", "way"]);
+assert.strictEqual(set1.scopeLabel, "本组学情 · Set 1");
+
+const whole = uni.buildGraph({
+  tracks: scopeTrack,
+  trackId: "gaokao",
+  save: scopeSave,
+  events: [],
+  cap: 20,
+  seedPer: 1,
+  neighborPer: 0,
+});
+assert.strictEqual(whole.setNumber, null);
+assert.strictEqual(whole.scopeLabel, "");
+assert.ok(whole.lemmas.some(function (n) { return n.word === "advantage"; }));
+assert.ok(whole.lemmas.some(function (n) { return n.word === "life"; }), "no set param still seeds the whole track");
+
+const missingSet = uni.buildGraph({
+  tracks: scopeTrack,
+  trackId: "gaokao",
+  set: 9,
+  save: { cards: {} },
+  events: [],
+  cap: 20,
+  seedPer: 4,
+});
+assert.strictEqual(missingSet.setNumber, 9);
+assert.strictEqual(missingSet.lemmas.length, 0);
+
+const phraseOnly = uni.buildGraph({
+  tracks: scopeTrack,
+  trackId: "gaokao",
+  set: 3,
+  save: { cards: {} },
+  events: [],
+  cap: 20,
+  seedPer: 1,
+  neighborPer: 0,
+});
+assert.strictEqual(phraseOnly.setNumber, 3);
+assert.ok(phraseOnly.lemmas.some(function (n) { return n.word === "life"; }), "a lemma-less set still gets an empty-state core");
+assert.ok(!phraseOnly.lemmas.some(function (n) { return uni.isPhrase(n.word); }));
+
+const zkTrack = tracks.find(function (t) { return t.id === "zhongkao"; });
+const zkSet = uni.buildGraph({
+  tracks: tracks,
+  trackId: "zhongkao",
+  set: 1,
+  save: { cards: { "zhongkao|57::wool": { state: "learning", reps: 1, wrong: 1, mastery: 0, interval: 0, correct: 0 } } },
+  events: [],
+  cap: 52,
+  seedPer: 6,
+  neighborPer: 1,
+});
+const zkWords = {};
+zkTrack.sets[0].forEach(function (card) {
+  if (card && card.word && !uni.isPhrase(card.word)) zkWords[card.word.toLowerCase()] = true;
+});
+assert.strictEqual(zkSet.scopeLabel, "本组学情 · Set 1");
+assert.ok(zkSet.stats.shown <= 52);
+assert.strictEqual(zkSet.lemmas.length, Object.keys(zkWords).length);
+zkSet.lemmas.forEach(function (n) {
+  assert.ok(zkWords[n.word.toLowerCase()], n.word);
+});
+assert.ok(!zkSet.lemmas.some(function (n) { return n.word.toLowerCase() === "wool"; }));
+
+const zkWide = uni.buildGraph({
+  tracks: tracks,
+  trackId: "zhongkao",
+  save: { cards: { "zhongkao|57::wool": { state: "learning", reps: 1, wrong: 1, mastery: 0, interval: 0, correct: 0 } } },
+  events: [],
+  cap: 40,
+  seedPer: 1,
+  neighborPer: 0,
+});
+assert.strictEqual(zkWide.setNumber, null);
+assert.ok(zkWide.lemmas.some(function (n) { return n.word.toLowerCase() === "wool"; }), "no set param still reads the whole track");
+
+const game = read("grok/game.js");
+const clearFn = game.slice(game.indexOf("function onLevelClear"), game.indexOf("function setBackupStatus"));
+assert.ok(clearFn.includes('showScreen("clear")'));
+assert.ok(clearFn.indexOf('showScreen("clear")') < clearFn.indexOf("offerSetShare("));
+assert.ok(clearFn.indexOf("offerSetShare(") < clearFn.indexOf("openClearedSetUniverse("));
+assert.ok(clearFn.includes("word-universe.html?track="));
+assert.ok(clearFn.includes("&set="));
+assert.ok(clearFn.includes('currentTrack !== "zhongkao"') && clearFn.includes('currentTrack !== "gaokao"'));
+const queueFn = game.slice(game.indexOf("function finishQueueSession"), game.indexOf("function enterExam"));
+assert.ok(!queueFn.includes("word-universe"), "今日必练 / 拼写 do not open the universe");
+assert.ok(index.includes('id="btn-clear-universe"'));
+assert.ok(panel.indexOf("set=") === -1, "home entry stays the whole-track universe");
+assert.ok(own.indexOf("word-universe.html?track") === -1);
+assert.ok(read("grok/word-universe.html").includes('id="universe-title"'));
+assert.ok(!read("grok/kill-streak.js").includes("word-universe"));
+assert.ok(/\.supabase\.co\/?$/.test(read("grok/config.js").match(/SUPABASE_URL:\s*"([^"]+)"/)[1]));
+
 console.log("word-universe ok");
