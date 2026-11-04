@@ -32,7 +32,7 @@ function staticGuards() {
     const html = read(file);
     assert.ok(html.includes('src="vendor/supabase.umd.js"'), file + " loads the vendored SDK");
     assert.ok(!html.includes("cdn.jsdelivr.net/npm/@supabase/supabase-js"), file + " still loads supabase from jsDelivr");
-    assert.ok(html.indexOf('src="config.js"') < html.indexOf('src="vendor/supabase.umd.js"'), file + " loads config before the SDK");
+    assert.ok(html.indexOf('src="config.js') < html.indexOf('src="vendor/supabase.umd.js"'), file + " loads config before the SDK");
     assert.ok(html.indexOf('src="vendor/supabase.umd.js"') < html.indexOf('src="sync-merge.js"'), file + " loads the SDK before sync-merge");
   }
   const grokUmd = read("grok/vendor/supabase.umd.js");
@@ -151,6 +151,8 @@ function loadBanner(authFile, opts) {
     console,
     URLSearchParams,
     Promise,
+    setTimeout,
+    clearTimeout,
     document: fakeDocument(),
     location: { search: "", hash: "", href: "https://example.test/login.html" },
     QUIZMARIO_CONFIG: opts.config,
@@ -235,3 +237,4 @@ function messageMatrix() {
 staticGuards();
 messageMatrix();
 console.log("auth banner ok");
+

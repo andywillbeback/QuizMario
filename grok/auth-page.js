@@ -3,7 +3,7 @@
   "use strict";
 
   var CLIENT = window.QuizMarioCloudClient;
-  var mode = "register";
+  var mode = "login";
 
   function $(id) { return document.getElementById(id); }
 
@@ -16,6 +16,10 @@
 
   function humanAuthError(err) {
     var text = (err && err.message) || String(err || "");
+    if (/QM_AUTH_LOCK/i.test(text)) return "另一聚光页面正在同步登录。请关闭其他聚光页面，再刷新本页重试。";
+    if (/QM_AUTH_STORAGE/i.test(text)) return "浏览器无法保存登录状态。请允许本站存储；微信内可点右上角菜单，用系统浏览器打开后重试。";
+    if (/QM_AUTH_TIMEOUT|timed? ?out|timeout/i.test(text)) return "登录服务响应超时，请稍后重试；也可以切换 Wi-Fi 或移动网络。";
+    if (/QM_AUTH_NETWORK|failed to fetch|load failed|network|fetch failed/i.test(text)) return "暂时连接不到登录服务，请检查网络，或切换 Wi-Fi／移动网络后重试。";
     if (/invalid login credentials/i.test(text)) return "邮箱或密码不正确。";
     if (/already registered|already been registered/i.test(text)) return "这个邮箱已经注册过，请直接登录。";
     if (/email not confirmed/i.test(text)) return "邮箱还没确认。请先点邮件里的链接，再登录。";
@@ -28,6 +32,18 @@
 
   function configured() {
     return blockReason() === "";
+  }
+
+  function requireStorage() {
+    if (CLIENT && CLIENT.canPersistSession && !CLIENT.canPersistSession()) throw new Error("QM_AUTH_STORAGE");
+  }
+
+  function enterGame() {
+    requireStorage();
+    var saved;
+    try { saved = JSON.parse(window.localStorage.getItem("quizmario-auth") || "null"); } catch (_) {}
+    if (!saved || !saved.user || (!saved.access_token && !saved.refresh_token)) throw new Error("QM_AUTH_STORAGE");
+    window.location.href = "index.html";
   }
 
   function configHelp() {
@@ -75,6 +91,7 @@
     if (confirmLabel) confirmLabel.hidden = mode !== "register";
     if (confirmInput) {
       confirmInput.required = mode === "register";
+      confirmInput.disabled = mode !== "register";
       if (mode !== "register") confirmInput.value = "";
     }
     if (password) password.autocomplete = mode === "register" ? "new-password" : "current-password";
@@ -152,13 +169,13 @@
     var hash = new URLSearchParams((window.location.hash || "").replace(/^#/, ""));
     var description = search.get("error_description") || hash.get("error_description");
     var error = search.get("error") || hash.get("error");
-    if (description) return decodeURIComponent(description.replace(/\+/g, " "));
+    if (description) return description;
     if (error) return error;
     return "";
   }
 
   async function boot() {
-    setMode("register");
+    setMode("login");
     var banner = $("config-banner");
     if (!configured()) {
       if (banner) {
@@ -171,12 +188,26 @@
     var redirectError = readRedirectError();
     if (redirectError) msg(redirectError, "bad");
     try {
-      var res = await CLIENT.client().auth.getSession();
+      requireStorage();
+      var res = await authWithinDeadline(CLIENT.client().auth.getSession());
+      if (res && res.error) throw res.error;
       var session = res && res.data && res.data.session;
       if (session && session.user) showSession(session.user.email);
     } catch (e) {
       msg(humanAuthError(e), "bad");
     }
+  }
+
+  function authWithinDeadline(promise) {
+    return new Promise(function (resolve, reject) {
+      var timer = setTimeout(function () {
+        reject(new Error("QM_AUTH_TIMEOUT"));
+      }, 25000);
+      Promise.resolve(promise).then(function (value) {
+        clearTimeout(timer);
+        resolve(value);
+      }, function (error) { clearTimeout(timer); reject(error); });
+    });
   }
 
   var loginModeBtn = $("mode-login");
@@ -219,6 +250,7 @@
       if (submit) submit.disabled = true;
       msg(mode === "register" ? "正在注册…" : "正在登录…");
       try {
+        requireStorage();
         var client = CLIENT.client();
         if (mode === "register") {
           var signupData = { display_name: identity.name, class_name: identity.cls };
@@ -232,24 +264,24 @@
               window.QuizMarioProfileName.seedLocalProfile(identity.name, identity.cls);
             }
           } catch (_) {}
-          var signed = await client.auth.signUp({
+          var signed = await authWithinDeadline(client.auth.signUp({
             email: email,
             password: password,
             options: {
               emailRedirectTo: CLIENT.siteUrl(),
               data: signupData,
             },
-          });
+          }));
           if (signed.error) throw signed.error;
           if (signed.data && signed.data.session) {
-            window.location.href = "index.html";
+            enterGame();
             return;
           }
           msg("注册成功。请到邮箱点确认链接（用同一浏览器打开），然后再登录。课堂使用可以在 Supabase 里关掉 Confirm email，注册后会直接进入游戏。", "ok");
         } else {
-          var logged = await client.auth.signInWithPassword({ email: email, password: password });
+          var logged = await authWithinDeadline(client.auth.signInWithPassword({ email: email, password: password }));
           if (logged.error) throw logged.error;
-          window.location.href = "index.html";
+          enterGame();
         }
       } catch (err) {
         msg(humanAuthError(err), "bad");
@@ -257,6 +289,10 @@
         if (submit) submit.disabled = false;
       }
     });
+    var readySubmit = $("btn-submit");
+    if (readySubmit) readySubmit.disabled = false;
+    window.__QM_AUTH_HANDLER_READY = true;
+    clearTimeout(window.__QM_AUTH_LOAD_TIMER);
   }
 
   var forgot = $("btn-forgot");
@@ -273,9 +309,9 @@
       }
       forgot.disabled = true;
       try {
-        var res = await CLIENT.client().auth.resetPasswordForEmail(email, {
+        var res = await authWithinDeadline(CLIENT.client().auth.resetPasswordForEmail(email, {
           redirectTo: CLIENT.siteUrl() + "login.html",
-        });
+        }));
         if (res.error) throw res.error;
         msg("如果这个邮箱已注册，你会收到重置邮件。请用同一浏览器打开链接，然后在本页设置新密码。", "ok");
       } catch (err) {
@@ -296,7 +332,7 @@
       }
       logoutBtn.disabled = true;
       try {
-        await CLIENT.client().auth.signOut();
+        await authWithinDeadline(CLIENT.client().auth.signOut());
       } catch (_) {}
       logoutBtn.disabled = false;
       showForm();
@@ -325,7 +361,7 @@
       var btn = $("btn-update-password");
       if (btn) btn.disabled = true;
       try {
-        var res = await CLIENT.client().auth.updateUser({ password: next });
+        var res = await authWithinDeadline(CLIENT.client().auth.updateUser({ password: next }));
         if (res.error) throw res.error;
         $("new-password").value = "";
         $("new-password-2").value = "";
@@ -340,3 +376,4 @@
 
   boot();
 })();
+

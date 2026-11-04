@@ -66,29 +66,29 @@ input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,2
  <p class="sub">登录以同步你的学习进度<small>VOCAB SPOTLIGHT</small></p>
  <section class="card" aria-label="账号" style="width:auto">
     <p id="config-banner" hidden></p>
-    <form id="auth-form">
+    <form id="auth-form" method="post" onsubmit="return false">
       <div class="tabs" role="tablist" aria-label="登录或注册">
-        <button type="button" id="mode-login" role="tab" aria-pressed="false" aria-selected="false">登录</button>
-        <button type="button" id="mode-register" role="tab" aria-pressed="true" aria-selected="true">注册</button>
+        <button type="button" id="mode-login" role="tab" aria-pressed="true" aria-selected="true">登录</button>
+        <button type="button" id="mode-register" role="tab" aria-pressed="false" aria-selected="false">注册</button>
       </div>
       <label for="email">邮箱</label>
       <input id="email" name="email" type="email" autocomplete="username" inputmode="email" required placeholder="邮箱">
       <label for="password">密码</label>
-      <input id="password" name="password" type="password" autocomplete="new-password" minlength="6" required placeholder="密码（至少 6 位）">
-      <div id="confirm-label">
+      <input id="password" name="password" type="password" autocomplete="current-password" minlength="6" required placeholder="密码（至少 6 位）">
+      <div id="confirm-label" hidden>
         <label for="confirm">确认密码</label>
-        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" required placeholder="确认密码">
+        <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="6" disabled placeholder="确认密码">
       </div>
-      <div id="name-label">
+      <div id="name-label" hidden>
         <label for="display-name">姓名</label>
-        <input id="display-name" name="display-name" type="text" autocomplete="nickname" maxlength="12" required placeholder="姓名（2–12 字）">
+        <input id="display-name" name="display-name" type="text" autocomplete="nickname" maxlength="12" disabled placeholder="姓名（2–12 字）">
       </div>
-      <div id="class-label">
+      <div id="class-label" hidden>
         <label for="class-name">班级名</label>
-        <input id="class-name" name="class-name" type="text" autocomplete="organization" maxlength="20" required placeholder="班级名">
+        <input id="class-name" name="class-name" type="text" autocomplete="organization" maxlength="20" disabled placeholder="班级名">
       </div>
       <div class="actions">
-        <button type="submit" class="primary" id="btn-submit">注册</button>
+        <button type="submit" class="primary" id="btn-submit" disabled>登录</button>
         <div class="links"><button type="button" class="texty" id="btn-forgot">忘记密码？</button></div>
       </div>
     </form>
@@ -115,13 +115,20 @@ input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,2
  <div class="orbbox" aria-hidden="true"><canvas id="orb"></canvas></div>
  <p class="credit">Doctoral product powered by Pu Jin</p>
 </main>
-<script src="orb.js"></script>
-<script src="config.js"></script>
+<script>
+window.__QM_AUTH_LOAD_TIMER = setTimeout(function () {
+  if (window.__QM_AUTH_HANDLER_READY) return;
+  var msg = document.getElementById("auth-msg");
+  if (msg) { msg.textContent = "登录组件加载较慢或被网络拦截，请刷新重试；微信内可用系统浏览器打开。"; msg.className = "bad"; }
+}, 12000);
+</script>
+<script src="orb.js" async></script>
+<script src="config.js?v=20261104-auth"></script>
 <script src="vendor/supabase.umd.js"></script>
 <script src="sync-merge.js"></script>
-<script src="cloud-client.js"></script>
+<script src="cloud-client.js?v=20261104-auth"></script>
 <script src="profile-name.js"></script>
-<script src="auth-page.js"></script>
+<script src="auth-page.js?v=20261104-auth" onerror="document.getElementById('auth-msg').textContent='登录组件加载失败，请刷新页面后重试。'"></script>
 <script>
 (function () {
   if (!("serviceWorker" in navigator)) return;
@@ -131,3 +138,4 @@ input:focus{outline:none;border-color:#2f86ff;box-shadow:0 0 0 3px rgba(31,123,2
 })();
 </script>
 </body></html>
+
