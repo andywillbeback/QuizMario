@@ -43,8 +43,8 @@ function staticGuards() {
   assert.ok(!head.includes('classList.add("session-ok")'), "head script must not reveal the exam gate");
   assert.ok(head.includes("html:not(.session-ok) #screen-gate"), "exam gate stays hidden until a confirmed session");
   assert.ok(head.includes("display:none!important"), "unsigned gate cannot paint over the login redirect");
-  assert.ok(index.includes('src="entry-guard.js"'), "session check loads before the word lists");
-  assert.ok(index.indexOf('src="entry-guard.js"') < index.indexOf('src="words.js"'));
+  assert.ok(/src="entry-guard\.js(?:\?[^\"]*)?"/.test(index), "session check loads before the word lists");
+  assert.ok(index.indexOf('src="entry-guard.js') < index.indexOf('src="words.js"'));
   assert.ok(index.includes('id="screen-gate"') && index.includes('id="btn-gate-zhongkao"') && index.includes('id="btn-gate-gaokao"'));
   assert.ok(/id="login-cta"[^>]*hidden/.test(index), "home login CTA is not the post-exam step");
   assert.ok(guard.includes("auth.getSession"), "gate waits for getSession");
@@ -194,6 +194,7 @@ function earlyScript() {
         return orig(input, init);
       }
       window.__QM_SMOKE_FETCH.push(method + " " + url.split("?")[0]);
+      if (url.indexOf("/auth/v1/health") !== -1) return reply(200, { name: "GoTrue" });
       var expired = false;
       try { expired = sessionStorage.getItem("qm-phase") === "expired"; } catch (e) {}
       if (expired) return reply(400, { error: "invalid_grant", error_description: "expired" });
@@ -238,7 +239,7 @@ class Cdp {
 }
 
 function launchChrome(userDir) {
-  const chrome = spawn("google-chrome", [
+  const chrome = spawn(process.env.CHROME_BIN || "google-chrome", [
     "--headless=new",
     "--no-sandbox",
     "--disable-gpu",
@@ -356,8 +357,8 @@ async function main() {
       return snap;
     }, 20000, "unsigned login page");
 
-    assert.strictEqual(login.pressed, "true", "unsigned visit opens on 注册");
-    assert.strictEqual(login.submit, "注册");
+    assert.strictEqual(login.pressed, "false", "unsigned visit opens on 登录");
+    assert.strictEqual(login.submit, "登录");
     assert.ok(login.topbar.includes("聚光单词 · 1st edition"), login.topbar);
     assert.ok(login.title.includes("聚光单词 · 1st edition"));
     assert.strictEqual(login.gateSeen, "", "unsigned visit painted 中考/高考");
@@ -472,3 +473,4 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+

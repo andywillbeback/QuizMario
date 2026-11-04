@@ -16,6 +16,7 @@
 
   function showGate() {
     if (window.__QM_ENTRY_REDIRECTING) return;
+    clearTimeout(window.__QM_ENTRY_WATCHDOG);
     document.documentElement.classList.add("session-ok");
   }
 
@@ -32,18 +33,21 @@
       goLogin();
       return;
     }
-    var api = window.QuizMarioCloudClient;
-    var client = api && typeof api.client === "function" ? api.client() : null;
-    if (!client || !client.auth || typeof client.auth.getSession !== "function") {
-      goLogin();
-      return;
-    }
+    var timer = setTimeout(goLogin, 25000);
     try {
+      var api = window.QuizMarioCloudClient;
+      var client = api && typeof api.client === "function" ? api.client() : null;
+      if (!client || !client.auth || typeof client.auth.getSession !== "function") {
+        goLogin();
+        return;
+      }
       var res = await client.auth.getSession();
       if (sessionUser(res)) showGate();
       else goLogin();
     } catch (e) {
       goLogin();
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -56,3 +60,4 @@
 
   verify();
 })();
+

@@ -37,6 +37,11 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   window.__QM_AUTH_PENDING = pending;
   if (pending || plausible()) {
     window.__QM_EXPECT_SESSION = true;
+    window.__QM_ENTRY_WATCHDOG = setTimeout(function () {
+      if (document.documentElement.classList.contains("session-ok")) return;
+      window.__QM_ENTRY_REDIRECTING = true;
+      location.replace("login.html" + (pending ? blob : ""));
+    }, 30000);
     return;
   }
   location.replace("login.html");
@@ -51,9 +56,6 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap" rel="stylesheet">
 <title>聚光单词 · 1st edition — Vocab Spotlight</title>
 <style>
   :root {
@@ -1483,11 +1485,11 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 </div>
 
   <script src="meteor.js"></script>
-  <script src="config.js"></script>
+  <script src="config.js?v=20261104-auth"></script>
   <script src="vendor/supabase.umd.js"></script>
   <script src="sync-merge.js"></script>
-  <script src="cloud-client.js"></script>
-  <script src="entry-guard.js"></script>
+  <script src="cloud-client.js?v=20261104-auth"></script>
+  <script src="entry-guard.js?v=20261104-auth"></script>
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
@@ -1520,3 +1522,4 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   </script>
 </body>
 </html>
+

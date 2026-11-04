@@ -14,6 +14,8 @@
  */
 window.QUIZMARIO_CONFIG = {
   SUPABASE_URL: "https://cmainasvlfdynidabunp.supabase.co",
+  SUPABASE_FALLBACK_URL: "https://quizmario-supabase-proxy.juguang-qm.workers.dev",
   SUPABASE_ANON_KEY: "sb_publishable_wXq1t1Ynsj9o1qGpU5T3IQ_7M5EC1ZK",
   SITE_URL: "https://andywillbeback.github.io/QuizMario/grok/",
 };
+
