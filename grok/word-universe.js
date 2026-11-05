@@ -465,7 +465,7 @@
     rows.sort(compareSetFocus);
     // A unit is complete and exact: never truncate it or add outside seed words.
     // All-unit view is paged, so every registered item remains reachable.
-    var cap = spec ? Math.max(1, rows.length) : Math.max(1, Number(opt.cap) || 52);
+    var cap = spec && !opt.pageSize ? Math.max(1, rows.length) : Math.max(1, Number(opt.pageSize) || Number(opt.cap) || 52);
     var pages = Math.max(1, Math.ceil(rows.length / cap));
     var page = Math.max(0, Math.min(pages - 1, Math.floor(Number(opt.page) || 0)));
     var selected = rows.slice(page * cap, (page + 1) * cap), groups = Object.create(null);
@@ -491,6 +491,44 @@
       themes: themes, lemmas: lemmas, spokes: spokes, masteryOk: true, completedSets: completed,
       stats: { bankLemmas: rows.length, touched: rows.filter(function (r) { return r.scored; }).length,
         shown: lemmas.length, cap: cap, page: page, pages: pages, completedSets: completed.length } };
+  }
+
+  // The classic 3D presentation has three orbit hubs and one Connected Papers
+  // grey-teal hue. Detailed semantic categories and learner evidence are retained.
+  var CLASSIC_HUE = 184;
+  function classicVisual(mastery, scored) {
+    var light = scored ? 29 + Math.max(0, Math.min(3, Number(mastery) || 0)) / 3 * 47 : 55;
+    return { hue: CLASSIC_HUE, sat: 22, light: light,
+      hex: hslToHex(CLASSIC_HUE, 22, light), unscored: !scored };
+  }
+  function classic3DGraph(base, narrow) {
+    var definitions = [
+      {id:"life",label:"LIFE",zh:"生活",members:["life","nature","feeling","travel","time","society"]},
+      {id:"technology",label:"TECHNOLOGY",zh:"科技",members:["technology","school"]},
+      {id:"other",label:"OTHER",zh:"其他",members:["action","description","function","other"]}
+    ];
+    var centers = narrow ? [{x:-1,y:11,z:1},{x:2,y:0,z:-2},{x:-1,y:-11,z:1}] : placeThemes(["life","technology","other"]);
+    var themes = definitions.map(function (d, i) { return Object.assign({}, centers[i], {
+      id:d.id,label:d.label,zh:d.zh,hue:CLASSIC_HUE,count:0 }); });
+    var grouped = {life:[],technology:[],other:[]};
+    base.lemmas.forEach(function (row) {
+      var def = definitions.find(function (d) { return d.members.indexOf(row.themeId) >= 0; }) || definitions[2];
+      grouped[def.id].push(row);
+    });
+    var lemmas = [], spokes = [];
+    themes.forEach(function (theme) {
+      var members = grouped[theme.id]; theme.count = members.length;
+      members.forEach(function (row, i) {
+        var local = orbitPoint(i,members.length,4.6+Math.min(narrow?2.4:3.6,members.length*.12));
+        var phrases = row.phrases.map(function (p) { return Object.assign({},p,{visual:classicVisual(p.mastery,p.scored)}); });
+        lemmas.push(Object.assign({},row,{detailThemeId:row.themeId,themeId:theme.id,orbitCategory:theme.zh,
+          visual:classicVisual(row.mastery,row.scored),phrases:phrases,local:local,
+          x:theme.x+local.x,y:theme.y+local.y,z:theme.z+local.z}));
+        spokes.push({from:"theme:"+theme.id,to:"lemma:"+row.key});
+      });
+    });
+    return Object.assign({},base,{themes:themes,lemmas:lemmas,spokes:spokes,
+      legend:"同一灰青色系 · 颜色越深，越需要巩固",classic3d:true});
   }
 
   function readLocal() {
@@ -532,6 +570,58 @@
     var label = function (v) { return v == null ? "待验证" : v + "/3"; };
     return "<p class=\"uni-meta\">认词 " + label(e.recognition) + " · 拼写 " + label(e.spelling) + " · 多义 " + label(e.polysemy) +
       (e.requiredCollocations ? " · 搭配 " + label(e.collocation) + (e.collocationPending ? "（含未验证）" : "") : "") + "</p>";
+  }
+
+  function wordDetailHtml(graph, rec, phraseWord) {
+      var weakNote = rec.weak ? "<p class=\"uni-meta\">综合证据尚未达到熟练；请查看认词、搭配、拼写和多义的具体记录。</p>" : "";
+      var phraseHtml = "";
+      if (!rec.phrases.length) {
+        phraseHtml = "<p class=\"uni-meta\">当前词库的 related[] 里没有能对上的固定搭配。</p>";
+      } else {
+        phraseHtml = "<p class=\"uni-kicker\">固定搭配</p><ul class=\"uni-phrases\">";
+        for (var i = 0; i < rec.phrases.length; i++) {
+          var p = rec.phrases[i];
+          var mark = p.primary ? " · 主搭配" : "";
+          if (graph.setNumber && !graph.lemmas.some(function (n) { return n.key === norm(p.word); })) mark += " · 本组外关联";
+          var on = phraseWord && norm(phraseWord) === p.key ? " is-on" : "";
+          phraseHtml += "<li><button type=\"button\" data-phrase=\"" + esc(p.word) + "\" class=\"uni-phrase" + on + "\">" +
+            esc(p.word) + "</button><span>" + esc(p.gloss) + " · " + esc(masteryText(p)) + esc(mark) + "</span></li>";
+        }
+        phraseHtml += "</ul>";
+      }
+      var linkHtml = "";
+      if (rec.coLemmas && rec.coLemmas.length) {
+        linkHtml = "<p class=\"uni-kicker\">词与词（词库里已有）</p><p class=\"uni-links\">";
+        for (var c = 0; c < rec.coLemmas.length; c++) {
+          var surface = rec.coLemmas[c];
+          var inGraph = false;
+          for (var r = 0; r < graph.lemmas.length; r++) {
+            if (graph.lemmas[r].key === norm(surface)) inGraph = true;
+          }
+          if (c) linkHtml += " · ";
+          if (inGraph) linkHtml += "<button type=\"button\" data-focus-word=\"" + esc(surface) + "\">" + esc(surface) + "</button>";
+          else linkHtml += "<span>" + esc(surface) + "</span>";
+        }
+        linkHtml += "</p>";
+      }
+      var shownPhrase = null;
+      if (phraseWord) {
+        for (var q = 0; q < rec.phrases.length; q++) {
+          if (norm(rec.phrases[q].word) === norm(phraseWord)) shownPhrase = rec.phrases[q];
+        }
+      }
+      var title = shownPhrase ? shownPhrase.word : rec.word;
+      var gloss = shownPhrase ? shownPhrase.gloss : rec.gloss;
+      var ipa = shownPhrase ? shownPhrase.ipa : rec.ipa;
+      var scoreLine = shownPhrase ? masteryText(shownPhrase) : masteryText(rec);
+      return
+        "<button type=\"button\" class=\"uni-clear\" data-clear-focus>返回全景</button>" +
+        "<h2>" + esc(title) + "</h2>" +
+        (ipa ? "<p class=\"uni-ipa\">" + esc(ipa) + "</p>" : "") +
+        "<p class=\"uni-gloss\">" + esc(gloss || "—") + "</p>" +
+        "<p class=\"uni-score\">" + esc(scoreLine) + "</p>" +
+        "<p class=\"uni-meta\">大类：" + esc(rec.orbitCategory ? rec.orbitCategory + " · " + rec.category : rec.category || themeById(rec.themeId).zh) + "</p>" + evidenceHtml(shownPhrase || rec) +
+        weakNote + phraseHtml + linkHtml;
   }
 
   function watchProgress(refresh) {
@@ -724,15 +814,23 @@
       return;
     }
     if (rememberedList && !explicit3d) { mountList(host, ""); return; }
+    function orbitFallback(reason) {
+      if (root.QuizMarioOrbitFallback) {
+        root.QuizMarioOrbitFallback.mount(host,{api:api,esc:esc,parseScope:parseScope,readLocal:readLocal,
+          allTracks:allTracks,buildGraph:buildGraph,classic3DGraph:classic3DGraph,classicVisual:classicVisual,
+          paintControls:paintControls,bindControls:bindControls,watchProgress:watchProgress,
+          wordDetailHtml:wordDetailHtml,masteryText:masteryText,graphStatus:graphStatus});
+      } else mountList(host,reason);
+    }
     if (!root.THREE) {
-      mountList(host, "3D 引擎未加载，已切换列表");
+      orbitFallback("3D 引擎未加载，已切换列表");
       return;
     }
     var canvas = doc.createElement("canvas");
     var gl = null;
     try { gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl"); } catch (e) { gl = null; }
     if (!gl) {
-      mountList(host, "设备不支持 WebGL，已切换列表");
+      orbitFallback("设备不支持 WebGL，已切换列表");
       return;
     }
 
@@ -743,11 +841,13 @@
     } catch (e2) { reduce = false; }
     var narrow = false;
     try { narrow = !!(root.matchMedia && root.matchMedia("(max-width: 800px)").matches); } catch (e3) { narrow = false; }
-    var cap = narrow ? 32 : 52;
+    var cap = 52;
+    if (doc.body && doc.body.classList) doc.body.classList.add("is-classic-3d");
+    if (legendEl) legendEl.innerHTML = '<b>同一灰青色系 · 深色需要巩固</b><span class="classic-depth-ramp" aria-hidden="true"></span><span>半透明为尚未验证；搭配未熟练不计熟练</span>';
 
     var renderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: !narrow, alpha: false, powerPreference: "high-performance" }); }
-    catch (_) { mountList(host, "3D 初始化失败，已切换列表"); return; }
+    catch (_) { orbitFallback("3D 初始化失败，已切换列表"); return; }
     renderer.setPixelRatio(Math.min(root.devicePixelRatio || 1, narrow ? 1.5 : 2));
     renderer.setClearColor(0x070b16, 1);
     renderer.domElement.id = "universe-canvas";
@@ -756,8 +856,8 @@
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
-    scene.add(new THREE.AmbientLight(0x9eb4d8, 0.55));
-    var hemi = new THREE.HemisphereLight(0xd7e8ff, 0x1a1028, 0.55);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    var hemi = new THREE.HemisphereLight(0xd6e5e4, 0x263737, 0.55);
     scene.add(hemi);
     var sun = new THREE.DirectionalLight(0xffffff, 0.85);
     sun.position.set(18, 28, 14);
@@ -774,7 +874,7 @@
     }
     var starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xd5e6ff, size: 0.28, sizeAttenuation: true })));
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x93afb0, size: 0.28, sizeAttenuation: true })));
 
     var world = new THREE.Group();
     scene.add(world);
@@ -950,61 +1050,8 @@
 
     function renderDetail(rec, phraseWord) {
       if (!detailEl) return;
-      if (!rec) {
-        detailEl.hidden = true;
-        detailEl.innerHTML = "";
-        return;
-      }
-      detailEl.hidden = false;
-      var weakNote = rec.weak ? "<p class=\"uni-meta\">综合证据尚未达到熟练；请查看认词、搭配、拼写和多义的具体记录。</p>" : "";
-      var phraseHtml = "";
-      if (!rec.phrases.length) {
-        phraseHtml = "<p class=\"uni-meta\">当前词库的 related[] 里没有能对上的固定搭配。</p>";
-      } else {
-        phraseHtml = "<p class=\"uni-kicker\">固定搭配</p><ul class=\"uni-phrases\">";
-        for (var i = 0; i < rec.phrases.length; i++) {
-          var p = rec.phrases[i];
-          var mark = p.primary ? " · 主搭配" : "";
-          if (graph.setNumber && !graph.lemmas.some(function (n) { return n.key === norm(p.word); })) mark += " · 本组外关联";
-          var on = phraseWord && norm(phraseWord) === p.key ? " is-on" : "";
-          phraseHtml += "<li><button type=\"button\" data-phrase=\"" + esc(p.word) + "\" class=\"uni-phrase" + on + "\">" +
-            esc(p.word) + "</button><span>" + esc(p.gloss) + " · " + esc(masteryText(p)) + esc(mark) + "</span></li>";
-        }
-        phraseHtml += "</ul>";
-      }
-      var linkHtml = "";
-      if (rec.coLemmas && rec.coLemmas.length) {
-        linkHtml = "<p class=\"uni-kicker\">词与词（词库里已有）</p><p class=\"uni-links\">";
-        for (var c = 0; c < rec.coLemmas.length; c++) {
-          var surface = rec.coLemmas[c];
-          var inGraph = false;
-          for (var r = 0; r < records.length; r++) {
-            if (records[r].kind === "lemma" && records[r].key === norm(surface)) inGraph = true;
-          }
-          if (c) linkHtml += " · ";
-          if (inGraph) linkHtml += "<button type=\"button\" data-focus-word=\"" + esc(surface) + "\">" + esc(surface) + "</button>";
-          else linkHtml += "<span>" + esc(surface) + "</span>";
-        }
-        linkHtml += "</p>";
-      }
-      var shownPhrase = null;
-      if (phraseWord) {
-        for (var q = 0; q < rec.phrases.length; q++) {
-          if (norm(rec.phrases[q].word) === norm(phraseWord)) shownPhrase = rec.phrases[q];
-        }
-      }
-      var title = shownPhrase ? shownPhrase.word : rec.word;
-      var gloss = shownPhrase ? shownPhrase.gloss : rec.gloss;
-      var ipa = shownPhrase ? shownPhrase.ipa : rec.ipa;
-      var scoreLine = shownPhrase ? masteryText(shownPhrase) : masteryText(rec);
-      detailEl.innerHTML =
-        "<button type=\"button\" class=\"uni-clear\" data-clear-focus>返回全景</button>" +
-        "<h2>" + esc(title) + "</h2>" +
-        (ipa ? "<p class=\"uni-ipa\">" + esc(ipa) + "</p>" : "") +
-        "<p class=\"uni-gloss\">" + esc(gloss || "—") + "</p>" +
-        "<p class=\"uni-score\">" + esc(scoreLine) + "</p>" +
-        "<p class=\"uni-meta\">大类：" + esc(rec.category || themeById(rec.themeId).zh) + "</p>" + evidenceHtml(shownPhrase || rec) +
-        weakNote + phraseHtml + linkHtml;
+      detailEl.hidden = !rec;
+      detailEl.innerHTML = rec ? wordDetailHtml(graph,rec,phraseWord) : "";
     }
 
     function statusFor(g, focusedWord) {
@@ -1113,12 +1160,14 @@
         events: local.events,
         learnerId: local.learnerId,
         cap: cap,
+        pageSize: 52,
       });
+      graph = classic3DGraph(graph, narrow);
       scopeState.page = graph.stats.page;
-      defaultRadius = Math.max(narrow ? 38 : 36, 18 + graph.themes.length * 3);
+      defaultRadius = narrow ? 56 : 38;
       goal.radius = defaultRadius;
       paintControls(graph);
-      paintTitle(graph.scopeLabel);
+      paintTitle("单词宇宙");
       var buttons = doc.querySelectorAll("[data-universe-track]");
       for (var b = 0; b < buttons.length; b++) {
         buttons[b].setAttribute("aria-pressed", buttons[b].getAttribute("data-universe-track") === graph.trackId ? "true" : "false");
@@ -1129,7 +1178,7 @@
         var theme = graph.themes[t];
         var tg = new THREE.Group();
         tg.position.set(theme.x, theme.y, theme.z);
-        var coreVisual = { hex: hslToHex(theme.hue, 55, 62), unscored: false, light: 62 };
+        var coreVisual = { hue: CLASSIC_HUE, sat:22, hex:hslToHex(CLASSIC_HUE,22,64), unscored:false, light:64 };
         var core = makeOrb(theme.zh, coreVisual, narrow ? 1.45 : 1.85, narrow ? 0.78 : 0.95);
         tg.add(core.group);
         bindPick(core, { kind: "core", themeId: theme.id });
@@ -1364,6 +1413,9 @@
     visualOf: visualOf,
     hslToHex: hslToHex,
     buildGraph: buildGraph,
+    classic3DGraph: classic3DGraph,
+    classicVisual: classicVisual,
+    wordDetailHtml: wordDetailHtml,
     parseScope: parseScope,
     readLocal: readLocal,
     mount: mount,

@@ -8,7 +8,7 @@
 ## 显示范围
 
 - `?track=gaokao&set=1` 严格使用高考第 1 单元，包括短语、功能词和未测词条。
-- 本组不受概览的 32/52 节点上限限制，不添加邻组或示例词。
+- 关系图和分类词表完整显示本组词条；经典 3D 每页最多 52 个词，分页可查看本组全部词条。各视图不添加邻组或示例词。
 - 各大类词条数之和等于本组词条数；大类依据当前词条的英文、中文释义、
   词性规则确定。大小写义项（如 May/may）保留独立节点。
 - 主题类包括生活、科技、学习、自然、情感、出行、时间、社会；一般动作、
@@ -66,3 +66,9 @@ The classified list has four disjoint, current-page counts: mastered, reinforcem
 `universe-network.js` supplies the default SVG network on the universe page, with no WebGL requirement. The existing learner model and progress watcher feed the same exact-unit graph into the network, list and explicit `view=3d` views. List rows and graph nodes select the same detail; narrow screens use a word-list drawer and word-detail bottom sheet. Search, category focus, drag, pinch/wheel zoom, keyboard node selection and fit controls work within the current graph.
 
 The graph draws category membership and deduplicated in-scope associations already present in the word bank. It does not infer semantic similarity or introduce outside-unit nodes. Node size represents association degree, fill represents existing mastery evidence, and grey remains untested. A bounded deterministic layout keeps mastery-only refreshes from repositioning nodes; selected evidence updates in place.
+
+## Classic 3D presentation
+
+The explicit `view=3d` keeps the original theme cores with word spheres orbiting them. Its three presentation hubs are LIFE / 生活, TECHNOLOGY / 科技, and OTHER / 其他. Detailed categories and mastery evidence remain on each word. A single grey-teal hue (HSL 184°, 22%) is shared by every sphere and phrase; scored mastery only changes lightness. Translucent nodes remain untested rather than scored zero.
+
+Both phone and desktop 3D pages have a 52-word page capacity. Units with fewer entries show their actual count; larger units paginate without dropping or borrowing words. WebGL uses the existing Three.js orbit renderer; devices without it use `universe-orbit-fallback.js`, which applies perspective projection to the same x/y/z scene and supports rotation, zoom and word details. The approved network, list and practice typography is unchanged.
