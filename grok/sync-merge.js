@@ -81,11 +81,7 @@
     cfg = cfg || {};
     var url = String(cfg.SUPABASE_URL || "").trim().replace(/\/+$/, "");
     var key = String(cfg.SUPABASE_ANON_KEY || "").trim();
-    var direct = /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url);
-    // Exact workers.dev host stays allowlisted. It is not the live Pages URL:
-    // workers.dev is blocked for many CN mobile networks. Custom-domain proxy is future work.
-    var proxy = url === "https://quizmario-supabase-proxy.juguang-qm.workers.dev";
-    if (!direct && !proxy) return false;
+    if (!/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) return false;
     if (/YOUR_PROJECT|YOUR_SUPABASE|placeholder/i.test(url)) return false;
     if (key.length < 20) return false;
     if (/YOUR_|PASTE_HERE|placeholder|changeme/i.test(key)) return false;

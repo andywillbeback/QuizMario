@@ -11,7 +11,6 @@ const vm = require('node:vm');
 const SOURCE = fs.readFileSync(path.join(__dirname, '../grok/cloud-client.js'), 'utf8');
 const PROXY = 'https://quizmario-supabase-proxy.juguang-qm.workers.dev';
 const DIRECT = 'https://cmainasvlfdynidabunp.supabase.co';
-const HEALTH = '/auth/v1/health';
 const TOKEN = '/auth/v1/token?grant_type=password';
 const PUBLIC_FIXTURE_KEY = 'test-only-public-key';
 const never = () => new Promise(() => {});
@@ -22,8 +21,6 @@ const response = (body = { name: 'GoTrue' }, status = 200) => ({
 });
 
 async function flush() {
-  // VM promises, health JSON parsing, route selection and request dispatch all
-  // intentionally remain asynchronous, just as in the browser.
   for (let i = 0; i < 40; i += 1) await Promise.resolve();
 }
 
@@ -62,6 +59,7 @@ function makeHarness(handler, overrides = {}) {
   const clock = new Clock();
   const calls = [];
   let sdkOptions;
+  let sdkUrl;
   const fakeFetch = (input, init) => {
     const request = new Request(input, init);
     const call = {
@@ -82,15 +80,15 @@ function makeHarness(handler, overrides = {}) {
   };
   const window = {
     QUIZMARIO_CONFIG: {
-      SUPABASE_URL: PROXY,
-      SUPABASE_FALLBACK_URL: DIRECT,
+      SUPABASE_URL: DIRECT,
       SUPABASE_ANON_KEY: PUBLIC_FIXTURE_KEY,
       SITE_URL: 'https://example.invalid/QuizMario/grok/',
       ...overrides,
     },
     QuizMarioMerge: { isCloudConfigured: () => true },
     supabase: {
-      createClient(_url, _key, options) {
+      createClient(url, _key, options) {
+        sdkUrl = url;
         sdkOptions = options;
         return { fixtureClient: true };
       },
@@ -116,12 +114,9 @@ function makeHarness(handler, overrides = {}) {
   window.QuizMarioCloudClient.client();
   assert.ok(sdkOptions, 'the browser client must be constructed');
   const customFetch = sdkOptions.global && sdkOptions.global.fetch;
-  return { clock, calls, fetch: customFetch, sdkOptions };
+  return { clock, calls, fetch: customFetch, sdkOptions, sdkUrl };
 }
 
-function probes(harness) {
-  return harness.calls.filter(call => new URL(call.url).pathname === HEALTH);
-}
 function mutations(harness) {
   return harness.calls.filter(call => call.method !== 'GET' && call.method !== 'HEAD');
 }
@@ -129,109 +124,82 @@ function isCode(code) {
   return error => Boolean(error && String(error.message).includes(code));
 }
 function observed(promise) {
-  // Attach rejection handling immediately so virtual-clock expiration cannot
-  // accidentally be reported as an unhandled rejection by node:test.
   return promise.then(value => ({ value }), error => ({ error }));
 }
 
+test('student auth path has no fallback URL and no workers.dev proxy', () => {
+  const files = [
+    'grok/config.js',
+    'grok/cloud-client.js',
+    'grok/sync-merge.js',
+    'grok/auth-page.js',
+    'grok/login.html',
+    'grok/sw.js',
+  ];
+  for (const file of files) {
+    const src = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    assert.equal(src.includes('SUPABASE_FALLBACK_URL'), false, file);
+    assert.equal(src.includes('workers.dev'), false, file);
+    assert.equal(src.includes('quizmario-supabase-proxy'), false, file);
+  }
+  const config = fs.readFileSync(path.join(__dirname, '../grok/config.js'), 'utf8');
+  assert.match(config, /SUPABASE_URL:\s*"https:\/\/cmainasvlfdynidabunp\.supabase\.co"/);
+  const root = fs.readFileSync(path.join(__dirname, '../config.js'), 'utf8');
+  assert.equal(root.includes('SUPABASE_FALLBACK_URL'), false);
+  assert.match(root, /SUPABASE_URL:\s*"https:\/\/cmainasvlfdynidabunp\.supabase\.co"/);
+});
 
-test('dead proxy and healthy direct route: probe only safe health GET, cache winner for the page', async () => {
+test('auth uses only the primary supabase.co host and does not probe a second route', async () => {
   const h = makeHarness(call => {
-    if (call.url === PROXY + HEALTH) return never();
-    if (call.url === DIRECT + HEALTH) return response();
+    assert.equal(call.url.startsWith(PROXY), false);
+    assert.equal(new URL(call.url).pathname === '/auth/v1/health', false);
     return response({ fixture: 'auth-result' });
   });
+  assert.equal(h.sdkUrl, DIRECT);
   assert.equal(typeof h.fetch, 'function');
-  const first = await h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' });
+  const first = await h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' });
   assert.equal(first.status, 200);
-  assert.equal(probes(h).length, 2);
-  assert.ok(probes(h).every(call => call.method === 'GET'));
-  assert.ok(probes(h).every(call => call.request.headers.get('apikey') === PUBLIC_FIXTURE_KEY));
-  assert.ok(probes(h).every(call => !call.request.headers.has('authorization')));
-  assert.ok(probes(h).every(call => call.request.body === null));
   assert.equal(mutations(h).length, 1);
   assert.equal(mutations(h)[0].url, DIRECT + TOKEN);
+  assert.equal(h.calls.length, 1, 'login must not send a health probe');
 
-  await h.fetch(PROXY + '/auth/v1/user', { method: 'GET' });
-  assert.equal(probes(h).length, 2, 'a second request must reuse the winning route');
+  await h.fetch(DIRECT + '/auth/v1/user', { method: 'GET' });
+  assert.equal(h.calls.length, 2);
   assert.equal(h.calls.at(-1).url, DIRECT + '/auth/v1/user');
 });
 
-
-test('healthy proxy and dead direct route: credentials go to the proxy once', async () => {
+test('a stale fallback URL is ignored and never receives credentials', async () => {
   const h = makeHarness(call => {
-    if (call.url === DIRECT + HEALTH) return never();
-    if (call.url === PROXY + HEALTH) return response();
+    assert.equal(call.url.startsWith(PROXY), false);
     return response({ fixture: 'auth-result' });
-  });
-  await h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' });
-  assert.equal(probes(h).length, 2);
-  assert.equal(mutations(h).length, 1);
-  assert.equal(mutations(h)[0].url, PROXY + TOKEN);
-});
-
-test('direct primary can use the exact same-project proxy fallback', async () => {
-  const h = makeHarness(call => call.url === DIRECT + HEALTH ? never() : response(), {
-    SUPABASE_URL: DIRECT, SUPABASE_FALLBACK_URL: PROXY,
-  });
+  }, { SUPABASE_FALLBACK_URL: PROXY });
+  assert.equal(h.sdkUrl, DIRECT);
   await h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' });
-  assert.equal(mutations(h)[0].url, PROXY + TOKEN);
+  assert.equal(mutations(h).length, 1);
+  assert.equal(mutations(h)[0].url, DIRECT + TOKEN);
 });
 
-test('a healthy route with a failing POST cools down for the next explicit retry', async () => {
-  const h = makeHarness(call => {
-    if (new URL(call.url).pathname === HEALTH) return response();
-    if (call.url.startsWith(PROXY)) throw new TypeError('Failed to fetch');
-    return response();
-  });
-  await assert.rejects(h.fetch(PROXY + TOKEN, { method:'POST', body:'{}' }), /Failed to fetch/);
-  await h.fetch(PROXY + TOKEN, { method:'POST', body:'{}' });
-  assert.deepEqual(mutations(h).map(x=>x.url), [PROXY + TOKEN,DIRECT + TOKEN]);
-  assert.equal(probes(h).length,3);
+test('a 5xx from the primary host is returned once and is not sent anywhere else', async () => {
+  const h = makeHarness(() => response({ msg: 'unavailable' }, 503));
+  const first = await h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' });
+  assert.equal(first.status, 503);
+  await h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' });
+  assert.deepEqual(mutations(h).map(call => call.url), [DIRECT + TOKEN, DIRECT + TOKEN]);
 });
 
-test('wrong credentials are returned without changing routes or replaying the POST', async () => {
-  const h = makeHarness(call => new URL(call.url).pathname === HEALTH ? response() : response({msg:'invalid credentials'},400));
-  await h.fetch(PROXY + TOKEN,{method:'POST',body:'{}'});
-  await h.fetch(PROXY + TOKEN,{method:'POST',body:'{}'});
-  assert.equal(probes(h).length,2);
-  assert.ok(mutations(h).every(c=>c.url===PROXY + TOKEN));
+test('wrong credentials are returned without replaying the POST', async () => {
+  const h = makeHarness(() => response({ msg: 'invalid credentials' }, 400));
+  await h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' });
+  await h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' });
+  assert.equal(h.calls.length, 2);
+  assert.ok(mutations(h).every(call => call.url === DIRECT + TOKEN));
 });
 
-
-test('both health routes hanging: fail within the 8 second probe budget and never send auth POST', async () => {
-  const h = makeHarness(() => never());
-  let settled = false;
-  const result = observed(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }));
-  result.then(() => { settled = true; });
-  await flush();
-  assert.equal(probes(h).length, 2);
-  await h.clock.tick(7999);
-  assert.equal(settled, false);
-  await h.clock.tick(1);
-  const outcome = await result;
-  assert.ok(isCode('QM_AUTH_NETWORK')(outcome.error));
-  assert.equal(mutations(h).length, 0);
-  assert.ok(probes(h).every(call => call.signal && call.signal.aborted));
-});
-
-
-test('HTTP errors and a different health service cannot win the route race', async () => {
-  const h = makeHarness(call => {
-    if (call.url === PROXY + HEALTH) return response({ name: 'GoTrue' }, 503);
-    if (call.url === DIRECT + HEALTH) return response({ name: 'unrelated-service' });
-    assert.fail('no credential-bearing request may be issued without a healthy GoTrue route');
-  });
-  await assert.rejects(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }), isCode('QM_AUTH_NETWORK'));
-  assert.equal(mutations(h).length, 0);
-});
-
-
-test('fallback preserves method, exact query, body, headers and request options', async () => {
+test('primary fetch preserves method, exact query, body, headers and request options', async () => {
   const body = JSON.stringify({ fixture: 'not-a-credential' });
-  const h = makeHarness(call => call.url === PROXY + HEALTH ? never() : response());
+  const h = makeHarness(() => response());
   const pathAndQuery = '/auth/v1/token?grant_type=password&fixture=a%2Bb%26c';
-  await h.fetch(PROXY + pathAndQuery, {
+  await h.fetch(DIRECT + pathAndQuery, {
     method: 'POST',
     body,
     headers: {
@@ -255,10 +223,9 @@ test('fallback preserves method, exact query, body, headers and request options'
   assert.equal(call.request.cache, 'no-store');
 });
 
-
-test('Request input is rebased without losing its POST body, query or authorization', async () => {
-  const h = makeHarness(call => call.url === PROXY + HEALTH ? never() : response());
-  const input = new Request(PROXY + '/auth/v1/token?grant_type=refresh_token', {
+test('Request input keeps its POST body, query and authorization on the primary host', async () => {
+  const h = makeHarness(() => response());
+  const input = new Request(DIRECT + '/auth/v1/token?grant_type=refresh_token', {
     method: 'POST',
     body: JSON.stringify({ fixture: 'fake-refresh-value' }),
     headers: { authorization: 'Bearer fake-test-token', 'content-type': 'application/json' },
@@ -272,15 +239,10 @@ test('Request input is rebased without losing its POST body, query or authorizat
   assert.equal(mutations(h).length, 1);
 });
 
-
-test('caller abort is forwarded to the actual POST and never triggers another route attempt', async () => {
-  const h = makeHarness(call => {
-    if (call.url === PROXY + HEALTH) return never();
-    if (call.url === DIRECT + HEALTH) return response();
-    return never(); // deliberately ignore the signal; the wrapper must still settle
-  });
+test('caller abort is forwarded to the actual POST and never triggers another attempt', async () => {
+  const h = makeHarness(() => never());
   const controller = new AbortController();
-  const result = observed(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}', signal: controller.signal }));
+  const result = observed(h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}', signal: controller.signal }));
   await flush();
   assert.equal(mutations(h).length, 1);
   const sent = mutations(h)[0];
@@ -294,39 +256,19 @@ test('caller abort is forwarded to the actual POST and never triggers another ro
   assert.equal(mutations(h).length, 1);
 });
 
-
-test('caller abort during a hanging health race promptly cancels the logical request without a POST', async () => {
-  const h = makeHarness(() => never());
-  const controller = new AbortController();
-  let outcome;
-  observed(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}', signal: controller.signal }))
-    .then(value => { outcome = value; });
-  await flush();
-  assert.equal(probes(h).length, 2);
-  controller.abort();
-  await flush();
-  assert.ok(outcome, 'caller cancellation must not wait for the 8 second health deadline');
-  assert.equal(outcome.error && outcome.error.name, 'AbortError');
-  assert.equal(mutations(h).length, 0);
-  // Health work may be shared by other callers; it need not be cancelled, but
-  // completing it later must never revive this aborted logical request.
-  await h.clock.tick(8000);
-  assert.equal(mutations(h).length, 0);
-});
-
-
 test('an already aborted caller signal prevents any credential-bearing request', async () => {
-  const h = makeHarness(call => {
-    if (new URL(call.url).pathname === HEALTH) return response();
+  const h = makeHarness(() => {
     assert.fail('an aborted request must not reach native fetch');
   });
   const controller = new AbortController();
   controller.abort();
-  await assert.rejects(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}', signal: controller.signal }),
-    error => Boolean(error && error.name === 'AbortError'));
+  await assert.rejects(
+    h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}', signal: controller.signal }),
+    error => Boolean(error && error.name === 'AbortError')
+  );
   assert.equal(mutations(h).length, 0);
+  assert.equal(h.calls.length, 0);
 });
-
 
 test('an auth POST timeout is bounded at 15 seconds and is never replayed, including refresh/signup/recovery', async () => {
   for (const suffix of [
@@ -334,11 +276,8 @@ test('an auth POST timeout is bounded at 15 seconds and is never replayed, inclu
     '/auth/v1/signup',
     '/auth/v1/recover',
   ]) {
-    const h = makeHarness(call => {
-      if (new URL(call.url).pathname === HEALTH) return response();
-      return never();
-    });
-    const result = observed(h.fetch(PROXY + suffix, { method: 'POST', body: '{}' }));
+    const h = makeHarness(() => never());
+    const result = observed(h.fetch(DIRECT + suffix, { method: 'POST', body: '{}' }));
     await flush();
     assert.equal(mutations(h).length, 1);
     await h.clock.tick(14999);
@@ -352,91 +291,66 @@ test('an auth POST timeout is bounded at 15 seconds and is never replayed, inclu
   }
 });
 
-
-test('network rejection after sending an auth POST does not retry that mutation on the healthy fallback', async () => {
-  const h = makeHarness(call => {
-    if (new URL(call.url).pathname === HEALTH) return response();
+test('network rejection after sending an auth POST does not retry that mutation', async () => {
+  const h = makeHarness(() => {
     throw new TypeError('simulated connection loss after the request may have been sent');
   });
-  await assert.rejects(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }), /simulated connection loss/);
+  await assert.rejects(h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' }), /simulated connection loss/);
   await h.clock.tick(30000);
   assert.equal(mutations(h).length, 1);
+  assert.equal(mutations(h)[0].url, DIRECT + TOKEN);
 });
 
-
-test('concurrent auth calls share health probes but each explicit mutation is sent only once', async () => {
-  const h = makeHarness(call => call.url === PROXY + HEALTH ? never() : response());
+test('concurrent auth calls each send their mutation once on the primary host', async () => {
+  const h = makeHarness(() => response());
   await Promise.all([
-    h.fetch(PROXY + TOKEN, { method: 'POST', body: '{"fixture":1}' }),
-    h.fetch(PROXY + '/auth/v1/recover', { method: 'POST', body: '{"fixture":2}' }),
+    h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{"fixture":1}' }),
+    h.fetch(DIRECT + '/auth/v1/recover', { method: 'POST', body: '{"fixture":2}' }),
   ]);
-  assert.equal(probes(h).length, 2, 'route selection must be shared within the browser client');
   assert.equal(mutations(h).length, 2);
   assert.ok(mutations(h).every(call => call.url.startsWith(DIRECT + '/auth/v1/')));
+  assert.equal(h.calls.length, 2);
 });
 
-
-test('a failed health selection is discarded so a later explicit user retry can re-probe', async () => {
-  let healthy = false;
-  const h = makeHarness(call => {
-    if (new URL(call.url).pathname === HEALTH) {
-      return healthy ? response() : Promise.reject(new TypeError('fixture offline'));
-    }
-    return response({ fixture: 'retried-by-user' });
-  });
-  await assert.rejects(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }), isCode('QM_AUTH_NETWORK'));
-  assert.equal(mutations(h).length, 0);
-  healthy = true;
-  await h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' });
-  assert.equal(probes(h).length, 4);
-  assert.equal(mutations(h).length, 1);
-});
-
-
-test('unrelated or lookalike fallback URLs do not install route racing or receive credentials', () => {
+test('unrelated or lookalike hosts do not install a fetch wrapper or receive credentials', () => {
   const unsupported = [
-    { SUPABASE_FALLBACK_URL: 'https://another-project.supabase.co' },
-    { SUPABASE_FALLBACK_URL: DIRECT + '.attacker.invalid' },
-    { SUPABASE_FALLBACK_URL: DIRECT + '/auth/v1' },
+    { SUPABASE_URL: PROXY },
+    { SUPABASE_URL: 'https://another-project.supabase.co' },
+    { SUPABASE_URL: DIRECT + '.attacker.invalid' },
+    { SUPABASE_URL: DIRECT + '/auth/v1' },
     { SUPABASE_URL: PROXY + '.attacker.invalid' },
-    { SUPABASE_FALLBACK_URL: '' },
+    { SUPABASE_URL: '' },
   ];
   for (const config of unsupported) {
-    const h = makeHarness(() => assert.fail('unsupported routes must never be probed'), config);
+    const h = makeHarness(() => assert.fail('unsupported hosts must never be fetched by the wrapper'), config);
     assert.equal(h.fetch, undefined);
     assert.equal(h.calls.length, 0);
+    assert.equal(h.sdkUrl, String(config.SUPABASE_URL).trim().replace(/\/+$/, ''));
   }
 });
 
-
-test('requests outside the exact primary origin are passed through without health probes or URL rewriting', async () => {
+test('requests outside the exact primary origin are passed through without URL rewriting', async () => {
   const h = makeHarness(() => response({ fixture: 'passed-through' }));
-  const unrelated = PROXY + '.attacker.invalid/auth/v1/token?fixture=1';
+  const unrelated = DIRECT + '.attacker.invalid/auth/v1/token?fixture=1';
   const init = { method: 'POST', body: 'fixture', headers: { 'x-fixture': 'present' } };
   await h.fetch(unrelated, init);
   assert.equal(h.calls.length, 1);
   assert.equal(h.calls[0].url, unrelated);
   assert.equal(h.calls[0].init, init);
-  assert.equal(probes(h).length, 0);
 });
-
 
 test('auth headers with a stalled partial JSON body still abort at the 15 second deadline without replay', async () => {
   let bodyAborted = false;
   const h = makeHarness(call => {
-    if (new URL(call.url).pathname === HEALTH) return response();
     let bodyController;
     const body = new ReadableStream({
       start(controller) {
         bodyController = controller;
         controller.enqueue(new TextEncoder().encode('{"fixture":"partial-json'));
-        // Deliberately leave the real response body open after sending headers.
       },
     });
     call.signal.addEventListener('abort', () => {
       bodyAborted = true;
-      // Model native fetch aborting an in-progress response body as well as
-      // its request. Closing both tee branches prevents leaked stream work.
       bodyController.error(new DOMException('Fixture body aborted', 'AbortError'));
     }, { once: true });
     return new Response(body, {
@@ -445,7 +359,7 @@ test('auth headers with a stalled partial JSON body still abort at the 15 second
     });
   });
   let settled = false;
-  const result = observed(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }));
+  const result = observed(h.fetch(DIRECT + TOKEN, { method: 'POST', body: '{}' }));
   result.then(() => { settled = true; });
   await flush();
   assert.equal(mutations(h).length, 1);
@@ -460,48 +374,4 @@ test('auth headers with a stalled partial JSON body still abort at the 15 second
   assert.equal(bodyAborted, true);
   await h.clock.tick(30000);
   assert.equal(mutations(h).length, 1, 'a partial response must never cause a replayed auth POST');
-});
-
-
-test('a late health result from a failed attempt cannot poison the next user-initiated route race', async () => {
-  let releaseOldProxy;
-  let releaseNewDirect;
-  const oldProxy = new Promise(resolve => { releaseOldProxy = resolve; });
-  const newDirect = new Promise(resolve => { releaseNewDirect = resolve; });
-  let proxyProbes = 0;
-  let directProbes = 0;
-  let posted = 0;
-  const h = makeHarness(call => {
-    if (call.url === PROXY + HEALTH) {
-      proxyProbes += 1;
-      return proxyProbes === 1 ? oldProxy : never();
-    }
-    if (call.url === DIRECT + HEALTH) {
-      directProbes += 1;
-      return directProbes === 1 ? response() : newDirect;
-    }
-    posted += 1;
-    if (posted === 1) throw new TypeError('fixture first POST connection lost');
-    return response({ fixture: 'second explicit request completed' });
-  });
-
-  await assert.rejects(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }), /first POST connection lost/);
-  assert.equal(mutations(h).length, 1);
-  assert.equal(mutations(h)[0].url, DIRECT + TOKEN);
-
-  await h.clock.tick(60001); // retry after the failed-route cooldown
-  let outcome;
-  observed(h.fetch(PROXY + TOKEN, { method: 'POST', body: '{}' }))
-    .then(value => { outcome = value; });
-  await flush();
-  assert.equal(probes(h).length, 4, 'the explicit retry starts a new health race');
-  releaseOldProxy(response());
-  await flush();
-  releaseNewDirect(response());
-  await flush();
-
-  assert.ok(outcome, 'a stale probe must not steal selected and leave the current route promise unresolved');
-  assert.ifError(outcome.error);
-  assert.equal(mutations(h).length, 2, 'only the two explicit user requests may POST');
-  assert.equal(mutations(h)[1].url, DIRECT + TOKEN, 'the current race must determine the new route');
 });

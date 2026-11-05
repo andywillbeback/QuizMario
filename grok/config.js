@@ -3,9 +3,7 @@
  * Project Settings → API. The anon key is public (RLS protects each row).
  * Never put the service_role key in this file.
  *
- * SUPABASE_URL      Direct project host, like https://xxxxxxxx.supabase.co.
- *                   workers.dev is blocked for many CN mobile networks.
- *                   A custom-domain proxy is future work.
+ * SUPABASE_URL      Project URL, like https://xxxxxxxx.supabase.co
  * SUPABASE_ANON_KEY anon / public key (legacy JWT eyJ… or sb_publishable_…)
  * The value below is the live sb_publishable key. Leave it.
  * A legacy anon JWT is only a fallback if this publishable key is rejected;
@@ -14,7 +12,6 @@
  */
 window.QUIZMARIO_CONFIG = {
   SUPABASE_URL: "https://cmainasvlfdynidabunp.supabase.co",
-  SUPABASE_FALLBACK_URL: "https://quizmario-supabase-proxy.juguang-qm.workers.dev",
   SUPABASE_ANON_KEY: "sb_publishable_wXq1t1Ynsj9o1qGpU5T3IQ_7M5EC1ZK",
   SITE_URL: "https://andywillbeback.github.io/QuizMario/grok/",
 };
