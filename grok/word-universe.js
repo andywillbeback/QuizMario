@@ -577,6 +577,8 @@
       trackSelect.innerHTML = allTracks().map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.name || t.id) + '</option>'; }).join("");
       trackSelect.value = graph.trackId;
     }
+    var threeLink = doc.getElementById("universe-3d");
+    if (threeLink) threeLink.href = "?track=" + encodeURIComponent(graph.trackId) + (graph.setNumber ? "&set=" + graph.setNumber : "") + "&view=3d";
     var prev = doc.getElementById("universe-prev"), next = doc.getElementById("universe-next"), page = doc.getElementById("universe-page");
     if (prev) { prev.disabled = graph.stats.page === 0; prev.hidden = graph.stats.pages <= 1; }
     if (next) { next.disabled = graph.stats.page + 1 >= graph.stats.pages; next.hidden = graph.stats.pages <= 1; }
@@ -587,7 +589,7 @@
     var url = new URL(root.location.href);
     url.searchParams.set("track", track);
     if (set) url.searchParams.set("set", set); else url.searchParams.delete("set");
-    if (list) url.searchParams.set("view", "list"); else url.searchParams.delete("view");
+    if (list) url.searchParams.set("view", "list"); else url.searchParams.set("view", "graph");
     root.location.assign(url.pathname + url.search);
   }
   function bindControls(state, refresh, listMode) {
@@ -599,7 +601,7 @@
     if (prev) prev.addEventListener("click", function () { state.page = Math.max(0, state.page - 1); refresh(); });
     if (next) next.addEventListener("click", function () { state.page++; refresh(); });
     var view = doc.getElementById("universe-view");
-    if (view) { view.textContent = listMode ? "切换 3D" : "分类列表"; view.addEventListener("click", function () { navigateScope(state.trackId, state.setNumber, !listMode); }); }
+    if (view) { view.textContent = listMode ? "关系图谱" : "分类词表"; view.addEventListener("click", function () { navigateScope(state.trackId, state.setNumber, !listMode); }); }
   }
   function graphStatus(g) {
     return (g.scopeLabel || "") + " · " + g.trackName + " · 本页 " + g.stats.shown + "/" + g.stats.bankLemmas +
@@ -664,7 +666,7 @@
       paintControls(graph);
     }
     bindControls(state, refresh, true);
-    if (reason) {
+    if (reason && host.getAttribute("data-layout") !== "network") {
       var view = doc.getElementById("universe-view");
       if (view) { view.textContent = "分类视图"; view.disabled = true; view.title = "当前设备暂不支持 3D，已显示完整分类词表"; }
     }
@@ -713,7 +715,15 @@
       if (requestedList) root.localStorage.setItem("quizmario_universe_view", "list");
       rememberedList = root.localStorage.getItem("quizmario_universe_view") === "list";
     } catch (_) {}
-    if (requestedList || rememberedList) { mountList(host, ""); return; }
+    var explicit3d = /(?:[?&])view=3d(?:&|$)/.test((root.location && root.location.search) || "");
+    if (requestedList) { mountList(host, ""); return; }
+    if (host.getAttribute("data-layout") === "network" && root.QuizMarioUniverseNetwork && !explicit3d) {
+      root.QuizMarioUniverseNetwork.mount(host, { api: api, esc: esc, norm: norm, parseScope: parseScope,
+        readLocal: readLocal, buildGraph: buildGraph, allTracks: allTracks, listStatus: listStatus,
+        masteryText: masteryText, paintControls: paintControls, bindControls: bindControls, watchProgress: watchProgress });
+      return;
+    }
+    if (rememberedList && !explicit3d) { mountList(host, ""); return; }
     if (!root.THREE) {
       mountList(host, "3D 引擎未加载，已切换列表");
       return;

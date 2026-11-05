@@ -60,3 +60,9 @@ mount/rebuild，验证图数据刷新；它不替代手机 GPU 实测。
 The student home and practice screens use `mobile-ui.css`; the universe uses `universe-ui.css`. The practice screen keeps one-column choices, a large word card, safe-area-aware rating dock and direct current-unit universe/list links. Opening reference links before submission continues to mark the response as assisted.
 
 The classified list has four disjoint, current-page counts: mastered, reinforcement, pending collocation and untested. Pending collocation never appears as mastered. Rows expand to show component evidence and associated phrases; outside-unit associations are labelled and never added to unit membership. Category buttons jump within the scrollable word list. Progress refreshes preserve open word details.
+
+## Relationship graph
+
+`universe-network.js` supplies the default SVG network on the universe page, with no WebGL requirement. The existing learner model and progress watcher feed the same exact-unit graph into the network, list and explicit `view=3d` views. List rows and graph nodes select the same detail; narrow screens use a word-list drawer and word-detail bottom sheet. Search, category focus, drag, pinch/wheel zoom, keyboard node selection and fit controls work within the current graph.
+
+The graph draws category membership and deduplicated in-scope associations already present in the word bank. It does not infer semantic similarity or introduce outside-unit nodes. Node size represents association degree, fill represents existing mastery evidence, and grey remains untested. A bounded deterministic layout keeps mastery-only refreshes from repositioning nodes; selected evidence updates in place.
