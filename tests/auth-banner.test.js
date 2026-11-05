@@ -61,14 +61,8 @@ function staticGuards() {
     "https://andywillbeback.github.io/QuizMario/grok/",
     "grok SITE_URL stays the grok Pages path"
   );
-  assert.ok(
-    /workers\.dev is blocked for many CN mobile networks/.test(grokConfig),
-    "grok config notes workers.dev is blocked on many CN mobile networks"
-  );
-  assert.ok(
-    /custom-domain proxy is future work/i.test(grokConfig),
-    "grok config leaves a custom-domain proxy as future work"
-  );
+  assert.ok(!/SUPABASE_FALLBACK_URL/.test(grokConfig), "grok config has no fallback URL");
+  assert.ok(!/workers\.dev/.test(grokConfig), "grok config does not reference workers.dev");
   assert.ok(
     !/SUPABASE_URL\s+CF reverse proxy/.test(grokConfig),
     "grok config does not describe SUPABASE_URL as the CF reverse proxy"
@@ -88,11 +82,11 @@ function staticGuards() {
     SUPABASE_URL: LIVE_URL + "/",
     SUPABASE_ANON_KEY: LIVE_KEY,
   }), true, "trailing slash on the project host is stripped before the host check");
-  assert.strictEqual(grokMerge.isCloudConfigured(proxyConfig), true, "grok still accepts the exact CF proxy host");
+  assert.strictEqual(grokMerge.isCloudConfigured(proxyConfig), false, "grok rejects the workers.dev proxy host");
   assert.strictEqual(grokMerge.isCloudConfigured({
     SUPABASE_URL: GROK_PROXY_URL + "/",
     SUPABASE_ANON_KEY: LIVE_KEY,
-  }), true, "trailing slash is stripped before the host check");
+  }), false, "a trailing slash does not make the workers.dev proxy a valid host");
   assert.strictEqual(grokMerge.isCloudConfigured({
     SUPABASE_URL: "https://evil.workers.dev",
     SUPABASE_ANON_KEY: LIVE_KEY,
@@ -100,7 +94,7 @@ function staticGuards() {
   assertBanner("grok/auth-page.js", {
     config: proxyConfig,
     supabase: { createClient() { return authClient(); } },
-  }, null);
+  }, CONFIG_GROK);
 
   const grokAuth = read("grok/auth-page.js");
   assert.ok(grokAuth.includes(CONFIG_GROK), "grok config-missing sentence stays");

@@ -19,19 +19,14 @@
     return raw.replace(/\/+$/, "") + "/";
   }
 
-  /* Probe only the two routes to this project before sending credentials.
+  /* Bound requests to the primary project host. There is no second route.
      Never retry an auth POST here: a timed-out refresh may already have rotated
      its token, and replaying signup/reset requests can duplicate side effects. */
-  function routeFetch(cfg) {
-    var primary = String(cfg.SUPABASE_URL).trim().replace(/\/+$/, "");
-    var fallback = String(cfg.SUPABASE_FALLBACK_URL || "").trim().replace(/\/+$/, "");
-    var proxy = "https://quizmario-supabase-proxy.juguang-qm.workers.dev";
+  function boundedFetch(cfg) {
+    var primary = String(cfg.SUPABASE_URL || "").trim().replace(/\/+$/, "");
     var direct = "https://cmainasvlfdynidabunp.supabase.co";
-    if (!((primary === proxy && fallback === direct) || (primary === direct && fallback === proxy)) || typeof window.fetch !== "function") return null;
+    if (primary !== direct || typeof window.fetch !== "function") return null;
     var nativeFetch = window.fetch.bind(window);
-    var selected = "";
-    var selecting = null;
-    var failedUntil = {};
 
     function deadline(run, milliseconds, signal) {
       return new Promise(function (resolve, reject) {
@@ -64,71 +59,27 @@
       });
     }
 
-    function chooseRoute() {
-      if (selected) return Promise.resolve(selected);
-      if (selecting) return selecting;
-      selecting = new Promise(function (resolve, reject) {
-        var routes = [primary, fallback].filter(function (base) { return !(failedUntil[base] > Date.now()); });
-        if (!routes.length) routes = [primary, fallback];
-        var remaining = routes.length;
-        var decided = false;
-        routes.forEach(function (base) {
-          deadline(function (signal) {
-            return nativeFetch(base + "/auth/v1/health", {
-              headers: { apikey: String(cfg.SUPABASE_ANON_KEY).trim() },
-              cache: "no-store",
-              signal: signal,
-            }).then(function (response) {
-              if (!response.ok) throw new Error("Health check failed");
-              return response.json();
-            }).then(function (body) {
-              if (!body || body.name !== "GoTrue") throw new Error("Unexpected auth service");
-              return base;
-            });
-          }, 8000).then(function (base) {
-            if (!decided) { decided = true; selected = base; resolve(base); }
-          }, function () {
-            remaining -= 1;
-            if (!remaining && !decided) reject(new Error("QM_AUTH_NETWORK: 两条登录线路均不可达，请检查网络后重试。"));
-          });
-        });
-      }).catch(function (error) { selecting = null; throw error; });
-      return selecting;
-    }
-
     return function (input, init) {
       var url = typeof input === "string" ? input : input.url || String(input);
       if (url.indexOf(primary + "/") !== 0) return nativeFetch(input, init);
       var callerSignal = (init && init.signal) || (input && input.signal);
-      // A caller can cancel while the shared health checks continue for other
-      // requests. Do not attach its signal to the shared probe operation.
-      return deadline(function () { return chooseRoute(); }, 8500, callerSignal).then(function (base) {
-        return deadline(function (signal) {
-          var options = Object.assign({}, init || {}, { signal: signal });
-          var target = base + url.slice(primary.length);
-          var request;
-          if (typeof input !== "string" && window.Request && input instanceof window.Request) {
-            request = nativeFetch(new window.Request(target, input), options);
-          } else {
-            request = nativeFetch(target, options);
+      return deadline(function (signal) {
+        var options = Object.assign({}, init || {}, { signal: signal });
+        var request;
+        if (typeof input !== "string" && window.Request && input instanceof window.Request) {
+          request = nativeFetch(input, options);
+        } else {
+          request = nativeFetch(url, options);
+        }
+        return request.then(function (response) {
+          // Auth JSON is small. Include its body in the deadline so a server
+          // that sends headers but stalls mid-body cannot hold the SDK lock.
+          if (url.indexOf(primary + "/auth/v1/") === 0 && typeof response.clone === "function") {
+            return response.clone().arrayBuffer().then(function () { return response; });
           }
-          return request.then(function (response) {
-            if (response.status >= 500) { failedUntil[base] = Date.now() + 60000; selected = ""; selecting = null; }
-            // Auth JSON is small. Include its body in the deadline so a server
-            // that sends headers but stalls mid-body cannot hold the SDK lock.
-            if (url.slice(primary.length).indexOf("/auth/v1/") === 0 && typeof response.clone === "function") {
-              return response.clone().arrayBuffer().then(function () { return response; });
-            }
-            return response;
-          });
-        }, 15000, callerSignal).catch(function (error) {
-          if (!error || error.name !== "AbortError") failedUntil[base] = Date.now() + 60000;
-          throw error;
+          return response;
         });
-      }).catch(function (error) {
-        if (!error || error.name !== "AbortError") { selected = ""; selecting = null; }
-        throw error;
-      });
+      }, 15000, callerSignal);
     };
   }
 
@@ -175,7 +126,7 @@
     var lib = window.supabase;
     if (!lib || typeof lib.createClient !== "function") return null;
     var cfg = config();
-    var transport = routeFetch(cfg);
+    var transport = boundedFetch(cfg);
     var lock = boundedLock();
     var authOptions = {
       persistSession: true,
