@@ -47,3 +47,16 @@
 最近记录、大小写义项、全部 372 个单元（含 166 个中高考单元）的成员/分类计数，以及列表的
 实时刷新。`node tests/universe-renderer.test.js` 用模拟渲染原语执行真实 3D
 mount/rebuild，验证图数据刷新；它不替代手机 GPU 实测。
+
+## 入口
+
+练习页题目上方固定提供“本组宇宙”和“本组分类列表”；列表链接直接携带
+`track`、当前词条的单元号及 `view=list`，新窗口打开以保留正在进行的练习。
+未提交答案前查看参考会标记本题已使用提示。单元完成页和学情页也提供列表
+入口。手动选列表后，本设备后续完成单元时沿用列表模式，可在宇宙页切回 3D。
+
+## Mobile reading interface
+
+The student home and practice screens use `mobile-ui.css`; the universe uses `universe-ui.css`. The practice screen keeps one-column choices, a large word card, safe-area-aware rating dock and direct current-unit universe/list links. Opening reference links before submission continues to mark the response as assisted.
+
+The classified list has four disjoint, current-page counts: mastered, reinforcement, pending collocation and untested. Pending collocation never appears as mastered. Rows expand to show component evidence and associated phrases; outside-unit associations are labelled and never added to unit membership. Category buttons jump within the scrollable word list. Progress refreshes preserve open word details.

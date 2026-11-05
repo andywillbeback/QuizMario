@@ -96,6 +96,11 @@ check('no-WebGL list is complete and live on storage, same-page polling and page
  const storage={};const set=n=>storage.vocabSpotlight_v1=JSON.stringify({cards:{'gaokao|0::life':{state:'learning',mastery:n,reps:1,scheduledAt:now+n}}});set(.5);
  const {ctx,ids,timers}=runtime(storage),get=()=>ctx.QuizMarioWordUniverse.currentGraph().lemmas.find(n=>n.word==='life');
  assert.equal(get().mastery,.5);assert.ok(ids['universe-root'].innerHTML.includes('advantage'));
+ const markup=ids['universe-root'].innerHTML,graph=ctx.QuizMarioWordUniverse.currentGraph();
+ assert.equal((markup.match(/class="word-record"/g)||[]).length,graph.lemmas.length,'each exact-unit word remains an expandable row');
+ const counts=[...markup.matchAll(/class="count-(?:mastered|learning|collocation|unseen)"><b>(\d+)/g)].map(m=>Number(m[1]));
+ assert.equal(counts.length,4);assert.equal(counts.reduce((a,b)=>a+b,0),graph.lemmas.length,'overview statuses are disjoint and exhaustive');
+ assert.equal((markup.match(/data-category-jump=/g)||[]).length,graph.themes.length,'every populated category has a jump control');
  set(1);ctx.dispatch({type:'storage',key:'vocabSpotlight_v1'});assert.equal(get().mastery,1);
  set(0);timers[0]();assert.equal(get().mastery,0);set(2);ctx.dispatch({type:'pageshow'});assert.equal(get().mastery,2);
 });

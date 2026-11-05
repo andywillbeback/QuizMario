@@ -3,113 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#070b16">
-<title>单词记忆宇宙 · beta</title>
-<style>
-  html, body { margin: 0; height: 100%; background: #070b16; color: #f4f8ff; }
-  body {
-    font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", system-ui, sans-serif;
-    overflow: hidden;
-  }
-  #universe-root { position: fixed; inset: 0; touch-action: none; }
-  #universe-canvas { display: block; width: 100%; height: 100%; }
-  header.uni-bar {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 4;
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    padding: max(8px, env(safe-area-inset-top)) 12px 10px;
-    background: rgba(7, 11, 22, 0.94);
-    pointer-events: none;
-  }
-  header.uni-bar a, header.uni-bar button, header.uni-bar h1 { pointer-events: auto; }
-  header.uni-bar h1 {
-    margin: 0; flex: 1 1 160px; font-size: 1.05rem; letter-spacing: .04em; font-weight: 800;
-  }
-  header.uni-bar a.back, .track-switch button, #universe-detail button {
-    font: inherit; color: #f4f8ff; text-decoration: none;
-    background: rgba(10, 16, 32, 0.78);
-    border: 1px solid rgba(190, 220, 255, 0.45);
-    border-radius: 999px; padding: 8px 12px; min-height: 40px;
-  }
-  .track-switch { display: flex; gap: 6px; }
-  .track-switch button[aria-pressed="true"] {
-    color: #071018; background: linear-gradient(180deg, #d7f6ff, #7fd4ff); border-color: transparent;
-  }
-  #universe-status {
-    position: fixed; left: 12px; right: 12px; top: 72px; z-index: 3;
-    margin: 0; font-size: .75rem; line-height: 1.4; opacity: .88;
-    text-shadow: 0 1px 6px #000; pointer-events: none;
-  }
-  #universe-legend {
-    position: fixed; left: 12px; bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 4; display: flex; flex-direction: column; gap: 2px;
-    padding: 8px 12px; border-radius: 12px;
-    background: rgba(6, 10, 20, 0.86);
-    border: 1px solid rgba(255, 255, 255, 0.22);
-    font-size: .82rem;
-  }
-  #universe-legend b { font-weight: 800; }
-  #universe-legend span { opacity: .8; font-size: .75rem; }
-  #universe-detail {
-    position: fixed; right: 12px; bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 5; width: min(380px, calc(100vw - 24px));
-    max-height: min(46vh, 420px); overflow: auto;
-    padding: 12px 14px 14px; border-radius: 16px;
-    background: rgba(6, 10, 22, 0.92);
-    border: 1px solid rgba(180, 214, 255, 0.4);
-  }
-  #universe-detail[hidden] { display: none !important; }
-  #universe-detail h2 { margin: 6px 0 2px; font-size: 1.35rem; }
-  #universe-detail .uni-ipa, #universe-detail .uni-meta { margin: 2px 0; opacity: .8; font-size: .82rem; }
-  #universe-detail .uni-gloss { margin: 4px 0; font-weight: 700; }
-  #universe-detail .uni-score { margin: 2px 0 8px; color: #b7ecff; }
-  #universe-detail .uni-kicker { margin: 8px 0 4px; font-size: .75rem; letter-spacing: .08em; color: #9fd8ff; }
-  #universe-detail ul { list-style: none; margin: 0; padding: 0; }
-  #universe-detail li { margin: 6px 0; }
-  #universe-detail .uni-phrase.is-on { color: #071018; background: #d7f6ff; }
-  #universe-detail .uni-links button { margin: 0 2px 4px 0; }
-  @media (max-width: 720px) {
-    #universe-detail {
-      left: 12px; right: 12px; width: auto;
-      bottom: max(12px, env(safe-area-inset-bottom));
-      max-height: 42vh;
-    }
-    #universe-status { top: 118px; font-size: .68rem; max-height: 2.8em; overflow: hidden; }
-    body:has(#universe-detail:not([hidden])) #universe-legend { visibility: hidden; }
-  }
-  .universe-tools { position:fixed; top:108px; left:12px; right:12px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px; background:rgba(7,11,22,.95); border-radius:12px; }
-  .universe-tools select, .universe-tools button { font:inherit; color:#f4f8ff; background:#14243d; border:1px solid #6b84a6; border-radius:8px; padding:8px; min-height:40px; }
-  .universe-list-host { box-sizing:border-box; inset:174px 12px 86px !important; overflow:auto; touch-action:pan-y !important; padding:4px 8px 18px; }
-  .universe-category { margin-bottom:18px; padding:14px; border:1px solid #34475f; border-radius:14px; background:#0c1526; }
-  .universe-category h2 { margin:0 0 12px; font-size:1rem; color:#beeaff; }
-  .universe-category h2 span { margin-left:8px; color:#95a8c2; }
-  .universe-category ul { list-style:none; padding:0; margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; }
-  .universe-category li { display:flex; gap:12px; padding:10px; background:#121f35; border-radius:10px; }
-  .universe-dot { width:24px; height:24px; border:2px solid #8aa0bb; border-radius:50%; flex-shrink:0; }
-  .universe-gloss { display:block; color:#d1dcec; margin-top:4px; }
-  .universe-category p { margin:5px 0; font-size:.8rem; color:#a7bfdc; line-height:1.5; }
-  .universe-empty { padding:24px; line-height:1.8; }
-  @media(max-width:720px) { .universe-tools { top:164px; gap:6px; } .universe-tools select { max-width:180px; } .universe-list-host { top:272px !important; } }
-</style>
+<meta name="theme-color" content="#f5f7f6">
+<title>单词宇宙 · 聚光单词</title>
+<link rel="stylesheet" href="universe-ui.css?v=20261105-mobile1">
 </head>
 <body>
+<div class="universe-shell">
 <header class="uni-bar">
-  <a class="back" href="index.html">返回学习数据</a>
-  <h1 id="universe-title">单词记忆宇宙 · beta</h1>
-  <div class="track-switch" role="group" aria-label="词库">
-    <button type="button" data-universe-track="zhongkao" aria-pressed="true">中考</button>
-    <button type="button" data-universe-track="gaokao" aria-pressed="false">高考</button>
-  </div>
+  <a class="back" href="index.html" aria-label="返回学习"><span aria-hidden="true">‹</span> 学习</a>
+  <span class="uni-brand">聚光单词</span>
+  <span class="uni-live"><i></i> 随练习更新</span>
 </header>
+<div class="uni-heading"><p>MY WORD COLLECTION</p><h1 id="universe-title">单词宇宙</h1></div>
 <p id="universe-status" role="status"></p>
 <nav class="universe-tools" aria-label="单词宇宙范围">
-  <label>词库 <select id="universe-track" aria-label="选择词库"></select></label>
-  <label>单元 <select id="universe-set" aria-label="选择单元"></select></label>
-  <button type="button" id="universe-prev" hidden>上一页</button><span id="universe-page"></span><button type="button" id="universe-next" hidden>下一页</button>
-  <button type="button" id="universe-view">切换列表</button>
+  <label><span>词库</span><select id="universe-track" aria-label="选择词库"></select></label>
+  <label><span>范围</span><select id="universe-set" aria-label="选择单元"></select></label>
+  <button type="button" id="universe-view">分类列表</button>
+  <div class="universe-pagination"><button type="button" id="universe-prev" hidden aria-label="上一页">‹</button><span id="universe-page"></span><button type="button" id="universe-next" hidden aria-label="下一页">›</button></div>
 </nav>
 <div id="universe-root"></div>
-<p id="universe-legend"><b>颜色越深 = 越不熟练</b><span>灰色 = 尚无证据；搭配待验证不标熟练</span></p>
+<p id="universe-legend"><b>颜色越深，越需要巩固</b><span>灰色表示未验证 · 搭配未熟练，单词不计熟练</span></p>
 <aside id="universe-detail" hidden></aside>
+</div>
 <script src="vendor/three.r128.min.js"></script>
 <script src="words.js"></script>
 <script src="tracks.js"></script>
@@ -118,6 +34,6 @@
 <script src="universe-progress.js?v=20261105"></script>
 <script src="study-metrics.js"></script>
 <script src="exam-tracks.js"></script>
-<script src="word-universe.js?v=20261105.2"></script>
+<script src="word-universe.js?v=20261105-mobile1"></script>
 </body>
 </html>

@@ -1205,6 +1205,7 @@
 
   function fillCardContent() {
     clearCollocChrome();
+    updatePracticeUniverseLinks();
     const meaningMode = sessionDirection === "meaning";
     const facing = promptFacing();
     const promptLabel = $("prompt-label");
@@ -2488,7 +2489,9 @@
       const b = document.createElement("button");
       b.type = "button";
       b.className = "choice";
-      b.textContent = i + 1 + ".  " + opt;
+      b.textContent = opt;
+      b.setAttribute("aria-label", "选项 " + (i + 1) + "：" + opt);
+      b.setAttribute("aria-keyshortcuts", String(i + 1));
       b.addEventListener("click", () => {
         if (awaiting || b.disabled) return;
         const ok = match(opt, correct);
@@ -2603,17 +2606,45 @@
     openClearedSetUniverse();
   }
 
-  /** Exact 1-based unit for every supported track. Completion never awards mastery. */
-  function clearedSetUniverseHref() {
+  function unitUniverseHref(levelNum, listMode) {
     if (!LEVELS.length) return "";
-    const setNum = Math.floor(Number(currentLevel) || 0);
-    if (setNum < 1) return "";
-    return "word-universe.html?track=" + encodeURIComponent(currentTrack) + "&set=" + setNum;
+    const setNum = Math.floor(Number(levelNum) || 0);
+    if (setNum < 1 || setNum > LEVELS.length) return "";
+    if (listMode == null) {
+      try { listMode = localStorage.getItem("quizmario_universe_view") === "list"; } catch (_) { listMode = false; }
+    }
+    return "word-universe.html?track=" + encodeURIComponent(currentTrack) + "&set=" + setNum + (listMode ? "&view=list" : "");
+  }
+
+  document.addEventListener("click", (event) => {
+    const link = event.target && event.target.closest && event.target.closest("#btn-play-universe, #btn-play-universe-list");
+    if (link && currentCard && !awaiting && !pendingRate) currentCard._hintSeen = true;
+  });
+
+  function updatePracticeUniverseLinks() {
+    const level = currentCard && currentCard.levelIdx != null ? currentCard.levelIdx + 1 : currentLevel;
+    const pairs = [["btn-play-universe", false], ["btn-play-universe-list", true]];
+    for (const [id, list] of pairs) {
+      const link = $(id);
+      if (!link) continue;
+      const href = unitUniverseHref(level, list);
+      link.hidden = !href;
+      if (href) link.href = href;
+    }
+    const label = $("play-universe-scope");
+    if (label) label.textContent = "第 " + level + " 单元 · 新窗口查看，返回后继续练习";
+  }
+
+  /** Exact completed unit; retain an explicitly selected list preference. */
+  function clearedSetUniverseHref() {
+    return unitUniverseHref(currentLevel);
   }
 
   function openClearedSetUniverse() {
     const href = clearedSetUniverseHref();
     const link = $("btn-clear-universe");
+    const listLink = $("btn-clear-universe-list");
+    if (listLink) { listLink.hidden = !href; if (href) listLink.href = unitUniverseHref(currentLevel, true); }
     if (!href) {
       if (link) link.hidden = true;
       return;
@@ -3671,6 +3702,9 @@
     pendingRate = false;
     awaiting = true;
     const kind = sessionKind;
+    for (const id of ["btn-clear-universe", "btn-clear-universe-list"]) {
+      const link = $(id); if (link) link.hidden = true;
+    }
     const trophy = $("clear-trophy");
     if (trophy) trophy.hidden = true;
     const achEl = $("clear-achievement");

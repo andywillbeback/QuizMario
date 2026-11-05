@@ -583,6 +583,7 @@
     if (page) page.textContent = graph.stats.pages > 1 ? ((graph.stats.page + 1) + "/" + graph.stats.pages) : "";
   }
   function navigateScope(track, set, list) {
+    try { root.localStorage.setItem("quizmario_universe_view", list ? "list" : "3d"); } catch (_) {}
     var url = new URL(root.location.href);
     url.searchParams.set("track", track);
     if (set) url.searchParams.set("set", set); else url.searchParams.delete("set");
@@ -598,41 +599,81 @@
     if (prev) prev.addEventListener("click", function () { state.page = Math.max(0, state.page - 1); refresh(); });
     if (next) next.addEventListener("click", function () { state.page++; refresh(); });
     var view = doc.getElementById("universe-view");
-    if (view) { view.textContent = listMode ? "切换 3D" : "切换列表"; view.addEventListener("click", function () { navigateScope(state.trackId, state.setNumber, !listMode); }); }
+    if (view) { view.textContent = listMode ? "切换 3D" : "分类列表"; view.addEventListener("click", function () { navigateScope(state.trackId, state.setNumber, !listMode); }); }
   }
   function graphStatus(g) {
     return (g.scopeLabel || "") + " · " + g.trackName + " · 本页 " + g.stats.shown + "/" + g.stats.bankLemmas +
       " 个词条 · " + g.themes.length + " 个大类 · 已完成 " + g.stats.completedSets + " 个单元 · 随作答记录自动更新";
   }
+  function listStatus(row) {
+    if (!row.scored) return { id: "unseen", label: "未验证" };
+    if (row.evidence && row.evidence.collocationPending) return { id: "collocation", label: "搭配待验证" };
+    return row.mastery === 3 ? { id: "mastered", label: "熟练" } : { id: "learning", label: "待巩固" };
+  }
+  function listMarkup(graph) {
+    var counts = { mastered: 0, learning: 0, collocation: 0, unseen: 0 };
+    graph.lemmas.forEach(function (row) { counts[listStatus(row).id]++; });
+    var scope = graph.setNumber ? "第 " + graph.setNumber + " 单元" : "我的词汇集";
+    var html = '<section class="collection-overview" aria-label="本页学情概览"><div class="collection-copy"><span class="collection-kicker">' + esc(scope) + '</span><h2>每一次练习，都有迹可循。</h2><p>' + graph.stats.shown + ' 个词条 · ' + graph.themes.length + ' 个大类' + (graph.stats.pages > 1 ? ' · 第 ' + (graph.stats.page + 1) + ' 页' : '') + '</p></div><div class="collection-orbit" aria-hidden="true"><i></i><i></i><i></i><span>词</span></div>';
+    html += '<div class="collection-counts">';
+    [{id:"mastered",label:"已熟练"},{id:"learning",label:"待巩固"},{id:"collocation",label:"搭配待验证"},{id:"unseen",label:"未验证"}].forEach(function (item) {
+      html += '<div class="count-' + item.id + '"><b>' + counts[item.id] + '</b><span><i></i>' + item.label + '</span></div>';
+    });
+    html += '</div><p class="collection-note">搭配未熟练，单词不计熟练；灰色词条还需要练习验证。</p></section>';
+    if (!graph.lemmas.length) return html + '<div class="universe-empty"><h2>你的词汇，正在这里生长。</h2><p>完成一个单元后，该单元全部词条会自动加入，并随练习更新掌握状态。</p><a href="index.html">去学习 →</a></div>';
+    html += '<nav class="category-nav" aria-label="词汇分类">';
+    graph.themes.forEach(function (theme) { html += '<button type="button" data-category-jump="' + esc(theme.id) + '">' + esc(theme.zh) + '<span>' + theme.count + '</span></button>'; });
+    html += '</nav><div class="collection-list-title"><h2>分类词表</h2><span>点开词条，查看学习记录</span></div>';
+    for (var t = 0; t < graph.themes.length; t++) {
+      var theme = graph.themes[t], rows = graph.lemmas.filter(function (n) { return n.themeId === theme.id; });
+      html += '<section class="universe-category" id="category-' + esc(theme.id) + '"><h2><i style="--category-hue:' + theme.hue + '"></i>' + esc(theme.zh) + '<span>' + rows.length + ' 词</span></h2><ul>';
+      rows.forEach(function (row) {
+        var status = listStatus(row);
+        html += '<li><details class="word-record" data-word-key="' + esc(row.key) + '"><summary><span class="word-copy"><b>' + esc(row.word) + '</b><span class="universe-gloss">' + esc(row.gloss) + '</span></span><span class="word-state state-' + status.id + '"><i style="background:' + row.visual.hex + '"></i>' + status.label + '</span><span class="word-chevron" aria-hidden="true">›</span></summary><div class="word-evidence">' + (row.ipa ? '<p class="word-ipa">' + esc(row.ipa) + '</p>' : '') + '<p>' + esc(masteryText(row)) + '</p>' + evidenceHtml(row);
+        if (row.phrases.length) {
+          html += '<h3>关联搭配</h3><ul class="word-phrases">';
+          row.phrases.forEach(function (phrase) {
+            var outside = graph.setNumber && !graph.lemmas.some(function (n) { return n.key === norm(phrase.word); });
+            html += '<li><b>' + esc(phrase.word) + '</b><span>' + esc(phrase.gloss) + '</span><small>' + esc(masteryText(phrase)) + (outside ? ' · 本组外关联' : '') + '</small></li>';
+          });
+          html += '</ul>';
+        }
+        html += '</div></details></li>';
+      });
+      html += '</ul></section>';
+    }
+    return html + '<p class="collection-end">每个词都有自己的成长节奏</p>';
+  }
   function mountList(host, reason) {
     var doc = root.document, opened = parseScope(root.location.search), local = readLocal();
     var state = { trackId: opened.trackId || local.trackId, setNumber: opened.set, page: 0 }, graph;
     host.className = "universe-list-host";
+    if (doc.body && doc.body.classList) doc.body.classList.add("is-universe-list");
     function refresh() {
       var local = readLocal();
+      var expanded = [];
+      if (host.querySelectorAll) Array.prototype.forEach.call(host.querySelectorAll('details[open]'), function (item) { expanded.push(item.getAttribute("data-word-key")); });
       graph = buildGraph({ tracks: allTracks(), trackId: state.trackId, set: state.setNumber, page: state.page, cap: 52, save: local.save, events: local.events });
       state.page = graph.stats.page;
       var title = doc.getElementById("universe-title"), status = doc.getElementById("universe-status");
-      if (title) title.textContent = graph.scopeLabel || "单词记忆宇宙";
-      if (status) status.textContent = (reason ? reason + " · " : "") + graphStatus(graph);
-      var html = "";
-      for (var t = 0; t < graph.themes.length; t++) {
-        var theme = graph.themes[t], rows = graph.lemmas.filter(function (n) { return n.themeId === theme.id; });
-        html += '<section class="universe-category"><h2>' + esc(theme.zh) + ' <span>' + rows.length + '</span></h2><ul>';
-        for (var i = 0; i < rows.length; i++) {
-          var row = rows[i];
-          html += '<li><span class="universe-dot" style="background:' + row.visual.hex + '"></span><div><b>' + esc(row.word) + '</b><span class="universe-gloss">' + esc(row.gloss) + '</span><p>' + esc(masteryText(row)) + '</p>' + evidenceHtml(row) + '</div></li>';
-        }
-        html += '</ul></section>';
-      }
-      host.innerHTML = html || '<p class="universe-empty">尚无词条。完成一个单元后，该单元的全部单词和搭配会自动进入这里。</p>';
+      if (title) title.textContent = "单词宇宙";
+      doc.title = (graph.setNumber ? "第 " + graph.setNumber + " 单元 · " : "") + "单词宇宙 · 聚光单词";
+      if (status) status.textContent = graph.trackName + " · " + (graph.setNumber ? "本单元全部 " + graph.stats.bankLemmas + " 个词条" : "已完成 " + graph.stats.completedSets + " 个单元，共 " + graph.stats.bankLemmas + " 个词条");
+      host.innerHTML = listMarkup(graph);
+      if (host.querySelectorAll && expanded.length) Array.prototype.forEach.call(host.querySelectorAll('details'), function (item) { item.open = expanded.indexOf(item.getAttribute("data-word-key")) >= 0; });
       paintControls(graph);
     }
     bindControls(state, refresh, true);
     if (reason) {
       var view = doc.getElementById("universe-view");
-      if (view) { view.textContent = "分类列表（3D不可用）"; view.disabled = true; }
+      if (view) { view.textContent = "分类视图"; view.disabled = true; view.title = "当前设备暂不支持 3D，已显示完整分类词表"; }
     }
+    host.addEventListener("click", function (ev) {
+      var btn = ev.target && ev.target.closest && ev.target.closest("[data-category-jump]");
+      if (!btn) return;
+      var target = doc.getElementById("category-" + btn.getAttribute("data-category-jump"));
+      if (target && target.scrollIntoView) target.scrollIntoView({behavior:"smooth",block:"start"});
+    });
     doc.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-universe-track]");
       if (btn) { state.trackId = btn.getAttribute("data-universe-track"); state.setNumber = null; state.page = 0; refresh(); }
@@ -666,7 +707,13 @@
     }
     if (setNumber) paintTitle("本组学情 · Set " + setNumber);
     var scopePrefix = setNumber ? ("本组学情 · Set " + setNumber + " · ") : "";
-    if (/(?:[?&])view=list(?:&|$)/.test((root.location && root.location.search) || "")) { mountList(host, ""); return; }
+    var requestedList = /(?:[?&])view=list(?:&|$)/.test((root.location && root.location.search) || "");
+    var rememberedList = false;
+    try {
+      if (requestedList) root.localStorage.setItem("quizmario_universe_view", "list");
+      rememberedList = root.localStorage.getItem("quizmario_universe_view") === "list";
+    } catch (_) {}
+    if (requestedList || rememberedList) { mountList(host, ""); return; }
     if (!root.THREE) {
       mountList(host, "3D 引擎未加载，已切换列表");
       return;

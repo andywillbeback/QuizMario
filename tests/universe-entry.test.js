@@ -1,0 +1,23 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const game=fs.readFileSync('grok/game.js','utf8'),html=fs.readFileSync('grok/index.html','utf8');
+const elements=Object.fromEntries(['btn-play-universe','btn-play-universe-list','play-universe-scope'].map(id=>[id,{hidden:true}]));
+let click;
+const ctx={LEVELS:[[],[],[]],currentLevel:1,currentTrack:'gaokao',currentCard:{levelIdx:1},awaiting:false,pendingRate:false,
+ localStorage:{getItem(){return null}},$:id=>elements[id]||null,document:{addEventListener(type,fn){if(type==='click')click=fn}}};
+vm.createContext(ctx);
+const code=game.slice(game.indexOf('  function unitUniverseHref('),game.indexOf('  function openClearedSetUniverse('));
+vm.runInContext(code+'\nupdatePracticeUniverseLinks();',ctx);
+assert.equal(elements['btn-play-universe'].href,'word-universe.html?track=gaokao&set=2');
+assert.equal(elements['btn-play-universe-list'].href,'word-universe.html?track=gaokao&set=2&view=list');
+assert.equal(elements['btn-play-universe-list'].hidden,false);
+ctx.currentCard={levelIdx:2};vm.runInContext('updatePracticeUniverseLinks();',ctx);
+assert.ok(elements['btn-play-universe-list'].href.includes('set=3&view=list'));
+assert.equal(vm.runInContext('clearedSetUniverseHref()',ctx),'word-universe.html?track=gaokao&set=1');
+click({target:{closest(){return elements['btn-play-universe-list']}}});assert.equal(ctx.currentCard._hintSeen,true);
+ctx.localStorage.getItem=()=> 'list';assert.ok(vm.runInContext('clearedSetUniverseHref()',ctx).endsWith('&view=list'));
+const start=html.indexOf('id="screen-play"'),end=html.indexOf('id="screen-clear"');
+assert.ok(html.slice(start,end).includes('id="btn-play-universe-list"'));
+assert.ok(html.includes('id="btn-clear-universe-list"'));
+assert.ok(html.includes('target="_blank" rel="noopener"'));
+console.log('universe-entry: visible play/clear entry points, exact current-card unit, list preference and reference-use evidence passed');

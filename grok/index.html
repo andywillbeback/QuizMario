@@ -47,7 +47,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   location.replace("login.html");
 })();
 </script>
-<meta name="theme-color" content="#03060f">
+<meta name="theme-color" content="#f5f7f6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -997,6 +997,10 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   .own-bucket button { margin-top: 6px; }
   .own-bucket button[hidden] { display: none !important; }
   .universe-entry { margin: 8px 0; }
+  .practice-universe-nav { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin:8px 0 12px; }
+  .practice-universe-nav a { display:inline-flex; align-items:center; min-height:40px; padding:8px 12px; border:1px solid #66809a; border-radius:12px; color:#d1ecff; text-decoration:none; background:rgba(26,48,71,.85); font-size:.83rem; }
+  .practice-universe-nav span { width:100%; text-align:center; color:#a4b9cd; font-size:.72rem; }
+
   .universe-entry a {
     display: inline-block; padding: 8px 14px; border-radius: 999px;
     font-weight: 800; text-decoration: none; color: #041018;
@@ -1273,15 +1277,13 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   #rate-dock .rate-zh { white-space: nowrap; font-size: 1.05rem; }
   #rate-dock .rate-sub { white-space: normal; text-align: center; }
 </style>
+<link rel="stylesheet" href="mobile-ui.css?v=20261105-mobile1">
 </head>
 <body class="at-gate">
 <p id="auth-hold" role="status">聚光单词 · 1st edition<br>正在确认登录…</p>
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
-<div id="sort-bar" class="sort-bar" role="group" aria-label="语音">
-  <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
-  <button type="button" class="sort-btn" id="btn-accent" aria-label="当前英式英语发音，点按改为美式" title="英式英语">英音</button>
-</div>
+
 <div class="app">
   <header class="brand">
     <h1>聚光单词<span class="build-badge">1st edition</span></h1>
@@ -1319,7 +1321,8 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     <!-- HOME (after a track is chosen) -->
     <section id="screen-home" class="screen">
       <div class="title-card">
-        <h2>欢迎上台 Welcome to the stage</h2>
+        <p class="home-eyebrow">每天一点，记得更牢</p>
+        <h2>让每个单词<br>成为你的词汇。</h2>
         <div id="track-panel">
           <label for="track-select"><b>词库</b></label>
           <select id="track-select" aria-label="选择词库"></select>
@@ -1330,22 +1333,22 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         </div>
         <p id="queue-empty" class="queue-empty" hidden></p>
         <div class="btn-row" id="home-actions">
-          <button id="btn-continue" type="button">继续闯关</button>
+          <button id="btn-continue" type="button">继续学习</button>
           <button id="btn-challenge" class="secondary" type="button">12分钟挑战</button>
           <button id="btn-spelling" class="secondary" type="button">拼写</button>
-          <button id="btn-levels" class="secondary" type="button">选择关卡</button>
+          <button id="btn-levels" class="secondary" type="button">单元目录</button>
           <a id="login-cta" class="btn secondary" href="login.html" hidden>登录 / 注册</a>
           <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
         </div>
         <p id="continue-hint" class="sub continue-hint" hidden></p>
-        <p class="sub" style="margin-top:18px;font-size:.85rem">
+        <details class="learning-guide"><summary>学习方式与操作说明</summary><p class="sub">
           Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 中考拼写仍是键入英文，另算，不挡住第一次通关 · 高考这个按钮是一词多义选择题，同样不计入通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>（拼写时不选）· 拼写时 <kbd>Enter</kbd>=检查 · 看完解析后 <kbd>Enter</kbd>=继续
-        </p>
+        </p></details>
 
-        <div id="stats-panel" class="panel">
-          <h3>📈 我的学习数据</h3>
-          <p class="universe-entry"><a href="word-universe.html">单词记忆宇宙 · beta</a></p>
+        <div id="stats-panel" class="panel" aria-label="我的学习数据">
+          <h3>学习足迹</h3>
+          <p class="universe-entry"><a href="word-universe.html"><span>单词宇宙</span><small>探索词汇之间的联系 ↗</small></a><a href="word-universe.html?view=list"><span>分类词表</span><small>查看每个词的掌握情况 ↗</small></a></p>
           <div id="stats-body"></div>
         </div>
 
@@ -1355,10 +1358,10 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     <!-- LEVEL SELECT -->
     <section id="screen-levels" class="screen">
       <div class="title-card">
-        <h2>选择关卡 Word sets</h2>
-        <p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；中考拼写改为键入，单独记，不挡住第一次通关。高考一词多义也单独记，不计入通关。</p>
+        <p class="home-eyebrow">WORD COLLECTION</p><h2>单元目录</h2>
+        <details class="learning-guide"><summary>单元与通关说明</summary><p class="sub">Core parts have 15 words (Part A / Part B). Exam sets have 50. A set 通关 when 80% of its cards are in review with an interval of at least 1 day. 继续闯关是普通学习，没有倒计时。点一组卡片上的「12分钟挑战」才开始计时。看英文选中文计入通关；中考拼写改为键入，单独记，不挡住第一次通关。高考一词多义也单独记，不计入通关。</p></details>
         <div id="level-grid" class="level-grid"></div>
-        <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">Back</button></div>
+        <div class="btn-row"><button id="btn-back-home" class="ghost" type="button">返回学习</button></div>
       </div>
     </section>
 
@@ -1377,10 +1380,19 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
           <i id="play-progress"></i>
         </div>
       </div>
+      <nav class="practice-universe-nav" aria-label="本组学习反馈">
+        <a id="btn-play-universe" href="word-universe.html" target="_blank" rel="noopener" hidden>本组宇宙</a>
+        <a id="btn-play-universe-list" href="word-universe.html?view=list" target="_blank" rel="noopener" hidden>本组分类列表</a>
+        <span id="play-universe-scope">学习参考 · 新窗口打开，返回后继续练习</span>
+      </nav>
       <div id="prompt-box">
         <div id="prompt-label">英文 → 中文意思</div>
         <div id="prompt-main">—</div>
         <div id="prompt-ipa" hidden></div>
+        <div id="sort-bar" class="sort-bar" role="group" aria-label="语音">
+  <button type="button" class="sort-btn" id="btn-voice-toggle">🔊 连杀语音 On</button>
+  <button type="button" class="sort-btn" id="btn-accent" aria-label="当前英式英语发音，点按改为美式" title="英式英语">英音</button>
+</div>
         <div id="prompt-hint"></div>
         <div id="card-related" hidden></div>
         <div id="card-speak" class="speak-row" hidden></div>
@@ -1405,9 +1417,10 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         <p class="sub" id="clear-msg">Great work.</p>
         <div class="stars" id="clear-stars">★★★</div>
         <div class="btn-row">
-          <button id="btn-next-level" type="button">Next set</button>
+          <button id="btn-next-level" type="button">学习下一单元</button>
           <a id="btn-clear-universe" class="btn secondary" href="word-universe.html" hidden>本组单词宇宙</a>
-          <button id="btn-clear-home" class="secondary" type="button">Home</button>
+          <a id="btn-clear-universe-list" class="btn secondary" href="word-universe.html?view=list" hidden>本组分类列表</a>
+          <button id="btn-clear-home" class="secondary" type="button">返回首页</button>
         </div>
         <div id="share-achievement" class="share-achievement" hidden>
           <button id="btn-share-achievement" class="secondary" type="button">分享成就</button>
@@ -1448,7 +1461,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         <p class="sub" id="fail-msg">时间到了。这组还没通关。错词会再出现，再试一次即可。</p>
         <div class="btn-row">
           <button id="btn-fail-retry" type="button">再试一次</button>
-          <button id="btn-fail-home" class="secondary" type="button">Home</button>
+          <button id="btn-fail-home" class="secondary" type="button">返回首页</button>
         </div>
       </div>
     </section>
@@ -1509,8 +1522,8 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="related-links.js"></script>
   <script src="universe-progress.js?v=20261105"></script>
   <script src="study-metrics.js"></script>
-  <script src="own-study.js"></script>
-  <script src="game.js?v=20261105-universe"></script>
+  <script src="own-study.js?v=20261105-mobile1"></script>
+  <script src="game.js?v=20261105-mobile1"></script>
   <script src="profile-name.js"></script>
   <script src="sync.js"></script>
   <script>

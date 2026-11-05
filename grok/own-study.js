@@ -73,10 +73,8 @@
       return "";
     }
     var sample = study.MIN_SAMPLE || 5;
-    var universe = "<p class=\"universe-entry\"><a href=\"word-universe.html\">单词记忆宇宙 · beta</a></p>";
     return "<section class=\"own-study\" aria-label=\"我的学情\">" +
       "<h4>我的学情</h4>" +
-      universe +
       "<p class=\"own-hint\">只根据你自己的存档和学习记录。学情雷达是认词、搭配、产出、巩固。样本少于 " +
       sample + " 次先不打分，不记成 0 分。</p>" +
       charts + lists + "</section>";
