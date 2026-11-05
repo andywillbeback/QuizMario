@@ -31,7 +31,7 @@
     {
       id: "technology",
       label: "TECHNOLOGY",
-      zh: "科技",
+      zh: "科学与技术",
       hue: 196,
       en: wordSet("alarm computer internet phone software digital technology robot email e-mail website online keyboard screen television radio camera video media program code device electronic network app smartphone telephone laptop tablet ai tv data digital"),
       stems: ["comput", "internet", "technolog", "digit", "softwar", "phone", "robot", "email", "website", "online", "keyboard", "screen", "televis", "camera", "video", "network", "electron", "laptop", "tablet"],
@@ -40,7 +40,7 @@
     {
       id: "school",
       label: "SCHOOL",
-      zh: "学校",
+      zh: "学习与交流",
       hue: 42,
       en: wordSet("advice school teacher student class lesson exam test homework book learn study classroom pupil college university pencil pen desk grade course dictionary library knowledge education classmate textbook subject math maths science history language english chinese question answer read write spell notebook homework"),
       stems: ["school", "teach", "student", "lesson", "exam", "homework", "college", "univers", "librar", "diction", "educat", "textbook", "science", "history"],
@@ -49,7 +49,7 @@
     {
       id: "nature",
       label: "NATURE",
-      zh: "自然",
+      zh: "自然与环境",
       hue: 132,
       en: wordSet("nature natural animal plant tree flower river mountain weather rain snow wind sun moon star earth sea ocean forest bird fish dog cat horse farm grass leaf sky cloud water fire air environment pollution tiger lion panda garden weather"),
       stems: ["natur", "animal", "plant", "mountain", "weather", "ocean", "forest", "environment", "pollut", "river", "flower"],
@@ -58,7 +58,7 @@
     {
       id: "life",
       label: "LIFE",
-      zh: "生活",
+      zh: "生活与健康",
       hue: 352,
       en: wordSet("adult ache aid life live alive living lifestyle lifetime childhood death dead die dying family home house friend friendship love health healthy food meal breakfast lunch dinner parent mother father mom dad baby child birth body heart blood face hand eye hair sleep eat drink cook kitchen hospital doctor nurse medicine ill sick people person man woman boy girl husband wife brother sister uncle aunt grow growth pet clothes shirt dress shoe sport sports game music song film movie holiday birthday age young old"),
       stems: ["life", "live", "child", "family", "friend", "health", "mother", "father", "brother", "sister", "hospital", "doctor", "medicine", "breakfast", "dinner"],
@@ -67,7 +67,7 @@
     {
       id: "feeling",
       label: "FEELING",
-      zh: "情感",
+      zh: "情绪与态度",
       hue: 300,
       en: wordSet("happy happiness sad sadness angry anger fear afraid hope worry smile cry joy sorry proud lonely nervous excite excited exciting surprise surprised surprising emotion feel feeling anxious anxiety hate"),
       stems: ["happ", "anger", "angry", "afraid", "worry", "nervous", "excit", "surpris", "emotion", "lonely"],
@@ -76,7 +76,7 @@
     {
       id: "travel",
       label: "TRAVEL",
-      zh: "出行",
+      zh: "出行与空间",
       hue: 210,
       en: wordSet("abroad ahead travel trip train bus car plane airport station road street map hotel tourist visit ticket ship bike bicycle traffic journey taxi flight passenger railway subway boat"),
       stems: ["travel", "airport", "station", "tourist", "traffic", "journey", "bicycle", "railway", "subway"],
@@ -85,7 +85,7 @@
     {
       id: "time",
       label: "TIME",
-      zh: "时间",
+      zh: "时间与频率",
       hue: 24,
       en: wordSet("ago again time today tomorrow yesterday morning afternoon evening night week month year hour minute clock calendar season spring summer autumn winter early late always never often sometimes daily weekly weekend"),
       stems: ["today", "tomorrow", "yesterday", "morning", "afternoon", "evening", "calendar", "season", "winter", "summer", "autumn", "spring", "night", "week", "month", "year"],
@@ -94,7 +94,7 @@
     {
       id: "society",
       label: "SOCIETY",
-      zh: "社会",
+      zh: "人物与社会",
       hue: 262,
       en: wordSet("actor actress ad accident advantage society social law lawyer government economy economic money job work business city country nation police war peace duty public community citizen president king queen market price bank company office trade factory village town capital culture cultural rule policy election vote tax poor rich success successful fail failure problem chance opportunity"),
       stems: ["advantage", "societ", "govern", "econom", "business", "company", "citizen", "president", "culture", "success", "opportunit"],
@@ -561,6 +561,10 @@
         root.history.replaceState(null, "", url.pathname + url.search);
       }
     } catch (_) {}
+    if (doc.querySelectorAll) {
+      var switches = doc.querySelectorAll("[data-universe-track]");
+      for (var b = 0; b < switches.length; b++) switches[b].setAttribute("aria-pressed", switches[b].getAttribute("data-universe-track") === graph.trackId ? "true" : "false");
+    }
     if (select) {
       var options = '<option value="">全部词条（已完成单元 ' + (graph.completedSets || []).length + '）</option>';
       var sets = (graph.completedSets || []).slice();
@@ -625,6 +629,10 @@
       paintControls(graph);
     }
     bindControls(state, refresh, true);
+    if (reason) {
+      var view = doc.getElementById("universe-view");
+      if (view) { view.textContent = "分类列表（3D不可用）"; view.disabled = true; }
+    }
     doc.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-universe-track]");
       if (btn) { state.trackId = btn.getAttribute("data-universe-track"); state.setNumber = null; state.page = 0; refresh(); }
