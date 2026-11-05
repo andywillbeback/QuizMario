@@ -85,7 +85,7 @@
         return;
       }
       var status = ctx.listStatus(row), e = row.evidence || {};
-      var component = function (name, value, pending) { return '<div class="evidence-metric"><span>' + name + '</span><b>' + (pending ? '待验证' : value == null ? '未验证' : Number(value).toFixed(1).replace('.0','') + '<small>/3</small>') + '</b><i><em style="width:' + (value == null ? 0 : Math.max(0,Math.min(100,value/3*100))) + '%"></em></i></div>'; };
+      var component = function (name, value, pending) { return '<div class="evidence-metric"><span>' + name + '</span><b>' + (value == null ? (pending ? '待验证' : '未验证') : Number(value).toFixed(1).replace('.0','') + '<small>/3</small>') + '</b><i><em style="width:' + (value == null ? 0 : Math.max(0,Math.min(100,value/3*100))) + '%"></em></i>' + (pending && value != null ? '<small class="metric-pending">含待验证搭配</small>' : '') + '</div>'; };
       var html = '<div class="detail-topline"><span class="detail-kicker">WORD INSIGHT</span><button type="button" data-close-detail aria-label="关闭词条详情">×</button></div><div class="detail-category">' + esc(row.category) + '</div><h2>' + esc(row.word) + '</h2>' + (row.ipa ? '<p class="detail-ipa">' + esc(row.ipa) + '</p>' : '') + '<p class="detail-gloss">' + esc(row.gloss) + '</p><div class="detail-status state-' + status.id + '"><i></i>' + status.label + '<span>' + (row.scored ? Math.round(row.mastery * 10) / 10 + ' / 3' : '尚无作答证据') + '</span></div><h3>学习证据</h3><div class="evidence-grid">' + component('认词',e.recognition) + component('拼写',e.spelling) + component('多义',e.polysemy) + (e.requiredCollocations ? component('搭配',e.collocation,e.collocationPending) : '') + '</div>';
       if (e.collocationPending) html += '<p class="detail-rule">搭配尚未全部验证，当前不计为熟练。</p>';
       else if (!row.scored) html += '<p class="detail-rule">未验证表示缺少证据，不等于答错。</p>';
@@ -111,7 +111,18 @@
     }
     function pick(key) {
       selectedKey = rowFor(key) ? key : null;
-      renderDetail(rowFor(selectedKey)); renderIndex(); paintSelection(); setIndex(false);
+      renderDetail(rowFor(selectedKey)); renderIndex();
+      if (selectedKey && positions) {
+        var point = positions.nodes.find(function (node) { return node.key === selectedKey; });
+        var mobile = root.innerWidth <= 640;
+        var sx = point.x * zoom + panX, sy = point.y * zoom + panY;
+        if (mobile || sx < 30 || sx > width - 30 || sy < 65 || sy > height - 70) {
+          panX = width / 2 - point.x * zoom;
+          panY = height * (mobile ? .28 : .5) - point.y * zoom;
+          transform();
+        }
+      }
+      paintSelection(); setIndex(false);
     }
     function paintSelection() {
       if (!graph) return;
