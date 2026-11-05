@@ -501,13 +501,30 @@
     return { hue: CLASSIC_HUE, sat: 22, light: light,
       hex: hslToHex(CLASSIC_HUE, 22, light), unscored: !scored };
   }
+  function classicCameraDistance(graph, width, height, phi) {
+    var tangent = Math.tan(24 * Math.PI / 180), aspect = Math.max(.2, width / Math.max(1,height));
+    var elevation = phi == null ? 1.12 : phi, sin = Math.sin(elevation), cos = Math.cos(elevation), required = 24;
+    var points = graph.themes.map(function(p){return Object.assign({radius:2.1},p);}).concat(
+      graph.lemmas.map(function(p){return Object.assign({radius:1.15},p);}));
+    // Fit all points throughout an orbit, including portrait screens.
+    for (var step=0;step<36;step++) {
+      var theta=step/36*Math.PI*2,st=Math.sin(theta),ct=Math.cos(theta);
+      points.forEach(function(p){
+        var y=p.y-.4,screenX=ct*p.x-st*p.z;
+        var screenY=-cos*st*p.x+sin*y-cos*ct*p.z;
+        var depth=sin*st*p.x+cos*y+sin*ct*p.z;
+        required=Math.max(required,depth+Math.max((Math.abs(screenX)+p.radius)/(tangent*aspect),(Math.abs(screenY)+p.radius)/tangent));
+      });
+    }
+    return required*1.08;
+  }
   function classic3DGraph(base, narrow) {
     var definitions = [
       {id:"life",label:"LIFE",zh:"生活",members:["life","nature","feeling","travel","time","society"]},
       {id:"technology",label:"TECHNOLOGY",zh:"科技",members:["technology","school"]},
       {id:"other",label:"OTHER",zh:"其他",members:["action","description","function","other"]}
     ];
-    var centers = narrow ? [{x:-1,y:11,z:1},{x:2,y:0,z:-2},{x:-1,y:-11,z:1}] : placeThemes(["life","technology","other"]);
+    var centers = narrow ? [{x:-1,y:11,z:1},{x:2,y:0,z:-2},{x:-1,y:-11,z:1}] : [{x:-14,y:0,z:2},{x:8,y:10,z:-3},{x:8,y:-10,z:3}];
     var themes = definitions.map(function (d, i) { return Object.assign({}, centers[i], {
       id:d.id,label:d.label,zh:d.zh,hue:CLASSIC_HUE,count:0 }); });
     var grouped = {life:[],technology:[],other:[]};
@@ -614,8 +631,7 @@
       var gloss = shownPhrase ? shownPhrase.gloss : rec.gloss;
       var ipa = shownPhrase ? shownPhrase.ipa : rec.ipa;
       var scoreLine = shownPhrase ? masteryText(shownPhrase) : masteryText(rec);
-      return
-        "<button type=\"button\" class=\"uni-clear\" data-clear-focus>返回全景</button>" +
+      return "<button type=\"button\" class=\"uni-clear\" data-clear-focus>返回全景</button>" +
         "<h2>" + esc(title) + "</h2>" +
         (ipa ? "<p class=\"uni-ipa\">" + esc(ipa) + "</p>" : "") +
         "<p class=\"uni-gloss\">" + esc(gloss || "—") + "</p>" +
@@ -905,6 +921,7 @@
       renderer.setSize(w, h, false);
       renderer.domElement.style.width = "100%";
       renderer.domElement.style.height = "100%";
+      if (graph && !focused) { defaultRadius=classicCameraDistance(graph,w,h,phi); goal.radius=defaultRadius; }
     }
 
     function placeCamera() {
@@ -1164,7 +1181,7 @@
       });
       graph = classic3DGraph(graph, narrow);
       scopeState.page = graph.stats.page;
-      defaultRadius = narrow ? 56 : 38;
+      defaultRadius = classicCameraDistance(graph,host.clientWidth || root.innerWidth || 1000,host.clientHeight || root.innerHeight || 800,phi);
       goal.radius = defaultRadius;
       paintControls(graph);
       paintTitle("单词宇宙");
@@ -1179,7 +1196,7 @@
         var tg = new THREE.Group();
         tg.position.set(theme.x, theme.y, theme.z);
         var coreVisual = { hue: CLASSIC_HUE, sat:22, hex:hslToHex(CLASSIC_HUE,22,64), unscored:false, light:64 };
-        var core = makeOrb(theme.zh, coreVisual, narrow ? 1.45 : 1.85, narrow ? 0.78 : 0.95);
+        var core = makeOrb(theme.zh, coreVisual, narrow ? 1.45 : 1.85, 3.4);
         tg.add(core.group);
         bindPick(core, { kind: "core", themeId: theme.id });
         records.push({
@@ -1199,7 +1216,7 @@
         }
         for (var n = 0; n < members.length; n++) {
           var lemma = members[n];
-          var orb = makeOrb(lemma.word, lemma.visual, 0.78, lemma.word.length > 12 ? 0.62 : 0.78);
+          var orb = makeOrb(lemma.word, lemma.visual, 0.78, lemma.word.length > 12 ? 2.2 : 2.6);
           orb.group.position.set(lemma.local.x, lemma.local.y, lemma.local.z);
           tg.add(orb.group);
           bindPick(orb, { kind: "lemma", key: lemma.key });
@@ -1366,7 +1383,11 @@
     doc.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape") clearFocus(false);
     });
-    root.addEventListener("resize", resize);
+    root.addEventListener("resize", function () {
+      var nextNarrow = !!(root.matchMedia && root.matchMedia("(max-width: 800px)").matches);
+      if (nextNarrow !== narrow) { narrow=nextNarrow; rebuild(); }
+      resize();
+    });
 
     var started = false;
     function tick(now) {
@@ -1415,6 +1436,7 @@
     buildGraph: buildGraph,
     classic3DGraph: classic3DGraph,
     classicVisual: classicVisual,
+    classicCameraDistance: classicCameraDistance,
     wordDetailHtml: wordDetailHtml,
     parseScope: parseScope,
     readLocal: readLocal,
