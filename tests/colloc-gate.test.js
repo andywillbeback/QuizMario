@@ -173,7 +173,7 @@ function cardIn(track, word) {
   assert.ok(!game.includes("relatedLemmas"));
   assert.ok(index.includes("is-colloc-gate"));
   assert.ok(index.includes('src="related-links.js"'));
-  assert.ok(index.indexOf('src="related-links.js"') < index.indexOf('src="game.js"'));
+  assert.ok(index.indexOf('src="related-links.js"') < index.indexOf('src="game.js'));
 
   const gradeIdx = game.indexOf("function grade(");
   const gradeSlice = game.slice(gradeIdx, gradeIdx + 900);

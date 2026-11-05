@@ -69,7 +69,7 @@ assert.ok(login.includes('src="profile-name.js"'));
 assert.ok(auth.includes("display_name") && auth.includes("class_name"));
 assert.ok(auth.includes("seedLocalProfile"));
 assert.ok(auth.includes('options:') && auth.includes("data: signupData"));
-assert.ok(index.indexOf('src="game.js"') < index.indexOf('src="profile-name.js"'));
+assert.ok(index.indexOf('src="game.js') < index.indexOf('src="profile-name.js"'));
 assert.ok(index.indexOf('src="profile-name.js"') < index.indexOf('src="sync.js"'));
 assert.ok(sync.includes("stampIdentity"));
 assert.ok(helper.includes("writeProfile"));

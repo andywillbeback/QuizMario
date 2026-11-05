@@ -19,6 +19,7 @@
   "use strict";
 
   const STORAGE_KEY = "vocabSpotlight_v1";
+  const UniverseProgress = window.QuizMarioUniverseProgress;
   const TRACKS = (window.VOCAB_TRACKS || [{ id: "core", name: "原版核心" }]).map((t) =>
     t.id === "core" ? Object.assign({}, t, { sets: window.VOCAB_LEVELS || [], titles: (window.VOCAB_LEVELS || []).map((part, i) => {
       const setNum = Math.floor(i / 2) + 1;
@@ -98,6 +99,7 @@
   let pendingAttempt = null;
   /** Collocation hard gate. Holds the lemma until its primary phrase is answered. */
   const collocFlow = bindCollocFlow();
+  let collocGateRetries = 0;
 
   const KILL_LINES = {
     1: "First blood",
@@ -149,6 +151,7 @@
     sv.track = data.track || "core";
     sv.trackUnlock = data.trackUnlock || {};
     sv.trackStars = data.trackStars || {};
+    sv.universeCompletedSets = UniverseProgress ? UniverseProgress.normalizeCompleted(data.universeCompletedSets) : (data.universeCompletedSets || {});
     sv.daily = data.daily || {};
     sv.studyDaily = {};
     if (data.studyDaily && typeof data.studyDaily === "object" && !Array.isArray(data.studyDaily)) {
@@ -235,6 +238,7 @@
       save.updatedAt = new Date().toISOString();
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+    try { window.dispatchEvent(new CustomEvent("quizmario:progress", { detail: { updatedAt: save.updatedAt } })); } catch (_) {}
     if (opts.upload !== false && window.QuizMarioCloud && typeof window.QuizMarioCloud.onLocalSave === "function") {
       try { window.QuizMarioCloud.onLocalSave(save); } catch (_) {}
     }
@@ -463,7 +467,9 @@
 
   /** Anki-lite / SM-2. quality: 0 Again, 1 Good, 2 Easy. opts carries 不会 / hintSeen. */
   function schedule(prog, quality, nowMs, opts) {
-    return SRS.schedule(prog, quality, nowMs, opts);
+    const result = SRS.schedule(prog, quality, nowMs, opts);
+    prog.lastAttemptAt = nowMs || Date.now();
+    return result;
   }
 
   function formatDue(p) {
@@ -1562,8 +1568,8 @@
 
   function attemptOpts(card, extra) {
     return Object.assign({
-      firstTry: !(card && card._repeat),
-      hintSeen: !!(card && card._hintSeen),
+      firstTry: !(card && (card._repeat || card._collocAssisted)),
+      hintSeen: !!(card && (card._hintSeen || card._collocAssisted)),
       now: Date.now(),
     }, extra || {});
   }
@@ -1995,11 +2001,15 @@
     }
     // Hold SM-2 until the primary collocation is correct. No related entry falls through.
     if (collocFlow.phase() === "gate") {
-      const passed = collocFlow.onCollocAnswer((outcome || (correct ? "correct" : "wrong")) === "correct") === "complete";
+      const gateOutcome = outcome || (correct ? "correct" : "wrong");
+      recordCollocationAnswer(collocFlow.gate(), gateOutcome, chosen);
+      const passed = collocFlow.onCollocAnswer(gateOutcome === "correct") === "complete";
       if (!passed) {
+        collocGateRetries += 1;
         showCollocRetry();
         return;
       }
+      currentCard._collocAssisted = collocGateRetries > 0;
       correct = true;
       easy = false;
       chosen = "";
@@ -2009,6 +2019,8 @@
       if (preview === "correct" && sessionDirection === "meaning") {
         const gateEffect = collocFlow.onLemmaCorrect(currentCard, relatedTrackIndex(), sessionDirection);
         if (gateEffect === "open") {
+          collocGateRetries = 0;
+          currentCard._collocAssisted = false;
           renderCollocGate();
           return;
         }
@@ -2221,6 +2233,27 @@
     persist();
     updateProgress();
     setTimeout(nextCard, 700);
+  }
+
+  function recordCollocationAnswer(gate, outcome, chosen) {
+    if (!UniverseProgress || !gate || !gate.primary) return;
+    const phrase = gate.primary;
+    const firstTry = collocGateRetries === 0 && !(currentCard && currentCard._repeat);
+    const hintSeen = collocGateRetries > 0 || !!(currentCard && currentCard._hintSeen);
+    const noted = UniverseProgress.recordCollocation(save, {
+      track: currentTrack, levelIdx: phrase.levelIdx, word: phrase.lemma,
+      outcome: outcome, firstTry: firstTry, hintSeen: hintSeen, now: Date.now(),
+    });
+    const LE = learnerEvents();
+    if (LE && typeof LE.record === "function") {
+      try { LE.record({
+        event_type: outcome === "correct" ? LE.TYPES.CORRECT : LE.TYPES.WRONG,
+        headword: phrase.lemma, item_id: noted.key, track: currentTrack,
+        gloss_zh: phrase.gloss, outcome: outcome, answer: chosen || "",
+        evidence_kind: "mc_recognition", task_direction: "meaning", independent: noted.independent,
+      }); } catch (_) {}
+    }
+    persist();
   }
 
   function bindCollocFlow() {
@@ -2528,6 +2561,7 @@
     save.levelStars[String(currentLevel)] = Math.max(save.levelStars[String(currentLevel)] || 0, stars);
     advanceFrontier(currentLevel);
     save.points += 50;
+    if (UniverseProgress) UniverseProgress.recordCompleted(save, currentTrack, currentLevel, Date.now());
     persist();
     const cs = levelClearStats(currentLevel);
     const mins = Math.round(SRS.CHALLENGE_MS / MIN_MS);
@@ -2569,9 +2603,9 @@
     openClearedSetUniverse();
   }
 
-  /** 1-based set, same number as 第N组. Core and other tracks stay on 通关. */
+  /** Exact 1-based unit for every supported track. Completion never awards mastery. */
   function clearedSetUniverseHref() {
-    if (currentTrack !== "zhongkao" && currentTrack !== "gaokao") return "";
+    if (!LEVELS.length) return "";
     const setNum = Math.floor(Number(currentLevel) || 0);
     if (setNum < 1) return "";
     return "word-universe.html?track=" + encodeURIComponent(currentTrack) + "&set=" + setNum;
@@ -2591,7 +2625,14 @@
     // Clear UI is already up. The next turn hard-loads 本组 so colors read
     // the save persist() just wrote. Read-only: the universe does not write it.
     setTimeout(() => {
-      try { location.assign(href); } catch (_) {}
+      let navigated = false;
+      const go = () => { if (navigated) return; navigated = true; try { location.assign(href); } catch (_) {} };
+      const pending = [];
+      try { if (window.QuizMarioCloud && window.QuizMarioCloud.flushNow) pending.push(window.QuizMarioCloud.flushNow()); } catch (_) {}
+      try { const bus = learnerEvents(); if (bus && bus.flush) pending.push(bus.flush()); } catch (_) {}
+      // Let the completed-unit snapshot upload, without trapping an offline learner.
+      const timeout = setTimeout(go, 1500);
+      Promise.allSettled(pending).then(() => { clearTimeout(timeout); go(); });
     }, 0);
   }
 
@@ -2629,6 +2670,7 @@
       track: payload.track,
       trackUnlock: Object.assign({}, payload.trackUnlock || {}),
       trackStars: Object.assign({}, payload.trackStars || {}),
+      universeCompletedSets: payload.universeCompletedSets,
       daily: Object.assign({}, payload.daily || {}),
       profile: Object.assign({ name: "", cls: "" }, payload.profile || {}),
       updatedAt: payload.updatedAt,
@@ -3668,8 +3710,13 @@
         ? ("错词本还剩 " + left + " 个。同一个词在错词本里连续答对两次，就会毕业离开。")
         : "这些词都在错词本里连续答对了两次，已经毕业离开。";
     }
+    if (kind === "spelling" && UniverseProgress) {
+      UniverseProgress.recordCompleted(save, currentTrack, currentLevel, Date.now());
+      persist();
+    }
     showScreen("clear");
     offerSetShare(kind);
+    if (kind === "spelling") openClearedSetUniverse();
   }
 
   function enterExam(id) {

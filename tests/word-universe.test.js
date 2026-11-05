@@ -1,366 +1,111 @@
-/* Word-universe beta: first paint is lemmas, click data is existing colloc only.
- * Run: node tests/word-universe.test.js
- */
-"use strict";
-
-const assert = require("assert");
-const fs = require("fs");
-const path = require("path");
-const vm = require("vm");
-
-const root = path.join(__dirname, "..");
-function read(name) {
-  return fs.readFileSync(path.join(root, name), "utf8");
+/* Current universe contract: exact units, evidence, completion and live updates. */
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
+const related=require('../grok/related-links'),sense=require('../grok/sense-id');
+const progress=require('../grok/universe-progress'),srs=require('../grok/srs-rules'),practice=require('../grok/practice');
+const u=require('../grok/word-universe');
+const tracks=[{id:'gaokao',name:'高考',sets:[
+ [{word:'advantage',meaning_zh:'优势',pos:'n.',related:['take advantage of']},{word:'life',meaning_zh:'生活',pos:'n.'}],
+ [{word:'take advantage of',meaning_zh:'利用',pos:'verb_phrase',related:['take','advantage']}],
+ [{word:'May',meaning_zh:'五月',pos:'n.'},{word:'may',meaning_zh:'可能',pos:'modal'}]
+]}];
+const now=Date.parse('2026-11-04T10:00:00Z');
+const graph=(save,set=1,extra={})=>u.buildGraph({tracks,trackId:'gaokao',set,save,cap:1,...extra});
+const adv=save=>graph(save).lemmas.find(n=>n.word==='advantage');
+let count=0;function check(name,f){f();count++;console.log('ok',name)}
+check('registration is persistent, per-track, idempotent, and never awards mastery',()=>{
+ const save={cards:{}};for(const [t,n]of [['gaokao',1],['gaokao',1],['gaokao',2],['zhongkao',3]])progress.recordCompleted(save,t,n,now);
+ assert.deepEqual(progress.completedSets(save,'gaokao'),[1,2]);assert.deepEqual(progress.completedSets(save,'zhongkao'),[3]);
+ assert.ok(graph(save,null,{cap:52}).lemmas.every(n=>!n.scored));
+ assert.deepEqual(progress.completedSets(JSON.parse(JSON.stringify(save)),'gaokao'),[1,2]);
+ assert.deepEqual(progress.completedSets({track:'gaokao',levelStars:{2:1},trackStars:{gaokao:{1:2}}},'gaokao'),[1,2]);
+});
+check('exact unit is not truncated; phrase-only units never borrow example words',()=>{
+ assert.deepEqual(graph({cards:{}}).lemmas.map(n=>n.word).sort(),['advantage','life']);
+ assert.deepEqual(graph({cards:{}},2).lemmas.map(n=>n.word),['take advantage of']);assert.equal(graph({cards:{}},99).lemmas.length,0);
+});
+check('unknown differs from observed zero',()=>{
+ const p=srs.defaultCardProg(),save={cards:{'gaokao|0::advantage':p}};assert.equal(adv(save).scored,false);
+ srs.schedule(p,0,now,{outcome:'wrong'});assert.equal(adv(save).scored,true);assert.equal(adv(save).mastery,0);
+ assert.notEqual(u.visualOf(u.themeOf('life'),null,false).hex,adv(save).visual.hex);
+});
+check('current unit wins; overview uses latest same-track evidence, never highest',()=>{
+ const save={cards:{'gaokao|0::life':{state:'learning',wrong:1,mastery:0,scheduledAt:now},'gaokao|9::life':{state:'review',mastery:3,reps:4,scheduledAt:now-1},'zhongkao|0::life':{state:'review',mastery:3,reps:4,scheduledAt:now+1}}};
+ assert.equal(graph(save).lemmas.find(n=>n.word==='life').mastery,0);assert.equal(progress.itemState(save,'gaokao','life',null).score,0);
+});
+check('May and may preserve distinct identities and categories',()=>{
+ const g=graph({cards:{'gaokao|2::may:month':{state:'review',mastery:3,reps:4}}},3);
+ assert.equal(g.lemmas.length,2);assert.equal(g.lemmas.find(n=>n.word==='May').themeId,'time');
+ assert.equal(g.lemmas.find(n=>n.word==='may').themeId,'function');assert.equal(g.lemmas.find(n=>n.word==='may').scored,false);
+});
+check('missing or weak collocation blocks mastered; assisted retry never erases a miss',()=>{
+ const save={cards:{'gaokao|0::advantage':{state:'review',mastery:3,reps:4,scheduledAt:now}}};
+ assert.equal(adv(save).evidence.collocationPending,true);assert.ok(adv(save).mastery<3);
+ const note=(outcome,t,extra={})=>progress.recordCollocation(save,{track:'gaokao',levelIdx:1,word:'take advantage of',outcome,now:t,...extra});
+ note('wrong',now+1);assert.equal(adv(save).mastery,0);
+ note('correct',now+2,{firstTry:false,hintSeen:true});assert.equal(adv(save).mastery,0);
+ note('correct',now+100,{firstTry:true});note('correct',now+86400000,{firstTry:true});assert.equal(adv(save).mastery,3);
+ note('wrong',now+86400001);assert.ok(adv(save).mastery<3);
+});
+check('spelling and polysemy change colour without changing SRS; spelling alone is not overall mastery',()=>{
+ const p={state:'review',mastery:3,reps:4,due:123,scheduledAt:now};practice.noteSpelling(p,'wrong',now+1,{mode:'typed'});
+ assert.equal(p.mastery,3);assert.equal(p.due,123);assert.equal(graph({cards:{'gaokao|0::life':p}}).lemmas.find(n=>n.word==='life').mastery,0);
+ const q={state:'review',mastery:3,reps:4,scheduledAt:now};practice.notePolysemy(q,'wrong',now+2);
+ assert.equal(graph({cards:{'gaokao|0::life':q}}).lemmas.find(n=>n.word==='life').mastery,0);
+ const only={spelling:{typed:{correct:2,streak:2,lastAt:now},lastAt:now}};
+ assert.ok(graph({cards:{'gaokao|0::life':only}}).lemmas.find(n=>n.word==='life').mastery<3);
+});
+check('overview pagination retains every completed-unit entry',()=>{
+ const save={cards:{}};progress.recordCompleted(save,'gaokao',1,now);progress.recordCompleted(save,'gaokao',2,now);
+ const first=graph(save,null,{cap:1}),words=[];for(let page=0;page<first.stats.pages;page++)words.push(...graph(save,null,{cap:1,page}).lemmas.map(n=>n.word));
+ assert.deepEqual(words.sort(),['advantage','life','take advantage of']);
+});
+check('all 372 units are complete and classified, including 22 phrase-only exam units',()=>{
+ const ctx={window:{}};vm.createContext(ctx);
+ for(const p of ['words','tracks','exam-tracks'])vm.runInContext(read('grok/'+p+'.js'),ctx);
+ const all=ctx.window.VOCAB_TRACKS.map(t=>t.id==='core'?{...t,sets:ctx.window.VOCAB_LEVELS}:t);
+ let units=0,phrases=0;
+ for(const track of all)for(let i=0;i<track.sets.length;i++){
+  const expected=[...new Set(track.sets[i].map(c=>sense.senseId(c.word)))].sort();
+  const g=u.buildGraph({tracks:all,trackId:track.id,set:i+1,save:{cards:{}},cap:1});
+  assert.deepEqual(g.lemmas.map(n=>n.key).sort(),expected,track.id+'/'+(i+1));assert.equal(g.themes.reduce((n,t)=>n+t.count,0),expected.length);
+  assert.ok(g.lemmas.every(n=>n.category&&g.themes.some(t=>t.id===n.themeId)));
+  if(['zhongkao','gaokao'].includes(track.id)&&track.sets[i].every(c=>u.isPhrase(c.word)))phrases++;units++;
+ }assert.equal(units,372);assert.equal(phrases,22);
+});
+check('gate failures persist and emit phrase-specific events before retry',()=>{
+ const source=read('grok/game.js'),gate=related.createCollocGate(),card={...tracks[0].sets[0][0],key:'gaokao|0::advantage'};
+ gate.onLemmaCorrect(card,related.indexTrack(tracks[0].sets),'meaning');const events=[],save={cards:{[card.key]:{state:'review',mastery:3,reps:4}}};let writes=0;
+ const ctx={UniverseProgress:progress,save,currentTrack:'gaokao',currentCard:card,collocFlow:gate,collocGateRetries:0,awaiting:false,pendingRate:false,Practice:practice,sessionKind:'level',sessionDirection:'meaning',showCollocRetry(){},
+ learnerEvents(){return{TYPES:{WRONG:'vocab.answer_wrong',CORRECT:'vocab.answer_correct'},record(x){events.push(x)}}},persist(){writes++}};vm.createContext(ctx);
+ const grade=source.slice(source.indexOf('  function grade(correct,'),source.indexOf('  function confirmCorrect('));
+ const record=source.slice(source.indexOf('  function recordCollocationAnswer('),source.indexOf('  function bindCollocFlow('));
+ vm.runInContext(record+grade+'\ngrade(false,false,"wrong","wrong");grade(false,false,"wrong","wrong");',ctx);
+ assert.equal(events.length,2);assert.equal(events[0].headword,'take advantage of');assert.equal(save.cards['gaokao|1::take advantage of'].collocationEvidence.wrong,2);
+ assert.equal(save.cards[card.key].mastery,3);assert.equal(writes,2);assert.equal(adv(save).mastery,0);
+});
+function runtime(storage){
+ class El{constructor(){this.attrs={};this.listeners={};this.style={};this.textContent='';this.innerHTML='';this.value=''}getAttribute(k){return this.attrs[k]||null}setAttribute(k,v){this.attrs[k]=v}addEventListener(k,f){(this.listeners[k]||=[]).push(f)}dispatch(e){for(const f of this.listeners[e.type]||[])f(e)}}
+ const ids={};for(const id of ['universe-root','universe-status','universe-title','universe-detail','universe-legend','universe-set','universe-track','universe-prev','universe-next','universe-page','universe-view'])ids[id]=new El;
+ const document=new El;document.getElementById=id=>ids[id]||null;document.visibilityState='visible';const ctx=new El,timers=[];
+ Object.assign(ctx,{document,URL,VOCAB_EXAM_TRACKS:tracks,location:{search:'?track=gaokao&set=1',href:'https://example.test/grok/word-universe.html?track=gaokao&set=1',assign(){}},localStorage:{getItem(k){return storage[k]||null}},setInterval(f){timers.push(f);return timers.length},clearInterval(){}});
+ ctx.window=ctx;vm.createContext(ctx);for(const file of ['sense-id.js','related-links.js','universe-progress.js','word-universe.js'])vm.runInContext(read('grok/'+file),ctx,{filename:file});return{ctx,ids,timers};
 }
-
-require(path.join(root, "grok/related-links.js"));
-require(path.join(root, "grok/study-metrics.js"));
-const uni = require(path.join(root, "grok/word-universe.js"));
-
-assert.strictEqual(uni.LEGEND, "颜色越深 = 越不熟练");
-assert.ok(uni.UNSCORED_NOTE.indexOf("不记成 0") > 0);
-
-assert.strictEqual(uni.themeOf("life", "生活").id, "life");
-assert.strictEqual(uni.themeOf("lifestyle", "").id, "life");
-assert.strictEqual(uni.themeOf("computer", "电脑").id, "technology");
-assert.strictEqual(uni.themeOf("Internet", "互联网").id, "technology");
-assert.strictEqual(uni.themeOf("telephone", "").id, "technology");
-assert.strictEqual(uni.themeOf("advantage", "优势").id, "society");
-assert.strictEqual(uni.themeOf("school", "学校").id, "school");
-assert.strictEqual(uni.themeOf("nature", "自然").id, "nature");
-assert.strictEqual(uni.themeOf("zzzz-not-a-word", "无可归类").id, "other");
-assert.strictEqual(uni.isPhrase("take advantage of"), true);
-assert.strictEqual(uni.isPhrase("advantage"), false);
-
-const life = uni.themeOf("life", "");
-const dark = uni.visualOf(life, 0, true);
-const mid = uni.visualOf(life, 1.5, true);
-const bright = uni.visualOf(life, 3, true);
-const gray = uni.visualOf(life, null, false);
-assert.ok(dark.light < mid.light && mid.light < bright.light, "weaker mastery is darker");
-assert.ok(dark.light < gray.light, "unscored gray is not painted as mastery 0");
-assert.ok(gray.sat < dark.sat);
-assert.strictEqual(gray.unscored, true);
-assert.strictEqual(dark.unscored, false);
-
-const fixture = [{
-  id: "gaokao",
-  name: "高考",
-  sets: [[
-    { word: "life", pos: "n.", meaning_zh: "生活", related: ["way of life"] },
-    { word: "way of life", meaning_zh: "生活方式", related: ["life", "way"] },
-    { word: "way", meaning_zh: "方式" },
-    { word: "technology", meaning_zh: "技术" },
-    { word: "advantage", meaning_zh: "优势", related: ["advantage over", "take advantage of"] },
-    { word: "take advantage of", meaning_zh: "利用", related: ["take", "advantage"] },
-    { word: "advantage over", meaning_zh: "胜过", related: ["advantage", "over"] },
-    { word: "take", meaning_zh: "拿" },
-    { word: "over", meaning_zh: "在……上方" },
-    { word: "ghost", meaning_zh: "幽灵" },
-  ]],
-}];
-
-const save = {
-  cards: {
-    "gaokao|0::advantage": { state: "learning", reps: 2, wrong: 2, correct: 0, mastery: 0, interval: 0 },
-    "gaokao|0::life": { state: "review", interval: 3, reps: 4, correct: 4, wrong: 0, mastery: 3 },
-    "gaokao|1::ghost": { state: "learning", reps: 1, wrong: 1, mastery: 0.5, interval: 0 },
-  },
-  wrongBook: {},
-};
-const graph = uni.buildGraph({
-  tracks: fixture,
-  trackId: "gaokao",
-  save: save,
-  events: [],
-  cap: 12,
-  seedPer: 2,
-  neighborPer: 1,
+check('no-WebGL list is complete and live on storage, same-page polling and page restore',()=>{
+ const storage={};const set=n=>storage.vocabSpotlight_v1=JSON.stringify({cards:{'gaokao|0::life':{state:'learning',mastery:n,reps:1,scheduledAt:now+n}}});set(.5);
+ const {ctx,ids,timers}=runtime(storage),get=()=>ctx.QuizMarioWordUniverse.currentGraph().lemmas.find(n=>n.word==='life');
+ assert.equal(get().mastery,.5);assert.ok(ids['universe-root'].innerHTML.includes('advantage'));
+ set(1);ctx.dispatch({type:'storage',key:'vocabSpotlight_v1'});assert.equal(get().mastery,1);
+ set(0);timers[0]();assert.equal(get().mastery,0);set(2);ctx.dispatch({type:'pageshow'});assert.equal(get().mastery,2);
 });
-assert.ok(graph.lemmas.every(function (node) { return !uni.isPhrase(node.word); }), "first paint has no phrases");
-assert.ok(graph.spokes.every(function (edge) {
-  return edge.from.indexOf("theme:") === 0 && edge.to.indexOf("lemma:") === 0;
-}));
-assert.strictEqual(graph.spokes.length, graph.lemmas.length);
-assert.ok(graph.themes.some(function (t) { return t.id === "life"; }));
-assert.ok(graph.themes.some(function (t) { return t.id === "technology"; }));
-const advantage = graph.lemmas.find(function (n) { return n.word === "advantage"; });
-const lifeNode = graph.lemmas.find(function (n) { return n.word === "life"; });
-assert.ok(advantage, "a touched weak lemma is kept");
-assert.ok(lifeNode);
-assert.strictEqual(advantage.scored, true);
-assert.strictEqual(advantage.mastery, 0);
-assert.strictEqual(lifeNode.mastery, 3);
-assert.ok(advantage.visual.light < lifeNode.visual.light);
-assert.deepStrictEqual(advantage.phrases.map(function (p) { return p.word; }), ["take advantage of", "advantage over"]);
-assert.strictEqual(advantage.phrases[0].primary, true);
-assert.ok(advantage.phrases.every(function (p) { return p.word !== "have an advantage" && p.word !== "to one's advantage"; }));
-assert.ok(advantage.coLemmas.indexOf("take") >= 0);
-assert.ok(advantage.coLemmas.indexOf("over") >= 0);
-assert.ok(graph.lemmas.some(function (n) { return n.word === "take" || n.word === "over"; }), "a co-lemma neighbor can join under the cap");
-
-const empty = uni.buildGraph({
-  tracks: fixture,
-  trackId: "gaokao",
-  save: { cards: {} },
-  events: [],
-  cap: 20,
-  seedPer: 2,
-  neighborPer: 0,
+check('backup round-trip preserves completed-unit registry and completion saves it before opening',()=>{
+ const source=read('grok/game.js'),extend=source.slice(source.indexOf('  function extendSave('),source.indexOf('  function defaultCardProg('));
+ const snapshot=source.slice(source.indexOf('  function snapshotToSave('),source.indexOf('  function applySaveObject('));
+ const payload={track:'gaokao',cards:{},universeCompletedSets:{gaokao:{1:'2026-11-04T10:00:00Z'}}};
+ const ctx={UniverseProgress:progress,Sense:sense,normalizeMustPractice:x=>x||{},catalogGroups:()=>[],migrateCard:x=>x,payload};vm.createContext(ctx);vm.runInContext(extend+snapshot+'\nresult=snapshotToSave(payload);',ctx);
+ assert.deepEqual(JSON.parse(JSON.stringify(ctx.result.universeCompletedSets)),payload.universeCompletedSets);
+ const clear=source.slice(source.indexOf('  function onLevelClear('),source.indexOf('  function clearedSetUniverseHref('));
+ assert.ok(clear.indexOf('UniverseProgress.recordCompleted')>=0);assert.ok(clear.indexOf('UniverseProgress.recordCompleted')<clear.indexOf('persist();'));
 });
-assert.ok(empty.lemmas.every(function (n) { return n.themeId === "life" || n.themeId === "technology"; }));
-assert.ok(empty.lemmas.every(function (n) { return n.scored === false; }));
-assert.ok(empty.stats.shown <= 20);
-
-function loadTracks() {
-  const ctx = { window: {} };
-  vm.createContext(ctx);
-  vm.runInContext(read("grok/exam-tracks.js"), ctx);
-  return ctx.window.VOCAB_EXAM_TRACKS;
-}
-
-const tracks = loadTracks();
-const zk = uni.buildGraph({ tracks: tracks, trackId: "zhongkao", save: { cards: {} }, events: [], cap: 32, seedPer: 6 });
-assert.ok(zk.lemmas.some(function (n) { return n.word.toLowerCase() === "life"; }));
-assert.ok(zk.lemmas.some(function (n) { return n.word.toLowerCase() === "technology"; }));
-assert.ok(zk.lemmas.every(function (n) { return !uni.isPhrase(n.word); }));
-assert.ok(zk.stats.shown <= 32);
-
-const gkSave = {
-  cards: {
-    "gaokao|0::advantage": { state: "learning", reps: 1, wrong: 1, mastery: 0, interval: 0, correct: 0 },
-  },
-};
-const gk = uni.buildGraph({ tracks: tracks, trackId: "gaokao", save: gkSave, events: [], cap: 40, seedPer: 4, neighborPer: 1 });
-const gkAdv = gk.lemmas.find(function (n) { return n.word === "advantage"; });
-assert.ok(gkAdv, "gaokao advantage is on the graph when it is the weak card");
-assert.deepStrictEqual(gkAdv.phrases.map(function (p) { return p.word; }), ["take advantage of", "advantage over"]);
-assert.strictEqual(gkAdv.phrases[0].primary, true);
-const dumped = JSON.stringify(gkAdv.phrases);
-assert.ok(dumped.indexOf("have an advantage") === -1);
-assert.ok(dumped.indexOf("to one's advantage") === -1);
-
-const index = read("grok/index.html");
-const own = read("grok/own-study.js");
-const panelAt = index.indexOf('id="stats-panel"');
-const levelsAt = index.indexOf('id="screen-levels"');
-const panel = index.slice(panelAt, levelsAt);
-assert.ok(panel.indexOf('href="word-universe.html"') > 0, "entry sits in 我的学习数据");
-assert.ok(own.indexOf("word-universe.html") > 0, "entry sits in 我的学情");
-assert.ok(index.indexOf('src="study-metrics.js"') < index.indexOf('src="own-study.js"'));
-assert.ok(index.indexOf('src="own-study.js"') < index.indexOf('src="game.js"'));
-assert.ok(!index.includes('src="word-universe.js"'), "the game page does not boot the 3D view");
-assert.ok(!read("grok/login.html").includes("word-universe"));
-assert.ok(!read("grok/kill-streak.js").includes("word-universe"));
-assert.ok(!read("grok/kill-streak.js").includes("universe"));
-const configUrl = read("grok/config.js").match(/SUPABASE_URL:\s*"([^"]+)"/)[1];
-assert.ok(/\.supabase\.co\/?$/.test(configUrl), configUrl);
-assert.ok(read("grok/word-universe.html").includes("vendor/three.r128.min.js"));
-assert.ok(!read("grok/word-universe.html").includes("config.js"));
-assert.ok(!read("grok/word-universe.html").includes("supabase"));
-
-const capped = uni.buildGraph({ tracks: tracks, trackId: "gaokao", save: gkSave, events: [], cap: 18, seedPer: 3, neighborPer: 0 });
-assert.ok(capped.lemmas.length <= 18);
-
-const stopTracks = [{
-  id: "zhongkao",
-  name: "中考",
-  sets: [[
-    { word: "life", meaning_zh: "生活" },
-    { word: "technology", meaning_zh: "技术" },
-    { word: "phone", meaning_zh: "电话", related: ["on the phone"] },
-    { word: "on the phone", meaning_zh: "在打电话", related: ["on", "phone"] },
-    { word: "on", meaning_zh: "在……上" },
-  ]],
-}];
-const stopGraph = uni.buildGraph({
-  tracks: stopTracks,
-  trackId: "zhongkao",
-  save: { cards: { "zhongkao|0::phone": { state: "learning", reps: 1, wrong: 1, mastery: 0, interval: 0, correct: 0 } } },
-  events: [],
-  cap: 20,
-  seedPer: 1,
-  neighborPer: 1,
-});
-assert.ok(stopGraph.lemmas.every(function (n) { return !uni.isPhrase(n.word); }));
-assert.ok(!stopGraph.lemmas.some(function (n) { return n.word === "on"; }), "function-word co-lemmas do not take an orbit");
-const phone = stopGraph.lemmas.find(function (n) { return n.word === "phone"; });
-assert.ok(phone && phone.phrases.some(function (p) { return p.word === "on the phone" && p.primary; }));
-assert.ok(phone.coLemmas.indexOf("on") >= 0);
-
-assert.deepStrictEqual(uni.parseScope(""), { trackId: "", set: null });
-assert.deepStrictEqual(uni.parseScope("?track=gaokao&set=12"), { trackId: "gaokao", set: 12 });
-assert.deepStrictEqual(uni.parseScope("word-universe.html?track=zhongkao&set=3"), { trackId: "zhongkao", set: 3 });
-assert.strictEqual(uni.parseScope("?set=0").set, null);
-assert.strictEqual(uni.parseScope("?track=ket&set=4").trackId, "");
-assert.strictEqual(uni.parseScope("?set=12.9").set, 12);
-
-const scopeTrack = [{
-  id: "gaokao",
-  name: "高考",
-  sets: [
-    [
-      { word: "life", meaning_zh: "生活" },
-      { word: "way", meaning_zh: "方式" },
-    ],
-    [
-      { word: "advantage", meaning_zh: "优势", related: ["take advantage of", "way"] },
-      { word: "take advantage of", meaning_zh: "利用", related: ["take", "advantage"] },
-      { word: "ghost", meaning_zh: "幽灵" },
-      { word: "brave", meaning_zh: "勇敢" },
-      { word: "quilt", meaning_zh: "被子" },
-      { word: "zebra", meaning_zh: "斑马" },
-    ],
-    [
-      { word: "be able to", meaning_zh: "能够" },
-    ],
-  ],
-}];
-const scopeSave = {
-  cards: {
-    "gaokao|1::advantage": { state: "learning", reps: 2, wrong: 2, correct: 0, mastery: 0, interval: 0 },
-    "gaokao|1::brave": { state: "review", reps: 4, wrong: 0, correct: 4, mastery: 3, interval: 3 },
-    "gaokao|1::quilt": { state: "learning", reps: 2, wrong: 0, correct: 2, mastery: 1, interval: 0 },
-  },
-};
-const set2 = uni.buildGraph({
-  tracks: scopeTrack,
-  trackId: "gaokao",
-  set: 2,
-  save: scopeSave,
-  events: [],
-  cap: 3,
-  seedPer: 4,
-  neighborPer: 2,
-});
-assert.strictEqual(set2.setNumber, 2);
-assert.strictEqual(set2.scopeLabel, "本组学情 · Set 2");
-assert.strictEqual(set2.lemmas.length, 3);
-assert.deepStrictEqual(set2.lemmas.map(function (n) { return n.word; }).sort(), ["advantage", "ghost", "zebra"]);
-assert.ok(!set2.lemmas.some(function (n) { return n.word === "brave" || n.word === "quilt" || n.word === "life" || n.word === "way"; }));
-const set2Adv = set2.lemmas.find(function (n) { return n.word === "advantage"; });
-assert.ok(set2Adv.weak);
-assert.deepStrictEqual(set2Adv.phrases.map(function (p) { return p.word; }), ["take advantage of"]);
-assert.ok(set2Adv.coLemmas.indexOf("way") >= 0, "a co-lemma outside the set stays on the click list");
-assert.ok(set2.lemmas.every(function (n) { return !uni.isPhrase(n.word); }));
-
-const set2All = uni.buildGraph({
-  tracks: scopeTrack,
-  trackId: "gaokao",
-  set: 2,
-  save: scopeSave,
-  events: [],
-  cap: 52,
-  seedPer: 6,
-  neighborPer: 2,
-});
-assert.strictEqual(set2All.stats.bankLemmas, 5);
-assert.strictEqual(set2All.lemmas.length, 5, "a set under the cap shows every lemma");
-assert.ok(set2All.lemmas.some(function (n) { return n.word === "brave"; }));
-assert.ok(!set2All.lemmas.some(function (n) { return n.word === "life" || n.word === "way" || n.word === "technology"; }));
-
-const set1 = uni.buildGraph({
-  tracks: scopeTrack,
-  trackId: "gaokao",
-  set: 1,
-  save: { cards: {} },
-  events: [],
-  cap: 52,
-  seedPer: 6,
-});
-assert.deepStrictEqual(set1.lemmas.map(function (n) { return n.word; }).sort(), ["life", "way"]);
-assert.strictEqual(set1.scopeLabel, "本组学情 · Set 1");
-
-const whole = uni.buildGraph({
-  tracks: scopeTrack,
-  trackId: "gaokao",
-  save: scopeSave,
-  events: [],
-  cap: 20,
-  seedPer: 1,
-  neighborPer: 0,
-});
-assert.strictEqual(whole.setNumber, null);
-assert.strictEqual(whole.scopeLabel, "");
-assert.ok(whole.lemmas.some(function (n) { return n.word === "advantage"; }));
-assert.ok(whole.lemmas.some(function (n) { return n.word === "life"; }), "no set param still seeds the whole track");
-
-const missingSet = uni.buildGraph({
-  tracks: scopeTrack,
-  trackId: "gaokao",
-  set: 9,
-  save: { cards: {} },
-  events: [],
-  cap: 20,
-  seedPer: 4,
-});
-assert.strictEqual(missingSet.setNumber, 9);
-assert.strictEqual(missingSet.lemmas.length, 0);
-
-const phraseOnly = uni.buildGraph({
-  tracks: scopeTrack,
-  trackId: "gaokao",
-  set: 3,
-  save: { cards: {} },
-  events: [],
-  cap: 20,
-  seedPer: 1,
-  neighborPer: 0,
-});
-assert.strictEqual(phraseOnly.setNumber, 3);
-assert.ok(phraseOnly.lemmas.some(function (n) { return n.word === "life"; }), "a lemma-less set still gets an empty-state core");
-assert.ok(!phraseOnly.lemmas.some(function (n) { return uni.isPhrase(n.word); }));
-
-const zkTrack = tracks.find(function (t) { return t.id === "zhongkao"; });
-const zkSet = uni.buildGraph({
-  tracks: tracks,
-  trackId: "zhongkao",
-  set: 1,
-  save: { cards: { "zhongkao|57::wool": { state: "learning", reps: 1, wrong: 1, mastery: 0, interval: 0, correct: 0 } } },
-  events: [],
-  cap: 52,
-  seedPer: 6,
-  neighborPer: 1,
-});
-const zkWords = {};
-zkTrack.sets[0].forEach(function (card) {
-  if (card && card.word && !uni.isPhrase(card.word)) zkWords[card.word.toLowerCase()] = true;
-});
-assert.strictEqual(zkSet.scopeLabel, "本组学情 · Set 1");
-assert.ok(zkSet.stats.shown <= 52);
-assert.strictEqual(zkSet.lemmas.length, Object.keys(zkWords).length);
-zkSet.lemmas.forEach(function (n) {
-  assert.ok(zkWords[n.word.toLowerCase()], n.word);
-});
-assert.ok(!zkSet.lemmas.some(function (n) { return n.word.toLowerCase() === "wool"; }));
-
-const zkWide = uni.buildGraph({
-  tracks: tracks,
-  trackId: "zhongkao",
-  save: { cards: { "zhongkao|57::wool": { state: "learning", reps: 1, wrong: 1, mastery: 0, interval: 0, correct: 0 } } },
-  events: [],
-  cap: 40,
-  seedPer: 1,
-  neighborPer: 0,
-});
-assert.strictEqual(zkWide.setNumber, null);
-assert.ok(zkWide.lemmas.some(function (n) { return n.word.toLowerCase() === "wool"; }), "no set param still reads the whole track");
-
-const game = read("grok/game.js");
-const clearFn = game.slice(game.indexOf("function onLevelClear"), game.indexOf("function setBackupStatus"));
-assert.ok(clearFn.includes('showScreen("clear")'));
-assert.ok(clearFn.indexOf('showScreen("clear")') < clearFn.indexOf("offerSetShare("));
-assert.ok(clearFn.indexOf("offerSetShare(") < clearFn.indexOf("openClearedSetUniverse("));
-assert.ok(clearFn.includes("word-universe.html?track="));
-assert.ok(clearFn.includes("&set="));
-assert.ok(clearFn.includes('currentTrack !== "zhongkao"') && clearFn.includes('currentTrack !== "gaokao"'));
-const queueFn = game.slice(game.indexOf("function finishQueueSession"), game.indexOf("function enterExam"));
-assert.ok(!queueFn.includes("word-universe"), "今日必练 / 拼写 do not open the universe");
-assert.ok(index.includes('id="btn-clear-universe"'));
-assert.ok(panel.indexOf("set=") === -1, "home entry stays the whole-track universe");
-assert.ok(own.indexOf("word-universe.html?track") === -1);
-assert.ok(read("grok/word-universe.html").includes('id="universe-title"'));
-assert.ok(!read("grok/kill-streak.js").includes("word-universe"));
-assert.ok(/\.supabase\.co\/?$/.test(read("grok/config.js").match(/SUPABASE_URL:\s*"([^"]+)"/)[1]));
-
-console.log("word-universe ok");
+console.log('word-universe ok:',count,'scenario groups, all 372 units checked');

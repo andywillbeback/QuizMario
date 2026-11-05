@@ -65,7 +65,7 @@ assert.ok(index.includes("今天还有"));
 assert.ok(index.indexOf('id="home-loop"') < index.indexOf('id="must-reminder"'));
 assert.ok(index.indexOf('id="today-narrative"') < index.indexOf('id="must-reminder"'));
 assert.ok(index.includes('src="practice-reminder.js"'));
-assert.ok(index.indexOf('src="practice-reminder.js"') < index.indexOf('src="game.js"'));
+assert.ok(index.indexOf('src="practice-reminder.js"') < index.indexOf('src="game.js'));
 const rule = index.slice(index.indexOf(".must-reminder {"), index.indexOf("button.is-hero"));
 assert.ok(rule.includes("display: flex"));
 assert.ok(!/position:\s*fixed/.test(rule), "the tip stays in the page flow");

@@ -294,7 +294,7 @@ assert.strictEqual(teacher.msToMinutes(120000), 2);
   const login = read("grok/login.html");
   const game = read("grok/game.js");
   assert.ok(index.indexOf('src="learner-events.js"') < index.indexOf('src="session-duration.js"'));
-  assert.ok(index.indexOf('src="session-duration.js"') < index.indexOf('src="game.js"'));
+  assert.ok(index.indexOf('src="session-duration.js"') < index.indexOf('src="game.js'));
   assert.ok(!login.includes("session-duration.js"), "login does not load the study clock");
   assert.ok(game.includes("function bindStudyDuration"));
   assert.ok(game.includes("QuizMarioSession"));

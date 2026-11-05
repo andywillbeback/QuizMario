@@ -368,7 +368,7 @@ assert.strictEqual(share.BRAND, "聚光单词 · 1st edition");
   const learnerAt = index.indexOf('id="share-card-learner"');
   const copyAt = index.indexOf('id="share-card-copy"');
   assert.ok(sheetAt > 0 && learnerAt > sheetAt && copyAt > learnerAt, "learner line stays inside the share sheet");
-  assert.ok(index.indexOf('src="share-card.js"') < index.indexOf('src="game.js"'));
+  assert.ok(index.indexOf('src="share-card.js"') < index.indexOf('src="game.js'));
   assert.ok(index.indexOf('src="practice.js"') < index.indexOf('src="share-card.js"'));
 
   const banned = ["学习报告码", "QMR1", "教师看板", "ALS 学习信号", 'href="teacher.html"', "今日打卡王"];

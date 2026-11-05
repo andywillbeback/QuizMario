@@ -183,7 +183,7 @@ const root = path.join(__dirname, "..");
 const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(index.includes('src="error-types.js"'));
-assert.ok(index.indexOf('src="error-types.js"') < index.indexOf('src="game.js"'));
+assert.ok(index.indexOf('src="error-types.js"') < index.indexOf('src="game.js'));
 assert.ok(index.includes('id="miss-reasons"'));
 assert.ok(index.includes('id="clear-reasons"'));
 assert.ok(index.includes("形近 · 义近 · 词性 · 其他/未归类"));

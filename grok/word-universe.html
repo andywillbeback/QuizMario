@@ -76,6 +76,19 @@
     #universe-status { top: 118px; font-size: .68rem; max-height: 2.8em; overflow: hidden; }
     body:has(#universe-detail:not([hidden])) #universe-legend { visibility: hidden; }
   }
+  .universe-tools { position:fixed; top:108px; left:12px; right:12px; z-index:6; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px; background:rgba(7,11,22,.95); border-radius:12px; }
+  .universe-tools select, .universe-tools button { font:inherit; color:#f4f8ff; background:#14243d; border:1px solid #6b84a6; border-radius:8px; padding:8px; min-height:40px; }
+  .universe-list-host { box-sizing:border-box; inset:174px 12px 86px !important; overflow:auto; touch-action:pan-y !important; padding:4px 8px 18px; }
+  .universe-category { margin-bottom:18px; padding:14px; border:1px solid #34475f; border-radius:14px; background:#0c1526; }
+  .universe-category h2 { margin:0 0 12px; font-size:1rem; color:#beeaff; }
+  .universe-category h2 span { margin-left:8px; color:#95a8c2; }
+  .universe-category ul { list-style:none; padding:0; margin:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; }
+  .universe-category li { display:flex; gap:12px; padding:10px; background:#121f35; border-radius:10px; }
+  .universe-dot { width:24px; height:24px; border:2px solid #8aa0bb; border-radius:50%; flex-shrink:0; }
+  .universe-gloss { display:block; color:#d1dcec; margin-top:4px; }
+  .universe-category p { margin:5px 0; font-size:.8rem; color:#a7bfdc; line-height:1.5; }
+  .universe-empty { padding:24px; line-height:1.8; }
+  @media(max-width:720px) { .universe-tools { top:164px; gap:6px; } .universe-tools select { max-width:180px; } .universe-list-host { top:272px !important; } }
 </style>
 </head>
 <body>
@@ -88,13 +101,23 @@
   </div>
 </header>
 <p id="universe-status" role="status"></p>
+<nav class="universe-tools" aria-label="单词宇宙范围">
+  <label>词库 <select id="universe-track" aria-label="选择词库"></select></label>
+  <label>单元 <select id="universe-set" aria-label="选择单元"></select></label>
+  <button type="button" id="universe-prev" hidden>上一页</button><span id="universe-page"></span><button type="button" id="universe-next" hidden>下一页</button>
+  <button type="button" id="universe-view">切换列表</button>
+</nav>
 <div id="universe-root"></div>
-<p id="universe-legend"><b>颜色越深 = 越不熟练</b><span>灰色 = 未学，不记成 0 分</span></p>
+<p id="universe-legend"><b>颜色越深 = 越不熟练</b><span>灰色 = 尚无证据；搭配待验证不标熟练</span></p>
 <aside id="universe-detail" hidden></aside>
 <script src="vendor/three.r128.min.js"></script>
+<script src="words.js"></script>
+<script src="tracks.js"></script>
+<script src="sense-id.js"></script>
 <script src="related-links.js"></script>
+<script src="universe-progress.js?v=20261105"></script>
 <script src="study-metrics.js"></script>
 <script src="exam-tracks.js"></script>
-<script src="word-universe.js"></script>
+<script src="word-universe.js?v=20261105"></script>
 </body>
 </html>

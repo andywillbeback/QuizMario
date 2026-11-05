@@ -72,7 +72,7 @@ function staticGuards() {
   assert.ok(login.includes('id="display-name"') && login.includes('id="class-name"'), "register collects 姓名 and 班级名");
   assert.ok(auth.includes("display_name") && auth.includes("class_name"), "signup stores display_name and class_name");
   assert.ok(index.includes('src="profile-name.js"'), "index loads the profile prompt");
-  assert.ok(index.indexOf('src="game.js"') < index.indexOf('src="profile-name.js"'));
+  assert.ok(index.indexOf('src="game.js') < index.indexOf('src="profile-name.js"'));
   assert.ok(index.indexOf('src="profile-name.js"') < index.indexOf('src="sync.js"'));
 
   const banned = ["学习报告码", "QMR1", "教师看板", "ALS 学习信号", 'href="teacher.html"'];

@@ -147,8 +147,8 @@
       clearTimeout(timer);
       timer = null;
     }
-    if (!user || holdUploads) return;
-    enqueueUpload();
+    if (!user || holdUploads) return Promise.resolve();
+    return enqueueUpload();
   }
 
   async function logout(opts) {
@@ -259,6 +259,7 @@
 
   window.QuizMarioCloud = {
     onLocalSave: onLocalSave,
+    flushNow: flushNow,
     loggedIn: function () { return !!user; },
     logout: logout,
   };

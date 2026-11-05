@@ -69,7 +69,7 @@ function load(file, name) {
   assert.ok(index.includes('id="related-peek"'), "tapping a chip opens a peek");
   assert.ok(index.includes("相关词"));
   assert.ok(index.includes('src="related-links.js"'));
-  assert.ok(index.indexOf('src="related-links.js"') < index.indexOf('src="game.js"'));
+  assert.ok(index.indexOf('src="related-links.js"') < index.indexOf('src="game.js'));
   assert.ok(!index.includes("复制文案"));
   assert.ok(!rootIndex.includes("related-links.js"));
   assert.ok(!rootIndex.includes('id="card-related"'));

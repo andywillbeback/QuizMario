@@ -223,7 +223,7 @@ assert.ok(gaokao && zhongkao);
   assert.ok(fill.includes("renderPromptIpa"));
   assert.ok(fill.includes('sessionDirection === "polysemy"'));
   assert.ok(index.includes('src="polysemy.js"'));
-  assert.ok(index.indexOf('src="polysemy.js"') < index.indexOf('src="game.js"'));
+  assert.ok(index.indexOf('src="polysemy.js"') < index.indexOf('src="game.js'));
   assert.ok(index.includes('id="btn-spelling"') && index.includes(">拼写</button>"), "default label stays 拼写 for 中考");
   assert.ok(index.includes('id="prompt-ipa"'));
   assert.ok(game.includes("syncSpellingButton"));

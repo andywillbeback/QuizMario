@@ -150,6 +150,7 @@
       bucket.streak = 0;
     }
     bucket.lastAt = now || Date.now();
+    bucket.lastOutcome = outcome;
   }
 
   function syncTopFromTyped(s) {

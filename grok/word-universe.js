@@ -1,37 +1,6 @@
-/* 单词记忆宇宙 · beta
- * Additive 3D view. Does not write the save, schedule cards, or touch auth.
- *
- * Theme rule (heuristic buckets, not model edges):
- * 1. Exact English lemma hit on a bucket list, in bucket order.
- * 2. Else a stem: length >= 4 and the lemma starts with it; length >= 5
- *    also matches a substring (so "lifestyle" joins LIFE, "telephone" joins
- *    TECHNOLOGY).
- * 3. Else a Chinese gloss segment (split on ；;，,、/|) exactly equals a
- *    bucket gloss.
- * 4. Else the lemma joins 其他.
- * Bucket order is technology, school, nature, life, feeling, travel, time,
- * society. LIFE and TECHNOLOGY are the seed cores.
- *
- * First paint is theme cores plus single-word lemmas only. Phrase cards stay
- * off the graph until a lemma is clicked. A phrase node exists only when
- * related[] names a card in this exam track that has a gloss. The primary
- * phrase is QuizMarioRelated.primaryCollocation (the same hard-gate choice).
- * Co-lemma links are other single-word entries already on those phrase cards.
- * Nothing is invented.
- *
- * Color uses QMStudy.buildPersonal().inventory.practiced[].score, the same
- * 掌握度 0–3 as 我的学情三栏. Weakest scored color is darkest. A word with no
- * score stays gray and is not painted as 0. The 不熟练 list only decides which
- * nodes fit under the cap; it is not a second score.
- * LIFE / TECHNOLOGY keep a few showcase lemmas so an empty save still has
- * the two seed cores. Those nodes use real mastery when the save has it.
- *
- * No set in the query keeps that whole-track graph. ?track=gaokao&set=12
- * (1-based, same number as 第N组) limits lemma nodes to that set. 固定搭配
- * still resolve on click from the whole track. A set that fits the cap shows
- * every lemma. Over the cap, 不熟练 then 未学 come before high mastery.
- * Showcase seeds are only the whole-track empty state, or a set that has
- * no single-word lemmas.
+/* Personal word universe: exact unit membership, all unit entries (including
+ * phrases), recent track/sense-specific evidence, and live local refresh.
+ * Completion never awards mastery; missing collocation evidence blocks 熟练.
  */
 (function (root, factory) {
   var api = factory(root);
@@ -43,10 +12,12 @@
 })(typeof window !== "undefined" ? window : globalThis, function (root) {
   "use strict";
 
+  var Progress = root.QuizMarioUniverseProgress;
+  if (!Progress && typeof require === "function") Progress = require("./universe-progress.js");
   var SAVE_KEY = "vocabSpotlight_v1";
   var EVENT_KEY = "quizmario_learner_events_v1";
   var LEGEND = "颜色越深 = 越不熟练";
-  var UNSCORED_NOTE = "灰色 = 未学，不记成 0 分";
+  var UNSCORED_NOTE = "灰色 = 尚无证据，不记成 0 分；有搭配待验证时不标熟练";
   var PHRASE_CAP = 8;
 
   function wordSet(text) {
@@ -62,7 +33,7 @@
       label: "TECHNOLOGY",
       zh: "科技",
       hue: 196,
-      en: wordSet("computer internet phone software digital technology robot email e-mail website online keyboard screen television radio camera video media program code device electronic network app smartphone telephone laptop tablet ai tv data digital"),
+      en: wordSet("alarm computer internet phone software digital technology robot email e-mail website online keyboard screen television radio camera video media program code device electronic network app smartphone telephone laptop tablet ai tv data digital"),
       stems: ["comput", "internet", "technolog", "digit", "softwar", "phone", "robot", "email", "website", "online", "keyboard", "screen", "televis", "camera", "video", "network", "electron", "laptop", "tablet"],
       zhKeys: ["电脑", "计算机", "互联网", "网络", "软件", "科技", "技术", "数字", "电话", "手机", "程序", "键盘", "机器人", "电子邮件", "网站", "电子", "屏幕", "电视", "相机"],
     },
@@ -71,7 +42,7 @@
       label: "SCHOOL",
       zh: "学校",
       hue: 42,
-      en: wordSet("school teacher student class lesson exam test homework book learn study classroom pupil college university pencil pen desk grade course dictionary library knowledge education classmate textbook subject math maths science history language english chinese question answer read write spell notebook homework"),
+      en: wordSet("advice school teacher student class lesson exam test homework book learn study classroom pupil college university pencil pen desk grade course dictionary library knowledge education classmate textbook subject math maths science history language english chinese question answer read write spell notebook homework"),
       stems: ["school", "teach", "student", "lesson", "exam", "homework", "college", "univers", "librar", "diction", "educat", "textbook", "science", "history"],
       zhKeys: ["学校", "老师", "教师", "学生", "课堂", "作业", "考试", "图书馆", "字典", "教育"],
     },
@@ -89,7 +60,7 @@
       label: "LIFE",
       zh: "生活",
       hue: 352,
-      en: wordSet("life live alive living lifestyle lifetime childhood death dead die dying family home house friend friendship love health healthy food meal breakfast lunch dinner parent mother father mom dad baby child birth body heart blood face hand eye hair sleep eat drink cook kitchen hospital doctor nurse medicine ill sick people person man woman boy girl husband wife brother sister uncle aunt grow growth pet clothes shirt dress shoe sport sports game music song film movie holiday birthday age young old"),
+      en: wordSet("adult ache aid life live alive living lifestyle lifetime childhood death dead die dying family home house friend friendship love health healthy food meal breakfast lunch dinner parent mother father mom dad baby child birth body heart blood face hand eye hair sleep eat drink cook kitchen hospital doctor nurse medicine ill sick people person man woman boy girl husband wife brother sister uncle aunt grow growth pet clothes shirt dress shoe sport sports game music song film movie holiday birthday age young old"),
       stems: ["life", "live", "child", "family", "friend", "health", "mother", "father", "brother", "sister", "hospital", "doctor", "medicine", "breakfast", "dinner"],
       zhKeys: ["生活", "生命", "家庭", "健康", "食物", "身体", "医院", "医生"],
     },
@@ -107,7 +78,7 @@
       label: "TRAVEL",
       zh: "出行",
       hue: 210,
-      en: wordSet("travel trip train bus car plane airport station road street map hotel tourist visit ticket ship bike bicycle traffic journey taxi flight passenger railway subway boat"),
+      en: wordSet("abroad ahead travel trip train bus car plane airport station road street map hotel tourist visit ticket ship bike bicycle traffic journey taxi flight passenger railway subway boat"),
       stems: ["travel", "airport", "station", "tourist", "traffic", "journey", "bicycle", "railway", "subway"],
       zhKeys: ["旅行", "交通", "机场", "车站", "火车", "飞机"],
     },
@@ -116,7 +87,7 @@
       label: "TIME",
       zh: "时间",
       hue: 24,
-      en: wordSet("time today tomorrow yesterday morning afternoon evening night week month year hour minute clock calendar season spring summer autumn winter early late always never often sometimes daily weekly weekend"),
+      en: wordSet("ago again time today tomorrow yesterday morning afternoon evening night week month year hour minute clock calendar season spring summer autumn winter early late always never often sometimes daily weekly weekend"),
       stems: ["today", "tomorrow", "yesterday", "morning", "afternoon", "evening", "calendar", "season", "winter", "summer", "autumn", "spring", "night", "week", "month", "year"],
       zhKeys: ["时间", "今天", "明天", "昨天", "早上", "晚上", "季节"],
     },
@@ -125,14 +96,19 @@
       label: "SOCIETY",
       zh: "社会",
       hue: 262,
-      en: wordSet("advantage society social law lawyer government economy economic money job work business city country nation police war peace duty public community citizen president king queen market price bank company office trade factory village town capital culture cultural rule policy election vote tax poor rich success successful fail failure problem chance opportunity"),
+      en: wordSet("actor actress ad accident advantage society social law lawyer government economy economic money job work business city country nation police war peace duty public community citizen president king queen market price bank company office trade factory village town capital culture cultural rule policy election vote tax poor rich success successful fail failure problem chance opportunity"),
       stems: ["advantage", "societ", "govern", "econom", "business", "company", "citizen", "president", "culture", "success", "opportunit"],
       zhKeys: ["社会", "政府", "经济", "公司", "优势", "工作", "城市", "国家"],
     },
   ];
 
-  var OTHER = { id: "other", label: "OTHER", zh: "其他", hue: 222, en: Object.create(null), stems: [], zhKeys: [] };
-  var THEME_ORDER = ["life", "technology", "school", "nature", "feeling", "travel", "time", "society", "other"];
+  var OTHER = { id: "other", label: "GENERAL", zh: "通用事物与概念", hue: 222, en: Object.create(null), stems: [], zhKeys: [] };
+  THEMES.push(
+    { id: "action", label: "ACTION", zh: "动作与变化", hue: 172, en: wordSet("action activity accept achieve add allow appear apply arrange avoid become begin break build call carry change choose collect compare complete consider continue create cut decide develop discover do draw explain find finish follow get give happen help hold improve include increase introduce join keep know leave let look make mean move need offer open organize own pay pick prepare prevent produce provide put reach receive reduce remember remove require return save seem send serve set show solve start stay stop support take teach tell think try turn understand use wait want watch win"), stems: [], zhKeys: [] },
+    { id: "description", label: "QUALITY", zh: "性质与程度", hue: 65, en: wordSet("able available basic beautiful big common different difficult easy enough excellent famous fast fine free full general good great hard heavy high important large little long low main many more most much necessary new nice normal only other possible real right same short simple small special strong such sure true useful usual very whole wide wrong"), stems: [], zhKeys: [] },
+    { id: "function", label: "FUNCTION", zh: "语法与连接", hue: 28, en: wordSet("actually a an the and or but if unless although though because since while whether than that which who whom whose what whatever whoever when where why how as at by for from in into of on onto out over through to under until up upon with without be am is are was were been being can could may might must shall should will would ought i me my mine myself you your yours yourself he him his himself she her hers herself it its itself we us our ours ourselves they them their theirs themselves this these those both each either neither any anybody anyone anything everybody everyone everything nobody none nothing some somebody someone something all another else so nor yet"), stems: [], zhKeys: [] }
+  );
+  var THEME_ORDER = ["life", "technology", "school", "nature", "feeling", "travel", "time", "society", "action", "description", "function", "other"];
   /* Co-lemmas that are only function words stay in the detail list.
    * They are real related[] entries, but each one would otherwise become
    * its own orbit and spend the node cap. */
@@ -149,6 +125,7 @@
   }
 
   function norm(s) {
+    if (Progress) return Progress.norm(s);
     var related = root.QuizMarioRelated;
     if (related && typeof related.norm === "function") return related.norm(s);
     return String(s == null ? "" : s).trim().toLowerCase().replace(/[’‘]/g, "'").replace(/\s+/g, " ");
@@ -180,12 +157,39 @@
     return false;
   }
 
-  function themeOf(word, gloss) {
-    var lemma = norm(word);
-    for (var i = 0; i < THEMES.length; i++) {
-      var theme = THEMES[i];
-      if (theme.en[lemma] || stemHit(lemma, theme.stems) || glossHit(gloss, theme.zhKeys)) return theme;
-    }
+  function themeOf(word, gloss, pos) {
+    var lemma = String(word || "").trim().toLowerCase();
+    var meaning = String(gloss || "");
+    if ((word === "May" && /五月/.test(meaning)) || (word === "March" && /三月/.test(meaning))) return themeById("time");
+    if ((word === "Miss" && /小姐/.test(meaning)) || word === "WHO" || word === "China") return themeById("society");
+    if (word === "china" && /瓷/.test(meaning)) return themeById("life");
+    if (lemma === "bank" && /河岸|岸边/.test(meaning)) return themeById("nature");
+    if (lemma === "plant" && /工厂/.test(meaning)) return themeById("society");
+    if (lemma === "spring" && /弹簧/.test(meaning)) return themeById("technology");
+    if (lemma === "watch" && /手表/.test(meaning)) return themeById("time");
+    // Exact headword matches precede every stem/gloss match. POS is a safe
+    // fallback for general verbs, descriptions and grammatical function words.
+    for (var i = 0; i < THEMES.length; i++) if (THEMES[i].en[lemma]) return THEMES[i];
+    var semantic = [
+      ["technology", /计算机|电脑|互联网|软件|数码|电子|机器人|科技|技术|程序|设备|屏幕|电池|电力|发明|实验|科学|物理|化学/],
+      ["school", /学校|学生|老师|教师|课堂|课文|课程|学习|教育|考试|作业|图书馆|语法|词汇|字母|阅读|读书|拼写|翻译|大学|知识|交流|语言/],
+      ["nature", /动物|植物|森林|树木|花朵|环境|污染|气候|天气|地球|海洋|河流|山脉|火山|自然|昆虫|鸟类|哺乳|生态/],
+      ["life", /生活|生命|家庭|家人|亲属|父亲|母亲|孩子|儿童|婴儿|身体|健康|疾病|医院|医生|护士|药物|食物|食用|早餐|午餐|晚餐|烹饪|厨房|衣服|衣物|家具|睡眠|运动|体育/],
+      ["feeling", /感情|情感|情绪|高兴|快乐|幸福|悲伤|伤心|愤怒|生气|害怕|担心|焦虑|紧张|兴奋|惊讶|孤独|自豪|感到|期待|盼望|态度/],
+      ["travel", /旅行|旅游|交通|车辆|乘车|火车|飞机|航班|机场|车站|地铁|驾驶|自行车|公交|公共汽车|道路|街道|旅馆|酒店|方向|位置|空间/],
+      ["time", /时间|时刻|小时|分钟|星期|月份|季节|今天|明天|昨天|早晨|上午|下午|晚上|年代|世纪|数量|数字|数目/],
+      ["society", /社会|政府|国家|城市|社区|公民|法律|政治|经济|金钱|货币|价格|银行|公司|商业|职业|工作|文化|艺术|历史|人类|人民|民族|战争|和平|权利|责任/]
+    ];
+    for (var g = 0; g < semantic.length; g++) if (semantic[g][1].test(String(gloss || ""))) return themeById(semantic[g][0]);
+    for (var t = 0; t < THEMES.length - 3; t++) if (stemHit(lemma, THEMES[t].stems)) return THEMES[t];
+    if (/\b(afraid|angry|anxious|amazed|ashamed|crazy|eager|excited|fond|glad|happy|interested|nervous|pleased|proud|satisfied|sorry|surprised|worried)\b/.test(lemma)) return themeById("feeling");
+    if (/\b(allergic|ill|sick|healthy)\b/.test(lemma)) return themeById("life");
+    if (/\b(late|early)\b/.test(lemma)) return themeById("time");
+    var tag = String(pos || "").toLowerCase();
+    if (/^(prep|conj|pron|det|art|modal|aux)/.test(tag)) return themeById("function");
+    if (/^(v\.|verb|phrasal|verb_phrase)/.test(tag)) return themeById("action");
+    if (/^(adj|adv)/.test(tag)) return themeById("description");
+    if (/^[a-z]+\s/.test(lemma) && /^(be|take|make|get|have|give|put|keep|come|go|look|turn|set)\b/.test(lemma)) return themeById("action");
     return OTHER;
   }
 
@@ -230,66 +234,38 @@
     return { hue: hue, sat: 72, light: light, hex: hslToHex(hue, 72, light), unscored: false };
   }
 
-  function masteryIndex(save, events, learnerId) {
-    var byWord = Object.create(null);
-    var weak = Object.create(null);
-    var study = root.QMStudy;
-    if (!study || typeof study.buildPersonal !== "function") {
-      return { byWord: byWord, weak: weak, ok: false };
+  function allTracks() {
+    var out = (root.VOCAB_EXAM_TRACKS || []).slice();
+    var others = root.VOCAB_TRACKS || [];
+    for (var i = 0; i < others.length; i++) {
+      if (out.some(function (t) { return t.id === others[i].id; })) continue;
+      var track = others[i];
+      out.push(track.id === "core" ? Object.assign({}, track, { sets: root.VOCAB_LEVELS || [] }) : track);
     }
-    var model;
-    try {
-      model = study.buildPersonal(save || {}, events || [], new Date(), learnerId ? { learnerId: learnerId } : {});
-    } catch (e) {
-      return { byWord: byWord, weak: weak, ok: false };
-    }
-    var practiced = model && model.inventory && model.inventory.practiced || [];
-    for (var i = 0; i < practiced.length; i++) {
-      var row = practiced[i];
-      if (!row || !row.word) continue;
-      var score = row.score == null || row.score === "" ? null : Number(row.score);
-      byWord[norm(row.word)] = { score: score != null && isFinite(score) ? score : null };
-    }
-    var weakRows = model && model.inventory && model.inventory.weak || [];
-    for (var w = 0; w < weakRows.length; w++) {
-      if (weakRows[w] && weakRows[w].word) weak[norm(weakRows[w].word)] = true;
-    }
-    return { byWord: byWord, weak: weak, ok: true };
+    return out;
   }
-
   function findTrack(tracks, trackId) {
     var list = tracks || [];
-    var id = trackId === "gaokao" ? "gaokao" : "zhongkao";
-    for (var i = 0; i < list.length; i++) {
-      if (list[i] && list[i].id === id) return list[i];
-    }
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === trackId) return list[i];
     return list[0] || null;
   }
-
-  /* setIndex null: whole track. A number keeps lemmas from that set only.
-   * byNorm always covers the track so a click can still resolve 固定搭配. */
-  function flatten(track, setIndex) {
-    var lemmas = [];
-    var byNorm = Object.create(null);
-    var lemmaSeen = Object.create(null);
+  function flatten(track, setIndex, eligible) {
+    var lemmas = [], byNorm = Object.create(null), seen = Object.create(null), levels = Object.create(null);
     var sets = track && track.sets || [];
-    var scoped = setIndex != null;
     for (var s = 0; s < sets.length; s++) {
-      var row = sets[s] || [];
-      for (var i = 0; i < row.length; i++) {
-        var card = row[i];
+      for (var i = 0; i < (sets[s] || []).length; i++) {
+        var card = sets[s][i];
         if (!card || typeof card.word !== "string") continue;
         var key = norm(card.word);
         if (!key) continue;
         if (!byNorm[key]) byNorm[key] = card;
-        if (isPhrase(card.word)) continue;
-        if (scoped && s !== setIndex) continue;
-        if (lemmaSeen[key]) continue;
-        lemmaSeen[key] = true;
-        lemmas.push(card);
+        if (setIndex != null && s !== setIndex) continue;
+        if (eligible && eligible.indexOf(s + 1) < 0) continue;
+        if (seen[key]) continue;
+        seen[key] = true; levels[key] = s; lemmas.push(card);
       }
     }
-    return { lemmas: lemmas, byNorm: byNorm };
+    return { lemmas: lemmas, byNorm: byNorm, levels: levels };
   }
 
   function phraseCountOf(card, byNorm) {
@@ -403,7 +379,7 @@
       } catch (e) {
         continue;
       }
-      if (key === "track" && (val === "gaokao" || val === "zhongkao")) out.trackId = val;
+      if (key === "track" && /^(core|ket|pet|cet4|zhongkao|gaokao)$/.test(val)) out.trackId = val;
       if (key === "set" && val !== "" && isFinite(Number(val))) {
         var n = Math.floor(Number(val));
         if (n >= 1) out.set = n;
@@ -459,227 +435,62 @@
 
   function buildGraph(opt) {
     opt = opt || {};
-    var track = findTrack(opt.tracks || root.VOCAB_EXAM_TRACKS || [], opt.trackId);
-    var empty = {
-      trackId: track && track.id || "",
-      trackName: track && track.name || "",
-      legend: LEGEND,
-      unscoredNote: UNSCORED_NOTE,
-      themes: [],
-      lemmas: [],
-      spokes: [],
-      stats: { bankLemmas: 0, touched: 0, shown: 0, cap: opt.cap || 0 },
-      masteryOk: false,
-    };
-    if (!track) return empty;
-    var spec = resolveSet(track, opt.set);
-    var scoped = !!spec;
-    var bank = flatten(track, null);
-    var pool = scoped ? flatten(track, spec.missing ? -1 : spec.index) : bank;
-    var flat = { lemmas: pool.lemmas, byNorm: bank.byNorm };
-    var related = root.QuizMarioRelated;
-    var index = null;
-    if (related && typeof related.indexTrack === "function") {
-      try { index = related.indexTrack(track.sets || []); }
-      catch (e) { index = null; }
-    }
-    var mastery = masteryIndex(opt.save, opt.events, opt.learnerId);
-    function rowsFrom(cards, phraseNorm) {
-      var list = [];
-      var byKey = Object.create(null);
-      for (var i = 0; i < cards.length; i++) {
-        var card = cards[i];
-        var key = norm(card.word);
-        if (!key || byKey[key]) continue;
-        var theme = themeOf(card.word, card.meaning_zh || "");
-        var hit = mastery.byWord[key];
-        var scored = !!(hit && hit.score != null && isFinite(hit.score));
-        var row = {
-          key: key,
-          word: card.word,
-          gloss: String(card.meaning_zh || "").trim(),
-          ipa: card.ipa || "",
-          pos: card.pos || "",
-          themeId: theme.id,
-          mastery: scored ? hit.score : null,
-          scored: scored,
-          weak: !!mastery.weak[key],
-          phraseCount: phraseCountOf(card, phraseNorm),
-          card: card,
-        };
-        list.push(row);
-        byKey[key] = row;
+    var track = findTrack(opt.tracks || allTracks(), opt.trackId), save = opt.save || {};
+    var empty = { trackId: "", trackName: "", legend: LEGEND, unscoredNote: UNSCORED_NOTE, themes: [], lemmas: [], spokes: [],
+      stats: { bankLemmas: 0, touched: 0, shown: 0, cap: 0, page: 0, pages: 1, completedSets: 0 }, masteryOk: !!Progress };
+    if (!track || !Progress) return empty;
+    var spec = resolveSet(track, opt.set), completed = Progress.completedSets(save, track.id);
+    var pool = flatten(track, spec ? (spec.missing ? -1 : spec.index) : null, !spec && completed.length ? completed : null);
+    var bank = flatten(track, null), related = root.QuizMarioRelated;
+    var index = related && related.indexTrack ? related.indexTrack(track.sets || []) : null;
+    var stateIndex = Progress.createIndex(save, track.id);
+    var rows = [];
+    for (var i = 0; i < pool.lemmas.length; i++) {
+      var card = pool.lemmas[i], key = norm(card.word), level = spec ? spec.index : null;
+      var evidence = Progress.effectiveState(save, track.id, card, level, index, related, stateIndex);
+      if (!spec && !completed.length && evidence.score == null) continue;
+      var theme = themeOf(card.word, card.meaning_zh, card.pos);
+      var phrases = phrasesFor(card, bank.byNorm, index);
+      for (var p = 0; p < phrases.length; p++) {
+        var phraseState = Progress.itemState(save, track.id, phrases[p].word, null, stateIndex);
+        phrases[p].mastery = phraseState.score; phrases[p].scored = phraseState.score != null;
+        phrases[p].visual = visualOf(theme, phraseState.score, phraseState.score != null);
       }
-      return { rows: list, rowByKey: byKey };
+      rows.push({ key: key, word: card.word, gloss: card.meaning_zh || "", ipa: card.ipa || "", pos: card.pos || "",
+        themeId: theme.id, category: theme.zh, levelIdx: pool.levels[key], mastery: evidence.score, scored: evidence.score != null,
+        weak: evidence.score != null && evidence.score < 2 || evidence.collocationPending, evidence: evidence,
+        visual: visualOf(theme, evidence.score, evidence.score != null), phrases: phrases,
+        coLemmas: coLemmasOf(card, phrases, bank.byNorm) });
     }
-    var built = rowsFrom(flat.lemmas, flat.byNorm);
-    var rows = built.rows;
-    var rowByKey = built.rowByKey;
-    var cap = opt.cap > 0 ? opt.cap : 48;
-    var seedPer = opt.seedPer != null ? opt.seedPer : Math.min(6, Math.max(4, Math.floor(cap / 8)));
-    var perTheme = opt.perTheme != null ? opt.perTheme : 14;
-    var neighborPer = opt.neighborPer != null ? opt.neighborPer : 1;
-    var selected = [];
-    var have = Object.create(null);
-    function push(row) {
-      if (!row || have[row.key] || selected.length >= cap) return false;
-      have[row.key] = true;
-      selected.push(row);
-      return true;
-    }
-    function takeSeeds(lookup) {
-      var seedIds = ["life", "technology"];
-      for (var s = 0; s < seedIds.length; s++) {
-        var names = SHOWCASE[seedIds[s]] || [];
-        var nSeed = 0;
-        for (var n = 0; n < names.length && nSeed < seedPer; n++) {
-          if (push(lookup[norm(names[n])])) nSeed++;
-        }
-      }
-    }
-    if (!scoped) {
-      takeSeeds(rowByKey);
-      var ranked = rows.slice().sort(compareWeak);
-      var counts = Object.create(null);
-      for (var c = 0; c < selected.length; c++) {
-        counts[selected[c].themeId] = (counts[selected[c].themeId] || 0) + 1;
-      }
-      var take = function (respect) {
-        for (var r = 0; r < ranked.length; r++) {
-          var row = ranked[r];
-          if (!row.scored && !row.weak) continue;
-          if (respect && (counts[row.themeId] || 0) >= perTheme) continue;
-          if (push(row)) counts[row.themeId] = (counts[row.themeId] || 0) + 1;
-          if (selected.length >= cap) return;
-        }
-      };
-      take(true);
-      take(false);
-    } else if (!rows.length && !spec.missing) {
-      var bankRows = rowsFrom(bank.lemmas, bank.byNorm);
-      takeSeeds(bankRows.rowByKey);
-    } else {
-      var setRanked = rows.slice().sort(compareSetFocus);
-      for (var sr = 0; sr < setRanked.length; sr++) {
-        if (!push(setRanked[sr])) break;
-      }
-    }
-
-    function attachLinks(list) {
-      for (var a = 0; a < list.length; a++) {
-        var row = list[a];
-        if (row.phrases) continue;
-        var phrases = phrasesFor(row.card, flat.byNorm, index);
-        var theme = themeById(row.themeId);
-        for (var p = 0; p < phrases.length; p++) {
-          var pHit = mastery.byWord[phrases[p].key];
-          var pScored = !!(pHit && pHit.score != null && isFinite(pHit.score));
-          phrases[p].mastery = pScored ? pHit.score : null;
-          phrases[p].scored = pScored;
-          phrases[p].visual = visualOf(theme, phrases[p].mastery, pScored);
-        }
-        row.phrases = phrases;
-        row.coLemmas = coLemmasOf(row.card, phrases, flat.byNorm);
-      }
-    }
-    attachLinks(selected);
-    var base = selected.slice();
-    var neighbors = [];
-    for (var b = 0; b < base.length; b++) {
-      var cos = base[b].coLemmas || [];
-      var added = 0;
-      for (var k = 0; k < cos.length && added < neighborPer; k++) {
-        var other = rowByKey[norm(cos[k])];
-        if (other && STOP_NEIGHBOR[other.key]) continue;
-        if (push(other)) {
-          neighbors.push(other);
-          added++;
-        }
-      }
-    }
-    attachLinks(neighbors);
-
-    var themeIds = [];
-    var seenTheme = Object.create(null);
-    for (var t = 0; t < THEME_ORDER.length; t++) {
-      for (var u = 0; u < selected.length; u++) {
-        if (selected[u].themeId === THEME_ORDER[t] && !seenTheme[THEME_ORDER[t]]) {
-          seenTheme[THEME_ORDER[t]] = true;
-          themeIds.push(THEME_ORDER[t]);
-        }
-      }
-    }
-    var placed = placeThemes(themeIds);
-    var themePos = Object.create(null);
-    var themes = [];
-    for (var tp = 0; tp < placed.length; tp++) {
-      var meta = themeById(placed[tp].id);
-      var themeNode = {
-        id: placed[tp].id,
-        label: meta.label,
-        zh: meta.zh,
-        hue: meta.hue,
-        x: placed[tp].x,
-        y: placed[tp].y,
-        z: placed[tp].z,
-      };
-      themes.push(themeNode);
-      themePos[themeNode.id] = themeNode;
-    }
-    var groups = Object.create(null);
-    for (var g = 0; g < selected.length; g++) {
-      if (!groups[selected[g].themeId]) groups[selected[g].themeId] = [];
-      groups[selected[g].themeId].push(selected[g]);
-    }
-    var lemmas = [];
-    var spokes = [];
-    var themeKeys = Object.keys(groups);
-    for (var tk = 0; tk < themeKeys.length; tk++) {
-      var bucket = groups[themeKeys[tk]];
-      bucket.sort(function (a, b) { return a.word < b.word ? -1 : a.word > b.word ? 1 : 0; });
-      var radius = 4.6 + Math.min(2.4, bucket.length * 0.12);
-      var origin = themePos[themeKeys[tk]];
-      for (var bi = 0; bi < bucket.length; bi++) {
-        var row = bucket[bi];
-        var local = orbitPoint(bi, bucket.length, radius);
-        var theme = themeById(row.themeId);
-        lemmas.push({
-          id: "lemma:" + row.key,
-          key: row.key,
-          word: row.word,
-          gloss: row.gloss,
-          ipa: row.ipa,
-          pos: row.pos,
-          themeId: row.themeId,
-          mastery: row.mastery,
-          scored: row.scored,
-          weak: row.weak,
-          visual: visualOf(theme, row.mastery, row.scored),
-          phrases: row.phrases || [],
-          coLemmas: row.coLemmas || [],
-          local: local,
-          x: origin.x + local.x,
-          y: origin.y + local.y,
-          z: origin.z + local.z,
-        });
-        spokes.push({ from: "theme:" + row.themeId, to: "lemma:" + row.key });
-      }
-    }
-    var touched = 0;
-    for (var z = 0; z < rows.length; z++) if (rows[z].scored || rows[z].weak) touched++;
-    return {
-      trackId: track.id,
-      trackName: track.name || track.id,
-      legend: LEGEND,
-      unscoredNote: UNSCORED_NOTE,
-      scopeLabel: spec ? ("本组学情 · Set " + spec.number) : "",
-      setNumber: spec ? spec.number : null,
-      themes: themes,
-      lemmas: lemmas,
-      spokes: spokes,
-      stats: { bankLemmas: rows.length, touched: touched, shown: lemmas.length, cap: cap },
-      masteryOk: mastery.ok,
-    };
+    rows.sort(compareSetFocus);
+    // A unit is complete and exact: never truncate it or add outside seed words.
+    // All-unit view is paged, so every registered item remains reachable.
+    var cap = spec ? Math.max(1, rows.length) : Math.max(1, Number(opt.cap) || 52);
+    var pages = Math.max(1, Math.ceil(rows.length / cap));
+    var page = Math.max(0, Math.min(pages - 1, Math.floor(Number(opt.page) || 0)));
+    var selected = rows.slice(page * cap, (page + 1) * cap), groups = Object.create(null);
+    selected.forEach(function (row) { (groups[row.themeId] || (groups[row.themeId] = [])).push(row); });
+    var ids = THEME_ORDER.filter(function (id) { return groups[id] && groups[id].length; });
+    var themes = placeThemes(ids).map(function (point) {
+      var meta = themeById(point.id);
+      return Object.assign({}, point, { label: meta.label, zh: meta.zh, hue: meta.hue, count: groups[point.id].length });
+    });
+    var lemmas = [], spokes = [];
+    themes.forEach(function (theme) {
+      var members = groups[theme.id];
+      members.sort(function (a, b) { return a.key.localeCompare(b.key); });
+      members.forEach(function (row, index) {
+        var local = orbitPoint(index, members.length, 4.6 + Math.min(3.6, members.length * 0.12));
+        lemmas.push(Object.assign({}, row, { id: "lemma:" + row.key, local: local,
+          x: theme.x + local.x, y: theme.y + local.y, z: theme.z + local.z }));
+        spokes.push({ from: "theme:" + theme.id, to: "lemma:" + row.key });
+      });
+    });
+    return { trackId: track.id, trackName: track.name || track.id, legend: LEGEND, unscoredNote: UNSCORED_NOTE,
+      scopeLabel: spec ? "本组学情 · Set " + spec.number : "我的单词宇宙", setNumber: spec ? spec.number : null,
+      themes: themes, lemmas: lemmas, spokes: spokes, masteryOk: true, completedSets: completed,
+      stats: { bankLemmas: rows.length, touched: rows.filter(function (r) { return r.scored; }).length,
+        shown: lemmas.length, cap: cap, page: page, pages: pages, completedSets: completed.length } };
   }
 
   function readLocal() {
@@ -697,7 +508,7 @@
       if (store && Array.isArray(store.events)) events = store.events;
       if (store && store.learner_id) learnerId = String(store.learner_id);
     } catch (e2) {}
-    var trackId = save.track === "gaokao" || save.track === "zhongkao" ? save.track : "zhongkao";
+    var trackId = save.track || "zhongkao";
     return { save: save, events: events, learnerId: learnerId, trackId: trackId };
   }
 
@@ -710,9 +521,117 @@
   }
 
   function masteryText(node) {
-    if (!node || !node.scored) return "未学 · 不记成 0 分";
-    var n = Math.round(Number(node.mastery) * 10) / 10;
-    return "掌握度 " + n;
+    if (!node || !node.scored) return "待验证 · 尚无证据，不记成 0 分";
+    var label = node.mastery === 3 ? "熟练" : "待巩固";
+    if (node.evidence && node.evidence.collocationPending) label = "搭配待验证";
+    return label + " · 综合熟练度 " + (Math.round(Number(node.mastery) * 10) / 10) + "/3";
+  }
+  function evidenceHtml(node) {
+    var e = node && node.evidence;
+    if (!e) return "";
+    var label = function (v) { return v == null ? "待验证" : v + "/3"; };
+    return "<p class=\"uni-meta\">认词 " + label(e.recognition) + " · 拼写 " + label(e.spelling) + " · 多义 " + label(e.polysemy) +
+      (e.requiredCollocations ? " · 搭配 " + label(e.collocation) + (e.collocationPending ? "（含未验证）" : "") : "") + "</p>";
+  }
+
+  function watchProgress(refresh) {
+    var last = "";
+    function check(force) {
+      var signature = "";
+      try { signature = (root.localStorage.getItem(SAVE_KEY) || "") + "|" + (root.localStorage.getItem(EVENT_KEY) || ""); } catch (_) {}
+      if (force || signature !== last) { last = signature; refresh(); }
+    }
+    root.addEventListener("storage", function (ev) { if (!ev.key || ev.key === SAVE_KEY || ev.key === EVENT_KEY) check(false); });
+    root.addEventListener("quizmario:progress", function () { check(false); });
+    root.addEventListener("focus", function () { check(false); });
+    root.addEventListener("pageshow", function () { check(false); });
+    root.document.addEventListener("visibilitychange", function () { if (root.document.visibilityState !== "hidden") check(false); });
+    // Covers same-document storage writes that do not emit a storage event.
+    var timer = root.setInterval ? root.setInterval(function () { if (root.document.visibilityState !== "hidden") check(false); }, 1000) : null;
+    root.addEventListener("pagehide", function (ev) { if (!ev.persisted && timer != null) root.clearInterval(timer); });
+    check(false);
+  }
+  function paintControls(graph) {
+    var doc = root.document, select = doc.getElementById("universe-set"), trackSelect = doc.getElementById("universe-track");
+    try {
+      if (root.history && root.location.href) {
+        var url = new URL(root.location.href);
+        url.searchParams.set("track", graph.trackId);
+        if (graph.setNumber) url.searchParams.set("set", graph.setNumber); else url.searchParams.delete("set");
+        root.history.replaceState(null, "", url.pathname + url.search);
+      }
+    } catch (_) {}
+    if (select) {
+      var options = '<option value="">全部词条（已完成单元 ' + (graph.completedSets || []).length + '）</option>';
+      var sets = (graph.completedSets || []).slice();
+      if (graph.setNumber && sets.indexOf(graph.setNumber) < 0) sets.push(graph.setNumber);
+      sets.sort(function (a, b) { return a - b; });
+      for (var i = 0; i < sets.length; i++) options += '<option value="' + sets[i] + '">第 ' + sets[i] + ' 单元</option>';
+      select.innerHTML = options; select.value = graph.setNumber || "";
+    }
+    if (trackSelect) {
+      trackSelect.innerHTML = allTracks().map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.name || t.id) + '</option>'; }).join("");
+      trackSelect.value = graph.trackId;
+    }
+    var prev = doc.getElementById("universe-prev"), next = doc.getElementById("universe-next"), page = doc.getElementById("universe-page");
+    if (prev) { prev.disabled = graph.stats.page === 0; prev.hidden = graph.stats.pages <= 1; }
+    if (next) { next.disabled = graph.stats.page + 1 >= graph.stats.pages; next.hidden = graph.stats.pages <= 1; }
+    if (page) page.textContent = graph.stats.pages > 1 ? ((graph.stats.page + 1) + "/" + graph.stats.pages) : "";
+  }
+  function navigateScope(track, set, list) {
+    var url = new URL(root.location.href);
+    url.searchParams.set("track", track);
+    if (set) url.searchParams.set("set", set); else url.searchParams.delete("set");
+    if (list) url.searchParams.set("view", "list"); else url.searchParams.delete("view");
+    root.location.assign(url.pathname + url.search);
+  }
+  function bindControls(state, refresh, listMode) {
+    var doc = root.document;
+    var set = doc.getElementById("universe-set"), track = doc.getElementById("universe-track");
+    if (set) set.addEventListener("change", function () { state.setNumber = Number(set.value) || null; state.page = 0; refresh(); });
+    if (track) track.addEventListener("change", function () { state.trackId = track.value; state.setNumber = null; state.page = 0; refresh(); });
+    var prev = doc.getElementById("universe-prev"), next = doc.getElementById("universe-next");
+    if (prev) prev.addEventListener("click", function () { state.page = Math.max(0, state.page - 1); refresh(); });
+    if (next) next.addEventListener("click", function () { state.page++; refresh(); });
+    var view = doc.getElementById("universe-view");
+    if (view) { view.textContent = listMode ? "切换 3D" : "切换列表"; view.addEventListener("click", function () { navigateScope(state.trackId, state.setNumber, !listMode); }); }
+  }
+  function graphStatus(g) {
+    return (g.scopeLabel || "") + " · " + g.trackName + " · 本页 " + g.stats.shown + "/" + g.stats.bankLemmas +
+      " 个词条 · " + g.themes.length + " 个大类 · 已完成 " + g.stats.completedSets + " 个单元 · 随作答记录自动更新";
+  }
+  function mountList(host, reason) {
+    var doc = root.document, opened = parseScope(root.location.search), local = readLocal();
+    var state = { trackId: opened.trackId || local.trackId, setNumber: opened.set, page: 0 }, graph;
+    host.className = "universe-list-host";
+    function refresh() {
+      var local = readLocal();
+      graph = buildGraph({ tracks: allTracks(), trackId: state.trackId, set: state.setNumber, page: state.page, cap: 52, save: local.save, events: local.events });
+      state.page = graph.stats.page;
+      var title = doc.getElementById("universe-title"), status = doc.getElementById("universe-status");
+      if (title) title.textContent = graph.scopeLabel || "单词记忆宇宙";
+      if (status) status.textContent = (reason ? reason + " · " : "") + graphStatus(graph);
+      var html = "";
+      for (var t = 0; t < graph.themes.length; t++) {
+        var theme = graph.themes[t], rows = graph.lemmas.filter(function (n) { return n.themeId === theme.id; });
+        html += '<section class="universe-category"><h2>' + esc(theme.zh) + ' <span>' + rows.length + '</span></h2><ul>';
+        for (var i = 0; i < rows.length; i++) {
+          var row = rows[i];
+          html += '<li><span class="universe-dot" style="background:' + row.visual.hex + '"></span><div><b>' + esc(row.word) + '</b><span class="universe-gloss">' + esc(row.gloss) + '</span><p>' + esc(masteryText(row)) + '</p>' + evidenceHtml(row) + '</div></li>';
+        }
+        html += '</ul></section>';
+      }
+      host.innerHTML = html || '<p class="universe-empty">尚无词条。完成一个单元后，该单元的全部单词和搭配会自动进入这里。</p>';
+      paintControls(graph);
+    }
+    bindControls(state, refresh, true);
+    doc.addEventListener("click", function (ev) {
+      var btn = ev.target && ev.target.closest && ev.target.closest("[data-universe-track]");
+      if (btn) { state.trackId = btn.getAttribute("data-universe-track"); state.setNumber = null; state.page = 0; refresh(); }
+    });
+    api.currentGraph = function () { return graph; };
+    api.focusWord = function () { return false; };
+    watchProgress(refresh);
   }
 
   function mount(host) {
@@ -739,15 +658,16 @@
     }
     if (setNumber) paintTitle("本组学情 · Set " + setNumber);
     var scopePrefix = setNumber ? ("本组学情 · Set " + setNumber + " · ") : "";
+    if (/(?:[?&])view=list(?:&|$)/.test((root.location && root.location.search) || "")) { mountList(host, ""); return; }
     if (!root.THREE) {
-      setStatus(scopePrefix + "3D 引擎没有加载。单词记忆宇宙需要 WebGL。");
+      mountList(host, "3D 引擎未加载，已切换列表");
       return;
     }
     var canvas = doc.createElement("canvas");
     var gl = null;
     try { gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl"); } catch (e) { gl = null; }
     if (!gl) {
-      setStatus(scopePrefix + "这台设备没有可用的 WebGL，单词记忆宇宙需要真 3D。");
+      mountList(host, "设备不支持 WebGL，已切换列表");
       return;
     }
 
@@ -760,7 +680,9 @@
     try { narrow = !!(root.matchMedia && root.matchMedia("(max-width: 800px)").matches); } catch (e3) { narrow = false; }
     var cap = narrow ? 32 : 52;
 
-    var renderer = new THREE.WebGLRenderer({ antialias: !narrow, alpha: false, powerPreference: "high-performance" });
+    var renderer;
+    try { renderer = new THREE.WebGLRenderer({ antialias: !narrow, alpha: false, powerPreference: "high-performance" }); }
+    catch (_) { mountList(host, "3D 初始化失败，已切换列表"); return; }
     renderer.setPixelRatio(Math.min(root.devicePixelRatio || 1, narrow ? 1.5 : 2));
     renderer.setClearColor(0x070b16, 1);
     renderer.domElement.id = "universe-canvas";
@@ -802,6 +724,7 @@
     var pickables = [];
     var focused = null;
     var graph = null;
+    var scopeState = { trackId: trackId, setNumber: setNumber, page: 0 };
     var dragging = false;
     var moved = false;
     var lastX = 0;
@@ -968,7 +891,7 @@
         return;
       }
       detailEl.hidden = false;
-      var weakNote = rec.weak ? "<p class=\"uni-meta\">这个词也在「不熟练 · 薄弱词」里。颜色仍用掌握度，不用薄弱信号。</p>" : "";
+      var weakNote = rec.weak ? "<p class=\"uni-meta\">综合证据尚未达到熟练；请查看认词、搭配、拼写和多义的具体记录。</p>" : "";
       var phraseHtml = "";
       if (!rec.phrases.length) {
         phraseHtml = "<p class=\"uni-meta\">当前词库的 related[] 里没有能对上的固定搭配。</p>";
@@ -977,6 +900,7 @@
         for (var i = 0; i < rec.phrases.length; i++) {
           var p = rec.phrases[i];
           var mark = p.primary ? " · 主搭配" : "";
+          if (graph.setNumber && !graph.lemmas.some(function (n) { return n.key === norm(p.word); })) mark += " · 本组外关联";
           var on = phraseWord && norm(phraseWord) === p.key ? " is-on" : "";
           phraseHtml += "<li><button type=\"button\" data-phrase=\"" + esc(p.word) + "\" class=\"uni-phrase" + on + "\">" +
             esc(p.word) + "</button><span>" + esc(p.gloss) + " · " + esc(masteryText(p)) + esc(mark) + "</span></li>";
@@ -1014,24 +938,12 @@
         (ipa ? "<p class=\"uni-ipa\">" + esc(ipa) + "</p>" : "") +
         "<p class=\"uni-gloss\">" + esc(gloss || "—") + "</p>" +
         "<p class=\"uni-score\">" + esc(scoreLine) + "</p>" +
+        "<p class=\"uni-meta\">大类：" + esc(rec.category || themeById(rec.themeId).zh) + "</p>" + evidenceHtml(shownPhrase || rec) +
         weakNote + phraseHtml + linkHtml;
     }
 
     function statusFor(g, focusedWord) {
-      if (!g) return "";
-      var tail = g.masteryOk ? "" : " · 学情模块没读到，颜色先按未学";
-      var scope = g.scopeLabel ? (g.scopeLabel + " · ") : "";
-      var base = scope + g.trackName + " · 显示 " + g.stats.shown + " 个单词（上限 " + g.stats.cap +
-        "，优先不熟练）· 词库单词 " + g.stats.bankLemmas + " · 已有学情 " + g.stats.touched + tail;
-      if (!g.stats.touched) {
-        if (g.setNumber) {
-          if (!g.stats.bankLemmas) base += " · 这一组没有单独单词";
-        } else {
-          base += " · 还没有练习记录，LIFE / TECHNOLOGY 是种子主题";
-        }
-      }
-      if (focusedWord) return "已展开「" + focusedWord + "」的固定搭配 · " + base;
-      return "首屏只有主题和单词 · " + base;
+      return (focusedWord ? "已选中「" + focusedWord + "」 · " : "") + graphStatus(g);
     }
 
     function focusRecord(rec, phraseWord) {
@@ -1043,7 +955,10 @@
       focused = rec;
       if (!rec.phraseGroup && rec.data && rec.data.phrases && rec.data.phrases.length) {
         var anchor = new THREE.Group();
-        var phrases = rec.data.phrases;
+        var phrases = rec.data.phrases.filter(function (p) {
+          // Unit nodes remain exact; outside collocations stay in the detail list.
+          return !graph.setNumber && !graph.lemmas.some(function (n) { return n.key === norm(p.word); });
+        });
         var n = phrases.length;
         for (var i = 0; i < n; i++) {
           var p = phrases[i];
@@ -1114,6 +1029,7 @@
     }
 
     function rebuild() {
+      var previousFocus = graph && graph.trackId === scopeState.trackId && graph.setNumber === scopeState.setNumber && focused ? focused.key : "";
       clearFocus(true);
       disposeObject(world);
       world.clear ? world.clear() : world.remove.apply(world, world.children.slice());
@@ -1122,15 +1038,21 @@
       pickables = [];
       world.rotation.y = 0;
       var local = readLocal();
+      trackId = scopeState.trackId || local.trackId; setNumber = scopeState.setNumber;
       graph = buildGraph({
-        tracks: root.VOCAB_EXAM_TRACKS || [],
-        trackId: trackId || local.trackId,
+        tracks: allTracks(),
+        trackId: trackId,
         set: setNumber,
+        page: scopeState.page,
         save: local.save,
         events: local.events,
         learnerId: local.learnerId,
         cap: cap,
       });
+      scopeState.page = graph.stats.page;
+      defaultRadius = Math.max(narrow ? 38 : 36, 18 + graph.themes.length * 3);
+      goal.radius = defaultRadius;
+      paintControls(graph);
       paintTitle(graph.scopeLabel);
       var buttons = doc.querySelectorAll("[data-universe-track]");
       for (var b = 0; b < buttons.length; b++) {
@@ -1143,7 +1065,7 @@
         var tg = new THREE.Group();
         tg.position.set(theme.x, theme.y, theme.z);
         var coreVisual = { hex: hslToHex(theme.hue, 55, 62), unscored: false, light: 62 };
-        var core = makeOrb(theme.label, coreVisual, narrow ? 1.45 : 1.85, narrow ? 0.78 : 0.95);
+        var core = makeOrb(theme.zh, coreVisual, narrow ? 1.45 : 1.85, narrow ? 0.78 : 0.95);
         tg.add(core.group);
         bindPick(core, { kind: "core", themeId: theme.id });
         records.push({
@@ -1190,6 +1112,9 @@
       }
       setStatus(statusFor(graph, ""));
       renderDetail(null);
+      if (previousFocus) {
+        for (var f = 0; f < records.length; f++) if (records[f].kind === "lemma" && records[f].key === previousFocus) { focusRecord(records[f], ""); break; }
+      }
     }
 
     var raycaster = new THREE.Raycaster();
@@ -1313,6 +1238,7 @@
       if (!next || next === trackId) return;
       trackId = next;
       setNumber = null;
+      scopeState.trackId = next; scopeState.setNumber = null; scopeState.page = 0;
       try {
         if (root.history && root.location) {
           var url = new URL(root.location.href);
@@ -1347,8 +1273,10 @@
       if (started) root.requestAnimationFrame(tick);
     }
 
+    api.currentGraph = function () { return graph; };
+    bindControls(scopeState, rebuild, false);
     resize();
-    rebuild();
+    watchProgress(rebuild);
     started = true;
     root.requestAnimationFrame(tick);
     api.focusWord = function (word) {
@@ -1374,7 +1302,9 @@
     parseScope: parseScope,
     readLocal: readLocal,
     mount: mount,
-    CLUSTER_RULE: "Heuristic theme buckets in fixed order (technology, school, nature, life, feeling, travel, time, society, else 其他). Match exact English lemma, then stem (prefix if length >= 4, substring if length >= 5), then an exact Chinese gloss segment. First paint is cores plus lemma words only. Click adds phrase cards already in related[] that resolve to a glossed track card; primary is primaryCollocation. Co-lemmas are single-word related[] entries on those cards. Function-word co-lemmas (on/of/to/over/…) stay in the detail list and do not take an orbit. Mastery color is QMStudy inventory.practiced score (0–3, same as 三栏). Unscored stays gray. Weak-list membership only prioritizes which nodes fit the cap. A set query limits lemmas to that set; 固定搭配 still resolve from the whole track. Over the set cap, 不熟练 and 未学 come before high mastery. No set query keeps the whole track.",
+    allTracks: allTracks,
+    masteryText: masteryText,
+    CLUSTER_RULE: "Exact current-unit membership, including phrase entries. All entries receive one primary category from headword, current gloss and POS rules. Current-unit evidence wins; otherwise latest same-track/sense evidence is used. Overall colour includes observed spelling/polysemy and required collocations; untested collocations block mastered. Completed units persist and full-universe pages keep every registered entry accessible.",
   };
   return api;
 });

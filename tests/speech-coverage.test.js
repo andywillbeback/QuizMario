@@ -125,9 +125,11 @@ const safeExample = {
   assert.ok(game.includes("playPartClearCue") && game.includes("if (!voiceOn) return"));
   assert.ok(game.includes('speakLine("Shut down")') && game.includes("announceKillStreak"));
   assert.ok(game.includes("audio/01_first_blood.m4a") && game.includes("audio/12_shut_down.m4a"), "streak clips stay on the recorded files");
-  assert.ok(index.includes('src="pronunciation.js"') && index.indexOf('src="pronunciation.js"') < index.indexOf('src="game.js"'));
+  assert.ok(index.includes('src="pronunciation.js"') && index.indexOf('src="pronunciation.js"') < index.indexOf('src="game.js'));
   assert.ok(index.includes('id="btn-accent"') && index.includes("英音"), "British default with an American switch");
-  assert.ok(!index.includes("HD") && !index.includes("Cambridge"), "the page does not promise a studio voice");
+  // Inspect visible copy, not identifiers such as ENTRY_WATCHDOG.
+  const visibleCopy = index.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
+  assert.ok(!visibleCopy.includes("HD") && !visibleCopy.includes("Cambridge"), "the page does not promise a studio voice");
   assert.ok(!game.includes("resolveAudio") && !game.includes("speech.googleapis"), "teaching speech stays on the browser");
 }
 

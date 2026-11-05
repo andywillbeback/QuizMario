@@ -100,7 +100,7 @@ function staticGuards() {
   assert.ok(index.includes('id="prompt-sense"'), "study card has a sense cue line");
   assert.ok(index.includes('src="sense-cue.js"'), "sense cue loads with the game");
   assert.ok(index.indexOf('src="sense-id.js"') < index.indexOf('src="sense-cue.js"'), "sense ids load before the cue");
-  assert.ok(index.indexOf('src="sense-cue.js"') < index.indexOf('src="game.js"'), "the cue loads before the game");
+  assert.ok(index.indexOf('src="sense-cue.js"') < index.indexOf('src="game.js'), "the cue loads before the game");
   assert.ok(!index.includes('id="btn-sort-scene"') && !index.includes('id="btn-sort-default"'), "sort toggles are gone");
   assert.ok(!index.includes(">场景<") && !index.includes(">默认<"), "sort labels are gone");
   assert.ok(!game.includes("btn-sort-scene") && !game.includes('sortMode === "scene"'), "scene sort path is gone");

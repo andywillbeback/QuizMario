@@ -127,7 +127,7 @@ assert.strictEqual(merge.isBlank({ points: 0, unlockedLevel: 1, cards: {}, place
 const index = read("index.html");
 const game = read("game.js");
 assert.ok(index.includes('src="placement.js"'), "placement.js loads");
-assert.ok(index.indexOf('src="placement.js"') < index.indexOf('src="game.js"'), "placement.js loads before game.js");
+assert.ok(index.indexOf('src="placement.js"') < index.indexOf('src="game.js'), "placement.js loads before game.js");
 assert.ok(index.includes('id="placement-note"'));
 assert.ok(index.includes('id="btn-placement-enter"') && index.includes("进入起始组"));
 assert.ok(index.includes('id="btn-must-practice"') && index.includes("今日必练"), "今日必练 stays on home");

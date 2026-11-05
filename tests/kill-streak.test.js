@@ -75,7 +75,7 @@ const EARLY = {
 }
 
 {
-  assert.ok(index.indexOf('src="kill-streak.js"') < index.indexOf('src="game.js"'), "schedule loads before the game");
+  assert.ok(index.indexOf('src="kill-streak.js"') < index.indexOf('src="game.js'), "schedule loads before the game");
   const fn = game.slice(game.indexOf("function announceKillStreak"), game.indexOf("function announceShutDown"));
   assert.ok(fn.includes("StreakVoice.killStreakPlan(n, KILL_LINES, SPREE_LINES)"));
   assert.ok(fn.includes("StreakVoice.shouldSpeakLegendary(n)"));

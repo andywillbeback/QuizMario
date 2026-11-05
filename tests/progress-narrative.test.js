@@ -159,7 +159,7 @@ const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(index.includes('id="today-narrative"'));
 assert.ok(index.includes('id="today-narrative-lines"'));
 assert.ok(index.includes('src="progress-narrative.js"'));
-assert.ok(index.indexOf('src="progress-narrative.js"') < index.indexOf('src="game.js"'));
+assert.ok(index.indexOf('src="progress-narrative.js"') < index.indexOf('src="game.js'));
 assert.ok(index.indexOf('id="home-loop"') < index.indexOf('id="today-narrative"'));
 assert.ok(index.indexOf('id="miss-reasons"') < index.indexOf('id="today-narrative"'));
 assert.ok(game.includes("renderTodayNarrative"));
