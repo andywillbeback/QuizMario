@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#080d18">
+<meta name="theme-color" content="#070b16">
 <title>单词宇宙 · 聚光单词</title>
-<link rel="stylesheet" href="universe-ui.css?v=20261105-classic3d1">
+<link rel="stylesheet" href="universe-ui.css?v=20261106-original3d">
 </head>
 <body>
 <div class="universe-shell">
@@ -23,8 +23,8 @@
   <a id="universe-3d" href="?view=3d" aria-label="切换立体宇宙">3D</a>
   <div class="universe-pagination"><button type="button" id="universe-prev" hidden aria-label="上一页">‹</button><span id="universe-page"></span><button type="button" id="universe-next" hidden aria-label="下一页">›</button></div>
 </nav>
-<div id="universe-root" data-layout="network"></div>
-<p id="universe-legend"><b>颜色越深，越需要巩固</b><span>灰色表示未验证 · 搭配未熟练，单词不计熟练</span></p>
+<div id="universe-root"></div>
+<p id="universe-legend"><b>颜色越深 = 越不熟练</b><span>灰色 = 未学，不记成 0 分</span></p>
 <aside id="universe-detail" hidden></aside>
 </div>
 <script src="vendor/three.r128.min.js"></script>
@@ -36,7 +36,7 @@
 <script src="study-metrics.js"></script>
 <script src="exam-tracks.js"></script>
 <script src="universe-network.js?v=20261105-network2"></script>
-<script src="universe-orbit-fallback.js?v=20261105-classic3d1"></script>
-<script src="word-universe.js?v=20261105-classic3d2"></script>
+<script src="universe-orbit-fallback.js?v=20261106-original3d"></script>
+<script src="word-universe.js?v=20261106-original3d"></script>
 </body>
 </html>

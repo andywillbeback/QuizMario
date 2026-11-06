@@ -28,3 +28,21 @@ body.is-universe-list{background:var(--page);color:var(--text)}.universe-list-ho
 .classic-orbit-rods line{stroke-width:.7;pointer-events:none}.classic-orbit-node{cursor:pointer;outline:none}.classic-orbit-node text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;font-weight:500;fill:#b5cbcc;paint-order:stroke;stroke:#070b16;stroke-width:3px;stroke-linejoin:round;pointer-events:none}.classic-orbit-node.is-core text{fill:#102629;font-weight:650;stroke:none}.orbit-node-halo{fill:#8bafb014;opacity:0}.orbit-node-outline{fill:none;stroke-width:.65;opacity:.45}.orbit-node-sphere{stroke-width:.8}.classic-orbit-node:hover .orbit-node-halo,.classic-orbit-node:focus .orbit-node-halo,.classic-orbit-node.is-selected .orbit-node-halo{opacity:1}.classic-orbit-node.is-selected .orbit-node-outline{stroke-width:1.4;opacity:1}.classic-orbit-node.is-selected text{fill:#c9dbdb;font-weight:650}
 .classic-orbit-tools{position:absolute;right:22px;bottom:max(24px,env(safe-area-inset-bottom));display:flex;gap:6px;z-index:4}.classic-orbit-tools button{width:38px;height:38px;border:1px solid #365052;border-radius:6px;background:#122125d9;color:#9bb9ba;font-size:21px;font-weight:300;backdrop-filter:blur(10px)}
 @media(max-width:640px){.is-classic-3d #universe-legend{right:auto;max-width:calc(100% - 150px);padding:10px;font-size:9px}.is-classic-3d #universe-legend span:not(.classic-depth-ramp){font-size:8px;max-width:170px;line-height:1.6}.is-classic-3d .classic-depth-ramp{width:100%;min-width:130px}.classic-orbit-tools{right:14px;bottom:max(24px,env(safe-area-inset-bottom));gap:4px}.classic-orbit-tools button{width:34px;height:36px}.is-classic-3d:has(#universe-detail:not([hidden])) #universe-legend{visibility:hidden}}
+/* Original #81 WebGL scene: full-bleed starfield, colored glass orbs, floating controls. */
+body.is-original-3d{background:#070b16}
+body.is-original-3d .universe-shell{display:block;height:100%;background:transparent}
+body.is-original-3d #universe-root{position:fixed;inset:0;z-index:1;background:#070b16}
+body.is-original-3d .uni-bar,body.is-original-3d .uni-heading,body.is-original-3d .universe-tools{position:relative;z-index:4}
+body.is-original-3d #universe-status{position:absolute;z-index:4;top:148px;left:20px;right:20px;max-width:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#d5e2f5;text-shadow:0 1px 6px #000;pointer-events:none}
+body.is-original-3d .uni-bar{background:linear-gradient(#070b16f2,rgba(7,11,22,0));border-bottom:0}
+body.is-original-3d .universe-tools{background:transparent;border-bottom:0}
+body.is-original-3d .uni-brand::before{background:#d7f6ff;box-shadow:0 0 12px #7fd4ff88}
+body.is-original-3d #universe-legend{background:rgba(6,10,20,.86);border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:8px 12px}
+body.is-original-3d #universe-legend b{font-weight:800;color:#f4f8ff}
+body.is-original-3d #universe-legend span{color:#d5e2f5;opacity:.8}
+body.is-original-3d #universe-detail:not(.network-detail){background:rgba(6,10,22,.92);border:1px solid rgba(180,214,255,.4);border-radius:16px}
+body.is-original-3d #universe-detail .uni-score{color:#b7ecff}
+body.is-original-3d .classic-orbit-host{background:#070b16}
+body.is-original-3d .classic-orbit-node text{fill:#f7fbff}
+body.is-original-3d:has(#universe-detail:not([hidden])) #universe-legend{visibility:hidden}
+@media(max-width:720px){body.is-original-3d #universe-status{top:168px;font-size:10px}body.is-original-3d #universe-detail:not(.network-detail){left:12px;right:12px;width:auto;max-height:42vh}}

@@ -32,8 +32,10 @@ function makeRuntime(storage){
 const storage={vocabSpotlight_v1:JSON.stringify({cards:{'gaokao|0::advantage':{state:'learning',mastery:0.5,reps:1,scheduledAt:1}}})};
 const ctx=makeRuntime(storage),get=()=>ctx.QuizMarioWordUniverse.currentGraph().lemmas.find(n=>n.word==='advantage');
 assert.equal(get().mastery,0.5);
-assert.equal(ctx.QuizMarioWordUniverse.currentGraph().themes.length,3);
-assert.ok(ctx.QuizMarioWordUniverse.currentGraph().lemmas.every(r=>r.visual.hue===184));
+assert.notEqual(get().visual.hue,184,'the mounted scene keeps per-theme color, not the monochrome hub hue');
+assert.ok(get().visual.sat>40);
+assert.ok(ctx.QuizMarioWordUniverse.currentGraph().themes.every(t=>t.hue!==184));
+assert.ok(!ctx.QuizMarioWordUniverse.currentGraph().classic3d);
 storage.vocabSpotlight_v1=JSON.stringify({cards:{'gaokao|0::advantage':{state:'learning',mastery:1,reps:2,scheduledAt:2}}});
 ctx.dispatchEvent({type:'storage',key:'vocabSpotlight_v1'});
 assert.equal(get().mastery,1);
