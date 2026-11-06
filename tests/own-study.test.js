@@ -147,4 +147,102 @@ vm.createContext(ownSandbox);
 vm.runInContext(read("grok/own-study.js"), ownSandbox, { filename: "own-study.js" });
 assert.strictEqual(ownSandbox.window.QuizMarioOwnStudy.render({ save: { cards: {} }, events: [] }), "");
 
+function chartSection(html, title) {
+  const marker = "<h4>" + title + "</h4>";
+  const at = html.indexOf(marker);
+  assert.ok(at > 0, title);
+  const start = html.lastIndexOf("<section", at);
+  const end = html.indexOf("</section>", at);
+  return html.slice(start, end + "</section>".length);
+}
+
+function textFills(svg) {
+  const fills = [];
+  const re = /<text\b[^>]*\bfill="([^"]+)"/g;
+  let match;
+  while ((match = re.exec(svg))) fills.push(match[1]);
+  assert.ok(fills.length > 0, "chart has text");
+  return fills;
+}
+
+function answerEvents(type, dir, n, extra) {
+  const list = [];
+  for (let i = 0; i < n; i++) {
+    const row = {
+      event_type: type,
+      created_at: now.toISOString(),
+      task_direction: dir,
+      payload: { task_direction: dir },
+    };
+    if (extra) {
+      Object.keys(extra).forEach(function (key) {
+        row[key] = extra[key];
+        row.payload[key] = extra[key];
+      });
+    }
+    list.push(row);
+  }
+  return list;
+}
+
+const contrastSave = {
+  track: "zhongkao",
+  practice: { meaning: { n: 10, good: 8 }, spelling: { n: 6, good: 4 } },
+  cards: {
+    "0::apple": { state: "review", interval: 2, mastery: 2, reps: 4, correct: 4, wrong: 0 },
+    "0::be able to": { state: "review", interval: 2, mastery: 2, reps: 6, correct: 5, wrong: 1 },
+  },
+  daily: { "2026-11-06": { c: 8, w: 2, rc: 5, rw: 1, n: 10, unk: 0 } },
+};
+const contrastEvents = []
+  .concat(answerEvents("vocab.answer_correct", "meaning", 8))
+  .concat(answerEvents("vocab.answer_wrong", "meaning", 2))
+  .concat(answerEvents("vocab.answer_correct", "collocation", 6, { evidence_kind: "collocation" }))
+  .concat(answerEvents("vocab.answer_wrong", "collocation", 2, { evidence_kind: "collocation" }))
+  .concat(answerEvents("vocab.answer_correct", "spelling", 4))
+  .concat(answerEvents("vocab.answer_wrong", "spelling", 2))
+  .concat(answerEvents("vocab.answer_correct", "cloze", 3));
+const contrast = api.buildPersonal(contrastSave, contrastEvents, now);
+const contrastHtml = api.personalChartsHtml(contrast);
+const radarSec = chartSection(contrastHtml, "学情雷达");
+const donutSec = chartSection(contrastHtml, "题型占比");
+const accuracySec = chartSection(contrastHtml, "近7日正确率");
+assert.ok(radarSec.startsWith('<section class="own-chart own-ink">'), "home radar caption is in the bright set");
+assert.ok(donutSec.startsWith('<section class="own-chart own-ink">'), "home donut caption is in the bright set");
+assert.ok(accuracySec.startsWith('<section class="own-chart">') && accuracySec.indexOf("own-ink") === -1, "other home charts stay out of the bright set");
+assert.deepStrictEqual(textFills(radarSec), ["#fff", "#fff", "#fff", "#fff"], "radar axis labels and scores are white");
+assert.ok(radarSec.indexOf("认词 ") > 0 && radarSec.indexOf("巩固 ") > 0);
+assert.ok(radarSec.indexOf('stroke="#d5dbe8"') > 0, "radar grid strokes stay");
+assert.ok(radarSec.indexOf("rgba(46,111,196,.22)") > 0, "radar shape color stays");
+assert.ok(textFills(donutSec).every(function (fill) { return fill === "#fff"; }), "donut legend numbers are white");
+assert.ok(donutSec.indexOf("看英选义") > 0 && donutSec.indexOf("完形") > 0);
+for (const swatch of ["#2e6fc4", "#2f9e8f", "#c9842e", "#c45b7a"]) {
+  assert.ok(donutSec.indexOf(swatch) > 0, "donut segment " + swatch);
+}
+assert.ok(textFills(accuracySec).some(function (fill) { return fill !== "#fff"; }), "accuracy chart text is not recoloured");
+const emptyRadar = chartSection(emptyHtml, "学情雷达");
+const emptyDonut = chartSection(emptyHtml, "题型占比");
+assert.ok(emptyRadar.indexOf("样本不足") > 0);
+assert.ok(textFills(emptyRadar).every(function (fill) { return fill === "#fff"; }), "thin radar labels are white, not grey");
+assert.ok(emptyDonut.indexOf("暂无答题") > 0 && emptyDonut.indexOf("还没有答题记录，不编造题型占比") > 0);
+assert.deepStrictEqual(textFills(emptyDonut), ["#fff", "#fff"], "empty donut centre and caption are white");
+assert.ok(emptyDonut.indexOf('stroke="#d5dbe8"') > 0, "empty donut ring stays");
+const parentPage = api.studentReportHtml(contrast, "2026-11-06");
+const parentRadarAt = parentPage.indexOf('aria-label="学情雷达"');
+const parentRadar = parentPage.slice(parentPage.lastIndexOf("<svg", parentRadarAt), parentPage.indexOf("</svg>", parentRadarAt));
+assert.ok(parentRadar.indexOf('fill="#1c2430"') > 0, "parent report radar keeps dark ink on its light page");
+assert.ok(parentRadar.indexOf('fill="#fff"') === -1);
+const parentModesAt = parentPage.indexOf('data-chart="modes"');
+const parentModes = parentPage.slice(parentPage.lastIndexOf("<svg", parentModesAt), parentPage.indexOf("</svg>", parentModesAt));
+assert.ok(parentModes.indexOf('fill="#1c2430"') > 0);
+assert.ok(parentModes.indexOf('fill="#fff"') === -1);
+const homeCss = read("grok/index.html");
+const navyCss = read("grok/mobile-ui.css");
+assert.ok(homeCss.indexOf(".own-chart.own-ink > h4") > 0 && homeCss.indexOf("color: #fff") > 0);
+assert.ok(homeCss.indexOf(".own-chart.own-ink svg text { fill: #fff; }") > 0);
+assert.ok(navyCss.indexOf(".own-chart.own-ink>h4,.own-chart.own-ink>.own-hint{color:#fff;opacity:1}") > 0);
+assert.ok(navyCss.indexOf(".own-chart.own-ink svg text{fill:#fff}") > 0);
+assert.ok(navyCss.indexOf(".own-chart svg{border-color:#273b57;background:#111d31}") > 0, "chart background stays");
+assert.strictEqual(read("grok/config.js").match(/SUPABASE_URL:\s*"([^"]+)"/)[1], "https://cmainasvlfdynidabunp.supabase.co");
+
 console.log("own-study ok");
