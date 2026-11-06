@@ -834,7 +834,7 @@
       if (root.QuizMarioOrbitFallback) {
         root.QuizMarioOrbitFallback.mount(host,{api:api,esc:esc,parseScope:parseScope,readLocal:readLocal,
           allTracks:allTracks,buildGraph:buildGraph,classic3DGraph:classic3DGraph,classicVisual:classicVisual,
-          paintControls:paintControls,bindControls:bindControls,watchProgress:watchProgress,
+          visualOf:visualOf,paintControls:paintControls,bindControls:bindControls,watchProgress:watchProgress,
           wordDetailHtml:wordDetailHtml,masteryText:masteryText,graphStatus:graphStatus});
       } else mountList(host,reason);
     }
@@ -858,8 +858,8 @@
     var narrow = false;
     try { narrow = !!(root.matchMedia && root.matchMedia("(max-width: 800px)").matches); } catch (e3) { narrow = false; }
     var cap = 52;
-    if (doc.body && doc.body.classList) doc.body.classList.add("is-classic-3d");
-    if (legendEl) legendEl.innerHTML = '<b>同一灰青色系 · 深色需要巩固</b><span class="classic-depth-ramp" aria-hidden="true"></span><span>半透明为尚未验证；搭配未熟练不计熟练</span>';
+    if (doc.body && doc.body.classList) doc.body.classList.add("is-original-3d");
+    if (legendEl) legendEl.innerHTML = "<b>" + esc(LEGEND) + "</b><span>灰色 = 未学，不记成 0 分</span>";
 
     var renderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: !narrow, alpha: false, powerPreference: "high-performance" }); }
@@ -872,8 +872,8 @@
 
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(48, 1, 0.1, 400);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-    var hemi = new THREE.HemisphereLight(0xd6e5e4, 0x263737, 0.55);
+    scene.add(new THREE.AmbientLight(0x9eb4d8, 0.55));
+    var hemi = new THREE.HemisphereLight(0xd7e8ff, 0x1a1028, 0.55);
     scene.add(hemi);
     var sun = new THREE.DirectionalLight(0xffffff, 0.85);
     sun.position.set(18, 28, 14);
@@ -890,7 +890,7 @@
     }
     var starGeo = new THREE.BufferGeometry();
     starGeo.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
-    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0x93afb0, size: 0.28, sizeAttenuation: true })));
+    scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xd5e6ff, size: 0.28, sizeAttenuation: true })));
 
     var world = new THREE.Group();
     scene.add(world);
@@ -1084,10 +1084,7 @@
       focused = rec;
       if (!rec.phraseGroup && rec.data && rec.data.phrases && rec.data.phrases.length) {
         var anchor = new THREE.Group();
-        var phrases = rec.data.phrases.filter(function (p) {
-          // Unit nodes remain exact; outside collocations stay in the detail list.
-          return !graph.setNumber && !graph.lemmas.some(function (n) { return n.key === norm(p.word); });
-        });
+        var phrases = rec.data.phrases;
         var n = phrases.length;
         for (var i = 0; i < n; i++) {
           var p = phrases[i];
@@ -1179,7 +1176,6 @@
         cap: cap,
         pageSize: 52,
       });
-      graph = classic3DGraph(graph, narrow);
       scopeState.page = graph.stats.page;
       defaultRadius = classicCameraDistance(graph,host.clientWidth || root.innerWidth || 1000,host.clientHeight || root.innerHeight || 800,phi);
       goal.radius = defaultRadius;
@@ -1195,8 +1191,8 @@
         var theme = graph.themes[t];
         var tg = new THREE.Group();
         tg.position.set(theme.x, theme.y, theme.z);
-        var coreVisual = { hue: CLASSIC_HUE, sat:22, hex:hslToHex(CLASSIC_HUE,22,64), unscored:false, light:64 };
-        var core = makeOrb(theme.zh, coreVisual, narrow ? 1.45 : 1.85, 3.4);
+        var coreVisual = { hue: theme.hue, sat: 55, light: 62, hex: hslToHex(theme.hue, 55, 62), unscored: false };
+        var core = makeOrb(theme.label, coreVisual, narrow ? 1.45 : 1.85, narrow ? 0.78 : 0.95);
         tg.add(core.group);
         bindPick(core, { kind: "core", themeId: theme.id });
         records.push({
@@ -1216,7 +1212,7 @@
         }
         for (var n = 0; n < members.length; n++) {
           var lemma = members[n];
-          var orb = makeOrb(lemma.word, lemma.visual, 0.78, lemma.word.length > 12 ? 2.2 : 2.6);
+          var orb = makeOrb(lemma.word, lemma.visual, 0.78, lemma.word.length > 12 ? 0.62 : 0.78);
           orb.group.position.set(lemma.local.x, lemma.local.y, lemma.local.z);
           tg.add(orb.group);
           bindPick(orb, { kind: "lemma", key: lemma.key });
