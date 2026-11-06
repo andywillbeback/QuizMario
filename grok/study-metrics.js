@@ -947,8 +947,10 @@
       '<text x="' + (w / 2) + '" y="' + (h / 2) + '" font-size="13" text-anchor="middle" fill="#5c677a">' + escHtml(message) + "</text></svg>";
   }
 
-  function svgRadar(abilities) {
+  function svgRadar(abilities, textFill) {
     var list = abilities || [];
+    var scoredInk = textFill || "#1c2430";
+    var thinInk = textFill || "#8b93a7";
     var cx = 180;
     var cy = 150;
     var radius = 70;
@@ -979,7 +981,7 @@
       }
       var lp = svgPoint(cx, cy, radius, s, n, 1.24);
       var text = thin ? axis.label + " 样本不足" : axis.label + " " + axis.score;
-      labels += '<text x="' + lp[0].toFixed(1) + '" y="' + lp[1].toFixed(1) + '" font-size="12" text-anchor="middle" fill="' + (thin ? "#8b93a7" : "#1c2430") + '">' + escHtml(text) + "</text>";
+      labels += '<text x="' + lp[0].toFixed(1) + '" y="' + lp[1].toFixed(1) + '" font-size="12" text-anchor="middle" fill="' + (thin ? thinInk : scoredInk) + '">' + escHtml(text) + "</text>";
     }
     var shape = "";
     if (poly.length === n && n >= 3) {
@@ -1078,9 +1080,11 @@
 
   var DONUT_COLORS = ["#2e6fc4", "#2f9e8f", "#c9842e", "#c45b7a", "#6b5bb8", "#b89a2e", "#3d8fb5"];
 
-  function svgDonut(labels, values) {
+  function svgDonut(labels, values, textFill) {
     labels = labels || [];
     values = values || [];
+    var legendInk = textFill || "#1c2430";
+    var quietInk = textFill || "#5c677a";
     var w = 360;
     var h = 200;
     var total = 0;
@@ -1089,8 +1093,8 @@
     if (!total) {
       return svgOpen(w, h, "题型占比", "modes") +
         '<circle cx="110" cy="92" r="54" fill="none" stroke="#d5dbe8" stroke-width="22"/>' +
-        '<text x="110" y="96" font-size="13" text-anchor="middle" fill="#5c677a">暂无答题</text>' +
-        '<text x="180" y="178" font-size="12" text-anchor="middle" fill="#5c677a">还没有答题记录，不编造题型占比</text></svg>';
+        '<text x="110" y="96" font-size="13" text-anchor="middle" fill="' + quietInk + '">暂无答题</text>' +
+        '<text x="180" y="178" font-size="12" text-anchor="middle" fill="' + quietInk + '">还没有答题记录，不编造题型占比</text></svg>';
     }
     var cx = 96;
     var cy = 100;
@@ -1121,7 +1125,7 @@
     for (var k = 0; k < shown; k++) {
       var ly = 36 + k * 24;
       legend += '<rect x="188" y="' + (ly - 10) + '" width="12" height="12" rx="2" fill="' + DONUT_COLORS[k % DONUT_COLORS.length] + '"/>';
-      legend += '<text x="206" y="' + ly + '" font-size="12" fill="#1c2430">' + escHtml(labels[k] + " " + num(values[k])) + "</text>";
+      legend += '<text x="206" y="' + ly + '" font-size="12" fill="' + legendInk + '">' + escHtml(labels[k] + " " + num(values[k])) + "</text>";
     }
     return svgOpen(w, h, "题型占比", "modes") + paths + legend + "</svg>";
   }
@@ -1745,8 +1749,8 @@
     return html + "</div>";
   }
 
-  function chartBlock(title, hint, svg) {
-    return "<section class=\"own-chart\"><h4>" + escHtml(title) + "</h4><p class=\"own-hint\">" +
+  function chartBlock(title, hint, svg, bright) {
+    return "<section class=\"own-chart" + (bright ? " own-ink" : "") + "\"><h4>" + escHtml(title) + "</h4><p class=\"own-hint\">" +
       escHtml(hint) + "</p>" + svg + "</section>";
   }
 
@@ -1762,8 +1766,8 @@
       ? (specs.activity.eventData ? "蓝线是每天的答题次数，金线是练习事件。两套数字不相加。" : "折线是近 7 天每天的答题次数。")
       : "近 7 日存档里没有每日答题，折线改用练习事件。";
     return "<div class=\"own-charts\">" +
-      chartBlock("学情雷达", "认词、搭配、产出、巩固。样本少于 " + MIN_SAMPLE + " 次为样本不足，不记成 0 分。", svgRadar(axes)) +
-      chartBlock("题型占比", "只统计答题。到期信号不计入。没有答题就不编造占比。", svgDonut(specs.modes.labels, specs.modes.data)) +
+      chartBlock("学情雷达", "认词、搭配、产出、巩固。样本少于 " + MIN_SAMPLE + " 次为样本不足，不记成 0 分。", svgRadar(axes, "#fff"), true) +
+      chartBlock("题型占比", "只统计答题。到期信号不计入。没有答题就不编造占比。", svgDonut(specs.modes.labels, specs.modes.data, "#fff"), true) +
       chartBlock("近7日正确率", accuracyNote, svgAccuracy(specs.accuracy.labels, specs.accuracy.data)) +
       chartBlock("近7日学习分钟", "可见且最近有操作的练习时间。切走页面或超过 3 分钟没有操作的时间不计入。", svgLine(specs.duration.labels, specs.duration.data, null, "近7日学习分钟", "duration")) +
       chartBlock("遗忘节点", "今日到期、逾期、学习中、已巩固。一张卡只进一栏，不进入认词、搭配、产出、巩固雷达。", svgBars(specs.forget.labels, specs.forget.data, "遗忘节点", "forget", FORGET_COLORS)) +

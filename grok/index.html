@@ -986,6 +986,9 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   .own-study h4 { margin: 10px 0 4px; font-size: .95rem; color: var(--gold); }
   .own-charts, .own-lists { display: grid; gap: 12px; }
   .own-chart svg { width: 100%; height: auto; background: #f4f7fb; border-radius: 12px; }
+  .own-chart.own-ink > h4,
+  .own-chart.own-ink > .own-hint { color: #fff; opacity: 1; }
+  .own-chart.own-ink svg text { fill: #fff; }
   .own-hint, .own-empty, .own-rest { margin: 4px 0; font-size: .75rem; opacity: .8; }
   .own-bucket table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 4px; }
   .own-bucket th, .own-bucket td {
@@ -1277,7 +1280,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   #rate-dock .rate-zh { white-space: nowrap; font-size: 1.05rem; }
   #rate-dock .rate-sub { white-space: normal; text-align: center; }
 </style>
-<link rel="stylesheet" href="mobile-ui.css?v=20261105-network1">
+<link rel="stylesheet" href="mobile-ui.css?v=20261106-chartink">
 </head>
 <body class="at-gate">
 <p id="auth-hold" role="status">聚光单词 · 1st edition<br>正在确认登录…</p>
@@ -1521,7 +1524,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="pronunciation.js"></script>
   <script src="related-links.js"></script>
   <script src="universe-progress.js?v=20261105"></script>
-  <script src="study-metrics.js"></script>
+  <script src="study-metrics.js?v=20261106-chartink"></script>
   <script src="own-study.js?v=20261105-mobile1"></script>
   <script src="game.js?v=20261105-mobile1"></script>
   <script src="profile-name.js"></script>
