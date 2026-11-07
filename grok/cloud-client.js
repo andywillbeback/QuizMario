@@ -20,6 +20,8 @@
   }
 
   /* Bound requests to the primary project host. There is no second route.
+     The 15s deadline is only for /auth/v1/. A stalled login must not hold the
+     SDK lock, but teacher-board REST/RPC pages are not on that clock.
      Never retry an auth POST here: a timed-out refresh may already have rotated
      its token, and replaying signup/reset requests can duplicate side effects. */
   function boundedFetch(cfg) {
@@ -62,6 +64,7 @@
     return function (input, init) {
       var url = typeof input === "string" ? input : input.url || String(input);
       if (url.indexOf(primary + "/") !== 0) return nativeFetch(input, init);
+      if (url.indexOf(primary + "/auth/v1/") !== 0) return nativeFetch(input, init);
       var callerSignal = (init && init.signal) || (input && input.signal);
       return deadline(function (signal) {
         var options = Object.assign({}, init || {}, { signal: signal });
