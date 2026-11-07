@@ -6,8 +6,9 @@
  * 继续闯关 is regular study with no clock. 12分钟挑战 is the only timed mode (CHALLENGE_MS).
  * 通关 is 看英文选中文. 拼写 is tracked separately and does not block the first 通关.
  * 今日必练: due cards first, then 错词本 fill-in (review-queues.js). ZH→EN, still schedule().
- * 错词本 storage stays separate: misses and cumulative wrong >= 2; two correct
- * ratings of a book card inside 今日必练 graduate it. 继续闯关 is EN→ZH study.
+ * 错词本 storage stays separate: misses and cumulative wrong >= 2. Q3: same-day
+ * consecutive corrects only session_clear; a later-day correct graduates.
+ * 继续闯关 is EN→ZH study.
  * Optional cloud sync stamps save.updatedAt. Offline play ignores QuizMarioCloud.
  * learner-events.js emits quizmario signals only, and keeps pulled source=als
  * sense_return rows. schedule() remains the only SRS clock.
@@ -1753,7 +1754,7 @@
         if (reason && reason.line) why += '<div class="fb-meta">' + escapeHtml(reason.line) + "</div>";
       }
       if (sessionKind === "wrongbook" || (sessionKind === "must" && cardInWrongBook(currentCard))) {
-        why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
+        why += '<div class="fb-meta">还在错词本里 · 同轮连对只算当轮清掉，隔天再认对才毕业</div>';
       }
       why += feedbackHtml(viewFor(kind, chosen, "约 10 分钟后", ""));
       why += extraExampleHtml(currentCard);
@@ -1820,11 +1821,16 @@
       const res = RQ.noteWrongBookCorrect(
         ensureWrongBook(),
         RQ.lemmaKey(currentTrack, currentCard.word),
-        prog.wrong || 0
+        prog.wrong || 0,
+        { now: nowMs }
       );
-      bookNote = res.graduated
-        ? '<div class="fb-meta">错词本毕业 · 这个词先离开错词本了</div>'
-        : '<div class="fb-meta">错词本连续答对 ' + res.streak + "/2</div>";
+      if (res.graduated) {
+        bookNote = '<div class="fb-meta">错词本毕业 · 隔天仍认得，这个词先离开错词本了</div>';
+      } else if (res.sessionCleared) {
+        bookNote = '<div class="fb-meta">错词本当轮清掉 ' + res.streak + "/2 · 还不算毕业，隔天再练一次</div>";
+      } else {
+        bookNote = '<div class="fb-meta">错词本当轮答对 ' + res.streak + "/2 · 同轮连对≠长期掌握</div>";
+      }
     }
     const fb = $("feedback");
     const qName = quality === 2 ? "太简单" : "记住了";
@@ -3833,8 +3839,8 @@
       const left = wrongBookQueueItems().length;
       if (title) title.textContent = left ? "这轮错词练完了" : "错词本清空了";
       if (msg) msg.textContent = left
-        ? ("错词本还剩 " + left + " 个。同一个词在错词本里连续答对两次，就会毕业离开。")
-        : "这些词都在错词本里连续答对了两次，已经毕业离开。";
+        ? ("错词本还剩 " + left + " 个。同轮连对只算当轮清掉；隔天再认对才会毕业离开。")
+        : "这些词都经过隔天保持检查，已经毕业离开错词本。";
     }
     showScreen("clear");
   }
