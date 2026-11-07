@@ -270,6 +270,48 @@ test('an already aborted caller signal prevents any credential-bearing request',
   assert.equal(h.calls.length, 0);
 });
 
+test('class-board REST and RPC reads are not cut off by the 15s auth deadline', async () => {
+  const paths = [
+    ['/rest/v1/learner_events?select=learner_id,created_at&order=created_at.asc', 'GET'],
+    ['/rest/v1/user_progress?select=user_id,save,updated_at', 'GET'],
+    ['/rest/v1/rpc/teacher_directory', 'POST'],
+  ];
+  for (const [suffix, method] of paths) {
+    const h = makeHarness(call => new Promise((resolve, reject) => {
+      const abort = () => {
+        const error = new Error('aborted');
+        error.name = 'AbortError';
+        reject(error);
+      };
+      if (call.signal && call.signal.aborted) abort();
+      else if (call.signal) call.signal.addEventListener('abort', abort, { once: true });
+    }));
+    const controller = new AbortController();
+    let settled = false;
+    const pending = observed(h.fetch(DIRECT + suffix, {
+      method,
+      body: method === 'POST' ? '{}' : undefined,
+      signal: controller.signal,
+    })).then((outcome) => {
+      settled = true;
+      return outcome;
+    });
+    await flush();
+    assert.equal(h.calls.length, 1, suffix);
+    assert.equal(h.calls[0].signal, controller.signal, suffix);
+    await h.clock.tick(15000);
+    assert.equal(settled, false, suffix);
+    assert.equal(controller.signal.aborted, false, suffix);
+    await h.clock.tick(120000);
+    assert.equal(settled, false, suffix);
+    controller.abort();
+    const outcome = await pending;
+    assert.equal(outcome.error && outcome.error.name, 'AbortError', suffix);
+    assert.equal(String(outcome.error && outcome.error.message).includes('QM_AUTH_TIMEOUT'), false, suffix);
+    assert.equal(h.calls.length, 1, suffix);
+  }
+});
+
 test('an auth POST timeout is bounded at 15 seconds and is never replayed, including refresh/signup/recovery', async () => {
   for (const suffix of [
     '/auth/v1/token?grant_type=refresh_token',
