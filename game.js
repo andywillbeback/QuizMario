@@ -216,11 +216,14 @@
     sv.placement = Placement.normalizePlacement(data.placement);
     sv.missReasons = ET.normalizeLog(data.missReasons);
     const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
-    sv.practice = {
-      meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
-      spelling: Object.assign({ n: 0, good: 0 }, practice.spelling || {}),
-      hint: Object.assign({ n: 0, good: 0 }, practice.hint || {}),
-    };
+    sv.practice = Practice.ensureSessionPractice
+      ? Practice.ensureSessionPractice(practice)
+      : {
+          meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
+          form: Object.assign({ n: 0, good: 0 }, practice.form || {}),
+          spelling: Object.assign({ n: 0, good: 0 }, practice.spelling || {}),
+          hint: Object.assign({ n: 0, good: 0 }, practice.hint || {}),
+        };
     if (data.updatedAt) sv.updatedAt = data.updatedAt;
     return sv;
   }
@@ -1550,8 +1553,11 @@
 
   function bumpPractice(bucket, good) {
     if (!save.practice || typeof save.practice !== "object") {
-      save.practice = { meaning: { n: 0, good: 0 }, spelling: { n: 0, good: 0 }, hint: { n: 0, good: 0 } };
+      save.practice = Practice.ensureSessionPractice
+        ? Practice.ensureSessionPractice({})
+        : { meaning: { n: 0, good: 0 }, form: { n: 0, good: 0 }, spelling: { n: 0, good: 0 }, hint: { n: 0, good: 0 } };
     }
+    if (bucket === "form" && !save.practice.form) save.practice.form = { n: 0, good: 0 };
     const row = save.practice[bucket] || (save.practice[bucket] = { n: 0, good: 0 });
     row.n += 1;
     if (good) row.good += 1;
@@ -1593,7 +1599,9 @@
     setUnknownVisible(false);
     const kind = outcome || (correct ? "correct" : "wrong");
     const prog = getProg(currentCard.key);
-    const noted = Practice.noteSpelling(prog, kind, Date.now());
+    const noted = Practice.noteDirection
+      ? Practice.noteDirection(prog, "spelling", kind, Date.now())
+      : Practice.noteSpelling(prog, kind, Date.now());
     bumpPractice("spelling", kind === "correct");
     if (kind !== "correct") rememberWrongWord(currentCard.word);
     const fb = $("feedback");
@@ -1667,7 +1675,13 @@
     const opts = attemptOpts(currentCard, { outcome: kind, correct: kind === "correct" });
     const nowMs = opts.now;
     if (kind !== "correct") rememberWrongWord(currentCard.word);
-    if (sessionDirection === "meaning") bumpPractice("meaning", kind === "correct");
+    if (sessionDirection === "meaning") {
+      bumpPractice("meaning", kind === "correct");
+      if (Practice.noteDirection) Practice.noteDirection(prog, "en_zh", kind, Date.now());
+    } else if (sessionDirection === "form") {
+      bumpPractice("form", kind === "correct");
+      if (Practice.noteDirection) Practice.noteDirection(prog, "zh_en", kind, Date.now());
+    }
     bumpPractice("hint", kind === "correct" && !(currentCard && currentCard._hintSeen));
 
     logAnswer(kind === "correct", prog, opts);
