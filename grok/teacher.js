@@ -9,6 +9,85 @@
   if (!api) throw new Error("study-metrics.js did not load");
   root.QMTeacher = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
+
+  function wait(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  function isNotTeacherError(err) {
+    if (!err) return false;
+    if (err.code === "not_teacher") return true;
+    return /not_teacher/.test(String(err.message || ""));
+  }
+
+  /** Network drops while reading the class snapshot. Not a missing-SQL or role error. */
+  function isRetryableLoadError(err) {
+    if (!err || isNotTeacherError(err)) return false;
+    var code = String(err.code || "");
+    if (code === "42501" || code === "PGRST202" || code === "PGRST301") return false;
+    var name = String(err.name || "");
+    if (name === "AbortError" || name === "TypeError") return true;
+    var text = String(err.message || err.details || "");
+    return /failed to fetch|networkerror|network request failed|load failed|aborted/i.test(text);
+  }
+
+  function boardLoadMessage(err) {
+    var text = String((err && (err.message || err.details)) || err || "");
+    if (isRetryableLoadError(err)) {
+      return "读取失败。网络中断了，班级数据没有下完。请再点一次刷新。这不是教师权限问题。";
+    }
+    if (/teacher_class_board|PGRST202|could not find the function|schema cache/i.test(text)) {
+      return "读取失败。云端还没有班级汇总。请在 Supabase SQL 编辑器运行本目录 supabase/teacher_read.sql，然后刷新。";
+    }
+    return "读取失败。" + (text || "请再试一次。");
+  }
+
+  function normalizeClassPayload(data) {
+    var body = data;
+    if (typeof body === "string") {
+      try { body = JSON.parse(body); } catch (e) { body = null; }
+    }
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      throw new Error("班级汇总格式不对");
+    }
+    return {
+      progress: Array.isArray(body.progress) ? body.progress : [],
+      events: Array.isArray(body.events) ? body.events : [],
+      directory: Array.isArray(body.directory) ? body.directory : [],
+    };
+  }
+
+  /** One teacher RPC, retried when the browser reports Failed to fetch. */
+  async function readClassPayload(client, opts) {
+    opts = opts || {};
+    var delays = opts.delays || [0, 800, 2000];
+    var pause = opts.wait || wait;
+    var last = null;
+    for (var i = 0; i < delays.length; i++) {
+      if (delays[i]) await pause(delays[i]);
+      try {
+        var res = await client.rpc("teacher_class_board");
+        if (res && res.error) throw res.error;
+        return normalizeClassPayload(res && res.data);
+      } catch (err) {
+        last = err;
+        if (isNotTeacherError(err)) {
+          var denied = new Error(api.DENIED_MESSAGE);
+          denied.code = "not_teacher";
+          throw denied;
+        }
+        if (!isRetryableLoadError(err) || i === delays.length - 1) throw err;
+      }
+    }
+    throw last || new Error("读取失败");
+  }
+
+  api.isNotTeacherError = isNotTeacherError;
+  api.isRetryableLoadError = isRetryableLoadError;
+  api.boardLoadMessage = boardLoadMessage;
+  api.normalizeClassPayload = normalizeClassPayload;
+  api.readClassPayload = readClassPayload;
+
   if (typeof document === "undefined") return;
   if (!document.getElementById("board")) return;
 
@@ -601,46 +680,15 @@
     renderDetail(current);
   }
 
-  async function fetchAll(client, table, columns, orderCol) {
-    var size = 1000;
-    var from = 0;
-    var out = [];
-    while (from < 20000) {
-      var query = client.from(table).select(columns).range(from, from + size - 1);
-      if (orderCol) query = query.order(orderCol, { ascending: true });
-      var res = await query;
-      if (res.error) throw res.error;
-      var batch = res.data || [];
-      for (var i = 0; i < batch.length; i++) out.push(batch[i]);
-      if (batch.length < size) break;
-      from += size;
-    }
-    return out;
-  }
-
   async function loadClass(client, user) {
     if (!api.isTeacher(user)) {
       var denied = new Error(api.DENIED_MESSAGE);
       denied.code = "not_teacher";
       throw denied;
     }
-    var progress = await fetchAll(client, "user_progress", "user_id,save,updated_at", "user_id");
-    var events = await fetchAll(
-      client,
-      "learner_events",
-      "learner_id,user_id,event_type,payload,created_at,headword",
-      "created_at"
-    );
-    var directory = [];
-    var note = "";
-    var dir = await client.rpc("teacher_directory");
-    if (dir.error) {
-      note = "邮箱掩码目录还没生效。请在 Supabase SQL 编辑器运行本目录 supabase/teacher_read.sql，然后刷新。当前用学员编号代替邮箱。";
-    } else {
-      directory = dir.data || [];
-    }
-    var data = api.buildBoard(progress, events, directory, new Date());
-    data.note = note;
+    var payload = await readClassPayload(client);
+    var data = api.buildBoard(payload.progress, payload.events, payload.directory, new Date());
+    data.note = "";
     return data;
   }
 
@@ -712,7 +760,7 @@
         showDenied();
         return;
       }
-      $("cloud-status").textContent = "读取失败。" + humanAuthError(err) + " 若只能看到自己的进度，请运行本目录 supabase/teacher_read.sql 后退出再登录。";
+      $("cloud-status").textContent = boardLoadMessage(err);
     }
   }
 

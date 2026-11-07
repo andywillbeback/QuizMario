@@ -275,6 +275,7 @@ test('class-board REST and RPC reads are not cut off by the 15s auth deadline', 
     ['/rest/v1/learner_events?select=learner_id,created_at&order=created_at.asc', 'GET'],
     ['/rest/v1/user_progress?select=user_id,save,updated_at', 'GET'],
     ['/rest/v1/rpc/teacher_directory', 'POST'],
+    ['/rest/v1/rpc/teacher_class_board', 'POST'],
   ];
   for (const [suffix, method] of paths) {
     const h = makeHarness(call => new Promise((resolve, reject) => {

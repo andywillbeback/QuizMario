@@ -73,15 +73,15 @@ set raw_app_meta_data =
 where lower(email) = 'teacher@example.com';
 ```
 
-全班读取策略在 `grok/supabase/teacher_read.sql`（`public.is_teacher()`，以及 `user_progress` / `learner_events` 的教师 SELECT；学生仍只能读写自己的行）。邮箱在看板上显示为 `an***@163.com` 这种掩码，来自 `public.teacher_directory()`，学生调用得不到行。
+全班一次读取：`public.teacher_class_board()`（`grok/supabase/teacher_read.sql`，可重复执行）。仍只认 JWT `app_metadata.role = teacher`，学生调用会被拒绝。返回已接触词卡和近 14 日精简学习事件，不再把整份存档和全部 `learner_events` 分页拉下来。邮箱掩码仍是 `an***@163.com`，来自同一次结果里的 `teacher_directory()`。
 
 看板图表：
 
 1. 学员数 / 近7日活跃 / 平均掌握% / 薄弱词数
 2. 已接触词条的掌握度分布（`cards.mastery`，不含未学新词）
 3. 近 7 日练习折线（`learner_events` 里的答题和错词本，不含 `vocab.due_review`）
-4. 题型 / 事件占比（有 `payload.task_direction` 时按题型，否则按 `event_type`）
-5. 薄弱词 Top 10（`cards.wrong`、错词本 `active`、`vocab.answer_wrong`、`vocab.wrong_book_add`）
+4. 题型 / 事件占比（近 14 日学习事件；有 `task_direction` 时按题型，否则按 `event_type`）
+5. 薄弱词 Top 10（`cards.wrong`、错词本 `active`，加上近 14 日的 `vocab.answer_wrong` / `vocab.wrong_book_add`）
 6. 学员表（掩码邮箱）。点一行看进度、个人近 7 日答题、薄弱词和最近事件
 7. 没有任何云端行时显示空状态
 8. 近 7 日学习分钟（`save.studyDaily`，可见且 3 分钟内有操作；不把 `session.end` 再加一遍）
