@@ -302,6 +302,18 @@
     };
   }
 
+  /**
+   * 待复习数量 = 今日到期 + 逾期.
+   * due: a touched card whose due is missing, 0, or <= now, and that is not overdue.
+   * overdue: a touched card with due > 0 before local midnight.
+   * Future 学习中 and 已巩固 cards stay out. New cards stay out.
+   * This does not change isLearned or the SRS schedule.
+   */
+  function reviewDueCount(forget) {
+    forget = forget || {};
+    return num(forget.due) + num(forget.overdue);
+  }
+
   function addForget(into, part) {
     into.due += num(part.due);
     into.overdue += num(part.overdue);
@@ -795,6 +807,7 @@
     return clauses.join("；") + "。";
   }
 
+  /** Parent and teacher blurb. Says 待复习数量 for every student, and never says 已学会. */
   function parentSummary(st) {
     st = st || {};
     var name = st.name ? st.name : "这位同学";
@@ -802,7 +815,7 @@
     var touched = num(st.touched);
     var open = name + (track ? "正在使用" + track + "词库" : "的单词练习");
     open += "，已接触 " + touched + " 个词";
-    if (touched > 0) open += "，已学会 " + num(st.learned) + " 个";
+    open += "，待复习数量 " + reviewDueCount(st.forget) + " 个";
     open += "。";
     var activity;
     if (!st.active7) {
@@ -1200,7 +1213,7 @@
   }
 
   function classCsv(board) {
-    var headers = ["姓名", "邮箱", "班级", "词库", "已接触", "已学会", "掌握%", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
+    var headers = ["姓名", "邮箱", "班级", "词库", "已接触", "掌握%", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
     var lines = [headers.join(",")];
     var students = (board && board.students) || [];
     for (var i = 0; i < students.length; i++) {
@@ -1214,7 +1227,6 @@
         st.cls || "",
         st.trackLabel || "",
         st.touched,
-        st.learned,
         st.mastery == null ? "" : st.mastery,
         scoreCell(axes.recognition),
         scoreCell(axes.collocation),
@@ -1222,6 +1234,7 @@
         scoreCell(axes.retention),
         sum(st.line || []),
         st.minutes7 == null ? "" : st.minutes7,
+        reviewDueCount(st.forget),
         st.forget ? st.forget.due : "",
         st.forget ? st.forget.overdue : "",
         st.forget ? st.forget.learning : "",
@@ -1335,7 +1348,8 @@
       "@media (max-width:640px){.charts{grid-template-columns:1fr}.wide{grid-column:auto}}" +
       "</style></head><body><h1>" + escHtml(name) + "的学情</h1><p class=\"muted\">账号 " +
       escHtml(st.email || "—") + (st.cls ? " · 班级 " + escHtml(st.cls) : "") + " · 词库 " +
-      escHtml(st.trackLabel || "—") + " · " + escHtml(generated || "") + "</p><h2>简短评价</h2><p class=\"summary\">" +
+      escHtml(st.trackLabel || "—") + " · 待复习数量 " + reviewDueCount(st.forget) +
+      " · " + escHtml(generated || "") + "</p><h2>简短评价</h2><p class=\"summary\">" +
       escHtml(st.summary || "") + "</p><div class=\"charts\"><section class=\"chart\"><h2>学情雷达</h2><p class=\"muted\">认词、搭配、产出、巩固。样本少于 " +
       MIN_SAMPLE + " 次为样本不足，坐标轴为灰色，不记成 0 分。</p>" + svgRadar(axes) +
       "</section><section class=\"chart\"><h2>近7日练习</h2><p class=\"muted\">" + escHtml(lineNote) + "</p>" +
@@ -1442,50 +1456,7 @@
       n++;
     }
     used[name] = true;
-    return "学员/" + name + ".html";
-  }
-
-  var PACK_INDEX = "请先打开学员报告.html";
-  var PACK_CSV = "附表/班级汇总.csv";
-
-  function packClassLabel(students) {
-    var seen = Object.create(null);
-    var labels = [];
-    students = students || [];
-    for (var i = 0; i < students.length; i++) {
-      var key = classKeyOf(students[i]);
-      if (seen[key]) continue;
-      seen[key] = true;
-      labels.push(classLabelOf(key));
-    }
-    if (!labels.length) return UNFILED_CLASS;
-    return labels.join("、");
-  }
-
-  function packLinkLabel(st, path) {
-    var who = st && st.name ? String(st.name).trim() : "";
-    if (who) return who;
-    return String(path || "").replace(/^学员\//, "").replace(/\.html$/, "") || "学员";
-  }
-
-  /** Root page of the class pack. Lists each 学员 HTML and tells parents to open those, not the spreadsheet. */
-  function packIndexHtml(label, when, entries) {
-    var items = (entries || []).map(function (entry) {
-      var st = entry.student || {};
-      var href = escHtml(entry.name || "");
-      var blurb = st.summary ? "<p class=\"muted\">" + escHtml(st.summary) + "</p>" : "";
-      return "<li><a href=\"" + href + "\">" + escHtml(packLinkLabel(st, entry.name)) + "的学情</a>" + blurb + "</li>";
-    }).join("");
-    if (!items) items = "<li>这个班级还没有学员报告。</li>";
-    return "<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>" +
-      escHtml("聚光单词 · 请先打开学员报告 · " + (label || "")) + "</title><style>" +
-      "body{font-family:'PingFang SC','Noto Sans SC','Segoe UI',sans-serif;color:#1c2430;background:#fff;margin:0;padding:28px;line-height:1.65}" +
-      "h1{font-size:1.45rem;margin:0 0 8px}a{color:#1d4e89}" +
-      ".lead{background:#f7f4ec;border:1px solid #eadcba;border-radius:12px;padding:12px 14px}" +
-      ".muted{color:#5c677a;font-size:.9rem;margin:4px 0 0}ol{padding-left:1.2rem}li{margin:12px 0}" +
-      "</style></head><body><h1>" + escHtml((label || "班级") + " · 图文报告") + "</h1><p class=\"lead\">这是图文报告包，不是表格。请打开下面每位学员的网页，给家长看。每一页都有图表和简短评价。</p>" +
-      "<ol>" + items + "</ol><p class=\"muted\">学员网页在「学员」文件夹里。同包里的「" + escHtml(PACK_CSV) +
-      "」只是教师自用的汇总附表，不要先打开它，也不要把它当成给家长的报告。生成于 " + escHtml(when || "") + "。不含登录凭证。</p></body></html>";
+    return name + ".html";
   }
 
   var UNFILED_CLASS = "未填班级";
@@ -1555,36 +1526,21 @@
   }
 
   /**
-   * One 图文报告包 for the students on this board.
-   * Root file is the HTML index. Each student has 学员/<name>.html.
-   * The spreadsheet sits under 附表/ so a Mac does not open Excel first.
+   * One HTML 学情 page per student, at the zip root.
+   * No index, no spreadsheet, no 附表.
    * No ids, tokens, or raw emails.
    */
   function classZip(board, now) {
     var when = dayKey(now || new Date());
     var students = (board && board.students) || [];
     var used = Object.create(null);
-    var reports = [];
+    var files = [];
     for (var i = 0; i < students.length; i++) {
-      reports.push({
-        name: reportFileName(students[i], i, used),
-        student: students[i],
-      });
-    }
-    var files = [{
-      name: PACK_INDEX,
-      data: utf8Bytes(packIndexHtml(packClassLabel(students), when, reports)),
-    }];
-    for (var r = 0; r < reports.length; r++) {
       files.push({
-        name: reports[r].name,
-        data: utf8Bytes(studentReportHtml(reports[r].student, when)),
+        name: reportFileName(students[i], i, used),
+        data: utf8Bytes(studentReportHtml(students[i], when)),
       });
     }
-    files.push({
-      name: PACK_CSV,
-      data: utf8Bytes("\ufeff" + classCsv(board)),
-    });
     return zipStore(files);
   }
 
@@ -1719,6 +1675,19 @@
   /** Three labeled lists. report:true is for the parent HTML page (no script, no hidden rows). */
   function inventoryListsHtml(inventory, opts) {
     inventory = inventory || {};
+    var report = !!(opts && opts.report);
+    var parentCopy = report || !!(opts && opts.parent);
+    var learnedCopy = parentCopy
+      ? {
+        title: "熟练",
+        hint: "隔天巩固过的词。数字是掌握度。",
+        empty: "还没有达到熟练的词。",
+      }
+      : {
+        title: "熟练 · 已学会",
+        hint: "隔天巩固，并且达到已学会。数字是掌握度。",
+        empty: "还没有达到已学会的词。",
+      };
     var specs = [
       {
         id: "practiced",
@@ -1729,10 +1698,10 @@
       },
       {
         id: "learned",
-        title: "熟练 · 已学会",
+        title: learnedCopy.title,
         score: "掌握",
-        hint: "隔天巩固，并且达到已学会。数字是掌握度。",
-        empty: "还没有达到已学会的词。",
+        hint: learnedCopy.hint,
+        empty: learnedCopy.empty,
       },
       {
         id: "weak",
@@ -2185,12 +2154,10 @@
     studentChartSpecs: studentChartSpecs,
     classCsv: classCsv,
     studentReportHtml: studentReportHtml,
-    packIndexHtml: packIndexHtml,
-    PACK_INDEX: PACK_INDEX,
-    PACK_CSV: PACK_CSV,
     classZip: classZip,
     forgetBucket: forgetBucket,
     forgetCounts: forgetCounts,
+    reviewDueCount: reviewDueCount,
     studyMinuteSeries: studyMinuteSeries,
     msToMinutes: msToMinutes,
     UNFILED_CLASS: UNFILED_CLASS,

@@ -73,6 +73,7 @@ assert.deepStrictEqual(capped.inventory.learned.map(function (row) { return row.
 assert.strictEqual(capped.inventory.learned[0].score, 3);
 const cappedHtml = api.inventoryListsHtml(capped.inventory);
 assert.ok(cappedHtml.indexOf("已练习（45）") > 0);
+assert.ok(cappedHtml.indexOf("熟练 · 已学会") > 0, "student word lists keep the learned label");
 assert.ok(cappedHtml.indexOf("查看更多") > 0);
 assert.ok(cappedHtml.indexOf(">w44<") > 0);
 assert.ok(cappedHtml.indexOf("own-more") > 0);
