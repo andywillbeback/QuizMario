@@ -58,11 +58,16 @@ assert.ok(js.includes('document.getElementById("board")'), "teacher boot stays o
 assert.ok(js.includes("spanGaps: false"), "thin radar points stay gaps");
 assert.ok(js.includes("不画成 0"), "accuracy copy refuses a fake zero");
 assert.ok(html.includes("一键下载全班学情"), "class export button");
-assert.ok(html.includes("请先打开学员报告.html"), "teachers are told to open the report index");
-assert.ok(html.includes("打开「学员」文件夹里的网页"), "download copy points at 学员 HTML");
-assert.ok(html.includes("不要先打开附表"), "spreadsheet is not the lead file");
-assert.ok(js.includes("请解压后先打开「请先打开学员报告.html」"), "status after download names the index");
-assert.ok(js.includes("打开「学员」文件夹里的网页给家长看"), "status tells teachers to open 学员 pages");
+assert.ok(html.includes("每位学员一份 HTML 学情页"), "download is one HTML page per student");
+assert.ok(html.includes("包里没有目录页，也没有附表"), "pack has no index and no spreadsheet");
+assert.ok(!html.includes("请先打开学员报告.html"), "teachers are not sent to a pack index");
+assert.ok(js.includes("每位学员一份 HTML 学情页"), "status after download names the student pages");
+assert.ok(!js.includes("请先打开学员报告"), "status does not name a pack index");
+assert.ok(!js.includes("附表"), "status does not mention a spreadsheet");
+assert.ok(html.includes("<th>待复习数量</th>"), "board column is 待复习数量");
+assert.ok(!html.includes("已学会"), "teacher page does not say 已学会");
+assert.ok(js.includes('statChip("待复习数量"'), "detail chips include 待复习数量");
+assert.ok(!js.includes('statChip("已学会"'), "detail chips do not say 已学会");
 assert.ok(html.includes('id="board-class"'), "class filter");
 assert.ok(html.includes("未填班级"));
 assert.ok(js.includes("下载该班学情"), "per-class zip button");
@@ -246,6 +251,9 @@ assert.ok(student.abilities.every(function (axis) { return axis.score == null; }
 assert.ok(student.summary.indexOf("4 次答题") > 0);
 assert.ok(student.summary.indexOf("3 次练习事件") > 0);
 assert.ok(student.summary.indexOf("小王") === 0);
+assert.ok(student.summary.indexOf("已学会") === -1, "parent summary does not say 已学会");
+assert.ok(student.summary.indexOf("待复习数量 2 个") > 0);
+assert.strictEqual(api.reviewDueCount(student.forget), 2);
 assert.ok(student.summary.indexOf("样本不足") > 0);
 assert.ok(student.summary.indexOf("advice") > 0);
 assert.ok(student.summary.indexOf("anchor@") === -1);
@@ -279,6 +287,8 @@ assert.strictEqual(quiet.inventory.learned.length, 0);
 assert.strictEqual(quiet.inventory.weak.length, 0);
 assert.ok(quiet.email.indexOf("@") === -1, "missing directory entry does not invent an email");
 assert.ok(quiet.summary.indexOf("样本不足") > 0);
+assert.ok(quiet.summary.indexOf("已学会") === -1);
+assert.ok(quiet.summary.indexOf("待复习数量 0 个") > 0);
 assert.ok(!/0分/.test(quiet.summary));
 assert.ok(sentenceCount(quiet.summary) >= 2 && sentenceCount(quiet.summary) <= 4, quiet.summary);
 assert.strictEqual(api.studentChartSpecs(quiet).modes.empty, true);
@@ -432,6 +442,8 @@ assert.strictEqual(axisById(li.abilities, "retention").basis, "learned+retention
 assert.ok(li.summary.indexOf("5 次答题") > 0);
 assert.ok(li.summary.indexOf("10 次练习事件") > 0);
 assert.ok(li.summary.indexOf("小李") === 0);
+assert.ok(li.summary.indexOf("已学会") === -1);
+assert.ok(li.summary.indexOf("待复习数量 5 个") > 0);
 assert.ok(li.summary.indexOf("80分") > 0);
 assert.ok(li.summary.indexOf("lihua@") === -1);
 assert.ok(li.summary.indexOf("rich") === -1);
@@ -451,6 +463,11 @@ assert.ok(richSpecs.activity.eventData, "daily answers and practice events both 
 
 const csv = api.classCsv(rich);
 assert.ok(csv.indexOf("姓名,邮箱,班级,词库") === 0);
+assert.ok(csv.indexOf("待复习数量") > 0);
+assert.ok(csv.indexOf("已学会") === -1, "class csv does not say 已学会");
+const csvHeaders = csv.split("\n")[0].split(",");
+const csvCells = csv.split("\n")[1].split(",");
+assert.strictEqual(csvCells[csvHeaders.indexOf("待复习数量")], "5");
 assert.ok(csv.indexOf("小李") > 0);
 assert.ok(csv.indexOf("li***@school.com") > 0);
 assert.ok(csv.indexOf("lihua@school.com") === -1);
@@ -469,7 +486,9 @@ assert.ok(page.indexOf("近7日正确率") > 0);
 assert.ok(page.indexOf("简短评价") > 0);
 assert.ok(page.indexOf(li.summary) > 0);
 assert.ok(page.indexOf("薄弱词") > 0);
-assert.ok(page.indexOf("已练习") > 0 && page.indexOf("熟练 · 已学会") > 0, "parent page lists all three buckets");
+assert.ok(page.indexOf("已练习") > 0 && page.indexOf("<h2>熟练（") > 0 && page.indexOf("不熟练") > 0, "parent page lists all three buckets");
+assert.ok(page.indexOf("已学会") === -1, "parent page does not say 已学会");
+assert.ok(page.indexOf("待复习数量") > 0);
 assert.ok(page.indexOf('width="360" height="300"') > 0, "radar svg has an explicit size so a parent page still paints it");
 assert.ok(page.indexOf("看英选义") > 0);
 assert.ok(page.indexOf("不画成0") === -1, "a real accuracy series is drawn");
@@ -535,26 +554,17 @@ function zipEntries(buf) {
 }
 
 function assertReportPack(entries, studentNames) {
-  assert.ok(entries.length >= 2, "index plus at least one student, or index plus csv");
-  assert.strictEqual(entries[0].name, "请先打开学员报告.html", "root file is the report index, not a spreadsheet");
-  assert.strictEqual(entries[entries.length - 1].name, "附表/班级汇总.csv", "csv is buried and is not the first entry");
-  assert.ok(entries[0].data.indexOf("图文报告") > 0);
-  assert.ok(entries[0].data.indexOf("给家长看") > 0);
-  assert.ok(entries[0].data.indexOf("简短评价") > 0);
-  assert.ok(entries[0].data.indexOf("不要先打开") > 0);
-  assert.ok(entries[0].data.indexOf("<script") === -1);
-  const csvNames = entries.filter(function (entry) { return /\.csv$/i.test(entry.name); }).map(function (entry) { return entry.name; });
-  assert.deepStrictEqual(csvNames, ["附表/班级汇总.csv"]);
+  assert.strictEqual(entries.length, studentNames.length, "zip is only one HTML page per student");
   assert.ok(!entries.some(function (entry) {
-    return entry.name === "班级学情.csv" || (!entry.name.includes("/") && /\.csv$/i.test(entry.name));
-  }), "no root csv for Excel to open first");
-  const pages = entries.filter(function (entry) { return entry.name.indexOf("学员/") === 0 && entry.name.endsWith(".html"); });
-  assert.strictEqual(pages.length, studentNames.length);
+    return /\.csv$/i.test(entry.name) || entry.name.indexOf("附表") >= 0 || entry.name.indexOf("/") >= 0;
+  }), "no spreadsheet, no 附表, no folders");
+  assert.ok(!entries.some(function (entry) { return entry.name.indexOf("请先打开") >= 0; }), "no pack index");
   studentNames.forEach(function (name) {
-    const page = pages.filter(function (entry) { return entry.name === "学员/" + name + ".html"; })[0];
+    const page = entries.filter(function (entry) { return entry.name === name + ".html"; })[0];
     assert.ok(page, "missing " + name);
-    assert.ok(entries[0].data.indexOf("学员/" + name + ".html") > 0, "index lists " + name);
     assert.ok(page.data.indexOf("简短评价") > 0, name);
+    assert.ok(page.data.indexOf("待复习数量") > 0, name);
+    assert.ok(page.data.indexOf("已学会") === -1, name);
     assert.ok(page.data.indexOf("学情雷达") > 0, name);
     assert.ok(page.data.indexOf("题型占比") > 0, name);
     assert.ok(page.data.indexOf("近7日正确率") > 0, name);
@@ -566,11 +576,10 @@ function assertReportPack(entries, studentNames) {
 
 const classOneEntries = zipEntries(Buffer.from(classOne.bytes));
 assertReportPack(classOneEntries, ["小王"]);
-assert.ok(classOneEntries[0].data.indexOf("1 · 图文报告") > 0);
+assert.strictEqual(classOneEntries[0].name, "小王.html");
 assert.ok(classOneEntries[0].data.indexOf("学员2") === -1);
-assert.strictEqual(classOneEntries.filter(function (entry) { return entry.name.indexOf("学员/") === 0; }).length, 1);
-assert.ok(classOneEntries[classOneEntries.length - 1].data.indexOf("小王") > 0);
-assert.ok(classOneEntries[classOneEntries.length - 1].data.indexOf("student-b") === -1);
+assert.ok(classOneEntries[0].data.indexOf("小王") > 0);
+assert.ok(classOneEntries[0].data.indexOf("student-b") === -1);
 
 const zip = Buffer.from(api.classZip(board, now));
 assert.strictEqual(zip[0], 0x50);
@@ -579,9 +588,10 @@ const entries = zipEntries(zip);
 assertReportPack(entries, ["小王", "学员2"]);
 const zipText = zip.toString("utf8");
 assert.ok(zipText.indexOf("班级学情.csv") === -1);
-assert.ok(zipText.indexOf("附表/班级汇总.csv") > 0);
-assert.ok(zipText.indexOf("请先打开学员报告.html") > 0);
-assert.ok(zipText.indexOf("学员/小王.html") > 0);
+assert.ok(zipText.indexOf("附表") === -1);
+assert.ok(zipText.indexOf(".csv") === -1);
+assert.ok(zipText.indexOf("请先打开学员报告.html") === -1);
+assert.ok(zipText.indexOf("小王.html") > 0);
 assert.ok(zipText.indexOf("样本不足") > 0);
 assert.ok(zipText.indexOf("简短评价") > 0);
 assert.ok(zipText.indexOf("题型占比") > 0);
@@ -595,12 +605,54 @@ assert.ok(!/eyJ[A-Za-z0-9_-]{10,}\./.test(zipText));
 const escapedPack = zipEntries(Buffer.from(api.classZip({
   students: [{ name: "<b>", email: "a***@x.com", summary: "安全<script>", cls: "2", abilities: [], weak: [], line: [] }],
 }, now)));
+assert.strictEqual(escapedPack.length, 1);
+assert.strictEqual(escapedPack[0].name, "b.html");
 assert.ok(escapedPack[0].data.indexOf("&lt;b&gt;") > 0);
 assert.ok(escapedPack[0].data.indexOf("<b>") === -1);
-assert.ok(escapedPack[0].data.indexOf("<script>") === -1);
-assert.ok(escapedPack[0].data.indexOf("学员/b.html") > 0);
-assert.ok(escapedPack[1].data.indexOf("&lt;b&gt;") > 0);
-assert.ok(escapedPack[1].data.indexOf("<script") === -1);
+assert.ok(escapedPack[0].data.indexOf("<script") === -1);
+assert.ok(escapedPack[0].data.indexOf("待复习数量") > 0);
+
+const zeroLearned = api.parentSummary({
+  name: "小陈",
+  trackLabel: "中考",
+  touched: 213,
+  learned: 0,
+  forget: { due: 10, overdue: 3 },
+  abilities: [],
+  weak: [],
+  active7: false,
+});
+assert.ok(api.parentSummary.toString().indexOf("已学会") === -1);
+assert.ok(zeroLearned.indexOf("已学会") === -1);
+assert.ok(zeroLearned.indexOf("已接触 213 个词，待复习数量 13 个") > 0);
+assert.strictEqual(api.reviewDueCount({ due: 10, overdue: 3 }), 13);
+assert.strictEqual(api.reviewDueCount(null), 0);
+
+const juniorBoard = api.buildBoard([{
+  user_id: "junior",
+  updated_at: now.toISOString(),
+  save: {
+    track: "zhongkao",
+    profile: { name: "小初", cls: "初三" },
+    cards: {
+      "z|0::one": { state: "review", interval: 2, mastery: 1, reps: 2, correct: 2, wrong: 0 },
+      "z|0::two": { state: "review", interval: 3, mastery: 1, reps: 3, correct: 3, wrong: 0, due: new Date(2026, 9, 23, 8, 0, 0).getTime() },
+    },
+    daily: {},
+  },
+}], [], [], now);
+const junior = juniorBoard.students[0];
+assert.strictEqual(junior.learned, 0, "strict learned flag stays internal");
+assert.ok(junior.summary.indexOf("已学会") === -1);
+assert.ok(junior.summary.indexOf("待复习数量 2 个") > 0);
+const juniorPack = api.classPack(juniorBoard, "初三", now);
+assert.strictEqual(juniorPack.count, 1);
+assert.strictEqual(juniorPack.filename, "聚光单词-学情-初三-2026-10-24.zip");
+const juniorEntries = zipEntries(Buffer.from(juniorPack.bytes));
+assert.deepStrictEqual(juniorEntries.map(function (entry) { return entry.name; }), ["小初.html"]);
+assert.ok(juniorEntries[0].data.indexOf(junior.summary) > 0);
+assert.ok(juniorEntries[0].data.indexOf("待复习数量 2") > 0);
+assert.ok(juniorEntries[0].data.indexOf("已学会") === -1);
 
 const phrases = [];
 for (let i = 0; i < 5; i++) {
@@ -734,6 +786,8 @@ const zhou = missBoard.students[0];
 assert.ok(zhou.accuracy.scores.indexOf(0) >= 0, "five wrong answers are a real 0, not a gap");
 assert.ok(zhou.summary.indexOf("0分") > 0);
 assert.ok(zhou.summary.indexOf("样本不足") > 0);
+assert.ok(zhou.summary.indexOf("已学会") === -1);
+assert.ok(zhou.summary.indexOf("待复习数量 0 个") > 0);
 assert.ok(sentenceCount(zhou.summary) >= 2 && sentenceCount(zhou.summary) <= 4, zhou.summary);
 assert.strictEqual(api.studentChartSpecs(zhou).accuracy.empty, false);
 assert.ok(api.studentChartSpecs(zhou).accuracy.data.indexOf(0) >= 0);

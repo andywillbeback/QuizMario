@@ -333,7 +333,7 @@
         "<td>" + esc(st.trackLabel) + "</td>" +
         "<td>" + st.touched + "</td>" +
         "<td>" + (st.mastery == null ? "—" : st.mastery) + "</td>" +
-        "<td>" + st.learned + "</td>" +
+        "<td>" + api.reviewDueCount(st.forget) + "</td>" +
         "<td>" + st.weakCount + "</td>" +
         "<td>" + (st.active7 ? "活跃" : "—") + "</td>" +
         "<td>" + esc(st.updatedAt || "—") + "</td></tr>";
@@ -480,7 +480,7 @@
         statChip("词库", st.trackLabel || "—"),
         statChip("已接触", st.touched),
         statChip("掌握", st.mastery == null ? "—" : st.mastery + "%"),
-        statChip("已学会", st.learned),
+        statChip("待复习数量", api.reviewDueCount(st.forget)),
         statChip("近7日答题", st.answers7),
         statChip("近7日分钟", st.minutes7 == null ? "—" : st.minutes7),
         statChip("逾期", st.forget ? st.forget.overdue : 0),
@@ -495,6 +495,7 @@
       " · 最佳 " + st.bestStreak +
       " · 错词本 " + st.bookActive +
       " · 近7日练习事件 " + st.practice7 +
+      " · 待复习数量 " + api.reviewDueCount(st.forget) +
       (st.forget ? " · 今日到期 " + st.forget.due + " · 学习中 " + st.forget.learning + " · 已巩固 " + st.forget.solid : "");
     var lineHint = $("detail-line-hint");
     if (lineHint) {
@@ -655,7 +656,7 @@
         practiced: [],
         learned: [],
         weak: st.weak || [],
-      });
+      }, { parent: true });
     }
     $("student-timeline").innerHTML = st.timeline.length
       ? st.timeline.map(function (row) {
@@ -829,8 +830,8 @@
       link.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
       if (status) {
-        status.textContent = "已下载「" + pack.label + "」图文报告（" + pack.count +
-          " 名学员）。请解压后先打开「请先打开学员报告.html」，或打开「学员」文件夹里的网页给家长看。每页都有图表和简短评价。附表里的汇总表不是主报告。";
+        status.textContent = "已下载「" + pack.label + "」学情（" + pack.count +
+          " 名学员）。解压后是每位学员一份 HTML 学情页，直接给家长打开。";
       }
     } catch (err) {
       if (status) status.textContent = "下载失败。请再试一次。";
