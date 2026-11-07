@@ -89,9 +89,13 @@ assert.strictEqual(api.isTeacher({ app_metadata: { provider: "email" } }), false
 assert.ok(api.isTeacher.toString().includes("app_metadata"));
 assert.ok(!api.isTeacher.toString().includes("user_metadata"));
 
-const gateAt = js.indexOf("if (!api.isTeacher(user))");
-const queryAt = js.indexOf('"user_progress"', gateAt);
-assert.ok(gateAt > 0 && queryAt > gateAt, "class query stays behind the teacher gate");
+const loadAt = js.indexOf("async function loadClass");
+const gateAt = js.indexOf("if (!api.isTeacher(user))", loadAt);
+const queryAt = js.indexOf("readClassPayload", gateAt);
+assert.ok(loadAt > 0 && gateAt > loadAt && queryAt > gateAt, "class query stays behind the teacher gate");
+assert.ok(!js.includes("fetchAll"), "the board does not page full tables");
+assert.ok(!js.includes("若只能看到自己的进度"), "a network failure is not blamed on teacher_read.sql");
+assert.ok(js.includes("这不是教师权限问题"));
 assert.ok(!js.includes("user.user_metadata") && !/user_metadata\.role\s*===/.test(js), "board does not authorize from user_metadata");
 
 for (const file of ["grok/teacher.html", "grok/teacher.js", "grok/config.js", "grok/supabase/teacher_read.sql"]) {
@@ -113,6 +117,15 @@ assert.ok(!sql.includes("drop policy if exists learner_events_select_own"));
 assert.ok(!/create policy[\s\S]*?for (insert|update|delete)[\s\S]*?is_teacher\(\)/i.test(sql));
 assert.ok(sql.includes("raw_app_meta_data"));
 assert.ok(sql.includes("private.teacher_directory"));
+assert.ok(sql.includes("public.teacher_class_board"));
+assert.ok(sql.includes("private.board_card_touched"));
+assert.ok(sql.includes("interval '14 days'"));
+assert.ok(sql.includes("raise exception 'not_teacher'"));
+const boardFn = sql.slice(sql.indexOf("function public.teacher_class_board()"));
+const boardHead = boardFn.slice(0, boardFn.indexOf("as $$"));
+assert.ok(boardHead.includes("security invoker"));
+assert.ok(!boardHead.includes("security definer"));
+assert.ok(sql.includes("revoke all on function public.teacher_class_board() from anon"));
 
 assert.ok(!index.includes('href="teacher.html"'), "students do not get a teacher-board link");
 assert.ok(!login.includes('href="teacher.html"') && !login.includes("教师看板"), "login has no teacher board");
@@ -734,4 +747,49 @@ const report = api.decodeReport("QMR1." + Buffer.from(JSON.stringify({
 assert.strictEqual(report.n, "a");
 assert.strictEqual(api.totals(report).learned, 1);
 
-console.log("teacher-dashboard ok");
+const networkErr = { name: "TypeError", message: "TypeError: Failed to fetch" };
+assert.strictEqual(api.isRetryableLoadError(networkErr), true);
+assert.ok(api.boardLoadMessage(networkErr).indexOf("teacher_read.sql") === -1);
+assert.ok(api.boardLoadMessage(networkErr).indexOf("只能看到自己的进度") === -1);
+assert.ok(api.boardLoadMessage(networkErr).indexOf("网络中断") > 0);
+const missingFn = { code: "PGRST202", message: "Could not find the function public.teacher_class_board" };
+assert.strictEqual(api.isRetryableLoadError(missingFn), false);
+assert.ok(api.boardLoadMessage(missingFn).indexOf("teacher_read.sql") > 0);
+assert.strictEqual(api.isNotTeacherError({ message: "not_teacher", code: "42501" }), true);
+assert.strictEqual(api.isRetryableLoadError({ message: "not_teacher", code: "42501" }), false);
+
+const packed = api.normalizeClassPayload({
+  progress: progress,
+  events: events,
+  directory: [{ user_id: "student-a", masked_email: "anchor@school.com" }],
+});
+assert.strictEqual(api.buildBoard(packed.progress, packed.events, packed.directory, now).kpis.students, 2);
+assert.throws(function () { api.normalizeClassPayload(null); }, /班级汇总格式不对/);
+
+let attempts = 0;
+api.readClassPayload({
+  rpc: function () {
+    attempts += 1;
+    if (attempts < 3) return Promise.resolve({ error: networkErr });
+    return Promise.resolve({ data: { progress: [], events: [], directory: [] } });
+  },
+}, { delays: [0, 0, 0], wait: function () { return Promise.resolve(); } }).then(function (payload) {
+  assert.strictEqual(attempts, 3);
+  assert.deepStrictEqual(payload, { progress: [], events: [], directory: [] });
+  let once = 0;
+  return api.readClassPayload({
+    rpc: function () {
+      once += 1;
+      return Promise.resolve({ error: { message: "not_teacher", code: "42501" } });
+    },
+  }, { delays: [0, 0, 0], wait: function () { return Promise.resolve(); } }).then(function () {
+    throw new Error("student rpc should fail");
+  }, function (err) {
+    assert.strictEqual(once, 1);
+    assert.strictEqual(err.code, "not_teacher");
+    console.log("teacher-dashboard ok");
+  });
+}).catch(function (err) {
+  console.error(err);
+  process.exit(1);
+});
