@@ -645,7 +645,10 @@ async function browserCheck() {
       const s = await snap();
       if (!s || s.gate || s.good || s.prompt === "be able to") return null;
       if (s.clear) return s;
-      if (/word-universe\.html\?track=zhongkao&set=1/.test(s.href)) return s;
+      if (/word-universe\.html\?track=zhongkao&set=1/.test(s.href)) {
+        const loaded=await evaluate(`typeof window.QuizMarioAccountStore !== 'undefined' && typeof window.QuizMarioWordUniverse !== 'undefined'`);
+        return loaded ? s : null;
+      }
       if (s.play && !s.feedback && s.choices.length === 4) return s;
       return null;
     }, 8000, "advanced past the collocation gate");
@@ -673,7 +676,10 @@ async function browserCheck() {
       const s = await snap();
       if (!s || s.gate || s.good) return null;
       if (s.clear) return s;
-      if (/word-universe\.html\?track=zhongkao&set=1/.test(s.href)) return s;
+      if (/word-universe\.html\?track=zhongkao&set=1/.test(s.href)) {
+        const loaded=await evaluate(`typeof window.QuizMarioAccountStore !== 'undefined' && typeof window.QuizMarioWordUniverse !== 'undefined'`);
+        return loaded ? s : null;
+      }
       if (s.play && !s.feedback && s.choices.length === 4) return s;
       return null;
     }, 8000, "advanced after a lemma with no related");
