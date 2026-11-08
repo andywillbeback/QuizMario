@@ -686,6 +686,21 @@ async function main() {
       return true;
     })(${JSON.stringify(meaning)})`);
     assert.strictEqual(picked, true, "correct meaning choice clicked, saw " + JSON.stringify(picked));
+    // Some randomly dealt lemmas require a primary collocation before the
+    // answer is complete. Solve that visible stage before expecting its VO.
+    const gatedStreak = await evaluate(`(() => {
+      const box=document.getElementById('prompt-box'),phrase=box&&box.getAttribute('data-colloc-gate');
+      if(!phrase)return {gated:false};
+      const premature=(window.__QM_AUDIO||[]).slice(${audioBefore}).some(src=>src.indexOf('01_first_blood.m4a')!==-1);
+      const bank=(window.VOCAB_EXAM_TRACKS||[]).find(t=>t.id===__QM.track);
+      const hit=QuizMarioRelated.lookup(QuizMarioRelated.indexTrack(bank.sets),phrase);
+      const gloss=hit&&hit.word&&hit.word.meaning_zh;
+      const choice=Array.from(document.querySelectorAll('#choices button')).find(b=>b.textContent.replace(/^\\d+\\.\\s+/,'')===gloss);
+      if(!choice)return {gated:true,answered:false,phrase};
+      choice.click();return {gated:true,answered:true,premature,phrase};
+    })()`);
+    if(gatedStreak.gated){assert.strictEqual(gatedStreak.premature,false,'First blood waits for the required collocation');assert.strictEqual(gatedStreak.answered,true,JSON.stringify(gatedStreak));}
+
     const after = await waitFor(async () => {
       const s = await snap();
       const fresh = (s.audio || []).slice(audioBefore);

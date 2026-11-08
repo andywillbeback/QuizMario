@@ -346,7 +346,8 @@ async function main() {
       const snap = await evalRetry(`(() => {
         const reg = document.getElementById("mode-register");
         const form = document.getElementById("auth-form");
-        if (!reg || !form || location.href.indexOf("/grok/login.html") === -1) return null;
+        const submit = document.getElementById("btn-submit");
+        if (!reg || !form || !submit || !submit.textContent.trim() || location.href.indexOf("/grok/login.html") === -1) return null;
         const gate = document.getElementById("btn-gate-zhongkao");
         return {
           pressed: reg.getAttribute("aria-pressed"),
