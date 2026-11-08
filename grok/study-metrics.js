@@ -29,6 +29,7 @@
     "vocab.answer_wrong": "答错",
     "vocab.answer_unknown": "不会",
     "vocab.wrong_book_add": "错词本",
+    "vocab.notebook_add": "加入笔记本",
     "vocab.due_review": "到期信号",
     "session.start": "开始学习",
     "session.end": "学习结束",
