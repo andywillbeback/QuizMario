@@ -508,7 +508,7 @@ async function browserCheck() {
     };
     const snap = () => evaluate(SNAP);
     const shot = async (name) => {
-      const dir = "/opt/cursor/artifacts/screenshots";
+      const dir = path.join(require("os").tmpdir(), "quizmario-test-artifacts", path.basename(__filename), "screenshots");
       fs.mkdirSync(dir, { recursive: true });
       const png = await cdp.send("Page.captureScreenshot", { format: "png" }, sessionId);
       const file = path.join(dir, name + ".png");

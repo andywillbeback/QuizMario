@@ -387,7 +387,7 @@ async function main() {
     }
 
     async function shot(name) {
-      const dir = "/opt/cursor/artifacts/screenshots";
+      const dir = path.join(require("os").tmpdir(), "quizmario-test-artifacts", path.basename(__filename), "screenshots");
       fs.mkdirSync(dir, { recursive: true });
       const png = await cdp.send("Page.captureScreenshot", { format: "png" }, sessionId);
       const file = path.join(dir, name + ".png");
@@ -698,7 +698,7 @@ async function main() {
     assert.ok(!freshSpeech.some((text) => text === "First blood" || text === "Shut down"), freshSpeech.join(" | "));
     assert.ok(freshSpeech.indexOf(streakCard.word) !== -1, "headword still spoken on the streak card");
 
-    const outDir = "/opt/cursor/artifacts";
+    const outDir = path.join(require("os").tmpdir(), "quizmario-test-artifacts", path.basename(__filename));
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, "speech-spoken.json"), JSON.stringify({
       viewport: { width: 390, height: 844 },
