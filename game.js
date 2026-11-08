@@ -3528,7 +3528,10 @@
   };
 
   window.__QM.onSessionReady = function () {
-    if (sessionKind === "placement" && !currentNeedsPlacement()) {
+    const play = $("screen-play");
+    // A late cloud callback may cancel a stale running probe, but must leave
+    // an already completed starting-set offer on screen.
+    if (sessionKind === "placement" && play && play.classList.contains("active") && !currentNeedsPlacement()) {
       playGen += 1;
       stopChallenge();
       hidePlacementNote();
