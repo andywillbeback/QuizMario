@@ -50,11 +50,15 @@
     if (!body || typeof body !== "object" || Array.isArray(body)) {
       throw new Error("班级汇总格式不对");
     }
-    return {
+    var normalized = {
       progress: Array.isArray(body.progress) ? body.progress : [],
       events: Array.isArray(body.events) ? body.events : [],
       directory: Array.isArray(body.directory) ? body.directory : [],
     };
+    if (typeof body.generated_at === "string" && body.generated_at) normalized.generated_at = body.generated_at;
+    if (typeof body.snapshot_version === "string" && body.snapshot_version) normalized.snapshot_version = body.snapshot_version;
+    if (typeof body.event_since === "string" && body.event_since) normalized.event_since = body.event_since;
+    return normalized;
   }
 
   /** One teacher RPC, retried when the browser reports Failed to fetch. */
@@ -101,6 +105,7 @@
   var charts = {};
   var board = null;
   var selectedId = "";
+  var loadEpoch = 0;
   /** null = every class. "" = 未填班级. */
   var selectedClass = null;
   var PALETTE = ["#8eb7ff", "#e6c98a", "#7ddec8", "#f0a0c0", "#c9b6ff", "#f3d37a", "#9fd0ff"];
@@ -478,15 +483,20 @@
     if (stats) {
       stats.innerHTML = [
         statChip("词库", st.trackLabel || "—"),
+        statChip("统计范围", "全部词库累计"),
         statChip("已接触", st.touched),
-        statChip("掌握", st.mastery == null ? "—" : st.mastery + "%"),
+        statChip("进度指数", st.mastery == null ? "—" : st.mastery),
         statChip("待复习数量", api.reviewDueCount(st.forget)),
         statChip("近7日答题", st.answers7),
+        statChip("答题事件", st.answerEvents7),
+        statChip("错词本标记", st.wrongBookEvents7),
         statChip("近7日分钟", st.minutes7 == null ? "—" : st.minutes7),
         statChip("逾期", st.forget ? st.forget.overdue : 0),
         statChip("薄弱词", st.weakCount),
       ].join("");
     }
+    var notes = $("detail-data-notes");
+    if (notes) notes.textContent = api.reportDataNotes(st);
     abilityLegend(st);
     $("detail-progress").textContent =
       (st.cls ? "班级 " + st.cls + " · " : "") +
@@ -688,7 +698,7 @@
       throw denied;
     }
     var payload = await readClassPayload(client);
-    var data = api.buildBoard(payload.progress, payload.events, payload.directory, new Date());
+    var data = api.fromSnapshot(payload);
     data.note = "";
     return data;
   }
@@ -746,6 +756,7 @@
   }
 
   async function openBoard(client, user) {
+    var epoch = ++loadEpoch;
     if (!api.isTeacher(user)) {
       showDenied();
       return;
@@ -754,14 +765,16 @@
     $("cloud-status").textContent = "正在读取云端进度…";
     try {
       var data = await loadClass(client, user);
-      $("cloud-status").textContent = data.note || ("已更新 " + data.kpis.students + " 名学员");
+      if (epoch !== loadEpoch) return;
+      $("cloud-status").textContent = data.note || ("已核对 " + data.kpis.students + " 个账号 · 学生隔离与数量校验通过 · 数据读取 " + data.dataReadAt);
       paint(data);
     } catch (err) {
+      if (epoch !== loadEpoch) return;
       if (err && err.code === "not_teacher") {
         showDenied();
         return;
       }
-      $("cloud-status").textContent = boardLoadMessage(err);
+      $("cloud-status").textContent = boardLoadMessage(err) + (board && board.dataReadAt ? " 当前仍为上次读取的数据：" + board.dataReadAt : "");
     }
   }
 
@@ -798,6 +811,7 @@
   }
 
   async function logout() {
+    loadEpoch++;
     var client = clientOrNull();
     if (client) {
       try { await client.auth.signOut(); } catch (e) {}
@@ -812,6 +826,11 @@
     var status = $("cloud-status");
     if (!board) {
       if (status) status.textContent = "还没有可下载的班级数据。请先刷新。";
+      return;
+    }
+    var checked = api.auditBoardSnapshot(board, board.sourcePayload, new Date(board.dataReadAt));
+    if (!checked.ok) {
+      if (status) status.textContent = "统计校验未通过，已停止生成报告。请刷新重新核对。";
       return;
     }
     try {

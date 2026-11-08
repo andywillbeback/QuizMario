@@ -23,11 +23,11 @@ const game = read("grok/game.js");
 const login = read("grok/login.html");
 
 assert.ok(index.includes('id="stats-panel"') && index.includes("我的学习数据"));
-assert.ok(index.indexOf('src="study-metrics.js"') < index.indexOf('src="own-study.js'));
+assert.ok(index.indexOf('src="study-metrics.js') < index.indexOf('src="own-study.js'));
 assert.ok(index.indexOf('src="own-study.js') < index.indexOf('src="game.js'));
-assert.ok(!index.includes('src="teacher.js"'), "student home does not load the teacher board");
+assert.ok(!index.includes('src="teacher.js'), "student home does not load the teacher board");
 assert.ok(!index.includes('href="teacher.html"'));
-assert.ok(!login.includes('src="study-metrics.js"') && !login.includes('src="own-study.js"'), "login stays unchanged");
+assert.ok(!login.includes('src="study-metrics.js') && !login.includes('src="own-study.js"'), "login stays unchanged");
 for (const banned of ["teacher_directory", "classZip", "user_progress", "一键下载", "教师看板"]) {
   assert.ok(!index.includes(banned), "index shows " + banned);
   assert.ok(!own.includes(banned), "own-study shows " + banned);

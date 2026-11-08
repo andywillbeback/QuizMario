@@ -152,6 +152,12 @@ as $$
       or coalesce((card->>'wrong')::numeric, 0) > 0
       or coalesce((card->>'unknown')::numeric, 0) > 0
       or coalesce((card->>'mastery')::numeric, 0) > 0
+      or coalesce((card #>> '{polysemy,correct}')::numeric, 0)
+         + coalesce((card #>> '{polysemy,wrong}')::numeric, 0)
+         + coalesce((card #>> '{polysemy,unknown}')::numeric, 0) > 0
+      or coalesce((card #>> '{collocationEvidence,correct}')::numeric, 0)
+         + coalesce((card #>> '{collocationEvidence,wrong}')::numeric, 0)
+         + coalesce((card #>> '{collocationEvidence,unknown}')::numeric, 0) > 0
       or coalesce((card #>> '{spelling,correct}')::numeric, 0)
          + coalesce((card #>> '{spelling,wrong}')::numeric, 0)
          + coalesce((card #>> '{spelling,unknown}')::numeric, 0) > 0
@@ -183,6 +189,8 @@ as $$
       'reps', card->'reps',
       'due', card->'due',
       'lapses', card->'lapses',
+      'polysemy', card->'polysemy',
+      'collocationEvidence', card->'collocationEvidence',
       'spelling', case
         when jsonb_typeof(card->'spelling') = 'object' then jsonb_strip_nulls(jsonb_build_object(
           'correct', card #> '{spelling,correct}',
@@ -206,6 +214,7 @@ as $$
   select case
     when payload is null or jsonb_typeof(payload) <> 'object' then '{}'::jsonb
     else jsonb_strip_nulls(jsonb_build_object(
+      'track', payload->'track',
       'gloss_zh', payload->'gloss_zh',
       'headword', payload->'headword',
       'lemma', payload->'lemma',
@@ -252,6 +261,9 @@ begin
   end if;
 
   select jsonb_build_object(
+    'generated_at', now(),
+    'snapshot_version', 'teacher-board-v2',
+    'event_since', now() - interval '14 days',
     'progress', coalesce(progress.rows, '[]'::jsonb),
     'events', coalesce(events.rows, '[]'::jsonb),
     'directory', coalesce(directory.rows, '[]'::jsonb)
@@ -262,6 +274,7 @@ begin
       jsonb_build_object(
         'user_id', p.user_id,
         'updated_at', p.updated_at,
+        'source_card_count', coalesce(slim.card_count, 0),
         'save', jsonb_strip_nulls(jsonb_build_object(
           'track', p.save->'track',
           'points', p.save->'points',
@@ -275,7 +288,7 @@ begin
           'wrongBook', case when jsonb_typeof(p.save->'wrongBook') = 'object' then p.save->'wrongBook' else '{}'::jsonb end,
           'cards', coalesce(slim.cards, '{}'::jsonb)
         ))
-      )
+      ) order by p.user_id
     ) as rows
     from public.user_progress p
     left join lateral (
@@ -292,6 +305,8 @@ begin
           'reps', c.value->'reps',
           'due', c.value->'due',
           'lapses', c.value->'lapses',
+          'polysemy', c.value->'polysemy',
+          'collocationEvidence', c.value->'collocationEvidence',
           'spelling', case
             when jsonb_typeof(c.value->'spelling') = 'object' then jsonb_strip_nulls(jsonb_build_object(
               'correct', c.value #> '{spelling,correct}',
@@ -303,7 +318,7 @@ begin
             else null
           end
         ))
-      ) as cards
+      ) as cards, count(*)::integer as card_count
       from jsonb_each(coalesce(p.save->'cards', '{}'::jsonb)) as c(key, value)
       where c.value->>'state' in ('learning', 'review')
         or coalesce((c.value->>'reps')::numeric, 0) > 0
@@ -311,6 +326,12 @@ begin
         or coalesce((c.value->>'wrong')::numeric, 0) > 0
         or coalesce((c.value->>'unknown')::numeric, 0) > 0
         or coalesce((c.value->>'mastery')::numeric, 0) > 0
+        or coalesce((c.value #>> '{polysemy,correct}')::numeric, 0)
+           + coalesce((c.value #>> '{polysemy,wrong}')::numeric, 0)
+           + coalesce((c.value #>> '{polysemy,unknown}')::numeric, 0) > 0
+        or coalesce((c.value #>> '{collocationEvidence,correct}')::numeric, 0)
+           + coalesce((c.value #>> '{collocationEvidence,wrong}')::numeric, 0)
+           + coalesce((c.value #>> '{collocationEvidence,unknown}')::numeric, 0) > 0
         or coalesce((c.value #>> '{spelling,correct}')::numeric, 0)
            + coalesce((c.value #>> '{spelling,wrong}')::numeric, 0)
            + coalesce((c.value #>> '{spelling,unknown}')::numeric, 0) > 0
@@ -325,6 +346,8 @@ begin
   cross join (
     select jsonb_agg(
       jsonb_build_object(
+        'event_id', e.event_id,
+        'item_id', e.item_id,
         'learner_id', e.learner_id,
         'user_id', e.user_id,
         'event_type', e.event_type,
@@ -335,6 +358,7 @@ begin
         'payload', case
           when e.payload is null or jsonb_typeof(e.payload) <> 'object' then '{}'::jsonb
           else jsonb_strip_nulls(jsonb_build_object(
+            'track', e.payload->'track',
             'gloss_zh', e.payload->'gloss_zh',
             'headword', e.payload->'headword',
             'lemma', e.payload->'lemma',
@@ -353,10 +377,11 @@ begin
             'scene', e.payload->'scene'
           ))
         end
-      )
+      ) order by e.created_at, e.event_id
     ) as rows
     from public.learner_events e
     where e.created_at >= now() - interval '14 days'
+      and e.created_at <= now()
   ) events
   cross join (
     select jsonb_agg(

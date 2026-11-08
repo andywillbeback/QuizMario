@@ -37,6 +37,8 @@
   var FORGET_COLORS = ["#c9842e", "#c45b7a", "#2e6fc4", "#2f9e8f"];
   var MASTERY_LABELS = ["0", "0.5", "1", "2", "3"];
   var DENIED_MESSAGE = "这个账号不是教师，不能打开班级看板。授权只认 app_metadata 里的 role=teacher，不认 user_metadata。";
+  var SNAPSHOT_VERSION = "teacher-board-v2";
+  var CALCULATION_VERSION = "teacher-metrics-2026-11-08.2";
 
   function num(v) {
     var n = Number(v);
@@ -125,7 +127,7 @@
     if (!card || typeof card !== "object") return false;
     if (card.state === "learning" || card.state === "review") return true;
     if (num(card.reps) > 0 || num(card.correct) > 0 || num(card.wrong) > 0 || num(card.unknown) > 0 || num(card.mastery) > 0) return true;
-    return spellingTouched(card.spelling);
+    return spellingTouched(card.spelling) || spellingTouched(card.polysemy) || spellingTouched(card.collocationEvidence);
   }
 
   /** 1 when the card is in review with an interval of at least one day, else 0.5 if touched. */
@@ -198,6 +200,75 @@
   function trackLabel(id) {
     if (!id) return "—";
     return TRACK_NAMES[id] || String(id);
+  }
+
+  function trackId(value) {
+    return typeof value === "string" && /^[a-z0-9][a-z0-9_-]*$/i.test(value.trim())
+      ? value.trim().toLowerCase() : "";
+  }
+
+  function itemTrack(key) {
+    var text = String(key || "");
+    var explicit = /^([a-z0-9][a-z0-9_-]*)\|\d+::/i.exec(text);
+    if (explicit) return trackId(explicit[1]);
+    return /^\d+::/.test(text) ? "core" : "";
+  }
+
+  /** A menu selection does not establish which track was actually practiced. */
+  function practiceTrackContext(save, events, now) {
+    var observed = Object.create(null);
+    var breakdown = Object.create(null);
+    var cards = asObject(save && save.cards);
+    Object.keys(cards).forEach(function (key) {
+      var id = itemTrack(key);
+      if (!cardTouched(cards[key])) return;
+      if (id) observed[id] = true;
+      var slot = id || "unattributed";
+      var row = breakdown[slot] || {track:id,label:id ? trackLabel(id) : "未标明词库",cards:0,due:0};
+      row.cards++;
+      var bucket = forgetBucket(cards[key], now);
+      if (bucket === "due" || bucket === "overdue") row.due++;
+      breakdown[slot] = row;
+    });
+    var latest = 0;
+    var latestTracks = Object.create(null);
+    var conflicting = 0;
+    var missing = 0;
+    var clock = new Date(now || Date.now()).getTime();
+    (events || []).forEach(function (ev) {
+      if (!answerOutcome(ev)) return;
+      var p = asObject(ev.payload);
+      var candidates = [trackId(ev.track), trackId(p.track), itemTrack(ev.item_id || p.item_id)];
+      var ids = Object.create(null);
+      candidates.forEach(function (id) { if (id) ids[id] = true; });
+      var keys = Object.keys(ids);
+      if (keys.length > 1) { conflicting++; return; }
+      if (!keys.length) { missing++; return; }
+      var id = keys[0];
+      var at = Date.parse(ev.created_at);
+      if (!isFinite(at) || at > clock + 300000) return;
+      observed[id] = true;
+      if (at > latest) { latest = at; latestTracks = Object.create(null); }
+      if (at === latest) latestTracks[id] = true;
+    });
+    var recent = Object.keys(latestTracks).sort();
+    var tracks = Object.keys(observed).sort();
+    var source = recent.length === 1 ? "answer-event" : (recent.length > 1 ? "simultaneous-answers" : (tracks.length ? "cards" : "unverified"));
+    var selected = trackId(save && save.track);
+    var chosen = recent.length === 1 ? recent[0] : (tracks.length === 1 ? tracks[0] : "");
+    return {
+      track: chosen,
+      label: chosen ? trackLabel(chosen) : (tracks.length ? "多词库（" + tracks.map(trackLabel).join("、") + "）" : "待核对"),
+      source: source,
+      tracks: tracks,
+      selectedTrack: selected,
+      selectedLabel: selected ? trackLabel(selected) : "未记录",
+      conflictingAnswers: conflicting,
+      untaggedAnswers: missing,
+      lastAnswerAt: latest ? new Date(latest).toISOString() : "",
+      scope: "全部词库累计",
+      breakdown: Object.keys(breakdown).sort().map(function (id) {return breakdown[id];}),
+    };
   }
 
   function profileOf(save) {
@@ -371,23 +442,32 @@
     return { word: "", gloss: "", wrong: 0, events: 0, book: 0, students: Object.create(null) };
   }
 
+  function addWeakEvidence(row, extra) {
+    if (extra.wrong) row.wrong += extra.wrong;
+    if (extra.events) row.events += extra.events;
+    if (extra.book) row.book += extra.book;
+    if (extra.gloss && !row.gloss) row.gloss = String(extra.gloss);
+  }
+
   function touchWeak(map, word, studentId, extra) {
     word = String(word || "").trim().toLowerCase();
     if (!word) return;
     var row = map[word] || blankWeak();
     row.word = word;
     extra = extra || {};
-    if (extra.wrong) row.wrong += extra.wrong;
-    if (extra.events) row.events += extra.events;
-    if (extra.book) row.book += extra.book;
-    if (extra.gloss && !row.gloss) row.gloss = String(extra.gloss);
-    if (studentId) row.students[studentId] = true;
+    addWeakEvidence(row, extra);
+    if (studentId) {
+      var own = row.students[studentId] || { wrong: 0, events: 0, book: 0, gloss: "" };
+      addWeakEvidence(own, extra);
+      row.students[studentId] = own;
+    }
     map[word] = row;
   }
 
   function weakScore(row) {
-    var base = num(row.wrong) + num(row.events);
-    return base > 0 ? base : num(row.book);
+    // A saved cumulative failure and an event may be the same answer.
+    var base = Math.max(num(row.wrong), num(row.events));
+    return base > 0 ? base : (num(row.book) > 0 ? 1 : 0);
   }
 
   function weakList(map, studentId) {
@@ -396,12 +476,15 @@
     for (var i = 0; i < words.length; i++) {
       var row = map[words[i]];
       if (studentId && !row.students[studentId]) continue;
-      var score = weakScore(row);
+      var own = studentId ? row.students[studentId] : row;
+      var score = studentId ? weakScore(own) : Object.keys(row.students).reduce(function (n, id) {
+        return n + weakScore(row.students[id]);
+      }, 0);
       if (score <= 0) continue;
       var who = Object.keys(row.students);
       out.push({
         word: row.word,
-        gloss: row.gloss || "",
+        gloss: own.gloss || "",
         score: score,
         students: studentId ? 1 : who.length,
       });
@@ -592,6 +675,8 @@
         good: num(card.correct),
       });
       addAttempt(out, typedAttempt(card.spelling));
+      var gate = asObject(card.collocationEvidence);
+      addAttempt(out, {n:num(gate.correct)+num(gate.wrong)+num(gate.unknown),good:num(gate.correct)});
     }
     return out;
   }
@@ -761,8 +846,8 @@
     return {
       recognition: "看英文认意思",
       collocation: "词组搭配",
-      production: "拼写和按中文产出",
-      retention: "隔天巩固",
+      production: "中文到英文练习（可含选择题）",
+      retention: "巩固记录（合成分）",
     }[axis && axis.id] || (axis && axis.label) || "这项";
   }
 
@@ -813,19 +898,27 @@
     var name = st.name ? st.name : "这位同学";
     var track = st.trackLabel && st.trackLabel !== "—" ? st.trackLabel : "";
     var touched = num(st.touched);
-    var open = name + (track ? "正在使用" + track + "词库" : "的单词练习");
-    open += "，已接触 " + touched + " 个词";
+    var context = st.trackContext;
+    var open = name;
+    if (context && context.source === "answer-event") open += "最近记录的答题来自" + track + "词库";
+    else if (context && context.tracks.length) open += "的练习记录覆盖" + context.tracks.map(trackLabel).join("、") + "词库";
+    else open += "的单词练习（实际词库待核对）";
+    open += "；以下为全部词库累计学情，已接触 " + touched + " 张词条卡";
     open += "，待复习数量 " + reviewDueCount(st.forget) + " 个";
     open += "。";
     var activity;
     if (!st.active7) {
       activity = "近 7 天还没有新的练习。";
-    } else if (num(st.answers7) > 0 && num(st.practice7) > 0 && num(st.answers7) !== num(st.practice7)) {
-      activity = "近 7 天有练习，存档里有 " + num(st.answers7) + " 次答题，另外记到 " + num(st.practice7) + " 次练习事件。";
+    } else if (num(st.practice7) > 0) {
+      activity = "近 7 天存档主流程记有 " + num(st.answers7) + " 次答题，事件流记到 " + num(st.practice7) + " 次练习事件";
+      if (st.answerEvents7 != null && st.wrongBookEvents7 != null) activity += "（其中答题 " + num(st.answerEvents7) + " 次、错词本标记 " + num(st.wrongBookEvents7) + " 次；与存档不相加）。";
+      else activity += "（两套记录可能重叠，不相加）。";
     } else if (num(st.answers7) > 0) {
       activity = "近 7 天有练习，存档里有 " + num(st.answers7) + " 次答题。";
+    } else if (!num(st.practice7)) {
+      activity = "近 7 天有学习活动，尚无新的答题记录。";
     } else {
-      activity = "近 7 天有练习，记录到 " + num(st.practice7) + " 次练习事件。";
+      activity = "近 7 天有学习活动，尚无新的答题记录。";
     }
     var weakLine;
     var weak = st.weak || [];
@@ -841,7 +934,7 @@
     } else {
       weakLine = "练习记录还很少，可以先看哪几项是样本不足。";
     }
-    return open + activity + axisSentence(st.abilities) + weakLine;
+    return open + activity + "按累计存档与已加载事件计算，" + axisSentence(st.abilities) + weakLine;
   }
 
   /** Answer events only. due_review and the wrong-book signal are not question types. */
@@ -1213,7 +1306,7 @@
   }
 
   function classCsv(board) {
-    var headers = ["姓名", "邮箱", "班级", "词库", "已接触", "掌握%", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
+    var headers = ["姓名", "邮箱", "班级", "词库", "已练词条卡", "进度指数", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
     var lines = [headers.join(",")];
     var students = (board && board.students) || [];
     for (var i = 0; i < students.length; i++) {
@@ -1232,7 +1325,7 @@
         scoreCell(axes.collocation),
         scoreCell(axes.production),
         scoreCell(axes.retention),
-        sum(st.line || []),
+        num(st.answers7),
         st.minutes7 == null ? "" : st.minutes7,
         reviewDueCount(st.forget),
         st.forget ? st.forget.due : "",
@@ -1349,7 +1442,8 @@
       "</style></head><body><h1>" + escHtml(name) + "的学情</h1><p class=\"muted\">账号 " +
       escHtml(st.email || "—") + (st.cls ? " · 班级 " + escHtml(st.cls) : "") + " · 词库 " +
       escHtml(st.trackLabel || "—") + " · 待复习数量 " + reviewDueCount(st.forget) +
-      " · " + escHtml(generated || "") + "</p><h2>简短评价</h2><p class=\"summary\">" +
+      " · 报告生成 " + escHtml(generated || "") + "</p><p class=\"muted\">" +
+      escHtml(reportDataNotes(st)) + "</p><h2>简短评价</h2><p class=\"summary\">" +
       escHtml(st.summary || "") + "</p><div class=\"charts\"><section class=\"chart\"><h2>学情雷达</h2><p class=\"muted\">认词、搭配、产出、巩固。样本少于 " +
       MIN_SAMPLE + " 次为样本不足，坐标轴为灰色，不记成 0 分。</p>" + svgRadar(axes) +
       "</section><section class=\"chart\"><h2>近7日练习</h2><p class=\"muted\">" + escHtml(lineNote) + "</p>" +
@@ -1370,6 +1464,28 @@
         weak: weakRows,
       }, { report: true, limit: 20 }) +
       "<p class=\"muted\">本页由聚光单词教师看板根据已经加载的学习记录生成，给家长阅读。不含登录凭证。</p></body></html>";
+  }
+
+  function reportDataNotes(st) {
+    st = st || {};
+    var notes = ["统计范围：全部词库累计存档及当前加载的事件。已接触按词条卡计数，同词在不同组或词库可能分别计数。"];
+    if (st.trackContext) notes.push("存档中选中的词库：" + st.trackContext.selectedLabel + "（选择本身不证明已经练习）。");
+    if (st.trackContext && st.trackContext.breakdown && st.trackContext.breakdown.length) notes.push("词库分布：" + st.trackContext.breakdown.map(function (b) {return b.label + " " + b.cards + " 张卡，待复习 " + b.due + " 张";}).join("；") + "。");
+    if (st.sourceUpdatedAt) notes.push("存档更新时间：" + formatWhen(st.sourceUpdatedAt) + "。");
+    if (st.dataReadAt) notes.push("数据读取时间：" + formatWhen(st.dataReadAt) + "。");
+    if (st.eventSince && st.dataReadAt) notes.push("事件时间范围：" + formatWhen(st.eventSince) + " 至 " + formatWhen(st.dataReadAt) + "；存档计数保留累计历史。");
+    if (st.calculationVersion) notes.push("统计版本：" + st.calculationVersion + "。");
+    notes.push("遗忘节点只统计已进入SRS排程的卡片；单独的搭配或附加练习尚未排程时不计入到期数量。");
+    notes.push("认词、搭配和中文到英文练习分数使用累计练习或已加载事件；中文到英文轴可包含选择题，不能等同于独立拼写能力。巩固为进度与复习记录合成分，不是隔天测验正确率。进度指数仅对已练卡片作阶段折算，不是正确率或全部词库的掌握比例。");
+    var axes = st.abilities || [];
+    var basisNames = { events: "答题事件", practice: "累计练习", typed: "手动拼写", cards: "词条卡记录", thin: "样本不足" };
+    var samples = axes.map(function (axis) {
+      var basis = axis.id === "retention" ? "进度/复习合成记录" : (basisNames[axis.basis] || axis.basis || "未注明");
+      return axis.label + "：" + basis + "，记录数 " + num(axis.n);
+    });
+    if (samples.length) notes.push(samples.join("；") + "。");
+    notes.push("薄弱词来自历史错误与错词本信号，需复测确认当前状态；信号取存档与事件计数的较大者用于排序，不是精确错误次数。练习分数包含已有记录中的重做或受助表现，不等于无提示首答成绩。");
+    return notes.join(" ");
   }
 
   function utf8Bytes(text) {
@@ -1680,7 +1796,7 @@
     var learnedCopy = parentCopy
       ? {
         title: "熟练",
-        hint: "隔天巩固过的词。数字是掌握度。",
+        hint: "至少一张对应词条卡达到熟练记录门槛。数字是该词条卡的星级，不代表所有词义或新情境都已掌握。",
         empty: "还没有达到熟练的词。",
       }
       : {
@@ -1707,7 +1823,7 @@
         id: "weak",
         title: "不熟练 · 薄弱词",
         score: "信号",
-        hint: "错得比较多，或还在错词本里。数字是薄弱信号，不是掌握度。",
+        hint: "历史错误或错词本提供的待复核线索。数字是信号强度，不是当前掌握度；是否仍不熟练，需要复测。",
         empty: "目前没有特别集中的薄弱词。",
       },
     ];
@@ -1772,7 +1888,7 @@
       if (isSolid(card)) solid++;
       var bin = masteryBin(card.mastery);
       masteryBins[bin]++;
-      var wrongs = num(card.wrong) + spellingWrong(card.spelling);
+      var wrongs = num(card.wrong) + spellingWrong(card.spelling) + num(card.polysemy && card.polysemy.wrong) + num(card.collocationEvidence && card.collocationEvidence.wrong);
       if (wrongs > 0) touchWeak(map, headwordFromKey(cardKeys[c]), id, { wrong: wrongs });
     }
     var book = asObject(save.wrongBook);
@@ -1795,6 +1911,8 @@
       if (answers > 0) dailyActive = true;
     }
     var event7 = [0, 0, 0, 0, 0, 0, 0];
+    var answerEvents7 = 0;
+    var wrongBookEvents7 = 0;
     var eventActive = false;
     var timeline = [];
     var modeCounts = Object.create(null);
@@ -1811,13 +1929,19 @@
       var type = one && one.event_type;
       var sessionEvent = isSessionEvent(type);
       if (slot != null) {
-        eventActive = true;
+        if (PRACTICE_TYPES[type] || sessionEvent) eventActive = true;
         if (!sessionEvent && PRACTICE_TYPES[type]) event7[slot]++;
+        if (answerOutcome(one)) answerEvents7++;
+        if (type === "vocab.wrong_book_add") wrongBookEvents7++;
       }
       if (sessionEvent) continue;
       if (WEAK_EVENT_TYPES[type]) {
         var payload = asObject(one.payload);
-        touchWeak(map, eventHeadword(one), id, { events: 1, gloss: payload.gloss_zh || "" });
+        touchWeak(map, eventHeadword(one), id, {
+          events: type === "vocab.answer_wrong" ? 1 : 0,
+          book: type === "vocab.wrong_book_add" ? 1 : 0,
+          gloss: payload.gloss_zh || "",
+        });
       }
       var mode = modeLabel(one);
       modeCounts[mode] = (modeCounts[mode] || 0) + 1;
@@ -1844,13 +1968,15 @@
       learned: learned,
       solid: solid,
     });
+    var trackContext = practiceTrackContext(save, evs, now);
     var studentRow = {
       id: id,
       email: email || "",
       name: profile.name,
       cls: profile.cls,
-      track: typeof save.track === "string" ? save.track : "",
-      trackLabel: trackLabel(save.track),
+      track: trackContext.track,
+      trackLabel: trackContext.label,
+      trackContext: trackContext,
       touched: touched,
       learned: learned,
       mastery: mastery,
@@ -1862,11 +1988,14 @@
       weak: studentWeak.slice(0, 20),
       active7: isActive,
       updatedAt: updatedAt ? formatWhen(updatedAt) : "",
+      sourceUpdatedAt: updatedAt || save.updatedAt || "",
       line: personal,
       lineSource: sum(daily7) > 0 ? "daily" : "events",
       lineLabels: window7.labels.map(shortDay),
       eventLine: event7,
       practice7: sum(event7),
+      answerEvents7: answerEvents7,
+      wrongBookEvents7: wrongBookEvents7,
       answers7: sum(daily7),
       timeline: timeline,
       masteryBins: masteryBins,
@@ -1914,6 +2043,45 @@
       paintGloss(row.weak, opts.glosses);
     }
     return row;
+  }
+
+  /** Reject a partial/old projection or class-level contamination before export. */
+  function auditBoardSnapshot(board, payload, now) {
+    var errors = [];
+    if (!payload || payload.snapshot_version !== SNAPSHOT_VERSION) errors.push("snapshot-version");
+    var progress = (payload && payload.progress) || [];
+    var events = (payload && payload.events) || [];
+    var students = (board && board.students) || [];
+    var fields = ["touched","learned","mastery","weakCount","weak","abilities","forget","answers7","practice7","answerEvents7","wrongBookEvents7","inventory","trackContext"];
+    progress.forEach(function (source) {
+      var row = students.filter(function (s) {return s.id === source.user_id;})[0];
+      if (!row) {errors.push("missing-student");return;}
+      if (!Number.isInteger(source.source_card_count) || source.source_card_count !== row.touched) errors.push("source-card-count");
+      var mine = events.filter(function (e) {return eventLearner(e) === source.user_id;});
+      var personal = buildPersonal(source.save, mine, now, {id:source.user_id,email:row.email,learnerId:source.user_id});
+      fields.forEach(function (key) {
+        if (JSON.stringify(personal[key]) !== JSON.stringify(row[key])) errors.push("student-isolation:" + key);
+      });
+      if (sum(row.masteryBins || []) !== row.touched) errors.push("mastery-partition");
+      if (row.practice7 !== row.answerEvents7 + row.wrongBookEvents7) errors.push("event-partition");
+      if (sum((row.trackContext.breakdown || []).map(function (b) {return b.cards;})) !== row.touched) errors.push("track-partition");
+    });
+    if (students.some(function (s) {return !progress.some(function (p) {return p.user_id === s.id;});})) errors.push("event-without-save");
+    return {ok:errors.length === 0,errors:errors,calculationVersion:CALCULATION_VERSION,snapshotVersion:payload && payload.snapshot_version};
+  }
+
+  function fromSnapshot(payload) {
+    if (!payload || !payload.generated_at || !isFinite(Date.parse(payload.generated_at))) throw new Error("统计快照缺少可核对的读取时间。");
+    var when = new Date(payload.generated_at);
+    var board = buildBoard(payload.progress, payload.events, payload.directory, when);
+    board.dataReadAt = payload.generated_at;
+    board.students.forEach(function (st) {
+      st.dataReadAt=board.dataReadAt;st.eventSince=payload.event_since || "";st.calculationVersion=CALCULATION_VERSION;
+    });
+    board.integrity=auditBoardSnapshot(board,payload,when);
+    if (!board.integrity.ok) throw new Error("统计版本或数据校验未通过，已停止显示新的评价。请刷新后重试。");
+    Object.defineProperty(board,"sourcePayload",{value:payload,enumerable:false});
+    return board;
   }
 
   /**
@@ -2148,6 +2316,11 @@
     axisOf: axisOf,
     scoreAbilities: scoreAbilities,
     parentSummary: parentSummary,
+    reportDataNotes: reportDataNotes,
+    practiceTrackContext: practiceTrackContext,
+    auditBoardSnapshot: auditBoardSnapshot,
+    fromSnapshot: fromSnapshot,
+    CALCULATION_VERSION: CALCULATION_VERSION,
     answerModeMix: answerModeMix,
     studentModeMix: studentModeMix,
     accuracySeries: accuracySeries,

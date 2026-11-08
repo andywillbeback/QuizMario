@@ -22,7 +22,7 @@ assert.strictEqual(
 assert.ok(html.includes(api.DENIED_MESSAGE), "teacher page carries the role gate");
 assert.ok(html.includes("app_metadata"), "teacher page names app_metadata");
 assert.ok(html.includes('id="kpi-strip"') && html.includes("学员数") && html.includes("近7日活跃"));
-assert.ok(html.includes("平均掌握%") && html.includes("薄弱词数"));
+assert.ok(html.includes("平均进度指数") && html.includes("薄弱词数"));
 assert.ok(html.includes('id="chart-mastery"'), "mastery chart");
 assert.ok(html.includes('id="chart-activity"'), "activity chart");
 assert.ok(html.includes('id="chart-modes"'), "mode donut");
@@ -39,7 +39,7 @@ assert.ok(html.includes('id="chart-student-duration"'), "personal study minutes"
 assert.ok(html.includes('id="chart-student-forget"'), "personal forgetting nodes");
 assert.ok(html.includes('id="student-inventory"'), "personal detail lists practiced, learned, and weak words");
 assert.ok(html.includes("已练习") && html.includes("熟练") && html.includes("不熟练"));
-assert.ok(html.indexOf('src="study-metrics.js"') < html.indexOf('src="teacher.js"'), "metrics load before the board boots");
+assert.ok(html.indexOf('src="study-metrics.js') < html.indexOf('src="teacher.js'), "metrics load before the board boots");
 assert.ok(html.includes("近7日学习分钟") && html.includes("遗忘节点"));
 assert.ok(html.includes("不进入认词、搭配、产出、巩固雷达") || html.includes("不进入认词 / 搭配 / 产出 / 巩固雷达"), "forget chart stays off the radar");
 assert.ok(js.includes("mountChart(specs.duration.id"), "personal minutes chart stays mounted");
@@ -222,7 +222,7 @@ assert.ok(board.modes.labels.indexOf("看英选义") >= 0);
 assert.ok(board.modes.labels.indexOf("到期信号") >= 0);
 assert.ok(board.modes.labels.indexOf("答对") === -1, "recognition payload replaces the generic correct slice");
 assert.strictEqual(board.weak[0].word, "advice");
-assert.strictEqual(board.weak[0].score, 3);
+assert.strictEqual(board.weak[0].score, 2, "save and event may refer to the same failure");
 assert.strictEqual(board.weak[1].word, "adult");
 assert.strictEqual(board.weak[1].score, 1);
 assert.ok(!board.weak.some(function (row) { return row.word === "gone"; }));
@@ -236,7 +236,7 @@ assert.deepStrictEqual(student.inventory.practiced.map(function (row) { return r
 assert.strictEqual(student.inventory.practiced[1].score, 0.5);
 assert.deepStrictEqual(student.inventory.learned.map(function (row) { return row.word; }), ["advice"]);
 assert.deepStrictEqual(student.inventory.weak.map(function (row) { return row.word; }), ["advice", "adult"]);
-assert.strictEqual(student.inventory.weak[0].score, 3);
+assert.strictEqual(student.inventory.weak[0].score, 2);
 assert.strictEqual(student.inventory.weak[0].gloss, "建议");
 assert.ok(!student.inventory.practiced.some(function (row) { return row.word === "gone" || row.word === "a"; }));
 assert.strictEqual(student.mastery, 75);
@@ -624,7 +624,7 @@ const zeroLearned = api.parentSummary({
 });
 assert.ok(api.parentSummary.toString().indexOf("已学会") === -1);
 assert.ok(zeroLearned.indexOf("已学会") === -1);
-assert.ok(zeroLearned.indexOf("已接触 213 个词，待复习数量 13 个") > 0);
+assert.ok(zeroLearned.indexOf("已接触 213 张词条卡，待复习数量 13 个") > 0);
 assert.strictEqual(api.reviewDueCount({ due: 10, overdue: 3 }), 13);
 assert.strictEqual(api.reviewDueCount(null), 0);
 
