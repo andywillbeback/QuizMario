@@ -465,6 +465,7 @@ async function browserCheck() {
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), "colloc-gate-"));
   let chrome = null;
   let sessionId = null;
+  let activeTarget = null;
   let cdp = null;
   try {
     const launched = launchChrome(userDir);
@@ -478,6 +479,7 @@ async function browserCheck() {
     });
     cdp = new Cdp(ws);
     const created = await cdp.send("Target.createTarget", { url: "about:blank" });
+    activeTarget = created.targetId;
     const attached = await cdp.send("Target.attachToTarget", { targetId: created.targetId, flatten: true });
     sessionId = attached.sessionId;
     await cdp.send("Page.enable", {}, sessionId);
@@ -517,6 +519,16 @@ async function browserCheck() {
       return file;
     };
     const openPractice = async (trackId, focusWord, buttonId) => {
+      // Each planted case is independent. Retire the old page so its delayed
+      // completed-unit navigation cannot overtake the next case's navigation.
+      const previousTarget=activeTarget;
+      const fresh=await cdp.send("Target.createTarget",{url:"about:blank"});
+      activeTarget=fresh.targetId;
+      const attached=await cdp.send("Target.attachToTarget",{targetId:activeTarget,flatten:true});
+      sessionId=attached.sessionId;
+      await cdp.send("Page.enable",{},sessionId);
+      await cdp.send("Runtime.enable",{},sessionId);
+      if(previousTarget)await cdp.send("Target.closeTarget",{targetId:previousTarget});
       await cdp.send("Page.addScriptToEvaluateOnNewDocument", {
         source: earlyScript(plant(trackId, focusWord)),
       }, sessionId);
