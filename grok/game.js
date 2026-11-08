@@ -198,9 +198,18 @@
     return p;
   }
 
+  function readLocalSave() {
+    return window.QuizMarioAccountStore ? window.QuizMarioAccountStore.get(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY);
+  }
+  function writeLocalSave(value) {
+    const data = window.QuizMarioSyncCore ? window.QuizMarioSyncCore.compact(value) : value;
+    if (window.QuizMarioAccountStore) window.QuizMarioAccountStore.set(STORAGE_KEY, JSON.stringify(data));
+    else localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
   function loadSave() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = readLocalSave();
       if (raw) {
         const data = JSON.parse(raw);
         const cards = Sense.migrateCards(data.cards || {}, catalogGroups());
@@ -237,7 +246,10 @@
     if (!(opts.keepUpdatedAt && save.updatedAt)) {
       save.updatedAt = new Date().toISOString();
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+    try { writeLocalSave(save); }
+    catch (e) {
+      if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(e);
+    }
     try { window.dispatchEvent(new CustomEvent("quizmario:progress", { detail: { updatedAt: save.updatedAt } })); } catch (_) {}
     if (opts.upload !== false && window.QuizMarioCloud && typeof window.QuizMarioCloud.onLocalSave === "function") {
       try { window.QuizMarioCloud.onLocalSave(save); } catch (_) {}
@@ -1963,6 +1975,7 @@
     const prog = getProg(currentCard.key);
     // Live 拼写 is always typed. Legacy MC scores stay in spelling.mc via Practice.
     const noted = Practice.noteSpelling(prog, kind, Date.now(), { mode: "typed" });
+    if (kind === "wrong" || kind === "unknown") rememberMiss(currentCard, prog, kind === "unknown");
     bumpPractice("spelling", kind === "correct");
     if (kind !== "correct") rememberWrongWord(currentCard.word);
     emitLearnerAnswer(kind === "correct", currentCard, kind === "unknown" ? "" : chosen, kind);
@@ -2099,8 +2112,8 @@
     } else {
       if (countsClearance) {
         schedule(prog, 0, nowMs, opts);
-        rememberMiss(currentCard, prog);
       }
+      if (kind === "wrong" || kind === "unknown") rememberMiss(currentCard, prog, kind === "unknown");
       emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind);
       save.streak = 0;
       const brokenStreak = killStreak;
@@ -2204,7 +2217,7 @@
       const res = RQ.noteWrongBookCorrect(
         ensureWrongBook(),
         RQ.lemmaKey(currentTrack, currentCard.word),
-        prog.wrong || 0
+        notebookErrors(prog)
       );
       bookNote = res.graduated
         ? '<div class="fb-meta">错词本毕业 · 这个词先离开错词本了</div>'
@@ -2245,6 +2258,7 @@
       track: currentTrack, levelIdx: phrase.levelIdx, word: phrase.lemma,
       outcome: outcome, firstTry: firstTry, hintSeen: hintSeen, now: Date.now(),
     });
+    if (outcome === "wrong") rememberMiss({word:phrase.lemma,key:noted.key,levelIdx:phrase.levelIdx,meaning_zh:phrase.gloss}, save.cards[noted.key]);
     const LE = learnerEvents();
     if (LE && typeof LE.record === "function") {
       try { LE.record({
@@ -2703,6 +2717,7 @@
       trackStars: Object.assign({}, payload.trackStars || {}),
       universeCompletedSets: payload.universeCompletedSets,
       daily: Object.assign({}, payload.daily || {}),
+      studyDaily: Object.assign({}, payload.studyDaily || {}),
       profile: Object.assign({ name: "", cls: "" }, payload.profile || {}),
       updatedAt: payload.updatedAt,
       wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
@@ -3164,11 +3179,33 @@
       forcedChallengeRoll = roll;
     },
     getSave() { return save; },
+    notebookWord(word, track) {
+      const bank = findTrack(track || currentTrack);
+      for (let li = 0; li < (bank.sets || []).length; li++) {
+        const found = findSurface(bank.sets[li], word);
+        if (found) return {levelIdx:li,cardKey:Sense.cardKeyFor(bank.id,li,found.word),gloss:found.meaning_zh || ""};
+      }
+      return null;
+    },
+    updateNotebook(change) {
+      if (!document.documentElement.classList.contains("session-ok")) throw new Error("请先完成本账号的进度读取。");
+      change(ensureWrongBook());
+      persist();
+      refreshHomeQueues();
+    },
     applyCloudSave(data) {
       let payload = data;
       if (payload && payload.save && !payload.cards) payload = payload.save;
       if (!payload || typeof payload !== "object") throw new Error("Invalid cloud save");
       applySaveObject(snapshotToSave(payload), { keepUpdatedAt: true, upload: false });
+    },
+    applySyncedSave(data) {
+      // Rebase acknowledged counters without leaving the current exercise.
+      save = snapshotToSave(data);
+      save.track = currentTrack;
+      persist({ keepUpdatedAt: true, upload: false });
+      const home = $("screen-home");
+      if (home && home.classList.contains("active")) renderStats();
     },
     touchUpdatedAt() {
       save.updatedAt = new Date().toISOString();
@@ -3303,8 +3340,11 @@
     } catch (_) {}
   }
 
-  function rememberMiss(card, prog) {
+  function rememberMiss(card, prog, selfReported) {
     if (!card || !card.word) return null;
+    const mistakes = notebookErrors(prog);
+    const existing = ensureWrongBook()[RQ.lemmaKey(currentTrack, card.word)];
+    if (mistakes < 2 && !(existing && existing.active) && !selfReported) return null;
     const res = RQ.touchWrongBook(ensureWrongBook(), {
       lemmaKey: RQ.lemmaKey(currentTrack, card.word),
       lemma: card.word,
@@ -3312,9 +3352,27 @@
       levelIdx: card.levelIdx != null ? card.levelIdx : (currentLevel - 1),
       cardKey: card.key,
       now: Date.now(),
-    }, prog, "miss");
-    if (res && res.entered) emitWrongBook(card);
+    }, Object.assign({}, prog, {wrong:mistakes}), "miss");
+    if (res && res.row) {
+      res.row.source = res.row.source || (selfReported ? "self_report" : "auto");
+      res.row.gloss_zh = res.row.gloss_zh || card.meaning_zh || "";
+      res.row.kind = /\s/.test(card.word) ? "phrase" : "word";
+      res.row.updatedAt = Date.now();
+    }
+    if (res && res.entered) {
+      if (selfReported) {
+        const LE = learnerEvents();
+        if (LE) LE.record({event_type:"vocab.notebook_add",headword:card.word,item_id:card.key,track:currentTrack,gloss_zh:card.meaning_zh || ""});
+      } else emitWrongBook(card);
+    }
     return res;
+  }
+
+  function notebookErrors(prog) {
+    const api = window.QuizMarioNotebook;
+    if (api) return api.errors(prog);
+    const p = prog || {}, s = p.spelling || {};
+    return Number(p.wrong || 0) + Number(s.wrong != null ? s.wrong : Number((s.typed || {}).wrong || 0) + Number((s.mc || {}).wrong || 0)) + Number((p.polysemy || {}).wrong || 0) + Number((p.collocationEvidence || {}).wrong || 0);
   }
 
   function scanWrongBook() {
@@ -3338,7 +3396,7 @@
           track: currentTrack,
           levelIdx: li,
           cardKey: key,
-          prog: prog,
+          prog: Object.assign({}, prog, {wrong:notebookErrors(prog)}),
           now: Date.now(),
         });
       }
@@ -3793,7 +3851,8 @@
       ? "\n\n你已登录：这只清空本机。云端进度还在，刷新页面会再同步下来。"
       : "";
     if (confirm("Reset all Vocab Spotlight progress on this browser?" + cloudNote)) {
-      localStorage.removeItem(STORAGE_KEY);
+      if (window.QuizMarioAccountStore) window.QuizMarioAccountStore.remove(STORAGE_KEY);
+      else localStorage.removeItem(STORAGE_KEY);
       if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.clear === "function") {
         window.QuizMarioLearnerEvents.clear();
       }
@@ -3917,10 +3976,10 @@
   refreshHud();
   // Drop a leftover 只练到期 flag without touching updatedAt, so sync order stays intact.
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    const stored = JSON.parse(readLocalSave() || "null");
     if (stored && Object.prototype.hasOwnProperty.call(stored, "dueOnly")) {
       delete stored.dueOnly;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+      writeLocalSave(stored);
     }
   } catch (_) {}
   initV6Ui();

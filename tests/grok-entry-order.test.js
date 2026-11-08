@@ -71,9 +71,9 @@ function staticGuards() {
   assert.ok(login.includes('id="mode-register"') && login.includes('id="mode-login"'));
   assert.ok(login.includes('id="display-name"') && login.includes('id="class-name"'), "register collects 姓名 and 班级名");
   assert.ok(auth.includes("display_name") && auth.includes("class_name"), "signup stores display_name and class_name");
-  assert.ok(index.includes('src="profile-name.js"'), "index loads the profile prompt");
-  assert.ok(index.indexOf('src="game.js') < index.indexOf('src="profile-name.js"'));
-  assert.ok(index.indexOf('src="profile-name.js"') < index.indexOf('src="sync.js"'));
+  assert.ok(index.includes('src="profile-name.js'), "index loads the profile prompt");
+  assert.ok(index.indexOf('src="game.js') < index.indexOf('src="profile-name.js'));
+  assert.ok(index.indexOf('src="profile-name.js') < index.indexOf('src="sync.js'));
 
   const banned = ["学习报告码", "QMR1", "教师看板", "ALS 学习信号", 'href="teacher.html"'];
   for (const needle of banned) {
@@ -179,6 +179,8 @@ function earlyScript() {
     requestAnimationFrame(watch);
     if (window.__QM_SMOKE_FETCH) return;
     window.__QM_SMOKE_FETCH = [];
+    var cloudProgress = null;
+    var cloudVersion = "2026-01-01T00:00:00.000Z", cloudRevision = 0;
     var orig = window.fetch ? window.fetch.bind(window) : null;
     function reply(status, payload) {
       return Promise.resolve(new Response(JSON.stringify(payload), {
@@ -199,10 +201,12 @@ function earlyScript() {
       try { expired = sessionStorage.getItem("qm-phase") === "expired"; } catch (e) {}
       if (expired) return reply(400, { error: "invalid_grant", error_description: "expired" });
       if (url.indexOf("/user_progress") !== -1) {
-        if (method === "GET" || method === "HEAD") {
-          return reply(200, []);
-        }
-        return reply(201, [{ user_id: session.user.id, updated_at: "2026-01-01T00:00:00.000Z" }]);
+        if (method === "GET" || method === "HEAD") return reply(200, cloudProgress ? [{save:cloudProgress,updated_at:cloudVersion}] : []);
+        var expected = new URL(url).searchParams.get("updated_at");
+        if (method === "PATCH" && expected && expected !== "eq."+cloudVersion) return reply(200, []);
+        var body = JSON.parse(init.body || "{}"); cloudProgress = body.save;
+        cloudVersion = new Date(Date.now()+(++cloudRevision)).toISOString();
+        return reply(200, [{user_id:session.user.id,save:cloudProgress,updated_at:cloudVersion}]);
       }
       if (url.indexOf("/learner_events") !== -1) return reply(200, []);
       if (url.indexOf("/auth/v1/user") !== -1) return reply(200, session.user);
@@ -428,7 +432,7 @@ async function main() {
       const prompt = document.getElementById("profile-name-gate");
       if (!prompt || !prompt.hidden) return null;
       let save = null;
-      try { save = JSON.parse(localStorage.getItem("vocabSpotlight_v1") || "null"); } catch (e) { save = null; }
+      try { save = JSON.parse(window.QuizMarioAccountStore.get("vocabSpotlight_v1") || "null"); } catch (e) { save = null; }
       const profile = save && save.profile;
       if (!profile || profile.name !== "小王" || profile.cls !== "初三1班") return null;
       return true;
@@ -461,6 +465,23 @@ async function main() {
     assert.strictEqual(home.continue, true);
     assert.strictEqual(home.editProfile, true, "home can reopen the name and class prompt");
     assert.strictEqual(home.banned, false, "student home shows report, teacher, or ALS copy");
+    const restoredMinutes=await evalRetry(`(()=>{const s=JSON.parse(JSON.stringify(__QM.getSave()));s.studyDaily={'2026-11-08':12345};__QM.applyCloudSave(s);return __QM.getSave().studyDaily['2026-11-08'];})()`);
+    assert.strictEqual(restoredMinutes,12345,'restoring progress preserves study minutes');
+    await evalRetry(`document.getElementById('btn-notebook').click()`);
+    await waitFor(async()=>evalRetry(`document.getElementById('word-notebook').open`),3000,'notebook dialog');
+    const manual=await evalRetry(`(()=>{const before=Object.values(__QM.getSave().cards).reduce((n,c)=>n+(c.wrong||0),0);document.getElementById('notebook-word').value='be close to';document.getElementById('notebook-gloss').value='接近';document.getElementById('notebook-note').value='记住介词 to';document.getElementById('notebook-form').requestSubmit();const book=__QM.getSave().wrongBook,key=QuizMarioSense.lemmaKey(__QM.track,'be close to');return{key,row:book[key],before,after:Object.values(__QM.getSave().cards).reduce((n,c)=>n+(c.wrong||0),0),events:QuizMarioLearnerEvents.list().map(e=>e.event_type)};})()`);
+    assert.strictEqual(manual.row.source,'manual');assert.strictEqual(manual.row.note,'记住介词 to');assert.strictEqual(manual.before,manual.after,'manual notes do not fabricate wrong answers');assert.ok(manual.events.includes('vocab.notebook_add'));
+    const edited=await evalRetry(`(()=>{document.querySelector('[data-notebook-edit]').click();document.getElementById('notebook-note').value='例句：Be close to your friends.';document.getElementById('notebook-form').requestSubmit();return __QM.getSave().wrongBook[${JSON.stringify('zhongkao::be close to')}].note;})()`);
+    assert.strictEqual(edited,'例句：Be close to your friends.');
+    const archived=await evalRetry(`(()=>{document.querySelector('[data-notebook-toggle]').click();const r=__QM.getSave().wrongBook['zhongkao::be close to'];return{active:r.active,note:r.note};})()`);
+    assert.strictEqual(archived.active,false);assert.ok(archived.note.includes('例句'));
+    const image=await cdp.send('Page.captureScreenshot',{format:'png'},sessionId);
+    const notebookShot=path.join(root,'..','feedback-browser-artifacts','notebook-desktop.png');fs.mkdirSync(path.dirname(notebookShot),{recursive:true});fs.writeFileSync(notebookShot,Buffer.from(image.data,'base64'));
+    await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true},sessionId);
+    const mobile=await cdp.send('Page.captureScreenshot',{format:'png'},sessionId);fs.writeFileSync(path.join(path.dirname(notebookShot),'notebook-mobile.png'),Buffer.from(mobile.data,'base64'));
+    const fits=await evalRetry(`document.getElementById('word-notebook').getBoundingClientRect().width<=innerWidth`);assert.strictEqual(fits,true,'notebook fits a phone viewport');
+    await evalRetry(`document.getElementById('notebook-close').click()`);
+
   } finally {
     try { if (launched.chrome) launched.chrome.kill("SIGKILL"); } catch (_) {}
     server.close();

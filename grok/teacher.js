@@ -7,6 +7,7 @@
   var api = root.QMTeacherCore || null;
   if (!api && typeof require === "function") api = require("./study-metrics.js");
   if (!api) throw new Error("study-metrics.js did not load");
+  var syncCore = root.QuizMarioSyncCore || (typeof require === 'function' ? require('./sync-core.js') : null);
   root.QMTeacher = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 
@@ -70,7 +71,8 @@
     for (var i = 0; i < delays.length; i++) {
       if (delays[i]) await pause(delays[i]);
       try {
-        var res = await client.rpc("teacher_class_board");
+        var query = client.rpc("teacher_class_board");
+        var res = await (syncCore ? syncCore.request(query, 25000) : query);
         if (res && res.error) throw res.error;
         return normalizeClassPayload(res && res.data);
       } catch (err) {
@@ -106,6 +108,8 @@
   var board = null;
   var selectedId = "";
   var loadEpoch = 0;
+  var autoTimer = null, autoUser = null, loadInProgress = false, autoFailures = 0;
+  var AUTO_REFRESH_MS = 20000;
   /** null = every class. "" = 未填班级. */
   var selectedClass = null;
   var PALETTE = ["#8eb7ff", "#e6c98a", "#7ddec8", "#f0a0c0", "#c9b6ff", "#f3d37a", "#9fd0ff"];
@@ -732,7 +736,14 @@
     return user;
   }
 
+  function clearPrivateDisplay() {
+    board = null; selectedId = '';
+    Object.keys(charts).forEach(destroyChart);
+    ['student-body','detail-summary','detail-data-notes','detail-title','detail-progress','detail-stats','student-inventory','student-timeline'].forEach(function(id){var el=$(id);if(el){el.innerHTML='';el.textContent='';}});
+    ['kpi-students','kpi-active','kpi-mastery','kpi-weak'].forEach(function(id){var el=$(id);if(el)el.textContent='—';});
+  }
   function showLogin() {
+    stopAutoRefresh();clearPrivateDisplay();
     show("gate", true);
     show("board", false);
     show("login-form", true);
@@ -741,6 +752,7 @@
   }
 
   function showDenied() {
+    stopAutoRefresh();clearPrivateDisplay();
     show("gate", true);
     show("board", false);
     show("login-form", false);
@@ -755,18 +767,42 @@
     if (who) who.textContent = maskEmail(user && user.email) ;
   }
 
+  function stopAutoRefresh() {
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = null; autoUser = null;
+  }
+  function scheduleAutoRefresh() {
+    if (autoTimer) clearTimeout(autoTimer);
+    if (!autoUser) return;
+    autoTimer = setTimeout(function () { autoTimer = null; automaticRefresh(); }, Math.min(60000, AUTO_REFRESH_MS * Math.pow(2,autoFailures)));
+  }
+  async function automaticRefresh() {
+    if (!autoUser) return;
+    if (document.visibilityState === 'hidden' || (root.navigator && root.navigator.onLine === false)) { scheduleAutoRefresh(); return; }
+    var client = clientOrNull();
+    if (!client) return;
+    try {
+      var user = await currentUser(client);
+      if (!user) { loadEpoch++; board = null; showLogin(); return; }
+      await openBoard(client,user);
+    } catch (_) { autoFailures++; scheduleAutoRefresh(); }
+  }
   async function openBoard(client, user) {
+    if (loadInProgress) return;
     var epoch = ++loadEpoch;
     if (!api.isTeacher(user)) {
       showDenied();
       return;
     }
+    autoUser = user; loadInProgress = true;
+    if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; }
     showBoard(user);
     $("cloud-status").textContent = "正在读取云端进度…";
     try {
       var data = await loadClass(client, user);
       if (epoch !== loadEpoch) return;
-      $("cloud-status").textContent = data.note || ("已核对 " + data.kpis.students + " 个账号 · 学生隔离与数量校验通过 · 数据读取 " + data.dataReadAt);
+      autoFailures = 0;
+      $("cloud-status").textContent = data.note || ("已核对 " + data.kpis.students + " 个账号 · 隔离与数量校验通过 · 每20秒自动更新 · 数据读取 " + data.dataReadAt);
       paint(data);
     } catch (err) {
       if (epoch !== loadEpoch) return;
@@ -775,6 +811,9 @@
         return;
       }
       $("cloud-status").textContent = boardLoadMessage(err) + (board && board.dataReadAt ? " 当前仍为上次读取的数据：" + board.dataReadAt : "");
+      autoFailures++;
+    } finally {
+      if (epoch === loadEpoch) { loadInProgress = false; scheduleAutoRefresh(); }
     }
   }
 
@@ -812,6 +851,7 @@
 
   async function logout() {
     loadEpoch++;
+    loadInProgress = false; board = null; stopAutoRefresh();
     var client = clientOrNull();
     if (client) {
       try { await client.auth.signOut(); } catch (e) {}
@@ -858,6 +898,18 @@
   }
 
   var out = $("btn-logout");
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState !== 'hidden') automaticRefresh(); });
+  root.addEventListener('online', function () { autoFailures = 0; automaticRefresh(); });
+  root.addEventListener('offline', function () {
+    if (board && $("cloud-status")) $("cloud-status").textContent = '连接中断，联网后自动更新。当前数据读取于 '+board.dataReadAt;
+  });
+  var teacherClient = clientOrNull();
+  if (teacherClient && teacherClient.auth.onAuthStateChange) teacherClient.auth.onAuthStateChange(function (_,session) {
+    if (autoUser && (!session || !session.user || session.user.id !== autoUser.id)) {
+      loadEpoch++; loadInProgress = false; board = null; selectedId = ''; stopAutoRefresh(); showLogin();
+      setTimeout(function () { boot(); },0);
+    }
+  });
   if (out) out.addEventListener("click", logout);
   var outGate = $("btn-logout-gate");
   if (outGate) outGate.addEventListener("click", logout);

@@ -548,17 +548,21 @@
       legend:"同一灰青色系 · 颜色越深，越需要巩固",classic3d:true});
   }
 
+  function ownedText(key) {
+    return root.QuizMarioAccountStore ? root.QuizMarioAccountStore.get(key) : null;
+  }
+
   function readLocal() {
     var save = { cards: {} };
     try {
-      var raw = root.localStorage && root.localStorage.getItem(SAVE_KEY);
+      var raw = ownedText(SAVE_KEY);
       if (raw) save = JSON.parse(raw);
     } catch (e) {}
     if (!save || typeof save !== "object") save = { cards: {} };
     var events = [];
     var learnerId = "";
     try {
-      var evRaw = root.localStorage && root.localStorage.getItem(EVENT_KEY);
+      var evRaw = ownedText(EVENT_KEY);
       var store = evRaw ? JSON.parse(evRaw) : null;
       if (store && Array.isArray(store.events)) events = store.events;
       if (store && store.learner_id) learnerId = String(store.learner_id);
@@ -644,10 +648,10 @@
     var last = "";
     function check(force) {
       var signature = "";
-      try { signature = (root.localStorage.getItem(SAVE_KEY) || "") + "|" + (root.localStorage.getItem(EVENT_KEY) || ""); } catch (_) {}
+      try { signature = (ownedText(SAVE_KEY) || "") + "|" + (ownedText(EVENT_KEY) || ""); } catch (_) {}
       if (force || signature !== last) { last = signature; refresh(); }
     }
-    root.addEventListener("storage", function (ev) { if (!ev.key || ev.key === SAVE_KEY || ev.key === EVENT_KEY) check(false); });
+    root.addEventListener("storage", function (ev) { if (!ev.key || ev.key === "quizmario-auth" || ev.key.indexOf(SAVE_KEY+":account:")===0 || ev.key.indexOf(EVENT_KEY+":account:")===0) check(false); });
     root.addEventListener("quizmario:progress", function () { check(false); });
     root.addEventListener("focus", function () { check(false); });
     root.addEventListener("pageshow", function () { check(false); });

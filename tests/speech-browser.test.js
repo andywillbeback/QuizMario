@@ -158,6 +158,7 @@ function earlyScript() {
     }
     if (window.__QM_SMOKE_FETCH) return;
     window.__QM_SMOKE_FETCH = [];
+    var cloudProgress=null, cloudVersion="2026-01-01T00:00:00.000Z", cloudRevision=0;
     var orig = window.fetch ? window.fetch.bind(window) : null;
     function reply(status, payload) {
       return Promise.resolve(new Response(JSON.stringify(payload), {
@@ -173,8 +174,12 @@ function earlyScript() {
         return orig(input, init);
       }
       if (url.indexOf("/user_progress") !== -1) {
-        if (method === "GET" || method === "HEAD") return reply(200, []);
-        return reply(201, [{ user_id: ${JSON.stringify(SESSION.user.id)}, updated_at: "2026-01-01T00:00:00.000Z" }]);
+        if (method === "GET" || method === "HEAD") return reply(200, cloudProgress ? [{save:cloudProgress,updated_at:cloudVersion}] : []);
+        var expected=new URL(url).searchParams.get('updated_at');
+        if(method==='PATCH' && expected && expected!=='eq.'+cloudVersion)return reply(200,[]);
+        cloudProgress=JSON.parse(init.body||'{}').save;
+        cloudVersion=new Date(Date.now()+(++cloudRevision)).toISOString();
+        return reply(200,[{user_id:${JSON.stringify(SESSION.user.id)},save:cloudProgress,updated_at:cloudVersion}]);
       }
       if (url.indexOf("/learner_events") !== -1) return reply(200, []);
       if (url.indexOf("/auth/v1/user") !== -1) return reply(200, ${JSON.stringify(SESSION.user)});

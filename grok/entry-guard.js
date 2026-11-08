@@ -17,6 +17,8 @@
   function showGate() {
     if (window.__QM_ENTRY_REDIRECTING) return;
     clearTimeout(window.__QM_ENTRY_WATCHDOG);
+    // Auth alone cannot reveal a previous account's in-memory save.
+    if (!window.__QM_SYNC_READY) return;
     document.documentElement.classList.add("session-ok");
   }
 

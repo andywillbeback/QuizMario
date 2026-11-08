@@ -275,7 +275,7 @@ function read(name) {
     "student home does not show the ALS signal panel");
   assert.ok(!index.includes('id="learner-events-panel"') && !index.includes('id="btn-export-learner-events"') && !index.includes('id="btn-copy-learner-events"'),
     "JSONL dump controls are gone from the student home");
-  assert.ok(index.includes('src="learner-events.js"'), "learner events still load for cloud sync");
+  assert.ok(index.includes('src="learner-events.js'), "learner events still load for cloud sync");
   assert.ok(!login.includes("ALS 学习信号") && !login.includes("下载 JSONL") && !login.includes("复制 JSONL"),
     "login stays free of the ALS signal panel");
   assert.ok(!game.includes("$(\"btn-report\")") && !game.includes("reportCode(") && !game.includes("buildReport("),

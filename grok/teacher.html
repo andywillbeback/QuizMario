@@ -194,7 +194,7 @@
       <button type="button" class="ghost" id="btn-logout">退出</button>
     </div>
     <h2 class="class-only">教师看板 · 班级云进度</h2>
-    <p class="sub class-only">图表来自云端 user_progress 和 learner_events。进度指数只对已有练习记录的词条卡作阶段折算，不是正确率，也不是全部词库的掌握比例。近 7 日折线是练习事件，不含到期信号，也不含学习分钟。学习分钟和遗忘节点（今日到期、逾期、学习中、已巩固）是另外两张图，不进入认词、搭配、产出、巩固雷达。点学员可看个人图表，以及一段给家长的简短评价。样本少于 5 次时雷达该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级。解压后是该班每位学员一份 HTML 学情页，直接给家长打开。包里没有目录页，也没有附表。用当前已加载的数据，不另取密钥。</p>
+    <p class="sub class-only">看板在前台每20秒自动读取并校验；回到页面或恢复网络会自动刷新，读取失败会标明旧数据时间。图表来自云端 user_progress 和 learner_events。进度指数只对已有练习记录的词条卡作阶段折算，不是正确率，也不是全部词库的掌握比例。近 7 日折线是练习事件，不含到期信号，也不含学习分钟。学习分钟和遗忘节点（今日到期、逾期、学习中、已巩固）是另外两张图，不进入认词、搭配、产出、巩固雷达。点学员可看个人图表，以及一段给家长的简短评价。样本少于 5 次时雷达该项显示样本不足，坐标轴为灰色，不记成 0 分。名单按班级分组。一键下载一次只打包一个班级。解压后是该班每位学员一份 HTML 学情页，直接给家长打开。包里没有目录页，也没有附表。用当前已加载的数据，不另取密钥。</p>
     <p id="cloud-status" role="status"></p>
     <div class="cards class-only" id="kpi-strip">
       <div><b id="kpi-students">—</b>学员数</div>
@@ -355,7 +355,8 @@
 <script src="sync-merge.js"></script>
 <script src="cloud-client.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
-<script src="study-metrics.js?v=20261108-accuracy2"></script>
-<script src="teacher.js?v=20261108-accuracy2"></script>
+<script src="sync-core.js?v=20261108-sync3"></script>
+<script src="study-metrics.js?v=20261108-sync3"></script>
+<script src="teacher.js?v=20261108-sync3"></script>
 </body>
 </html>

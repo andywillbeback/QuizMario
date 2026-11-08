@@ -1,0 +1,24 @@
+---
+description: Learning data ownership, durable automatic sync, truthful feedback, and release checks
+globs: "grok/**,tests/**,tools/**,.github/workflows/**"
+alwaysApply: false
+---
+# Learning data rules
+
+- Treat learner records as evidence. Never invent counts, course labels, or mastery claims.
+- Every local save, notebook and pending delivery belongs to one explicit account. Keep unowned legacy data preserved and quarantined; never assign it on the next login.
+- Capture the account id with each immutable upload attempt. Invalidate old callbacks and hide old data immediately on logout or account changes.
+- Persist pending work before network delivery. A failure, timeout, page close or history cap must not acknowledge or discard pending records.
+- Use bounded requests, automatic retry/backoff, online recovery and durable restart recovery. Show storage failures and stale timestamps honestly.
+- Use stable event ids and per-writer receipts. A retry or lost acknowledgement must never count the same attempt twice.
+- Compare the server revision before replacing progress. Reconcile this writer's delta on conflict; do not overwrite a newer save with an old whole snapshot.
+- Preserve studyDaily, spelling, polysemy, collocationEvidence and notebook metadata when restoring or compacting saves. Remove only exact unused default cards.
+- Recognition, typing, multiple choice and delayed retention are distinct evidence. Assisted/repeated responses do not establish independent mastery.
+- Manual notebook additions and “不会” are not wrong answers. Keep entries/notes when archived or graduated.
+- Personal weak-word scores/glosses must depend only on that account. Class totals must never flow back into a student's report.
+- Teacher data uses a fixed server snapshot with source counts, evidence ranges and calculation version. Validate before displaying and before exporting; fail closed on inconsistency.
+- Keep SQL teacher reads security invoker and preserve existing own-row RLS. Do not grant broader access or run role-seeding statements as a report migration.
+- Keep source statistics, event counts and derived scores separately labelled. Mark missing evidence as unknown rather than zero or certainty.
+- Test fixtures must use fictional identities. Never commit student captures, real account ids, session data, notes, exports or credentials.
+- For a data-flow change run `node tools/verify-learning-contracts.js`. Do not skip, weaken, or suppress failing ownership/sync/report checks to release a change.
+- The Pages deployment must depend on the successful verification job. Preserve that gate in future workflow edits.

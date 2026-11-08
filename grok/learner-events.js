@@ -179,9 +179,12 @@
   function trim(store) {
     sortEvents(store.events);
     if (store.events.length <= MAX_EVENTS) return store;
-    var removed = store.events.splice(0, store.events.length - MAX_EVENTS);
-    var uploaded = store.uploaded || {};
-    for (var i = 0; i < removed.length; i++) delete uploaded[removed[i].event_id];
+    // The history cap may evict acknowledged history, never an unsent event.
+    var uploaded = store.uploaded || {}, remove = store.events.length - MAX_EVENTS;
+    store.events = store.events.filter(function (ev) {
+      if (remove > 0 && uploaded[ev.event_id]) { remove--; delete uploaded[ev.event_id]; return false; }
+      return true;
+    });
     store.uploaded = uploaded;
     return store;
   }
@@ -314,7 +317,7 @@
     var rows = [];
     for (var i = 0; i < events.length; i++) {
       var ev = events[i];
-      if (!ev.learner_id || (learner && ev.learner_id !== learner)) continue;
+      if (!ev.learner_id || (learner && ev.learner_id !== learner) || (ev.user_id && ev.user_id !== ev.learner_id)) continue;
       if (uploaded[ev.event_id]) continue;
       if (ev.source && ev.source !== SOURCE) continue;
       rows.push(pickDbColumns(publicEvent(ev)));
@@ -400,34 +403,60 @@
   }
 
   function installBrowser(root) {
-    var memory = null;
+    var memory = null, boundId = '', generation = 0, retryTimer = null, retryCount = 0, localError = '';
     var flushTimer = null;
     var flushChain = Promise.resolve();
-    var cloudState = "";
-    var cloudBlocked = "";
-    var warned = false;
-    var pulled = false;
+    var cloudState = '', cloudBlocked = '', warned = false, pulled = false;
     var DEBOUNCE_MS = 800;
-
+    var accounts = root.QuizMarioAccountStore;
+    var core = root.QuizMarioSyncCore;
+    function cacheKey(id) { return accounts ? accounts.key(STORAGE_KEY,id) : STORAGE_KEY+':account:'+id; }
+    function queuePrefix(id) { return 'quizmario-event-pending-v2:'+encodeURIComponent(id)+':'; }
+    function outbox(id) {
+      var out = [], prefix = queuePrefix(id), storage = root.localStorage;
+      for (var i=0; storage && i<storage.length; i++) {
+        var key=storage.key(i);if (!key || key.indexOf(prefix)!==0) continue;
+        try { var ev=JSON.parse(storage.getItem(key));if(ev.learner_id===id && ev.user_id===id)out.push(ev); } catch (_) {}
+      }
+      return out;
+    }
+    function storePending(ev) {
+      try { root.localStorage.setItem(queuePrefix(ev.learner_id)+ev.event_id,JSON.stringify(publicEvent(ev)));localError=''; }
+      catch(e) { localError=String(e.message||e); }
+    }
     function load() {
       if (memory) return memory;
-      try {
-        var raw = root.localStorage && root.localStorage.getItem(STORAGE_KEY);
-        if (raw) memory = JSON.parse(raw);
-      } catch (_) {}
-      if (!memory || !Array.isArray(memory.events)) memory = emptyStore();
-      if (!memory.uploaded) memory.uploaded = {};
+      try { memory=JSON.parse(root.localStorage.getItem(cacheKey(boundId)) || 'null'); } catch (_) {}
+      if (!memory || !Array.isArray(memory.events)) memory=emptyStore();
+      memory.learner_id=boundId;memory.uploaded=memory.uploaded||{};
+      memory.events=memory.events.filter(function(e){return e.learner_id===boundId && (!e.user_id || e.user_id===boundId);});
+      var seen={};memory.events.forEach(function(e){seen[e.event_id]=true;});
+      outbox(boundId).forEach(function(e){if(!seen[e.event_id]){memory.events.push(e);seen[e.event_id]=true;}});
       return memory;
     }
-
-    function persistStore() {
-      try {
-        if (root.localStorage) root.localStorage.setItem(STORAGE_KEY, JSON.stringify(load()));
-      } catch (e) {
-        if (root.console && console.warn) console.warn("QuizMario learner_events local", e);
-      }
+    function persistStore(store,owner) {
+      store=store||load();owner=owner||boundId;if(!owner)return;
+      try { root.localStorage.setItem(cacheKey(owner),JSON.stringify(trim(store))); }
+      catch(e) { localError=String(e.message||e); }
     }
-
+    function migrateOwnedLegacy(id) {
+      // Explicit ids can be recovered. Blank/unowned legacy events stay untouched.
+      var old;try{old=JSON.parse(root.localStorage.getItem(STORAGE_KEY)||'null');}catch(_){}
+      if(!old || !Array.isArray(old.events))return;
+      var store=load(), seen={};store.events.forEach(function(e){seen[e.event_id]=true;});
+      old.events.forEach(function(e){
+        if(e.learner_id!==id || (e.user_id && e.user_id!==id))return;
+        if(!seen[e.event_id]){store.events.push(e);seen[e.event_id]=true;}
+        if(old.uploaded && old.uploaded[e.event_id])store.uploaded[e.event_id]=true;
+        else storePending(e);
+      });persistStore();
+    }
+    function retryLater(owner,token) {
+      if(owner!==boundId || token!==generation || retryTimer)return;
+      retryCount=Math.min(retryCount+1,5);
+      retryTimer=setTimeout(function(){retryTimer=null;if(owner===boundId && token===generation)enqueueFlush();},Math.min(30000,1000*Math.pow(2,retryCount)));
+    }
+    function bounded(q) { return core ? core.request(q) : Promise.resolve(q); }
     function $(id) { return root.document.getElementById(id); }
 
     function cloudMode() {
@@ -449,14 +478,16 @@
         return "还没有学习信号。答对、答错、进入错词本，或首页算出今日到期之后，可以下载 JSONL。间隔重复仍由本机计算。";
       }
       var base = "本机 " + n + " 条学习信号（source=quizmario）";
-      if (mode === "session" && cloudState === "ok" && up > 0) {
-        return base + "，其中 " + up + " 条已写入 Supabase learner_events。ALS 不会自动收到这些行：下载 JSONL 交给 ingest，或等 ALS 自己来读这张表。";
+      var pending = outbox(boundId).length;
+      if (localError) return base+'。本机保存失败，请保持页面打开；正在尝试上传：'+localError;
+      if (mode === "session" && cloudState === "ok") {
+        return base+'，已确认写入 '+up+' 条，待补传 '+pending+' 条。网络恢复后会自动补传。';
       }
       if (mode === "session" && cloudState === "missing") {
         return base + "。Supabase 还没有 learner_events 表，请在 SQL 编辑器运行 supabase/learner_events.sql。JSONL 可以下载。";
       }
       if (mode === "session" && cloudState === "error") {
-        return base + "。写入 Supabase 失败，JSONL 仍可下载。";
+        return base + "。暂未收到云端确认，记录已保留并会自动重试。";
       }
       if (mode === "logged_out") {
         return base + "。登录后才会写入 Supabase。JSONL 可以下载。";
@@ -467,6 +498,7 @@
     function refreshStatus() {
       var el = $("learner-events-status");
       if (el) el.textContent = statusText();
+      try { root.dispatchEvent(new root.CustomEvent('quizmario:sync-state')); } catch (_) {}
     }
 
     function setNote(text) {
@@ -479,6 +511,7 @@
     function withIdentity(input) {
       var store = load();
       input = Object.assign({}, input || {});
+      if ((input.learner_id && input.learner_id!==boundId) || (input.user_id && input.user_id!==boundId)) return null;
       if (!input.learner_id && store.learner_id) {
         input.learner_id = store.learner_id;
         input.user_id = store.learner_id;
@@ -488,13 +521,15 @@
     }
 
     function remember(inputs) {
+      if (!boundId) return {added:[],events:[]};
       var store = load();
       var added = [];
       var list = inputs || [];
       for (var i = 0; i < list.length; i++) {
-        var ev = buildEvent(withIdentity(list[i]));
+        var input=withIdentity(list[i]);if(!input)continue;
+        var ev = buildEvent(input);
         var res = append(store, ev);
-        if (!res.duplicate) added.push(res.event);
+        if (!res.duplicate) { added.push(res.event);storePending(res.event); }
       }
       if (added.length) persistStore();
       refreshStatus();
@@ -531,102 +566,65 @@
       try { return clientApi.client(); } catch (_) { return null; }
     }
 
-    async function pullOnce() {
+    async function pullOnce(owner,token,store) {
       if (pulled) return;
-      var client = clientOrNull();
-      var store = load();
-      if (!client || !store.learner_id) return;
-      pulled = true;
-      var res = await client.from("learner_events")
-        .select(REMOTE_COLUMNS)
-        .eq("learner_id", store.learner_id)
-        .eq("source", SOURCE)
-        .order("created_at", { ascending: false })
-        .limit(MAX_EVENTS);
-      if (res.error) throw res.error;
-      mergeRemote(store, res.data || []);
-      persistStore();
+      var client=clientOrNull();if(!client || !owner)return;
+      var res=await bounded(client.from('learner_events').select(REMOTE_COLUMNS).eq('learner_id',owner).eq('source',SOURCE).order('created_at',{ascending:false}).limit(MAX_EVENTS));
+      if(res.error)throw res.error;
+      if(owner!==boundId || token!==generation)return;
+      mergeRemote(store,(res.data||[]).filter(function(e){return e.learner_id===owner && e.user_id===owner;}));
+      pulled=true;persistStore(store,owner);refreshStatus();
+    }
+    async function flushOnce(owner,token) {
+      var client=clientOrNull();
+      var cloud=root.QuizMarioCloud;
+      if(!client || !owner || owner!==boundId || token!==generation || cloudMode()!=='session' || (cloud.userId && cloud.userId()!==owner))return;
+      if(root.navigator && root.navigator.onLine===false){refreshStatus();return;}
+      var store=load(), byId={};
+      pendingRows(store).concat(outbox(owner)).forEach(function(e){if(e.learner_id===owner && e.user_id===owner)byId[e.event_id]=publicEvent(e);});
+      var rows=Object.keys(byId).map(function(k){return byId[k];});
+      for(var offset=0;offset<rows.length;offset+=100){
+        if(owner!==boundId || token!==generation)return;
+        var batch=rows.slice(offset,offset+100);
+        var res=await bounded(client.from('learner_events').upsert(batch,{onConflict:'event_id',ignoreDuplicates:true}));
+        if(res.error)throw res.error;
+        var ids=batch.map(function(e){return e.event_id;});markUploaded(store,ids);
+        ids.forEach(function(id){try{root.localStorage.removeItem(queuePrefix(owner)+id);}catch(_){}});
+        persistStore(store,owner);
+      }
+      if(owner!==boundId || token!==generation)return;
+      cloudState='ok';cloudBlocked='';warned=false;retryCount=0;
+      try{await pullOnce(owner,token,store);}catch(e){pulled=false;retryLater(owner,token);}
       refreshStatus();
     }
-
-    async function flushOnce() {
-      var client = clientOrNull();
-      var store = load();
-      if (!client || !store.learner_id || cloudMode() !== "session") {
-        refreshStatus();
-        return;
-      }
-      var rows = pendingRows(store);
-      if (rows.length) {
-        var res = await client.from("learner_events").upsert(rows, {
-          onConflict: "event_id",
-          ignoreDuplicates: true,
-        });
-        if (res.error) throw res.error;
-        var ids = [];
-        for (var i = 0; i < rows.length; i++) ids.push(rows[i].event_id);
-        markUploaded(store, ids);
-        persistStore();
-        cloudState = "ok";
-        cloudBlocked = "";
-        warned = false;
-      } else if (cloudState !== "missing" && cloudState !== "error") {
-        cloudState = "ok";
-      }
-      try {
-        await pullOnce();
-      } catch (pullErr) {
-        if (!warned && root.console && console.warn) {
-          warned = true;
-          console.warn("QuizMario learner_events pull", pullErr);
-        }
-      }
-      refreshStatus();
-    }
-
     function enqueueFlush() {
-      flushChain = flushChain.then(flushOnce).catch(noteFailure);
-      return flushChain;
+      var owner=boundId,token=generation;
+      flushChain=flushChain.then(function(){return flushOnce(owner,token);}).catch(function(e){
+        if(owner===boundId && token===generation){noteFailure(e);retryLater(owner,token);}
+      });return flushChain;
     }
-
     function scheduleFlush() {
-      if (cloudBlocked === "missing") return;
-      if (flushTimer) clearTimeout(flushTimer);
-      flushTimer = setTimeout(function () {
-        flushTimer = null;
-        enqueueFlush();
-      }, DEBOUNCE_MS);
+      if(flushTimer || !boundId)return;
+      flushTimer=setTimeout(function(){flushTimer=null;enqueueFlush();},DEBOUNCE_MS);
     }
-
     function flush() {
-      if (flushTimer) {
-        clearTimeout(flushTimer);
-        flushTimer = null;
-      }
-      cloudBlocked = "";
-      return enqueueFlush();
+      if(flushTimer){clearTimeout(flushTimer);flushTimer=null;}
+      cloudBlocked='';return enqueueFlush();
     }
-
     function bindUser(user) {
-      var id = user && (user.id || user.user_id);
-      if (!id) return Promise.resolve();
-      var store = load();
-      retainLearner(store, id);
-      stampLearner(store, id);
-      persistStore();
-      cloudBlocked = "";
-      pulled = false;
-      refreshStatus();
-      return flush();
+      var id=user&&(user.id||user.user_id);if(!id)return Promise.resolve();
+      if(id!==boundId){generation++;boundId=id;memory=null;pulled=false;cloudState='';if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}migrateOwnedLegacy(id);}
+      refreshStatus();return flush();
     }
-
+    function unbindUser() {
+      generation++;boundId='';memory=null;pulled=false;
+      if(flushTimer){clearTimeout(flushTimer);flushTimer=null;}
+      if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
+    }
     function clear() {
-      memory = emptyStore();
-      pulled = false;
-      cloudState = "";
-      try { if (root.localStorage) root.localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-      refreshStatus();
-      setNote("");
+      // A local-history reset must not destroy unacknowledged delivery records.
+      if(boundId){try{root.localStorage.removeItem(cacheKey(boundId));}catch(_){}}
+      memory=null;pulled=false;cloudState='';refreshStatus();setNote('');
     }
 
     function download() {
@@ -684,6 +682,8 @@
       if (root.document.visibilityState === "hidden") flush();
     });
     root.addEventListener("pagehide", function () { flush(); });
+    root.addEventListener('online',function(){retryCount=0;flush();});
+    setInterval(function(){if(boundId && (outbox(boundId).length || !pulled))flush();},15000);
 
     refreshStatus();
 
@@ -707,6 +707,8 @@
       return remember(inputs);
     };
     api.bindUser = bindUser;
+    api.unbindUser = unbindUser;
+    api.syncState = function(){return {owner:boundId,pending:boundId?outbox(boundId).length:0,localError:localError,error:localError || (cloudState==='error' || cloudState==='missing' ? cloudState : '')};};
     api.flush = flush;
     api.clear = clear;
     api.list = function () { return exportEvents().map(publicEvent); };

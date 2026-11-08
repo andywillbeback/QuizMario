@@ -1,268 +1,206 @@
-/* After login, merge cloud progress with vocabSpotlight_v1 and upsert local saves.
- * Offline play does not require this script to succeed.
+/* Account-owned durable progress journals, retry and compare-and-swap cloud saves.
+ * A network acknowledgement, not a timer, determines 已同步.
  */
 (function () {
-  "use strict";
-
-  var MERGE = window.QuizMarioMerge;
-  var CLIENT = window.QuizMarioCloudClient;
-  var DEBOUNCE_MS = 1500;
-  var STORAGE_KEY = "vocabSpotlight_v1";
-
-  var user = null;
-  var holdUploads = true;
-  var pendingDuringBoot = false;
-  var timer = null;
-  var uploadChain = Promise.resolve();
-  var bootLocalJson = "";
-  var cloudSave = null;
-
-  function $(id) { return document.getElementById(id); }
-
-  function clone(obj) {
-    return JSON.parse(JSON.stringify(obj || {}));
+  'use strict';
+  var CLIENT=window.QuizMarioCloudClient, CORE=window.QuizMarioSyncCore, STORE=window.QuizMarioAccountStore;
+  var SAVE_KEY='vocabSpotlight_v1', JOURNAL='quizmario-progress-pending-v2';
+  var user=null, ready=false, epoch=0, stopped=false, running=false, booting=false;
+  var timer=null, retry=0, journal=null, remote=null, localBase=null, lastAck='', networkBootPending=true, hadOwnedCache=false;
+  var writer=CORE && CORE.id(), writeSeq=0, heartbeat=null, storageError='', storageFailures={};
+  function savedLocally(kind,error){if(error)storageFailures[kind]=String(error.message||error);else delete storageFailures[kind];storageError=Object.keys(storageFailures).map(function(k){return storageFailures[k];}).join('; ');}
+  function $(id){return document.getElementById(id);}
+  function owned(id,token){return !stopped && user && user.id===id && token===epoch;}
+  function setStatus(text,detail){var el=$('sync-status');if(!el)return;el.textContent=text;el.title=detail||'';el.classList.toggle('is-error',/失败|待恢复|空间不足/.test(text));}
+  function renderStatus(){
+    if(!user)return;
+    var ev=window.QuizMarioLearnerEvents, signals=ev&&ev.syncState?ev.syncState():{};
+    var pending=!!(journal&&journal.desired), n=signals.pending||0;
+    if(storageError||signals.localError){setStatus('本机保存失败 · 正在尝试云端同步',storageError||signals.localError);return;}
+    if(!navigator.onLine){setStatus('离线 · 本机保留，联网后自动补传',user.email||'');return;}
+    if(!ready){setStatus('正在读取本账号进度 · 自动重试中',user.email||'');return;}
+    if(retry||signals.error){setStatus('自动同步待恢复 · 记录已保留',signals.error||'连接恢复后自动重试');return;}
+    if(pending||n||running){setStatus('自动同步中'+(n?' · '+n+' 条学习记录待确认':''),user.email||'');return;}
+    setStatus('已自动同步'+(lastAck?' · '+new Date(lastAck).toLocaleTimeString():''),user.email||'');
   }
-
-  function setStatus(text, detail) {
-    var el = $("sync-status");
-    if (!el) return;
-    el.textContent = text;
-    el.title = detail || "";
-    el.classList.toggle("is-error", text.indexOf("失败") !== -1);
+  function revealApp(){
+    window.__QM_SYNC_READY=true;clearTimeout(window.__QM_ENTRY_WATCHDOG);
+    document.documentElement.classList.add('session-ok');
+    try{window.dispatchEvent(new CustomEvent('quizmario:session-ready'));}catch(_){}
   }
-
-  function revealApp() {
-    document.documentElement.classList.add("session-ok");
+  function sendToLogin(){document.documentElement.classList.remove('session-ok');location.replace('login.html'+(window.__QM_AUTH_PENDING?((location.search||'')+(location.hash||'')):''));}
+  function renderAccount(){var out=$('btn-logout'),wipe=$('wipe-label'),link=$('login-link'),cta=$('login-cta');if(out)out.hidden=!user;if(wipe)wipe.hidden=!user;if(link)link.hidden=!!user;if(cta)cta.hidden=true;}
+  function readJSON(key){try{return JSON.parse(STORE.raw.getItem(key)||'null');}catch(_){return null;}}
+  function cache(save,id){try{STORE.set(SAVE_KEY,JSON.stringify(CORE.compact(save)),id);savedLocally('cache');}catch(e){savedLocally('cache',e);}}
+  function persistJournal(j){
+    j.touched=Date.now();
+    try{STORE.raw.setItem(STORE.key(JOURNAL,j.owner)+':'+j.writer,JSON.stringify(j));savedLocally('journal');}
+    catch(e){savedLocally('journal',e);}
   }
-
-  function sendToLogin() {
-    document.documentElement.classList.remove("session-ok");
-    var tail = window.__QM_AUTH_PENDING ? ((location.search || "") + (location.hash || "")) : "";
-    location.replace("login.html" + tail);
+  function dropJournal(j){try{STORE.raw.removeItem(STORE.key(JOURNAL,j.owner)+':'+j.writer);}catch(_){} }
+  function recordDesired(save){
+    if(!user||!ready||stopped)return;
+    var target=CORE.compact(save||window.__QM.getSave());
+    var merge=window.QuizMarioMerge, profile=target.profile||{};
+    if(merge && merge.isBlank(target) && !(profile.name && profile.cls))return;
+    if(!journal){journal={v:2,owner:user.id,writer:writer,seq:writeSeq,base:CORE.clone(localBase||target),desired:target};}
+    else journal.desired=target;
+    persistJournal(journal);cache(target,user.id);renderStatus();schedule(1200);
   }
-
-  function renderAccount() {
-    var logged = !!user;
-    var confirming = !logged && (!!window.__QM_EXPECT_SESSION || document.documentElement.classList.contains("session-ok"));
-    var link = $("login-link");
-    var cta = $("login-cta");
-    var out = $("btn-logout");
-    var wipe = $("wipe-label");
-    if (cta) cta.hidden = true;
-    if (link) link.hidden = logged || confirming;
-    if (out) out.hidden = !logged;
-    if (wipe) wipe.hidden = !logged;
-    if (logged) return;
-    if (confirming) {
-      setStatus("已登录 · 同步中", "");
-      return;
+  function onLocalSave(save){recordDesired(save);}
+  function schedule(ms){if(timer||stopped||!user)return;timer=setTimeout(function(){timer=null;flushNow();},ms);}
+  function client(){return CLIENT&&CLIENT.client();}
+  async function readRemote(owner){
+    var res=await CORE.request(client().from('user_progress').select('save,updated_at').eq('user_id',owner).maybeSingle());
+    if(res.error)throw res.error;return res.data||null;
+  }
+  function receipt(row,j){var receipts=row&&row.save&&row.save._syncReceipts;return !!(j.attempt&&receipts&&Number(receipts[j.writer])>=j.attempt.seq);}
+  async function commitJournal(j,token){
+    var owner=j.owner;
+    if(!j.attempt){j.seq=(j.seq||0)+1;if(j.writer===writer)writeSeq=j.seq;j.attempt={seq:j.seq,base:CORE.clone(j.base||{}),target:CORE.clone(j.desired)};persistJournal(j);}
+    var row=remote&&remote.owner===owner?remote.row:await readRemote(owner);
+    for(var tries=0;tries<6;tries++){
+      if(!owned(owner,token))throw new Error('account_changed');
+      if(receipt(row,j))return row;
+      var payload=CORE.reconcile(j.attempt.base,j.attempt.target,row&&row.save||{});
+      payload._syncReceipts=Object.assign({},row&&row.save&&row.save._syncReceipts||{});
+      payload._syncReceipts[j.writer]=j.attempt.seq;
+      var query;
+      if(row){query=client().from('user_progress').update({save:payload}).eq('user_id',owner).eq('updated_at',row.updated_at).select('save,updated_at').maybeSingle();}
+      else query=client().from('user_progress').insert({user_id:owner,save:payload}).select('save,updated_at').maybeSingle();
+      var result=await CORE.request(query);
+      if(result.error&&result.error.code!=='23505')throw result.error;
+      if(result.data&&!result.error)return result.data;
+      row=await readRemote(owner);
     }
-    var configured = CLIENT && CLIENT.isConfigured();
-    setStatus("未登录本地", configured ? "" : "config.js 仍是占位符，进度只保存在本机");
+    throw new Error('其他页面也在同步，记录已保留并将自动重试');
   }
-
-  function friendlySyncError(err) {
-    var msg = (err && err.message) || String(err || "同步失败");
-    if (/user_progress|schema cache|does not exist|42P01|PGRST205/i.test(msg)) {
-      return "云端表 user_progress 还没有建好。请在 Supabase SQL 编辑器运行 supabase/user_progress.sql。";
+  async function finishJournal(j,row,token,isCurrent){
+    if(!owned(j.owner,token))return;
+    remote={owner:j.owner,row:row};
+    var latest=isCurrent?journal:(readJSON(STORE.key(JOURNAL,j.owner)+':'+j.writer)||j);
+    if(!isCurrent && latest && !latest.attempt)latest.attempt=j.attempt;
+    if(!latest||!latest.attempt)return;
+    var desired=CORE.reconcile(latest.attempt.target,latest.desired,row.save||{});
+    var clean=CORE.equal(CORE.compact(desired),CORE.compact(row.save));
+    latest.base=CORE.compact(row.save);latest.desired=desired;delete latest.attempt;
+    if(isCurrent){
+      localBase=CORE.compact(row.save);
+      if(window.__QM&&typeof window.__QM.applySyncedSave==='function')window.__QM.applySyncedSave(desired);
+      cache(desired,j.owner);
+      if(clean){dropJournal(latest);journal=null;}else persistJournal(latest);
+    }else{
+      if(clean)dropJournal(latest);else persistJournal(latest);
+      if(ready && !journal){localBase=CORE.compact(row.save);if(window.__QM.applySyncedSave)window.__QM.applySyncedSave(row.save);cache(row.save,j.owner);}
     }
-    if (/JWT|invalid api key|apikey/i.test(msg)) {
-      return "Supabase anon key 无效。请检查 config.js 里的 SUPABASE_ANON_KEY。";
-    }
-    return msg;
+    lastAck=row.updated_at;retry=0;
   }
-
-  function onLocalSave() {
-    if (holdUploads || !user) {
-      if (holdUploads) pendingDuringBoot = true;
-      return;
+  async function recover(owner,token){
+    var keys=STORE.keys(JOURNAL,owner);
+    for(var i=0;i<keys.length;i++){
+      var old=readJSON(keys[i]);
+      if(!old||old.owner!==owner||old.writer===writer||!old.desired)continue;
+      // A live page refreshes its lease every 10s. Do not steal a live writer.
+      if(!old.released && Date.now()-Number(old.touched||0)<45000)continue;
+      var result=await commitJournal(old,token);
+      await finishJournal(old,result,token,false);
     }
-    setStatus("已登录 · 同步中", user.email || "");
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(function () {
-      timer = null;
-      enqueueUpload();
-    }, DEBOUNCE_MS);
   }
-
-  function enqueueUpload() {
-    var qm = window.__QM;
-    if (!qm || !user || typeof qm.getSave !== "function") return uploadChain;
-    var snapshot;
-    try { snapshot = clone(qm.getSave()); } catch (_) { return uploadChain; }
-    uploadChain = uploadChain.then(function () {
-      return uploadSnapshot(snapshot);
-    }).catch(function (e) {
-      setStatus("已登录 · 同步失败", friendlySyncError(e));
-    });
-    return uploadChain;
-  }
-
-  async function uploadSnapshot(snapshot) {
-    var client = CLIENT && CLIENT.client();
-    if (!client || !user || !MERGE) return;
-    if (MERGE.isBlank(snapshot) && !profileReady(snapshot)) {
-      setStatus("已登录 · 已同步", user.email || "");
-      return;
+  async function flushNow(){
+    if(stopped||!user||running)return;
+    if(timer){clearTimeout(timer);timer=null;}
+    if(!navigator.onLine){renderStatus();return;}
+    if(!ready || networkBootPending){return boot();}
+    running=true;renderStatus();var owner=user.id,token=epoch;
+    try{
+      if(journal){var current=journal;var result=await commitJournal(current,token);await finishJournal(current,result,token,true);}
+      await recover(owner,token);
+      retry=0;
+    }catch(e){
+      if(owned(owner,token)){remote=null;retry=Math.min(retry+1,5);schedule(Math.min(30000,1000*Math.pow(2,retry)));}
+    }finally{
+      running=false;
+      if(owned(owner,token)){renderStatus();if(journal&&!timer)schedule(1200);}
     }
-    if (!snapshot.updatedAt && window.__QM && typeof window.__QM.touchUpdatedAt === "function") {
-      window.__QM.touchUpdatedAt();
-      snapshot = clone(window.__QM.getSave());
-    }
-    var res = await client.from("user_progress").upsert({
-      user_id: user.id,
-      save: snapshot,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id" });
-    if (res.error) throw res.error;
-    setStatus("已登录 · 已同步", user.email || "");
   }
-
-  function profileReady(snapshot) {
-    try {
-      var api = window.QuizMarioProfileName;
-      if (api && typeof api.complete === "function" && typeof api.readProfile === "function") {
-        return api.complete(api.readProfile(snapshot));
+  function stampIdentity(cloud){
+    var api=window.QuizMarioProfileName,qm=window.__QM;
+    if(!api||!user||!qm||!api.pickProfile)return;
+    var picked=api.pickProfile(qm.getSave(),cloud,user),cur=api.readProfile(qm.getSave());
+    if((picked.name||cur.name)!==cur.name||(picked.cls||cur.cls)!==cur.cls)qm.setProfile(picked.name||cur.name,picked.cls||cur.cls);
+  }
+  async function boot(){
+    if(booting||stopped)return;booting=true;
+    var token=epoch;
+    try{
+      if(!CORE||!STORE||!CLIENT||!CLIENT.isConfigured()||!client()||!window.__QM){sendToLogin();return;}
+      if(!user){
+        var res=await client().auth.getSession();if(res.error)throw res.error;
+        user=res.data&&res.data.session&&res.data.session.user;
+        if(!user){sendToLogin();return;}
+        STORE.activate(user.id);renderAccount();
+        var ownCache=STORE.get(SAVE_KEY,user.id), parsed=null;
+        try{parsed=ownCache?JSON.parse(ownCache):null;}catch(_){}
+        hadOwnedCache=!!(parsed && typeof parsed==='object' && !Array.isArray(parsed));
+        localBase=hadOwnedCache?CORE.compact(parsed):{};
+        window.__QM.applyCloudSave(localBase);
       }
-    } catch (_) {}
-    var p = snapshot && snapshot.profile;
-    return !!(p && String(p.name || "").trim() && String(p.cls || "").trim());
+      renderStatus();var owner=user.id;
+      var row=await readRemote(owner);if(!owned(owner,token))return;
+      remote={owner:owner,row:row};
+      await recover(owner,token);if(!owned(owner,token))return;
+      row=remote&&remote.row||row;
+      // On initial online load the server/recovered journal supplies the baseline.
+      if(!ready || !journal){localBase=CORE.compact(row&&row.save||{});window.__QM.applyCloudSave(localBase);cache(localBase,owner);}
+      else if(journal){remote={owner:owner,row:row};}
+      ready=true;networkBootPending=false;retry=0;lastAck=row&&row.updated_at||'';
+      var events=window.QuizMarioLearnerEvents;
+      if(events&&events.bindUser)events.bindUser(user).catch(function(){});
+      if (user) revealApp();stampIdentity(row&&row.save);
+      if(window.__QM.onSessionReady)window.__QM.onSessionReady();
+      renderStatus();if(journal)schedule(0);
+    }catch(e){
+      if(user&&token===epoch){
+        networkBootPending=true;retry=Math.min(retry+1,5);var cached=hadOwnedCache && STORE.get(SAVE_KEY,user.id);
+        if(cached){ready=true;if(window.QuizMarioLearnerEvents)window.QuizMarioLearnerEvents.bindUser(user).catch(function(){});if (user) revealApp();}
+        var hold=$('auth-hold');if(hold)hold.textContent='正在读取本账号进度，连接恢复后会自动重试。';
+        schedule(Math.min(30000,1000*Math.pow(2,retry)));renderStatus();
+      }else sendToLogin();
+    }finally{booting=false;}
   }
-
-  function stampIdentity(cloud) {
-    var api = window.QuizMarioProfileName;
-    var qm = window.__QM;
-    if (!api || !user || !qm || typeof qm.getSave !== "function" || typeof qm.setProfile !== "function") return;
-    if (typeof api.pickProfile !== "function" || typeof api.readProfile !== "function") return;
-    var picked = api.pickProfile(qm.getSave(), cloud, user);
-    var cur = api.readProfile(qm.getSave());
-    var nextName = picked.name || cur.name;
-    var nextCls = picked.cls || cur.cls;
-    if (nextName === cur.name && nextCls === cur.cls) return;
-    qm.setProfile(nextName, nextCls);
+  function suspend(){
+    if(stopped)return;stopped=true;epoch++;ready=false;window.__QM_SYNC_READY=false;
+    if(timer)clearTimeout(timer);if(heartbeat)clearInterval(heartbeat);
+    document.documentElement.classList.remove('session-ok');
+    if(window.QuizMarioLearnerEvents&&window.QuizMarioLearnerEvents.unbindUser)window.QuizMarioLearnerEvents.unbindUser();
+    location.replace('index.html');
   }
-
-  function flushNow() {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    if (!user || holdUploads) return Promise.resolve();
-    return enqueueUpload();
+  async function logout(opts){
+    opts=opts||{};
+    if(opts.wipe&&!window.confirm('退出并清除本账号的本机缓存？云端进度和待补传记录会保留。'))return;
+    var owner=user&&user.id;
+    try{await Promise.race([Promise.all([flushNow(),window.QuizMarioLearnerEvents&&window.QuizMarioLearnerEvents.flush()]),new Promise(function(r){setTimeout(r,2000);})]);}catch(_){}
+    stopped=true;epoch++;ready=false;if(timer)clearTimeout(timer);if(heartbeat)clearInterval(heartbeat);
+    if(window.QuizMarioLearnerEvents&&window.QuizMarioLearnerEvents.unbindUser)window.QuizMarioLearnerEvents.unbindUser();
+    if(opts.wipe&&owner)STORE.remove(SAVE_KEY,owner);
+    try{await client().auth.signOut();}catch(_){}
+    user=null;window.__QM_SYNC_READY=false;window.__QM_EXPECT_SESSION=false;document.documentElement.classList.remove('session-ok');location.replace('login.html');
   }
-
-  async function logout(opts) {
-    opts = opts || {};
-    if (opts.wipe) {
-      if (!window.confirm("退出并清除本机进度？云端进度会保留，下次登录可以再同步下来。")) return;
-    }
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    pendingDuringBoot = false;
-    var client = CLIENT && CLIENT.client();
-    if (client) {
-      try { await client.auth.signOut(); } catch (_) {}
-    }
-    user = null;
-    window.__QM_EXPECT_SESSION = false;
-    document.documentElement.classList.remove("session-ok");
-    try { localStorage.removeItem("quizmario-auth"); } catch (_) {}
-    if (opts.wipe) {
-      try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-      if (window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.clear === "function") {
-        try { window.QuizMarioLearnerEvents.clear(); } catch (_) {}
-      }
-    }
-    location.replace("login.html");
-  }
-
-  async function boot() {
-    renderAccount();
-    var qm = window.__QM;
-    if (qm && typeof qm.getSave === "function") {
-      try { bootLocalJson = JSON.stringify(qm.getSave()); } catch (_) { bootLocalJson = ""; }
-    }
-    if (!MERGE || !CLIENT || !CLIENT.isConfigured() || !CLIENT.client() || !qm) {
-      holdUploads = false;
-      renderAccount();
-      sendToLogin();
-      return;
-    }
-    var client = CLIENT.client();
-    try {
-      var sessionRes = await client.auth.getSession();
-      var session = sessionRes && sessionRes.data && sessionRes.data.session;
-      user = session && session.user ? session.user : null;
-      if (!user) {
-        pendingDuringBoot = false;
-        renderAccount();
-        sendToLogin();
-        return;
-      }
-      revealApp();
-      setStatus("已登录 · 同步中", user.email || "");
-      renderAccount();
-      var fetched = await client.from("user_progress").select("save,updated_at").eq("user_id", user.id).maybeSingle();
-      if (fetched.error) throw fetched.error;
-      var cloud = MERGE.normalizeCloudSave(fetched.data);
-      cloudSave = cloud;
-      var bootLocal = bootLocalJson ? JSON.parse(bootLocalJson) : {};
-      var liveJson = "";
-      try { liveJson = JSON.stringify(qm.getSave()); } catch (_) {}
-      var dirty = liveJson !== bootLocalJson;
-      var plan = MERGE.planSync(bootLocal, cloud);
-      if (plan.source === "cloud" && cloud) {
-        qm.applyCloudSave(cloud);
-        pendingDuringBoot = false;
-        setStatus("已登录 · 已同步", user.email || "");
-      } else if (plan.upload || (dirty && plan.source === "local" && !MERGE.isBlank(qm.getSave()))) {
-        if (!qm.getSave().updatedAt && typeof qm.touchUpdatedAt === "function") qm.touchUpdatedAt();
-        await uploadSnapshot(clone(qm.getSave()));
-      } else {
-        setStatus("已登录 · 已同步", user.email || "");
-      }
-    } catch (e) {
-      setStatus(user ? "已登录 · 同步失败" : "未登录本地", friendlySyncError(e));
-      if (window.console && console.warn) console.warn("QuizMario sync", e);
-      if (user) revealApp();
-      else sendToLogin();
-    } finally {
-      holdUploads = false;
-      if (user && window.QuizMarioLearnerEvents && typeof window.QuizMarioLearnerEvents.bindUser === "function") {
-        try { window.QuizMarioLearnerEvents.bindUser(user); } catch (_) {}
-      }
-      if (pendingDuringBoot && user) {
-        pendingDuringBoot = false;
-        enqueueUpload();
-      }
-      try { stampIdentity(cloudSave); } catch (_) {}
-      if (user && window.__QM && typeof window.__QM.onSessionReady === "function") {
-        try { window.__QM.onSessionReady(); } catch (_) {}
-      }
-    }
-  }
-
-  document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "hidden") flushNow();
-  });
-  window.addEventListener("pagehide", function () { flushNow(); });
-
-  var logoutBtn = $("btn-logout");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", function () {
-      var wipeEl = $("wipe-local");
-      logout({ wipe: !!(wipeEl && wipeEl.checked) });
+  window.QuizMarioCloud={onLocalSave:onLocalSave,flushNow:flushNow,loggedIn:function(){return !!user&&!stopped;},userId:function(){return user&&!stopped?user.id:'';},noteLocalFailure:function(e){storageError=String(e.message||e);renderStatus();},logout:logout,syncState:function(){return{ready:ready,pending:!!journal,retrying:retry>0,lastAcknowledged:lastAck};}};
+  window.addEventListener('pageshow',function(ev){if(ev.persisted&&user&&journal){suspend();return;}if(ev.persisted&&user)client().auth.getSession().then(function(r){var u=r.data&&r.data.session&&r.data.session.user;if(!u||u.id!==user.id)suspend();else flushNow();});});
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flushNow();else{if(journal && Date.now()-Number(journal.touched||0)>=45000){suspend();return;}if(user)flushNow();}});
+  window.addEventListener('pagehide',function(){if(journal){journal.released=true;persistJournal(journal);}flushNow();});
+  window.addEventListener('online',function(){retry=0;flushNow();if(window.QuizMarioLearnerEvents)window.QuizMarioLearnerEvents.flush();});
+  window.addEventListener('offline',renderStatus);
+  window.addEventListener('quizmario:sync-state',renderStatus);
+  window.addEventListener('storage',function(ev){if(ev.key==='quizmario-auth'&&user){var s;try{s=JSON.parse(ev.newValue||'null');}catch(_){}if(!s||!s.user||s.user.id!==user.id)suspend();}});
+  var button=$('btn-logout');if(button)button.addEventListener('click',function(){var wipe=$('wipe-local');logout({wipe:!!(wipe&&wipe.checked)});});
+  if(CLIENT&&CLIENT.client()){
+    var auth=CLIENT.client().auth;
+    if(auth.onAuthStateChange)auth.onAuthStateChange(function(event,session){
+      if(user&&(!session||!session.user||session.user.id!==user.id)){stopped=true;epoch++;ready=false;document.documentElement.classList.remove('session-ok');if(window.QuizMarioLearnerEvents&&window.QuizMarioLearnerEvents.unbindUser)window.QuizMarioLearnerEvents.unbindUser();setTimeout(function(){location.replace(session&&session.user?'index.html':'login.html');},0);}
     });
   }
-
-  window.QuizMarioCloud = {
-    onLocalSave: onLocalSave,
-    flushNow: flushNow,
-    loggedIn: function () { return !!user; },
-    logout: logout,
-  };
-
+  heartbeat=setInterval(function(){if(journal&&!stopped)persistJournal(journal);if(user&&!stopped){if(journal||retry||!ready)flushNow();else recover(user.id,epoch).catch(function(){retry=1;renderStatus();});}},10000);
   boot();
 })();

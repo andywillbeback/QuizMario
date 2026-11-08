@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('assert'),n=require('../grok/word-notebook'),sense=require('../grok/sense-id'),createStore=require('../grok/account-store');
+const book={};
+const a=n.put(book,{word:'be close to',track:'gaokao',gloss:'接近',note:'介词 to\n例句：Stay close to me.',pointer:{levelIdx:4,cardKey:'gaokao|4::be close to'}},100);
+assert.strictEqual(a.created,true);assert.strictEqual(a.row.source,'manual');assert.strictEqual(a.row.priority,0,'manual addition is not a wrong answer');assert.strictEqual(a.row.active,true);assert.ok(a.row.note.includes('\n'));
+n.put(book,{key:a.key,word:'be close to',track:'gaokao',gloss:'靠近',note:'修改后的笔记'},200);assert.strictEqual(Object.keys(book).length,1);assert.strictEqual(book[a.key].note,'修改后的笔记');assert.strictEqual(book[a.key].cardKey,'gaokao|4::be close to');
+n.archive(book,a.key,3,300);assert.strictEqual(n.rows(book).length,0);assert.strictEqual(n.rows(book,{archived:true}).length,1);assert.strictEqual(book[a.key].note,'修改后的笔记','archive preserves the notebook');assert.strictEqual(book[a.key].wrongAtGrad,3);
+assert.strictEqual(n.errors({wrong:1,unknown:20,spelling:{wrong:1,typed:{wrong:1}},collocationEvidence:{wrong:2}}),4,'aggregate spelling is counted once; unknown is not wrong');
+assert.strictEqual(n.errors({spelling:{typed:{wrong:1},mc:{wrong:1}}}),2);
+assert.throws(()=>n.put(book,{word:'  ',track:'gaokao'},0),/英文/);
+const named=n.put(book,{word:'<img src=x onerror=alert(1)> apple',track:'zhongkao',note:'<script>test</script>'},400);assert.ok(named.row.note.includes('<script>'),'notes are stored as text, escaping is the view responsibility');
+assert.strictEqual(n.rows(book,{track:'gaokao',archived:true}).length,1);assert.strictEqual(n.rows(book,{search:'修改',archived:true}).length,1);
+const fs=require('fs'),path=require('path'),html=fs.readFileSync(path.join(__dirname,'../grok/index.html'),'utf8'),js=fs.readFileSync(path.join(__dirname,'../grok/word-notebook.js'),'utf8'),game=fs.readFileSync(path.join(__dirname,'../grok/game.js'),'utf8');
+assert.ok(html.includes('id="btn-notebook"')&&html.includes('id="notebook-note"'));assert.ok(js.includes("event_type:'vocab.notebook_add'"));assert.ok(!js.includes("event_type:'vocab.answer_wrong'"));assert.ok(js.includes('esc(r.note)'),'arbitrary notebook text is escaped');assert.ok(game.includes('mistakes < 2'),'a first error alone does not auto-add a new notebook entry');
+assert.ok(game.includes('rememberMiss({word:phrase.lemma'),'collocation errors use the same auto collection rule');assert.ok(game.includes('studyDaily: Object.assign({}, payload.studyDaily'),'cloud restoration preserves study time');
+console.log('word-notebook ok: manual word/phrase notes, edit, archive, error evidence, XSS boundary and auxiliary practice');

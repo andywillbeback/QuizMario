@@ -24,7 +24,7 @@ function makeRuntime(storage){
   VOCAB_EXAM_TRACKS:tracks,frames:[],requestAnimationFrame(f){ctx.frames.push(f)},THREE:{WebGLRenderer:Renderer,Scene:Obj,PerspectiveCamera:Obj,AmbientLight:Obj,HemisphereLight:Obj,DirectionalLight:Obj,
   BufferGeometry:Geo,BufferAttribute:Geo,Points:Mesh,PointsMaterial:Mat,Group:Obj,Color:class{constructor(v){this.value=v}},CanvasTexture:class{dispose(){}},MeshStandardMaterial:Mat,MeshBasicMaterial:Mat,SpriteMaterial:Mat,
   SphereGeometry:Geo,CylinderGeometry:Geo,Mesh,Sprite,Vector3:Vec,Vector2:Vec,Raycaster:class{setFromCamera(){}intersectObjects(){return[]}}}});
- ctx.window=ctx;vm.createContext(ctx);
+ ctx.QuizMarioAccountStore={get:k=>storage[k]||null};ctx.window=ctx;vm.createContext(ctx);
  for(const path of ['grok/sense-id.js','grok/related-links.js','grok/universe-progress.js','grok/word-universe.js'])vm.runInContext(fs.readFileSync(path,'utf8'),ctx,{filename:path});
  return ctx;
 }
@@ -37,7 +37,7 @@ assert.ok(get().visual.sat>40);
 assert.ok(ctx.QuizMarioWordUniverse.currentGraph().themes.every(t=>t.hue!==184));
 assert.ok(!ctx.QuizMarioWordUniverse.currentGraph().classic3d);
 storage.vocabSpotlight_v1=JSON.stringify({cards:{'gaokao|0::advantage':{state:'learning',mastery:1,reps:2,scheduledAt:2}}});
-ctx.dispatchEvent({type:'storage',key:'vocabSpotlight_v1'});
+ctx.dispatchEvent({type:'storage',key:'vocabSpotlight_v1:account:test-user'});
 assert.equal(get().mastery,1);
 storage.vocabSpotlight_v1=JSON.stringify({cards:{'gaokao|0::advantage':{state:'learning',mastery:0,wrong:1,scheduledAt:3}}});
 ctx.dispatchEvent({type:'quizmario:progress'});assert.equal(get().mastery,0);

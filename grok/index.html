@@ -1279,6 +1279,15 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   }
   #rate-dock .rate-zh { white-space: nowrap; font-size: 1.05rem; }
   #rate-dock .rate-sub { white-space: normal; text-align: center; }
+
+  #word-notebook{width:min(820px,calc(100vw - 24px));max-height:88vh;overflow:auto;background:#10192b;color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px;}
+  #word-notebook::backdrop{background:rgba(0,0,0,.7)}
+  .notebook-heading,.notebook-filters{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.notebook-heading{justify-content:space-between}.notebook-heading h2{font-size:1.25rem;margin:0}.notebook-heading small{font-size:.8rem;color:var(--muted)}
+  .notebook-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.notebook-form label{display:grid;gap:6px;font-size:.9rem}.notebook-wide{grid-column:1/-1}
+  #word-notebook input:not([type=checkbox]),#word-notebook textarea,#word-notebook select{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#080f1c;color:var(--text);font:inherit}
+  .notebook-filters>input{flex:1;min-width:160px}.notebook-filters>select{max-width:135px}.notebook-filters label{white-space:nowrap;font-size:.85rem}
+  .notebook-entry{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.notebook-entry p{margin:8px 0}.notebook-note{white-space:pre-wrap;overflow-wrap:anywhere}.notebook-tag{font-size:.75rem;padding:3px 7px;border-radius:5px;background:#25334a;margin-left:8px}.notebook-entry small{color:var(--muted)}
+  @media(max-width:540px){.notebook-form{grid-template-columns:1fr}.notebook-entry .btn-row{gap:6px}#word-notebook{padding:16px}}
 </style>
 <link rel="stylesheet" href="mobile-ui.css?v=20261106-chartink">
 </head>
@@ -1340,6 +1349,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
           <button id="btn-challenge" class="secondary" type="button">12分钟挑战</button>
           <button id="btn-spelling" class="secondary" type="button">拼写</button>
           <button id="btn-levels" class="secondary" type="button">单元目录</button>
+          <button id="btn-notebook" class="secondary" type="button">错词笔记本</button>
           <a id="login-cta" class="btn secondary" href="login.html" hidden>登录 / 注册</a>
           <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
           <button id="btn-reset" class="ghost" type="button">重置进度</button>
@@ -1484,6 +1494,20 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   </div>
 </div>
 
+<dialog id="word-notebook" aria-labelledby="notebook-title">
+  <div class="notebook-heading"><h2 id="notebook-title">我的错词笔记本 <small id="notebook-count"></small></h2><button id="notebook-close" type="button" class="ghost">关闭</button></div>
+  <p class="sub">单词和词组累计答错两次自动加入；点击“不会”也会加入待巩固。可以手动添加和写笔记，手动添加及“不会”都不计成答错。词库内的条目可在今日必练巩固；词库外的条目保存在笔记里。移出后笔记仍保留。</p>
+  <form id="notebook-form" class="notebook-form">
+    <label>单词或词组<input id="notebook-word" maxlength="120" required autocomplete="off" placeholder="例如 achieve / be close to"></label>
+    <label>中文释义<input id="notebook-gloss" maxlength="240" placeholder="可以稍后补充"></label>
+    <label class="notebook-wide">我的笔记<textarea id="notebook-note" maxlength="2000" rows="3" placeholder="记忆方法、例句、容易混淆的地方……"></textarea></label>
+    <div class="btn-row notebook-wide"><button id="notebook-submit" type="submit">加入笔记本</button><button id="notebook-cancel-edit" type="button" class="ghost" hidden>取消编辑</button></div>
+  </form>
+  <p id="notebook-status" role="status"></p>
+  <div class="notebook-filters"><input id="notebook-search" type="search" placeholder="搜索单词、释义或笔记" aria-label="搜索笔记本"><select id="notebook-scope" aria-label="笔记本词库范围"><option value="current">当前词库</option><option value="all">全部词库</option></select><label><input id="notebook-archived" type="checkbox">显示已移出</label></div>
+  <div id="notebook-list"></div>
+</dialog>
+
 <div id="related-peek" class="related-peek" hidden>
   <div class="related-peek-card" role="dialog" aria-modal="true" aria-labelledby="related-peek-word">
     <p class="related-kicker">相关词</p>
@@ -1505,14 +1529,16 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="vendor/supabase.umd.js"></script>
   <script src="sync-merge.js"></script>
   <script src="cloud-client.js?v=20261104-auth"></script>
-  <script src="entry-guard.js?v=20261104-auth"></script>
+  <script src="account-store.js?v=20261108-sync3"></script>
+  <script src="sync-core.js?v=20261108-sync3"></script>
+  <script src="entry-guard.js?v=20261108-sync3"></script>
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
   <script src="sense-id.js"></script>
   <script src="srs-rules.js"></script>
   <script src="review-queues.js"></script>
-  <script src="learner-events.js"></script>
+  <script src="learner-events.js?v=20261108-sync3"></script>
   <script src="session-duration.js"></script>
   <script src="cloze.js"></script>
   <script src="sense-examples.js"></script>
@@ -1524,11 +1550,12 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="pronunciation.js"></script>
   <script src="related-links.js"></script>
   <script src="universe-progress.js?v=20261105"></script>
-  <script src="study-metrics.js?v=20261108-accuracy2"></script>
+  <script src="study-metrics.js?v=20261108-sync3"></script>
   <script src="own-study.js?v=20261105-mobile1"></script>
-  <script src="game.js?v=20261105-mobile1"></script>
-  <script src="profile-name.js"></script>
-  <script src="sync.js"></script>
+  <script src="game.js?v=20261108-sync3"></script>
+  <script src="word-notebook.js?v=20261108-sync3"></script>
+  <script src="profile-name.js?v=20261108-sync3"></script>
+  <script src="sync.js?v=20261108-sync3"></script>
   <script>
   (function () {
     if (!("serviceWorker" in navigator)) return;

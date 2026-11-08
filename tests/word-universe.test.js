@@ -81,7 +81,7 @@ check('gate failures persist and emit phrase-specific events before retry',()=>{
  learnerEvents(){return{TYPES:{WRONG:'vocab.answer_wrong',CORRECT:'vocab.answer_correct'},record(x){events.push(x)}}},persist(){writes++}};vm.createContext(ctx);
  const grade=source.slice(source.indexOf('  function grade(correct,'),source.indexOf('  function confirmCorrect('));
  const record=source.slice(source.indexOf('  function recordCollocationAnswer('),source.indexOf('  function bindCollocFlow('));
- vm.runInContext(record+grade+'\ngrade(false,false,"wrong","wrong");grade(false,false,"wrong","wrong");',ctx);
+ ctx.rememberMiss=()=>{};vm.runInContext(record+grade+'\ngrade(false,false,"wrong","wrong");grade(false,false,"wrong","wrong");',ctx);
  assert.equal(events.length,2);assert.equal(events[0].headword,'take advantage of');assert.equal(save.cards['gaokao|1::take advantage of'].collocationEvidence.wrong,2);
  assert.equal(save.cards[card.key].mastery,3);assert.equal(writes,2);assert.equal(adv(save).mastery,0);
 });
@@ -90,7 +90,7 @@ function runtime(storage){
  const ids={};for(const id of ['universe-root','universe-status','universe-title','universe-detail','universe-legend','universe-set','universe-track','universe-prev','universe-next','universe-page','universe-view'])ids[id]=new El;
  const document=new El;document.getElementById=id=>ids[id]||null;document.visibilityState='visible';const ctx=new El,timers=[];
  Object.assign(ctx,{document,URL,VOCAB_EXAM_TRACKS:tracks,location:{search:'?track=gaokao&set=1',href:'https://example.test/grok/word-universe.html?track=gaokao&set=1',assign(){}},localStorage:{getItem(k){return storage[k]||null}},setInterval(f){timers.push(f);return timers.length},clearInterval(){}});
- ctx.window=ctx;vm.createContext(ctx);for(const file of ['sense-id.js','related-links.js','universe-progress.js','word-universe.js'])vm.runInContext(read('grok/'+file),ctx,{filename:file});return{ctx,ids,timers};
+ ctx.QuizMarioAccountStore={get:k=>storage[k]||null};ctx.window=ctx;vm.createContext(ctx);for(const file of ['sense-id.js','related-links.js','universe-progress.js','word-universe.js'])vm.runInContext(read('grok/'+file),ctx,{filename:file});return{ctx,ids,timers};
 }
 check('no-WebGL list is complete and live on storage, same-page polling and page restore',()=>{
  const storage={};const set=n=>storage.vocabSpotlight_v1=JSON.stringify({cards:{'gaokao|0::life':{state:'learning',mastery:n,reps:1,scheduledAt:now+n}}});set(.5);
@@ -101,7 +101,7 @@ check('no-WebGL list is complete and live on storage, same-page polling and page
  const counts=[...markup.matchAll(/class="count-(?:mastered|learning|collocation|unseen)"><b>(\d+)/g)].map(m=>Number(m[1]));
  assert.equal(counts.length,4);assert.equal(counts.reduce((a,b)=>a+b,0),graph.lemmas.length,'overview statuses are disjoint and exhaustive');
  assert.equal((markup.match(/data-category-jump=/g)||[]).length,graph.themes.length,'every populated category has a jump control');
- set(1);ctx.dispatch({type:'storage',key:'vocabSpotlight_v1'});assert.equal(get().mastery,1);
+ set(1);ctx.dispatch({type:'storage',key:'vocabSpotlight_v1:account:test-user'});assert.equal(get().mastery,1);
  set(0);timers[0]();assert.equal(get().mastery,0);set(2);ctx.dispatch({type:'pageshow'});assert.equal(get().mastery,2);
 });
 check('backup round-trip preserves completed-unit registry and completion saves it before opening',()=>{

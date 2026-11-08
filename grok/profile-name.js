@@ -95,7 +95,8 @@
     var store = storage;
     if (!store) {
       if (typeof localStorage === "undefined") return null;
-      store = localStorage;
+      var owned = typeof globalThis !== 'undefined' && globalThis.QuizMarioAccountStore;
+      store = owned ? {getItem:function(k){return owned.get(k);},setItem:function(k,v){owned.set(k,v);}} : localStorage;
     }
     var save = {};
     try {
@@ -119,7 +120,8 @@
     var store = storage;
     if (!store) {
       if (typeof localStorage === "undefined") return null;
-      store = localStorage;
+      var owned = typeof globalThis !== 'undefined' && globalThis.QuizMarioAccountStore;
+      store = owned ? {getItem:function(k){return owned.get(k);},setItem:function(k,v){owned.set(k,v);}} : localStorage;
     }
     var save = {};
     try {

@@ -281,9 +281,16 @@ function earlyScript(save) {
   return `(function () {
     try { localStorage.setItem("quizmario-auth", ${JSON.stringify(JSON.stringify(SESSION))}); } catch (e) {}
     try { sessionStorage.setItem("qm-phase", "signed"); } catch (e) {}
-    try { localStorage.setItem("vocabSpotlight_v1", ${JSON.stringify(JSON.stringify(save))}); } catch (e) {}
+    // Each planted teaching scenario is a fresh server/cache fixture. Recovery
+    // journals from the preceding scenario are tested separately by the sync suite.
+    try { for(var i=localStorage.length-1;i>=0;i--){var k=localStorage.key(i);if(k.indexOf('quizmario-progress-pending-v2:account:'+${JSON.stringify(SESSION.user.id)}+':')===0||k.indexOf('quizmario-event-pending-v2:'+${JSON.stringify(SESSION.user.id)}+':')===0)localStorage.removeItem(k);} } catch(e) {}
+
+    try { localStorage.setItem("vocabSpotlight_v1:account:"+${JSON.stringify(SESSION.user.id)}, ${JSON.stringify(JSON.stringify(save))}); } catch (e) {}
+    window.__QM_MOCK_PROGRESS=${JSON.stringify(save)};
     if (window.__QM_SMOKE_FETCH) return;
+    var cloudVersion = "2026-01-01T00:00:00.000Z", cloudRevision = 0;
     window.__QM_SMOKE_FETCH = [];
+
     var orig = window.fetch ? window.fetch.bind(window) : null;
     function reply(status, payload) {
       return Promise.resolve(new Response(JSON.stringify(payload), {
@@ -299,8 +306,12 @@ function earlyScript(save) {
         return orig(input, init);
       }
       if (url.indexOf("/user_progress") !== -1) {
-        if (method === "GET" || method === "HEAD") return reply(200, []);
-        return reply(201, [{ user_id: ${JSON.stringify(SESSION.user.id)}, updated_at: "2026-01-01T00:00:00.000Z" }]);
+        if (method === "GET" || method === "HEAD") return reply(200, window.__QM_MOCK_PROGRESS ? [{save:window.__QM_MOCK_PROGRESS,updated_at:cloudVersion}] : []);
+        var expected = new URL(url).searchParams.get("updated_at");
+        if (method === "PATCH" && expected && expected !== "eq."+cloudVersion) return reply(200, []);
+        var body = JSON.parse(init.body || "{}"); window.__QM_MOCK_PROGRESS = body.save;
+        cloudVersion = new Date(Date.now()+(++cloudRevision)).toISOString();
+        return reply(200, [{user_id:${JSON.stringify(SESSION.user.id)},save:window.__QM_MOCK_PROGRESS,updated_at:cloudVersion}]);
       }
       if (url.indexOf("/learner_events") !== -1) return reply(200, []);
       if (url.indexOf("/auth/v1/user") !== -1) return reply(200, ${JSON.stringify(SESSION.user)});
@@ -633,6 +644,7 @@ async function browserCheck() {
       const s = await snap();
       if (!s || s.gate || s.good || s.prompt === "be able to") return null;
       if (s.clear) return s;
+      if (/word-universe\.html\?track=zhongkao&set=1/.test(s.href)) return s;
       if (s.play && !s.feedback && s.choices.length === 4) return s;
       return null;
     }, 8000, "advanced past the collocation gate");
@@ -659,10 +671,11 @@ async function browserCheck() {
       const s = await snap();
       if (!s || s.gate || s.good) return null;
       if (s.clear) return s;
+      if (/word-universe\.html\?track=zhongkao&set=1/.test(s.href)) return s;
       if (s.play && !s.feedback && s.choices.length === 4) return s;
       return null;
     }, 8000, "advanced after a lemma with no related");
-    assert.ok(abilityNext.clear || abilityNext.play);
+    assert.ok(abilityNext.clear || abilityNext.play || /word-universe\.html\?track=zhongkao&set=1/.test(abilityNext.href),"a completed unit may open its exact word universe");
 
     const adv = await openPractice("gaokao", "advantage", "btn-gate-gaokao");
     assert.strictEqual(adv.prompt, "advantage");
