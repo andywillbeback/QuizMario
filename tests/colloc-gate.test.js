@@ -279,6 +279,7 @@ const SESSION = {
 
 function earlyScript(save) {
   return `(function () {
+    if(location.pathname.indexOf('/grok/index.html')===-1)return;
     try { localStorage.setItem("quizmario-auth", ${JSON.stringify(JSON.stringify(SESSION))}); } catch (e) {}
     try { sessionStorage.setItem("qm-phase", "signed"); } catch (e) {}
     // Each planted teaching scenario is a fresh server/cache fixture. Recovery
@@ -308,10 +309,10 @@ function earlyScript(save) {
       if (url.indexOf("/user_progress") !== -1) {
         if (method === "GET" || method === "HEAD") return reply(200, window.__QM_MOCK_PROGRESS ? [{save:window.__QM_MOCK_PROGRESS,updated_at:cloudVersion}] : []);
         var expected = new URL(url).searchParams.get("updated_at");
-        if (method === "PATCH" && expected && expected !== "eq."+cloudVersion) return reply(200, []);
-        var body = JSON.parse(init.body || "{}"); window.__QM_MOCK_PROGRESS = body.save;
+        if (method === "PATCH" && expected && expected !== "eq."+cloudVersion) return reply(406, {code:"PGRST116",details:"The result contains 0 rows",message:"JSON object requested"});
+        var body = JSON.parse(init.body || "{}"); if(Array.isArray(body))body=body[0]; window.__QM_MOCK_PROGRESS = body.save;
         cloudVersion = new Date(Date.now()+(++cloudRevision)).toISOString();
-        return reply(200, [{user_id:${JSON.stringify(SESSION.user.id)},save:window.__QM_MOCK_PROGRESS,updated_at:cloudVersion}]);
+        return reply(200, {user_id:${JSON.stringify(SESSION.user.id)},save:window.__QM_MOCK_PROGRESS,updated_at:cloudVersion});
       }
       if (url.indexOf("/learner_events") !== -1) return reply(200, []);
       if (url.indexOf("/auth/v1/user") !== -1) return reply(200, ${JSON.stringify(SESSION.user)});
@@ -648,7 +649,8 @@ async function browserCheck() {
       if (s.play && !s.feedback && s.choices.length === 4) return s;
       return null;
     }, 8000, "advanced past the collocation gate");
-    assert.ok(advanced.clear || advanced.play);
+    assert.ok(advanced.clear || advanced.play || /word-universe\.html\?track=zhongkao&set=1/.test(advanced.href),"a completed unit may open its exact word universe");
+    if(/word-universe\.html/.test(advanced.href)){const completion=await evaluate(`JSON.parse(QuizMarioAccountStore.get("vocabSpotlight_v1")).universeCompletedSets.zhongkao[1]`);assert.ok(completion,"automatic navigation requires a saved unit completion");}
     assert.notStrictEqual(advanced.prompt, "be able to");
 
     const plain = await openPractice("zhongkao", "ability", "btn-gate-zhongkao");

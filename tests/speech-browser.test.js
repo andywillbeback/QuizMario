@@ -176,10 +176,10 @@ function earlyScript() {
       if (url.indexOf("/user_progress") !== -1) {
         if (method === "GET" || method === "HEAD") return reply(200, cloudProgress ? [{save:cloudProgress,updated_at:cloudVersion}] : []);
         var expected=new URL(url).searchParams.get('updated_at');
-        if(method==='PATCH' && expected && expected!=='eq.'+cloudVersion)return reply(200,[]);
-        cloudProgress=JSON.parse(init.body||'{}').save;
+        if(method==='PATCH' && expected && expected!=='eq.'+cloudVersion)return reply(406,{code:'PGRST116',details:'The result contains 0 rows',message:'JSON object requested'});
+        var body=JSON.parse(init.body||'{}');cloudProgress=(Array.isArray(body)?body[0]:body).save;
         cloudVersion=new Date(Date.now()+(++cloudRevision)).toISOString();
-        return reply(200,[{user_id:${JSON.stringify(SESSION.user.id)},save:cloudProgress,updated_at:cloudVersion}]);
+        return reply(200,{user_id:${JSON.stringify(SESSION.user.id)},save:cloudProgress,updated_at:cloudVersion});
       }
       if (url.indexOf("/learner_events") !== -1) return reply(200, []);
       if (url.indexOf("/auth/v1/user") !== -1) return reply(200, ${JSON.stringify(SESSION.user)});

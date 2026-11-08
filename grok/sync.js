@@ -70,7 +70,10 @@
       else query=client().from('user_progress').insert({user_id:owner,save:payload}).select('save,updated_at').maybeSingle();
       var result=await CORE.request(query);
       if(result.error&&result.error.code!=='23505')throw result.error;
-      if(result.data&&!result.error)return result.data;
+      if(result.data&&!result.error){
+        if(Array.isArray(result.data) || !result.data.save || typeof result.data.save!=='object' || Array.isArray(result.data.save) || !result.data.updated_at || !receipt(result.data,j))throw new Error('后台确认格式未通过校验，待传记录已保留');
+        return result.data;
+      }
       row=await readRemote(owner);
     }
     throw new Error('其他页面也在同步，记录已保留并将自动重试');

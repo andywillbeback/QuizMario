@@ -538,7 +538,7 @@ async function main() {
       await evalRetry(`document.documentElement.setAttribute("data-qm-boot", "stale")`);
       await cdp.send("Page.reload", { ignoreCache: true }, sessionId);
       await waitFor(async () => evalRetry(`(() => {
-        if (document.documentElement.getAttribute("data-qm-boot") === "stale") return null;
+        if (!document.documentElement || document.documentElement.getAttribute("data-qm-boot") === "stale") return null;
         const gate = document.getElementById("screen-gate");
         if (!window.__QM || !gate || !gate.classList.contains("active")) return null;
         return true;
