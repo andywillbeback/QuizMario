@@ -379,7 +379,7 @@
       } catch (e) {
         continue;
       }
-      if (key === "track" && /^(core|ket|pet|cet4|zhongkao|gaokao)$/.test(val)) out.trackId = val;
+      if (key === "track" && /^(core|ket|pet|cet4|zhongkao|gaokao|ielts)$/.test(val)) out.trackId = val;
       if (key === "set" && val !== "" && isFinite(Number(val))) {
         var n = Math.floor(Number(val));
         if (n >= 1) out.set = n;

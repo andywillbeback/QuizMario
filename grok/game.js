@@ -3824,16 +3824,25 @@
   }
   if ($("btn-gate-zhongkao")) $("btn-gate-zhongkao").addEventListener("click", () => enterExam("zhongkao"));
   if ($("btn-gate-gaokao")) $("btn-gate-gaokao").addEventListener("click", () => enterExam("gaokao"));
+  if ($("btn-gate-ielts")) $("btn-gate-ielts").addEventListener("click", () => enterExam("ielts"));
   if ($("btn-back-gate")) $("btn-back-gate").addEventListener("click", () => showScreen("gate"));
 
   $("btn-continue").addEventListener("click", () => {
     hideQueueEmpty();
+    if (!LEVEL_COUNT) {
+      showQueueEmpty("这个词库还没有可练的词。");
+      return;
+    }
     const lvl = Math.min(save.unlockedLevel, LEVEL_COUNT);
     startLevel(lvl);
   });
   if ($("btn-challenge")) $("btn-challenge").addEventListener("click", () => {
     const lvl = Math.min(Math.max(1, save.unlockedLevel || 1), LEVEL_COUNT);
     hideQueueEmpty();
+    if (!LEVEL_COUNT) {
+      showQueueEmpty("这个词库还没有可练的词。");
+      return;
+    }
     startLevel(lvl, { mode: "challenge" });
   });
   if ($("btn-spelling")) $("btn-spelling").addEventListener("click", () => startSpellingSession());

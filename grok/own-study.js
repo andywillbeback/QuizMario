@@ -77,6 +77,9 @@
       "<h4>我的学情</h4>" +
       "<p class=\"own-hint\">只根据你自己的存档和学习记录。学情雷达是认词、搭配、产出、巩固。样本少于 " +
       sample + " 次先不打分，不记成 0 分。</p>" +
+      "<p class=\"own-hint\">雅思已接触 " + (Number(model.ieltsTouched) || 0) +
+      " 张词条卡，雅思待复习 " + (Number(model.ieltsDue) || 0) +
+      " 个。近7日答题仍是全部词库累计。</p>" +
       charts + lists + "</section>";
   }
 

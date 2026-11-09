@@ -1319,13 +1319,14 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     <div id="stage-flash" aria-hidden="true"></div>
     <div id="kill-banner" aria-live="polite"></div>
 
-    <!-- LANDING: only the two exam tracks -->
+    <!-- LANDING: exam tracks. 雅思 has no word list until the corpus is reviewed. -->
     <section id="screen-gate" class="screen active" aria-label="选择考试">
       <div class="gate">
         <p class="gate-mark">聚光单词 · 1st edition</p>
         <div class="gate-actions">
           <button id="btn-gate-zhongkao" type="button">中考</button>
           <button id="btn-gate-gaokao" type="button">高考</button>
+          <button id="btn-gate-ielts" type="button">雅思</button>
         </div>
       </div>
     </section>
@@ -1356,7 +1357,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         </div>
         <p id="continue-hint" class="sub continue-hint" hidden></p>
         <details class="learning-guide"><summary>学习方式与操作说明</summary><p class="sub">
-          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 中考拼写仍是键入英文，另算，不挡住第一次通关 · 高考这个按钮是一词多义选择题，同样不计入通关 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>（拼写时不选）· 拼写时 <kbd>Enter</kbd>=检查 · 看完解析后 <kbd>Enter</kbd>=继续
+          Tip: 继续闯关是看英文选中文，用来通关 · 今日必练合并今日到期和错词本，看中文选英文 · 中考和雅思拼写是键入英文，另算，不挡住第一次通关 · 高考这个按钮是一词多义选择题，同样不计入通关 · 雅思词表尚未装入 · 12分钟挑战才计时 · 不认识就点「不会」· 答对后 <kbd>1</kbd>/<kbd>G</kbd>=记住了 · <kbd>2</kbd>/<kbd>E</kbd>=太简单 · 选项 <kbd>1</kbd>–<kbd>4</kbd>（拼写时不选）· 拼写时 <kbd>Enter</kbd>=检查 · 看完解析后 <kbd>Enter</kbd>=继续
         </p></details>
 
         <div id="stats-panel" class="panel" aria-label="我的学习数据">
@@ -1535,6 +1536,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
+  <script src="ielts-track.js?v=20261109-ielts1"></script>
   <script src="sense-id.js"></script>
   <script src="srs-rules.js"></script>
   <script src="review-queues.js"></script>
@@ -1550,11 +1552,11 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="pronunciation.js"></script>
   <script src="related-links.js"></script>
   <script src="universe-progress.js?v=20261105"></script>
-  <script src="study-metrics.js?v=20261108-sync4"></script>
-  <script src="own-study.js?v=20261105-mobile1"></script>
-  <script src="game.js?v=20261108-sync3"></script>
-  <script src="word-notebook.js?v=20261108-sync3"></script>
-  <script src="profile-name.js?v=20261108-sync3"></script>
+  <script src="study-metrics.js?v=20261109-ielts1"></script>
+  <script src="own-study.js?v=20261109-ielts1"></script>
+  <script src="game.js?v=20261109-ielts1"></script>
+  <script src="word-notebook.js?v=20261109-ielts1"></script>
+  <script src="profile-name.js?v=20261109-ielts1"></script>
   <script src="sync.js?v=20261108-sync3"></script>
   <script>
   (function () {
