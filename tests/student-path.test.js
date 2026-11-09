@@ -1587,9 +1587,14 @@ async function main() {
     if (logs.length) console.error(logs.slice(-20).join("\n"));
     throw err;
   } finally {
-    if (launched.chrome && !launched.chrome.killed) launched.chrome.kill("SIGKILL");
+    if (launched.chrome && launched.chrome.exitCode === null && launched.chrome.signalCode === null) {
+      await new Promise((resolve) => {
+        launched.chrome.once("close", resolve);
+        launched.chrome.kill("SIGKILL");
+      });
+    }
     await new Promise((resolve) => server.close(resolve));
-    fs.rmSync(userDir, { recursive: true, force: true });
+    fs.rmSync(userDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 }
 

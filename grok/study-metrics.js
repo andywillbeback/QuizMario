@@ -10,6 +10,7 @@
     core: "原版核心",
     zhongkao: "中考",
     gaokao: "高考",
+    ielts: "雅思",
     ket: "KET",
     pet: "PET",
     cet4: "四级",
@@ -39,7 +40,7 @@
   var MASTERY_LABELS = ["0", "0.5", "1", "2", "3"];
   var DENIED_MESSAGE = "这个账号不是教师，不能打开班级看板。授权只认 app_metadata 里的 role=teacher，不认 user_metadata。";
   var SNAPSHOT_VERSION = "teacher-board-v2";
-  var CALCULATION_VERSION = "teacher-metrics-2026-11-08.2";
+  var CALCULATION_VERSION = "teacher-metrics-2026-11-09.ielts1";
 
   function num(v) {
     var n = Number(v);

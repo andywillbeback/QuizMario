@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#070b16"><title>雅思词库范围与来源 · 聚光单词</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,"PingFang SC",sans-serif;background:#070b16;color:#edf2ff}*{box-sizing:border-box}body{margin:0}main{max-width:900px;margin:auto;padding:30px 22px 70px}a{color:#ffe066}h1{font-size:clamp(27px,6vw,42px);margin:28px 0 14px}h2{font-size:21px;margin-top:32px}p,li{line-height:1.9;color:#bdcbe1}.eyebrow{font-size:12px;letter-spacing:.15em;color:#ebc968}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:28px 0}.stat{padding:20px 15px;background:#101a2c;border:1px solid #2d3c55;border-radius:16px}.stat b{display:block;font-size:28px;color:#ffe066}.stat span{font-size:13px;color:#bdcbe1}.note{padding:17px 20px;border-left:3px solid #e7c65e;background:#141e30;border-radius:0 12px 12px 0}.links{display:flex;gap:12px;flex-wrap:wrap}.links a{padding:11px 15px;border:1px solid #48506a;border-radius:10px;text-decoration:none}.small{font-size:13px}#status{color:#e9d38b}@media(max-width:550px){.stats{grid-template-columns:repeat(2,1fr)}main{padding:22px 18px 55px}}
+</style>
+</head><body><main>
+<a href="index.html">‹ 返回聚光单词</a>
+<p class="eyebrow">IELTS VOCABULARY · COMPOSITE EDITION</p>
+<h1>雅思词库，范围可核对。</h1>
+<p>通用高频词、学术核心词与常见主题表达共用聚光的闯关、复习、搭配、拼写、错词本、连击语音和单词宇宙。雅思练习保留自己的词库标识与学习记录。</p>
+<p id="status" role="status">正在读取发布清单…</p>
+<div id="counts" class="stats"></div>
+<p class="note">覆盖范围以本页列出的冻结参考词表为准。这是综合学习词库，并非官方完整考试词表；词头数不等于词族数，也不用于预测 IELTS 分数。基础、学术与拓展词按学习组呈现。</p>
+<h2>参考词表</h2>
+<ul>
+<li><a href="https://www.newgeneralservicelist.com/new-general-service-list" target="_blank" rel="noopener">NGSL 1.2</a>：2,809 个通用高频词头，以及 52 个日期、数字等补充词头。</li>
+<li><a href="https://www.newgeneralservicelist.com/new-academic-word-list" target="_blank" rel="noopener">NAWL 1.2</a>：957 个学术词头。与通用词表重叠时合并学习条目。</li>
+<li><a href="https://github.com/designfuchen/word-atlas" target="_blank" rel="noopener">Word Atlas</a>：7,298 条开放词汇数据，补充主题词、双语例句与搭配。采用主释义，并对部分缺项、例句和合并拼写作了订正。</li>
+<li>聚光补充：为缺词与义项问题编写配套例句，补充常见雅思搭配；已有合适的聚光双语例句保留各自来源。</li>
+</ul>
+<h2>怎样理解“已核验”</h2>
+<p>发布检查逐项核对参考清单覆盖、必需字段、重复词条、目标词在例句中的完整出现、遮词结果、搭配链接、词库标签及记录隔离。对一词多义练习、首批学习词和发现的问题另作订正。</p>
+<p>Word Atlas 的上游文字由 AI 生成并经过自动校验，未逐条人工审校。全量结构检查不能代替逐条语言审校；如发现释义或例句问题，应保留原记录并通过版本订正。</p>
+<div class="links">
+<a href="data/ielts-v1/headwords.json" download>下载参考词头清单</a>
+<a href="data/ielts-v1/coverage.json" download>下载覆盖与校验信息</a>
+<a href="data/ielts-v1/ATTRIBUTION.md">查看来源与许可</a>
+</div>
+<p class="small">词表参考：Browne, Culligan and Phillips，<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>。Word Atlas contributors — <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>；内容经过修改。部分音标来自 ECDICT（MIT）。不使用来源方的名义为聚光或学习效果背书。</p>
+</main><script>
+(function(){'use strict';
+var status=document.getElementById('status');
+fetch('data/ielts-v1/coverage.json?v=20261109-ielts1').then(function(r){if(!r.ok)throw Error('load');return r.json();}).then(function(c){
+  [[c.word_count,'词头条目'],[c.phrase_count,'搭配与表达'],[c.entry_count,'学习条目'],[c.set_count,'学习组']].forEach(function(row){var el=document.createElement('div');el.className='stat';var value=document.createElement('b'),label=document.createElement('span');value.textContent=row[0].toLocaleString();label.textContent=row[1];el.append(value,label);document.getElementById('counts').append(el);});
+  status.textContent='发布版本：'+c.version+' · 各参考清单已纳入全部词头，合并写法见别名记录。';
+}).catch(function(){status.textContent='发布清单暂时未加载，请恢复网络后刷新。练习记录不受影响。';});
+})();
+</script></body></html>

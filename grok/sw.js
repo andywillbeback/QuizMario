@@ -1,7 +1,7 @@
 /* Home-screen install shell for /grok/.
    Network-first, and only for small shell files.
    Word banks and app scripts are not intercepted, so updates stay on the network. */
-var CACHE = "juguang-shell-20261108-sync3";
+var CACHE = "juguang-shell-20261109-ielts1";
 var SHELL = [
   "./index.html",
   "./login.html",

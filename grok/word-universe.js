@@ -379,7 +379,7 @@
       } catch (e) {
         continue;
       }
-      if (key === "track" && /^(core|ket|pet|cet4|zhongkao|gaokao)$/.test(val)) out.trackId = val;
+      if (key === "track" && /^(core|ket|pet|cet4|zhongkao|gaokao|ielts)$/.test(val)) out.trackId = val;
       if (key === "set" && val !== "" && isFinite(Number(val))) {
         var n = Math.floor(Number(val));
         if (n >= 1) out.set = n;
@@ -706,12 +706,29 @@
     var doc = root.document;
     var set = doc.getElementById("universe-set"), track = doc.getElementById("universe-track");
     if (set) set.addEventListener("change", function () { state.setNumber = Number(set.value) || null; state.page = 0; refresh(); });
-    if (track) track.addEventListener("change", function () { state.trackId = track.value; state.setNumber = null; state.page = 0; refresh(); });
+    if (track) track.addEventListener("change", function () { selectTrack(state, track.value, refresh); });
     var prev = doc.getElementById("universe-prev"), next = doc.getElementById("universe-next");
     if (prev) prev.addEventListener("click", function () { state.page = Math.max(0, state.page - 1); refresh(); });
     if (next) next.addEventListener("click", function () { state.page++; refresh(); });
     var view = doc.getElementById("universe-view");
     if (view) { view.textContent = listMode ? "关系图谱" : "分类词表"; view.addEventListener("click", function () { navigateScope(state.trackId, state.setNumber, !listMode); }); }
+  }
+  function selectTrack(state, id, refresh) {
+    var generation = state.loadGeneration = (state.loadGeneration || 0) + 1;
+    function commit() {
+      if (state.loadGeneration !== generation) return;
+      state.trackId = id; state.setNumber = null; state.page = 0; refresh();
+    }
+    var loader = root.QuizMarioIelts;
+    if (id === "ielts" && loader && !loader.track.loaded) {
+      var status = root.document.getElementById("universe-status");
+      if (status) status.textContent = "正在加载雅思词库…";
+      loader.ensure().then(commit).catch(function (error) {
+        if (state.loadGeneration !== generation) return;
+        if (status) status.textContent = error.message || "雅思词库加载失败，请重新选择后重试。";
+        var select = root.document.getElementById("universe-track"); if (select) select.value = state.trackId;
+      });
+    } else commit();
   }
   function graphStatus(g) {
     return (g.scopeLabel || "") + " · " + g.trackName + " · 本页 " + g.stats.shown + "/" + g.stats.bankLemmas +
@@ -788,7 +805,7 @@
     });
     doc.addEventListener("click", function (ev) {
       var btn = ev.target && ev.target.closest && ev.target.closest("[data-universe-track]");
-      if (btn) { state.trackId = btn.getAttribute("data-universe-track"); state.setNumber = null; state.page = 0; refresh(); }
+      if (btn) selectTrack(state, btn.getAttribute("data-universe-track"), refresh);
     });
     api.currentGraph = function () { return graph; };
     api.focusWord = function () { return false; };
@@ -810,6 +827,24 @@
     }
     var opened = parseScope((root.location && root.location.search) || "");
     var trackId = opened.trackId || readLocal().trackId;
+    if (trackId === "ielts" && !root.QuizMarioIelts) {
+      setStatus("雅思词库组件未加载，请刷新后重试。学习记录保留。");
+      var reload = doc.createElement("button"); reload.type = "button"; reload.textContent = "刷新并重试";
+      reload.addEventListener("click", function () { root.location.reload(); }); host.appendChild(reload); return;
+    }
+    if (trackId === "ielts" && root.QuizMarioIelts && !root.QuizMarioIelts.track.loaded) {
+      setStatus("正在加载雅思词库…");
+      root.QuizMarioIelts.ensure().then(function () {
+        host.removeAttribute("data-universe"); mount(host);
+      }).catch(function (error) {
+        setStatus(error.message || "雅思词库加载失败，请重试。");
+        host.textContent = "";
+        var retry = doc.createElement("button"); retry.type = "button"; retry.textContent = "重新加载雅思词库";
+        retry.addEventListener("click", function () { host.textContent = ""; host.removeAttribute("data-universe"); mount(host); });
+        host.appendChild(retry);
+      });
+      return;
+    }
     var setNumber = opened.set;
     var titleEl = doc.getElementById("universe-title");
     function paintTitle(label) {

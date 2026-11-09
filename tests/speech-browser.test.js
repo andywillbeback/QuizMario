@@ -32,6 +32,8 @@ function contentType(file) {
   switch (path.extname(file)) {
     case ".html": return "text/html; charset=utf-8";
     case ".js": return "text/javascript; charset=utf-8";
+    case ".css": return "text/css; charset=utf-8";
+    case ".json": return "application/json; charset=utf-8";
     case ".svg": return "image/svg+xml";
     case ".png": return "image/png";
     case ".webmanifest": return "application/manifest+json";
@@ -83,7 +85,7 @@ const SESSION = {
   },
 };
 
-function earlyScript() {
+function earlyScript(progress = null) {
   return `(function () {
     try { localStorage.setItem("quizmario-auth", ${JSON.stringify(JSON.stringify(SESSION))}); } catch (e) {}
     try { sessionStorage.setItem("qm-phase", "signed"); } catch (e) {}
@@ -158,7 +160,7 @@ function earlyScript() {
     }
     if (window.__QM_SMOKE_FETCH) return;
     window.__QM_SMOKE_FETCH = [];
-    var cloudProgress=null, cloudVersion="2026-01-01T00:00:00.000Z", cloudRevision=0;
+    var cloudProgress=${JSON.stringify(progress)}, cloudVersion="2026-01-01T00:00:00.000Z", cloudRevision=0;
     var orig = window.fetch ? window.fetch.bind(window) : null;
     function reply(status, payload) {
       return Promise.resolve(new Response(JSON.stringify(payload), {
@@ -216,7 +218,7 @@ class Cdp {
 }
 
 function launchChrome(userDir) {
-  const chrome = spawn("google-chrome", [
+  const chrome = spawn(process.env.CHROME_BIN || "google-chrome", [
     "--headless=new",
     "--no-sandbox",
     "--disable-gpu",
@@ -732,7 +734,8 @@ function documentHidden() {
   return false;
 }
 
-main().catch((err) => {
+module.exports = {startServer, launchChrome, Cdp, earlyScript, SESSION};
+if (require.main === module) main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

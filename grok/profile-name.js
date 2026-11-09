@@ -225,7 +225,7 @@ function install(root, api) {
     gate.innerHTML = [
       '<form id="profile-name-form">',
       "<h2>填写姓名和班级</h2>",
-      "<p>两项都要填，才能进入中考或高考。</p>",
+      "<p>两项都要填，才能进入中考、高考或雅思。</p>",
       '<label for="profile-name-input">姓名</label>',
       '<input id="profile-name-input" name="display-name" type="text" maxlength="12" autocomplete="nickname" placeholder="姓名（2–12 字）">',
       '<label for="profile-class-input">班级名</label>',
@@ -281,7 +281,7 @@ function install(root, api) {
       if (blurb) {
         blurb.textContent = editingNow
           ? "改班级名会同步到云端，老师看板按新的班级分组。"
-          : "两项都要填，才能进入中考或高考。";
+          : "两项都要填，才能进入中考、高考或雅思。";
       }
       gate.hidden = false;
       if (nameInput && typeof nameInput.focus === "function") nameInput.focus();
@@ -321,7 +321,7 @@ function install(root, api) {
   }
 
   function bindGate() {
-    ["btn-gate-zhongkao", "btn-gate-gaokao"].forEach(function (id) {
+    ["btn-gate-zhongkao", "btn-gate-gaokao", "btn-gate-ielts"].forEach(function (id) {
       var btn = $(id);
       if (!btn || btn.getAttribute("data-profile-name") === "1") return;
       btn.setAttribute("data-profile-name", "1");

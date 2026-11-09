@@ -28,11 +28,15 @@
       return scene + " · 第" + setNum + "组 · Part " + partLetter;
     }) }) : t
   );
+  // Keep the saved IELTS identity even if its small loader script failed.
+  // Selecting it must show a retry message, never silently select 中考.
+  if (!TRACKS.some((t) => t.id === "ielts")) TRACKS.push({id:"ielts",name:"雅思",sets:[],titles:[],lazy:true,loaded:false});
   let currentTrack = "core";
   let LEVELS = TRACKS[0].sets || [];
   let LEVEL_COUNT = LEVELS.length;
   let relatedIndex = null;
   let relatedIndexLevels = null;
+  let trackSelectionGeneration = 0;
   const SRS = window.QuizMarioSRS;
   if (!SRS) throw new Error("srs-rules.js must load before game.js");
   const RQ = window.QuizMarioQueues;
@@ -537,6 +541,7 @@
       levelIdx: levelIdx,
     };
     if (Array.isArray(w.related)) item.related = w.related;
+    if (Array.isArray(w.accepted_spellings)) item.accepted_spellings = w.accepted_spellings;
     return item;
   }
 
@@ -1635,7 +1640,7 @@
     const raw = input ? String(input.value || "") : "";
     if (!String(raw).trim()) return;
     const correct = currentCard.word;
-    const ok = answersMatch(raw, correct);
+    const ok = answersMatch(raw, correct) || (currentCard.accepted_spellings || []).some((form) => answersMatch(raw, form));
     grade(ok, false, raw, ok ? "correct" : "wrong");
   }
 
@@ -2186,6 +2191,11 @@
     updateProgress();
   }
 
+  function nextAfterFeedback() {
+    const generation = playGen;
+    setTimeout(() => { if (generation === playGen) nextCard(); }, 700);
+  }
+
   function confirmCorrect(quality, prevMastery) {
     if (!pendingRate || !currentCard) return;
     clearRateDock();
@@ -2204,7 +2214,7 @@
       }
       persist();
       updateProgress();
-      setTimeout(nextCard, 700);
+      nextAfterFeedback();
       return;
     }
     const prog = getProg(currentCard.key);
@@ -2246,7 +2256,7 @@
     if (isLevelClear(currentLevel)) advanceFrontier(currentLevel);
     persist();
     updateProgress();
-    setTimeout(nextCard, 700);
+    nextAfterFeedback();
   }
 
   function recordCollocationAnswer(gate, outcome, chosen) {
@@ -2867,15 +2877,48 @@
     const sel = $("track-select");
     if (sel) sel.value = t.id;
     const d = $("track-desc");
-    if (d) d.textContent = (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + LEVELS.reduce((a, s) => a + s.length, 0) + " 词";
+    if (d) d.textContent = t.lazy && !t.loaded ? "选择雅思后加载词库，学习记录保留。" : (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + LEVELS.reduce((a, s) => a + s.length, 0) + " 词条";
+    const sourceLink = $("ielts-sources-link");
+    if (sourceLink) sourceLink.hidden = t.id !== "ielts";
   }
 
-  function switchTrack(id) {
+  function commitTrack(id) {
     applyTrack(id, false);
     currentLevel = 1;
     persist();
     renderLevels();
     renderStats();
+  }
+
+  function trackLoadStatus(message) {
+    for (const id of ["gate-load-status", "track-load-status"]) {
+      const el = $(id); if (el) el.textContent = message || "";
+    }
+  }
+
+  function switchTrack(id) {
+    const generation = ++trackSelectionGeneration;
+    const t = TRACKS.find((track) => track.id === id);
+    if (!t) { trackLoadStatus("这个词库暂时未加载，请刷新后重试。"); return false; }
+    const loader = window.QuizMarioIelts;
+    const owner = window.QuizMarioAccountStore ? window.QuizMarioAccountStore.owner() : "";
+    if (t.id === "ielts" && !t.loaded && !loader) {
+      trackLoadStatus("雅思词库组件未加载，请刷新后重试。学习记录保留。"); return false;
+    }
+    if (t.id === "ielts" && !t.loaded && loader) {
+      trackLoadStatus("正在加载雅思词库…");
+      const selector = $("track-select"); if (selector) selector.value = currentTrack;
+      return loader.ensure().then(() => {
+        if (generation !== trackSelectionGeneration || !document.documentElement.classList.contains("session-ok") ||
+          (window.QuizMarioAccountStore && window.QuizMarioAccountStore.owner() !== owner)) return false;
+        commitTrack(id); trackLoadStatus(""); return true;
+      }).catch((error) => {
+        if (generation === trackSelectionGeneration && (!window.QuizMarioAccountStore || window.QuizMarioAccountStore.owner() === owner))
+          trackLoadStatus(error.message || "雅思词库加载失败，请重试。");
+        return false;
+      });
+    }
+    trackLoadStatus(""); commitTrack(id); return true;
   }
 
   function withTrack(id, fn) {
@@ -3480,9 +3523,11 @@
   function syncSpellingButton() {
     const btn = $("btn-spelling");
     if (!btn) return;
-    const poly = window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack);
+    const poly = currentTrack === "gaokao" && window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack);
     btn.textContent = poly ? "一词多义" : "拼写";
     btn.setAttribute("aria-label", poly ? "高考一词多义" : "拼写");
+    const extra = $("btn-polysemy");
+    if (extra) extra.hidden = currentTrack !== "ielts";
   }
 
   function todayKey(now) {
@@ -3650,7 +3695,7 @@
       }
     }
     if (!built.length) {
-      showQueueEmpty("高考词库里还没有对得上的一词多义。");
+      showQueueEmpty("当前词库里还没有对得上的一词多义。");
       return;
     }
     hideQueueEmpty();
@@ -3659,7 +3704,7 @@
   }
 
   function startSpellingSession() {
-    if (window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack)) {
+    if (currentTrack === "gaokao" && window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack)) {
       startPolysemySession();
       return;
     }
@@ -3811,19 +3856,17 @@
     if (kind === "spelling") openClearedSetUniverse();
   }
 
-  function enterExam(id) {
+  async function enterExam(id) {
     if (!document.documentElement.classList.contains("session-ok")) {
       location.replace("login.html");
       return;
     }
-    try {
-      switchTrack(id);
-    } finally {
-      showScreen("home");
-    }
+    if (await switchTrack(id)) showScreen("home");
   }
   if ($("btn-gate-zhongkao")) $("btn-gate-zhongkao").addEventListener("click", () => enterExam("zhongkao"));
   if ($("btn-gate-gaokao")) $("btn-gate-gaokao").addEventListener("click", () => enterExam("gaokao"));
+  if ($("btn-gate-ielts")) $("btn-gate-ielts").addEventListener("click", () => enterExam("ielts"));
+  if ($("btn-polysemy")) $("btn-polysemy").addEventListener("click", () => startPolysemySession());
   if ($("btn-back-gate")) $("btn-back-gate").addEventListener("click", () => showScreen("gate"));
 
   $("btn-continue").addEventListener("click", () => {

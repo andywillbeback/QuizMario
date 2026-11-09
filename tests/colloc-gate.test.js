@@ -198,7 +198,11 @@ function cardIn(track, word) {
 
   const confirm = game.slice(game.indexOf("function confirmCorrect"), game.indexOf("function bindCollocFlow"));
   assert.ok(confirm.includes("schedule("));
-  assert.ok(confirm.includes("setTimeout(nextCard"));
+  assert.ok(confirm.includes("nextAfterFeedback()"));
+  const delayedNext = game.slice(game.indexOf("function nextAfterFeedback"), game.indexOf("function confirmCorrect"));
+  assert.ok(delayedNext.includes("setTimeout("));
+  assert.ok(delayedNext.includes("const generation = playGen"));
+  assert.ok(delayedNext.includes("if (generation === playGen) nextCard()"));
   const retry = game.slice(game.indexOf("function showCollocRetry"), game.indexOf("function renderCollocGate"));
   assert.ok(!retry.includes("schedule("));
   assert.ok(!retry.includes("nextCard"));

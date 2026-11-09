@@ -76,6 +76,7 @@
 
   function findEntry(card) {
     if (!card) return null;
+    if (card.polysemy && card.polysemy.glossAnchor === card.meaning_zh) return card.polysemy;
     for (var i = 0; i < BANK.length; i++) {
       if (BANK[i].word === card.word && BANK[i].pos === card.pos) return BANK[i];
     }
@@ -114,7 +115,7 @@
   }
 
   function isPolysemyTrack(id) {
-    return id === "gaokao";
+    return id === "gaokao" || id === "ielts";
   }
 
   return {

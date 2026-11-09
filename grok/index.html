@@ -1075,9 +1075,9 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   }
   .gate-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(28px, 8vw, 72px);
-    width: min(800px, 92vw);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(14px, 3vw, 30px);
+    width: min(960px, 92vw);
   }
   .gate-actions button {
     background: linear-gradient(180deg, #ffe066, #f5b800);
@@ -1103,6 +1103,11 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
       padding-bottom: 12px;
     }
   }
+
+  #gate-load-status{min-height:1.5em;max-width:90vw;text-align:center;color:#e8dba7;font-size:.95rem}
+  #track-load-status:empty{display:none}
+  #ielts-sources-link{font-size:.82rem;color:#e9c460}
+  @media(max-width:640px){.gate-actions{grid-template-columns:1fr;width:min(400px,84vw);gap:14px}.gate-actions button{min-height:94px;padding:16px 12px 16px .2em;font-size:2.4rem;border-radius:20px}.gate-mark{margin-bottom:20px}}
 
   /* Training page: streak only. The voice control is pinned while playing. */
   header.brand .subtitle,
@@ -1319,14 +1324,16 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     <div id="stage-flash" aria-hidden="true"></div>
     <div id="kill-banner" aria-live="polite"></div>
 
-    <!-- LANDING: only the two exam tracks -->
+    <!-- Exam tracks share the same practice and account-owned records. -->
     <section id="screen-gate" class="screen active" aria-label="选择考试">
       <div class="gate">
         <p class="gate-mark">聚光单词 · 1st edition</p>
         <div class="gate-actions">
           <button id="btn-gate-zhongkao" type="button">中考</button>
           <button id="btn-gate-gaokao" type="button">高考</button>
+          <button id="btn-gate-ielts" type="button">雅思</button>
         </div>
+        <p id="gate-load-status" role="status" aria-live="polite"></p>
       </div>
     </section>
 
@@ -1339,6 +1346,8 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
           <label for="track-select"><b>词库</b></label>
           <select id="track-select" aria-label="选择词库"></select>
           <div id="track-desc"></div>
+          <a id="ielts-sources-link" href="ielts-sources.html" hidden>词库范围与来源</a>
+          <p id="track-load-status" role="status" aria-live="polite"></p>
         </div>
         <div class="btn-row" id="home-queues" hidden>
           <button id="btn-must-practice" type="button" hidden>今日必练 <span id="must-badge" class="count-badge" hidden>0</span></button>
@@ -1348,6 +1357,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
           <button id="btn-continue" type="button">继续学习</button>
           <button id="btn-challenge" class="secondary" type="button">12分钟挑战</button>
           <button id="btn-spelling" class="secondary" type="button">拼写</button>
+          <button id="btn-polysemy" class="secondary" type="button" hidden>一词多义</button>
           <button id="btn-levels" class="secondary" type="button">单元目录</button>
           <button id="btn-notebook" class="secondary" type="button">错词笔记本</button>
           <a id="login-cta" class="btn secondary" href="login.html" hidden>登录 / 注册</a>
@@ -1535,6 +1545,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="words.js"></script>
   <script src="tracks.js"></script>
   <script src="exam-tracks.js"></script>
+  <script src="ielts-loader.js?v=20261109-ielts1"></script>
   <script src="sense-id.js"></script>
   <script src="srs-rules.js"></script>
   <script src="review-queues.js"></script>
@@ -1543,18 +1554,18 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="cloze.js"></script>
   <script src="sense-examples.js"></script>
   <script src="practice.js"></script>
-  <script src="polysemy.js"></script>
+  <script src="polysemy.js?v=20261109-ielts1"></script>
   <script src="feedback.js"></script>
   <script src="share-card.js"></script>
   <script src="kill-streak.js"></script>
   <script src="pronunciation.js"></script>
   <script src="related-links.js"></script>
   <script src="universe-progress.js?v=20261105"></script>
-  <script src="study-metrics.js?v=20261108-sync4"></script>
+  <script src="study-metrics.js?v=20261109-ielts1"></script>
   <script src="own-study.js?v=20261105-mobile1"></script>
-  <script src="game.js?v=20261108-sync3"></script>
-  <script src="word-notebook.js?v=20261108-sync3"></script>
-  <script src="profile-name.js?v=20261108-sync3"></script>
+  <script src="game.js?v=20261109-ielts1"></script>
+  <script src="word-notebook.js?v=20261109-ielts1"></script>
+  <script src="profile-name.js?v=20261109-ielts1"></script>
   <script src="sync.js?v=20261108-sync3"></script>
   <script>
   (function () {
