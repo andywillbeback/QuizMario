@@ -3245,7 +3245,13 @@
     applySyncedSave(data) {
       // Rebase acknowledged counters without leaving the current exercise.
       save = snapshotToSave(data);
+      // The received snapshot's globals belong to its selected course. Swap
+      // them through the existing maps before keeping this page's course.
+      save.trackUnlock[save.track] = save.unlockedLevel;
+      save.trackStars[save.track] = save.levelStars;
       save.track = currentTrack;
+      save.unlockedLevel = Math.max(1, save.trackUnlock[currentTrack] || 1);
+      save.levelStars = save.trackStars[currentTrack] || {};
       persist({ keepUpdatedAt: true, upload: false });
       const home = $("screen-home");
       if (home && home.classList.contains("active")) renderStats();

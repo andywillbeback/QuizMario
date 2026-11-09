@@ -8,7 +8,7 @@ async function harness(fetcher,hit) {
  const cache={add:async()=>{},put:async()=>{puts++},match:async()=>hit};
  const ctx={URL,Response,AbortController,Promise,Error,
   setTimeout(fn){timers.set(++id,fn);return id},clearTimeout(n){timers.delete(n)},fetch:fetcher,
-  caches:{open:async()=>cache,keys:async()=>['juguang-shell-v1','juguang-shell-20261104-auth','juguang-shell-20261108-sync3','juguang-shell-20261109-ielts1','another-app-cache'],delete:async n=>deleted.push(n)},
+  caches:{open:async()=>cache,keys:async()=>['juguang-shell-v1','juguang-shell-20261104-auth','juguang-shell-20261108-sync3','juguang-shell-20261109-ielts1','juguang-shell-20261109-login1','another-app-cache'],delete:async n=>deleted.push(n)},
   self:{location:{origin:'https://example.test'},addEventListener:(name,fn)=>events[name]=fn,skipWaiting:async()=>{},clients:{claim:async()=>{}}}};
  vm.runInNewContext(source,ctx);
  return {events,timers,deleted,get puts(){return puts},fetch(url='https://example.test/QuizMario/grok/login.html?v=x'){
@@ -33,7 +33,7 @@ test('offline without cache returns an actionable 503 page',async()=>{
 test('activation preserves unrelated app caches',async()=>{
  const h=await harness(async()=>new Response('ok'));let p;
  h.events.activate({waitUntil(x){p=x}});await p;
- assert.deepEqual(h.deleted,['juguang-shell-v1','juguang-shell-20261104-auth','juguang-shell-20261108-sync3']);
+ assert.deepEqual(h.deleted,['juguang-shell-v1','juguang-shell-20261104-auth','juguang-shell-20261108-sync3','juguang-shell-20261109-ielts1']);
 });
 test('the service worker never intercepts auth requests',async()=>{
  const h=await harness(async()=>{throw Error('must not fetch')});

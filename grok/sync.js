@@ -20,6 +20,7 @@
     if(!navigator.onLine){setStatus('离线 · 本机保留，联网后自动补传',user.email||'');return;}
     if(!ready){setStatus('正在读取本账号进度 · 自动重试中',user.email||'');return;}
     if(retry||signals.error){setStatus('自动同步待恢复 · 记录已保留',signals.error||'连接恢复后自动重试');return;}
+    if(networkBootPending){setStatus('本机记录已恢复 · 正在核对后台',user.email||'');return;}
     if(pending||n||running){setStatus('自动同步中'+(n?' · '+n+' 条学习记录待确认':''),user.email||'');return;}
     setStatus('已自动同步'+(lastAck?' · '+new Date(lastAck).toLocaleTimeString():''),user.email||'');
   }
@@ -90,11 +91,11 @@
     if(isCurrent){
       localBase=CORE.compact(row.save);
       if(window.__QM&&typeof window.__QM.applySyncedSave==='function')window.__QM.applySyncedSave(desired);
-      cache(desired,j.owner);
+      cache(window.__QM.getSave(),j.owner);
       if(clean){dropJournal(latest);journal=null;}else persistJournal(latest);
     }else{
       if(clean)dropJournal(latest);else persistJournal(latest);
-      if(ready && !journal){localBase=CORE.compact(row.save);if(window.__QM.applySyncedSave)window.__QM.applySyncedSave(row.save);cache(row.save,j.owner);}
+      if(ready && !journal){localBase=CORE.compact(row.save);if(window.__QM.applySyncedSave)window.__QM.applySyncedSave(row.save);cache(window.__QM.getSave(),j.owner);}
     }
     lastAck=row.updated_at;retry=0;
   }
@@ -139,14 +140,28 @@
       if(!CORE||!STORE||!CLIENT||!CLIENT.isConfigured()||!client()||!window.__QM){sendToLogin();return;}
       if(!user){
         var res=await client().auth.getSession();if(res.error)throw res.error;
+        if(stopped||token!==epoch)return;
         user=res.data&&res.data.session&&res.data.session.user;
         if(!user){sendToLogin();return;}
+        // A delayed session result must not reopen an identity replaced in another tab.
+        var hintedOwner=STORE.owner();
+        if(hintedOwner && hintedOwner!==user.id){suspend();return;}
         STORE.activate(user.id);renderAccount();
         var ownCache=STORE.get(SAVE_KEY,user.id), parsed=null;
         try{parsed=ownCache?JSON.parse(ownCache):null;}catch(_){}
         hadOwnedCache=!!(parsed && typeof parsed==='object' && !Array.isArray(parsed));
         localBase=hadOwnedCache?CORE.compact(parsed):{};
         window.__QM.applyCloudSave(localBase);
+        // Auth and the explicit owner are established. Restore only this cache;
+        // a slow remote baseline must not block practice. New work stays in its
+        // durable journal and cannot upload until that baseline is reconciled.
+        if(hadOwnedCache){
+          ready=true;
+          var cachedEvents=window.QuizMarioLearnerEvents;
+          if(cachedEvents&&cachedEvents.bindUser)cachedEvents.bindUser(user).catch(function(){});
+          if(user)revealApp();
+          if(window.__QM.onSessionReady)window.__QM.onSessionReady();
+        }
       }
       renderStatus();var owner=user.id;
       var row=await readRemote(owner);if(!owned(owner,token))return;
@@ -154,7 +169,11 @@
       await recover(owner,token);if(!owned(owner,token))return;
       row=remote&&remote.row||row;
       // On initial online load the server/recovered journal supplies the baseline.
-      if(!ready || !journal){localBase=CORE.compact(row&&row.save||{});window.__QM.applyCloudSave(localBase);cache(localBase,owner);}
+      if(!ready || !journal){
+        localBase=CORE.compact(row&&row.save||{});
+        if(ready)window.__QM.applySyncedSave(localBase);else window.__QM.applyCloudSave(localBase);
+        cache(window.__QM.getSave(),owner);
+      }
       else if(journal){remote={owner:owner,row:row};}
       ready=true;networkBootPending=false;retry=0;lastAck=row&&row.updated_at||'';
       var events=window.QuizMarioLearnerEvents;
@@ -189,7 +208,7 @@
     try{await client().auth.signOut();}catch(_){}
     user=null;window.__QM_SYNC_READY=false;window.__QM_EXPECT_SESSION=false;document.documentElement.classList.remove('session-ok');location.replace('login.html');
   }
-  window.QuizMarioCloud={onLocalSave:onLocalSave,flushNow:flushNow,loggedIn:function(){return !!user&&!stopped;},userId:function(){return user&&!stopped?user.id:'';},noteLocalFailure:function(e){storageError=String(e.message||e);renderStatus();},logout:logout,syncState:function(){return{ready:ready,pending:!!journal,retrying:retry>0,lastAcknowledged:lastAck};}};
+  window.QuizMarioCloud={onLocalSave:onLocalSave,flushNow:flushNow,loggedIn:function(){return !!user&&!stopped;},userId:function(){return user&&!stopped?user.id:'';},noteLocalFailure:function(e){storageError=String(e.message||e);renderStatus();},logout:logout,syncState:function(){return{ready:ready,checking:networkBootPending,pending:!!journal,retrying:retry>0,lastAcknowledged:lastAck};}};
   window.addEventListener('pageshow',function(ev){if(ev.persisted&&user&&journal){suspend();return;}if(ev.persisted&&user)client().auth.getSession().then(function(r){var u=r.data&&r.data.session&&r.data.session.user;if(!u||u.id!==user.id)suspend();else flushNow();});});
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flushNow();else{if(journal && Date.now()-Number(journal.touched||0)>=45000){suspend();return;}if(user)flushNow();}});
   window.addEventListener('pagehide',function(){if(journal){journal.released=true;persistJournal(journal);}flushNow();});

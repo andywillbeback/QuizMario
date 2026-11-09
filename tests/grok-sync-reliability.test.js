@@ -7,7 +7,7 @@ function storage(){const m=new Map();return{getItem:k=>m.has(k)?m.get(k):null,se
 function save(n=0,name='甲同学'){return{profile:{name,cls:'测试班'},track:'gaokao',points:n,updatedAt:'2026-11-08T00:00:00Z',cards:{'gaokao|0::apple':{state:'learning',correct:n,wrong:0,unknown:0,reps:n,mastery:1}},daily:{'2026-11-08':{c:n,w:0,unk:0}},studyDaily:{'2026-11-08':n*1000}};}
 function deferred(){let resolve;return{promise:new Promise(r=>{resolve=r;}),resolve:v=>resolve(v)};}
 async function settle(){for(let i=0;i<60;i++)await Promise.resolve();}
-function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:00Z'),events=false}={}){
+function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:00Z'),events=false,holdRead=null,sessionGate=null}={}){
   let current=id,revision=0,tick=now,nextTimer=1,authHandler=null,redirect='',state=save(),beforeUpdate=null,failUpdates=0,loseAck=0,holdUpdate=null,malformedAck=false;
   const timers=new Map(),calls=[],eventDB=new Map(),elements={};
   const listeners={},docListeners={},classes=new Set();
@@ -25,7 +25,7 @@ function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:0
     }
     const owner=f.body&&f.body.user_id || (f.filters.find(x=>x[0]==='user_id')||[])[1];
     if(owner!==sentAs)return{error:{code:'42501',message:'RLS'}};
-    if(f.op==='read')return{data:clone(db[owner]||null)};
+    if(f.op==='read'){if(holdRead){const waiting=holdRead;holdRead=null;await waiting.promise;}return{data:clone(db[owner]||null)};}
     if(beforeUpdate){const cb=beforeUpdate;beforeUpdate=null;cb(db,owner);}
     if(failUpdates){failUpdates--;return{error:{message:'offline failure'}};}
     if(holdUpdate){const h=holdUpdate;holdUpdate=null;await h.promise;}
@@ -37,7 +37,7 @@ function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:0
     if(malformedAck){malformedAck=false;return{data:[clone(db[owner])]};}
     return{data:clone(db[owner])};
   }return out;}
-  const client={from:q,auth:{getSession:async()=>({data:{session:current?{user:{id:current,email:current+'@example.test'}}:null}}),signOut:async()=>{current=null;},onAuthStateChange:fn=>{authHandler=fn;}}};
+  const client={from:q,auth:{getSession:async()=>{const owner=current;if(sessionGate)await sessionGate.promise;return{data:{session:owner?{user:{id:owner,email:owner+'@example.test'}}:null}};},signOut:async()=>{current=null;},onAuthStateChange:fn=>{authHandler=fn;}}};
   function getElementById(id){if(id==='auth-hold')return elements[id]||(elements[id]={textContent:''});if(['sync-status','login-link','login-cta','btn-logout','wipe-label'].includes(id))return elements[id]||(elements[id]={textContent:'',hidden:false,classList:{toggle(){}},addEventListener(){}});return null;}
   class ClockDate extends Date{constructor(...args){super(...(args.length?args:[tick]));}static now(){return tick;}}
   const context={console:{warn(){}},Date:ClockDate,crypto,AbortController,URL,Blob,Promise,Math,JSON,Set,Number,Array,Object,Intl,
@@ -61,7 +61,7 @@ function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:0
     async online(v){context.navigator.onLine=v;context.dispatchEvent({type:v?'online':'offline'});await settle();},
   };
 }
-(async()=>{
+async function main(){
   const disk=storage();disk.setItem('vocabSpotlight_v1',JSON.stringify(save(99,'另一个账号')));
   const owned=createStore(disk);owned.activate('A');assert.strictEqual(owned.get('vocabSpotlight_v1'),null,'unowned legacy save cannot be adopted');owned.set('vocabSpotlight_v1','A');owned.activate('B');assert.strictEqual(owned.get('vocabSpotlight_v1'),null);owned.set('vocabSpotlight_v1','B');owned.activate('A');assert.strictEqual(owned.get('vocabSpotlight_v1'),'A');
   const blank={cards:{a:{state:'new',correct:0,wrong:0,unknown:0,mastery:0},b:{state:'new',collocationEvidence:{wrong:1}}}};
@@ -86,4 +86,6 @@ function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:0
   const restart=browser({db:{A:{save:save(1),updated_at:'restart0'}}});await settle();await restart.online(false);restart.edit(s=>{s.points++;});restart.ctx.dispatchEvent({type:'pagehide'});restart.timers.clear();
   const reopened=browser({disk:restart.disk,db:restart.db,now:Date.parse('2026-11-08T01:00:01Z')});await settle();assert.strictEqual(reopened.db.A.save.points,2,'a closed page leaves a durable journal that the next page automatically completes');assert.strictEqual(reopened.state.points,2,'recovered progress is immediately reflected in the student page');
   console.log('grok-sync-reliability ok: ownership, auto retry, offline backlog, lost acknowledgement, CAS conflict, in-flight edits and session switch');
-})().catch(e=>{console.error(e);process.exitCode=1;});
+}
+module.exports={browser,storage,save,deferred,settle};
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});
