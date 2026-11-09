@@ -321,7 +321,7 @@ function install(root, api) {
   }
 
   function bindGate() {
-    ["btn-gate-zhongkao", "btn-gate-gaokao"].forEach(function (id) {
+    ["btn-gate-zhongkao", "btn-gate-gaokao", "btn-gate-ielts"].forEach(function (id) {
       var btn = $(id);
       if (!btn || btn.getAttribute("data-profile-name") === "1") return;
       btn.setAttribute("data-profile-name", "1");

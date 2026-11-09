@@ -343,6 +343,8 @@
         "<td>" + st.touched + "</td>" +
         "<td>" + (st.mastery == null ? "—" : st.mastery) + "</td>" +
         "<td>" + api.reviewDueCount(st.forget) + "</td>" +
+        "<td>" + (st.ieltsTouched || 0) + "</td>" +
+        "<td>" + (st.ieltsDue || 0) + "</td>" +
         "<td>" + st.weakCount + "</td>" +
         "<td>" + (st.active7 ? "活跃" : "—") + "</td>" +
         "<td>" + esc(st.updatedAt || "—") + "</td></tr>";
@@ -354,12 +356,12 @@
     if (!body) return;
     var groups = visibleGroups(data);
     if (!groups.length) {
-      body.innerHTML = "<tr class=\"class-row\"><td colspan=\"9\">这个班级还没有学员。</td></tr>";
+      body.innerHTML = "<tr class=\"class-row\"><td colspan=\"11\">这个班级还没有学员。</td></tr>";
       return;
     }
     body.innerHTML = groups.map(function (group) {
       var note = group.key ? "" : " · 学生可在学习首页改班级名";
-      return "<tr class=\"class-row\"><td colspan=\"9\"><strong>" + esc(group.label) + "</strong> · " +
+      return "<tr class=\"class-row\"><td colspan=\"11\"><strong>" + esc(group.label) + "</strong> · " +
         group.students.length + " 人" + esc(note) +
         "<button type=\"button\" class=\"ghost\" data-export-class=\"" + esc(optionValueForClass(group.key)) + "\">下载该班学情</button></td></tr>" +
         studentRows(group.students);
@@ -491,6 +493,8 @@
         statChip("已接触", st.touched),
         statChip("进度指数", st.mastery == null ? "—" : st.mastery),
         statChip("待复习数量", api.reviewDueCount(st.forget)),
+        statChip("雅思已接触", st.ieltsTouched || 0),
+        statChip("雅思待复习", st.ieltsDue || 0),
         statChip("近7日答题", st.answers7),
         statChip("答题事件", st.answerEvents7),
         statChip("错词本标记", st.wrongBookEvents7),

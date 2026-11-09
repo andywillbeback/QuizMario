@@ -10,6 +10,7 @@
     core: "原版核心",
     zhongkao: "中考",
     gaokao: "高考",
+    ielts: "雅思",
     ket: "KET",
     pet: "PET",
     cet4: "四级",
@@ -39,7 +40,7 @@
   var MASTERY_LABELS = ["0", "0.5", "1", "2", "3"];
   var DENIED_MESSAGE = "这个账号不是教师，不能打开班级看板。授权只认 app_metadata 里的 role=teacher，不认 user_metadata。";
   var SNAPSHOT_VERSION = "teacher-board-v2";
-  var CALCULATION_VERSION = "teacher-metrics-2026-11-08.2";
+  var CALCULATION_VERSION = "teacher-metrics-2026-11-09.1";
 
   function num(v) {
     var n = Number(v);
@@ -270,6 +271,15 @@
       scope: "全部词库累计",
       breakdown: Object.keys(breakdown).sort().map(function (id) {return breakdown[id];}),
     };
+  }
+
+  /** One bank's touched cards and review-due cards. Missing bank is zero, not unknown. */
+  function bankSlice(context, id) {
+    var rows = context && context.breakdown || [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i] && rows[i].track === id) return { cards: num(rows[i].cards), due: num(rows[i].due) };
+    }
+    return { cards: 0, due: 0 };
   }
 
   function profileOf(save) {
@@ -906,7 +916,7 @@
     else open += "的单词练习（实际词库待核对）";
     open += "；以下为全部词库累计学情，已接触 " + touched + " 张词条卡";
     open += "，待复习数量 " + reviewDueCount(st.forget) + " 个";
-    open += "。";
+    open += "；雅思已接触 " + num(st.ieltsTouched) + " 张词条卡，雅思待复习 " + num(st.ieltsDue) + " 个。";
     var activity;
     if (!st.active7) {
       activity = "近 7 天还没有新的练习。";
@@ -1307,7 +1317,7 @@
   }
 
   function classCsv(board) {
-    var headers = ["姓名", "邮箱", "班级", "词库", "已练词条卡", "进度指数", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
+    var headers = ["姓名", "邮箱", "班级", "词库", "已练词条卡", "进度指数", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "雅思已接触", "雅思待复习", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
     var lines = [headers.join(",")];
     var students = (board && board.students) || [];
     for (var i = 0; i < students.length; i++) {
@@ -1329,6 +1339,8 @@
         num(st.answers7),
         st.minutes7 == null ? "" : st.minutes7,
         reviewDueCount(st.forget),
+        num(st.ieltsTouched),
+        num(st.ieltsDue),
         st.forget ? st.forget.due : "",
         st.forget ? st.forget.overdue : "",
         st.forget ? st.forget.learning : "",
@@ -1443,6 +1455,7 @@
       "</style></head><body><h1>" + escHtml(name) + "的学情</h1><p class=\"muted\">账号 " +
       escHtml(st.email || "—") + (st.cls ? " · 班级 " + escHtml(st.cls) : "") + " · 词库 " +
       escHtml(st.trackLabel || "—") + " · 待复习数量 " + reviewDueCount(st.forget) +
+      " · 雅思已接触 " + num(st.ieltsTouched) + " · 雅思待复习 " + num(st.ieltsDue) +
       " · 报告生成 " + escHtml(generated || "") + "</p><p class=\"muted\">" +
       escHtml(reportDataNotes(st)) + "</p><h2>简短评价</h2><p class=\"summary\">" +
       escHtml(st.summary || "") + "</p><div class=\"charts\"><section class=\"chart\"><h2>学情雷达</h2><p class=\"muted\">认词、搭配、产出、巩固。样本少于 " +
@@ -1477,6 +1490,7 @@
     if (st.eventSince && st.dataReadAt) notes.push("事件时间范围：" + formatWhen(st.eventSince) + " 至 " + formatWhen(st.dataReadAt) + "；存档计数保留累计历史。");
     if (st.calculationVersion) notes.push("统计版本：" + st.calculationVersion + "。");
     notes.push("遗忘节点只统计已进入SRS排程的卡片；单独的搭配或附加练习尚未排程时不计入到期数量。");
+    notes.push("雅思已接触与雅思待复习只数该词库的词条卡。近7日答题、练习事件和学习分钟仍是全部词库累计，不把历史天数拆开。");
     notes.push("认词、搭配和中文到英文练习分数使用累计练习或已加载事件；中文到英文轴可包含选择题，不能等同于独立拼写能力。巩固为进度与复习记录合成分，不是隔天测验正确率。进度指数仅对已练卡片作阶段折算，不是正确率或全部词库的掌握比例。");
     var axes = st.abilities || [];
     var basisNames = { events: "答题事件", practice: "累计练习", typed: "手动拼写", cards: "词条卡记录", thin: "样本不足" };
@@ -1970,6 +1984,7 @@
       solid: solid,
     });
     var trackContext = practiceTrackContext(save, evs, now);
+    var ielts = bankSlice(trackContext, "ielts");
     var studentRow = {
       id: id,
       email: email || "",
@@ -1978,6 +1993,8 @@
       track: trackContext.track,
       trackLabel: trackContext.label,
       trackContext: trackContext,
+      ieltsTouched: ielts.cards,
+      ieltsDue: ielts.due,
       touched: touched,
       learned: learned,
       mastery: mastery,
@@ -2053,7 +2070,7 @@
     var progress = (payload && payload.progress) || [];
     var events = (payload && payload.events) || [];
     var students = (board && board.students) || [];
-    var fields = ["touched","learned","mastery","weakCount","weak","abilities","forget","answers7","practice7","answerEvents7","wrongBookEvents7","inventory","trackContext"];
+    var fields = ["touched","learned","mastery","weakCount","weak","abilities","forget","answers7","practice7","answerEvents7","wrongBookEvents7","inventory","trackContext","ieltsTouched","ieltsDue"];
     progress.forEach(function (source) {
       var row = students.filter(function (s) {return s.id === source.user_id;})[0];
       if (!row) {errors.push("missing-student");return;}
