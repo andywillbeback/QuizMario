@@ -33,7 +33,7 @@ test('offline without cache returns an actionable 503 page',async()=>{
 test('activation preserves unrelated app caches',async()=>{
  const h=await harness(async()=>new Response('ok'));let p;
  h.events.activate({waitUntil(x){p=x}});await p;
- assert.deepEqual(h.deleted,['juguang-shell-v1','juguang-shell-20261104-auth','juguang-shell-20261108-sync3','juguang-shell-20261109-ielts1']);
+ assert.deepEqual(h.deleted,['juguang-shell-v1','juguang-shell-20261104-auth','juguang-shell-20261108-sync3','juguang-shell-20261109-ielts1','juguang-shell-20261109-login1']);
 });
 test('the service worker never intercepts auth requests',async()=>{
  const h=await harness(async()=>{throw Error('must not fetch')});

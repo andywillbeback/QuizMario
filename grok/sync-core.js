@@ -9,13 +9,29 @@
   function equal(a,b) { return JSON.stringify(a) === JSON.stringify(b); }
   function object(v) { return v && typeof v === 'object' && !Array.isArray(v); }
   var DEFAULT_CARD = {ef:2.5,interval:0,reps:0,lapses:0,due:0,correct:0,wrong:0,unknown:0,mastery:0,state:'new',mastered:false,lastOutcome:'',scheduledAt:0};
-  function compact(save) {
-    var out = clone(save || {}), cards = out.cards || {};
-    Object.keys(cards).forEach(function (k) {
-      var c = cards[k];
-      if (object(c) && Object.keys(c).every(function (f) { return Object.prototype.hasOwnProperty.call(DEFAULT_CARD,f) && c[f] === DEFAULT_CARD[f]; })) delete cards[k];
+  /* A card is unused when every stored field is still the untouched default.
+     Missing fields count as unused. Any extra field, including spelling,
+     polysemy or collocation evidence, keeps the card. */
+  function unusedDefault(card) {
+    if (!object(card)) return false;
+    var keys = Object.keys(card);
+    for (var i = 0; i < keys.length; i++) {
+      var field = keys[i];
+      if (!Object.prototype.hasOwnProperty.call(DEFAULT_CARD, field) || card[field] !== DEFAULT_CARD[field]) return false;
+    }
+    return true;
+  }
+  function prune(save) {
+    if (!object(save) || !object(save.cards)) return save;
+    Object.keys(save.cards).forEach(function (key) {
+      if (unusedDefault(save.cards[key])) delete save.cards[key];
     });
-    out.cards = cards;
+    return save;
+  }
+  function compact(save) {
+    var out = clone(save || {});
+    if (!object(out.cards)) out.cards = {};
+    prune(out);
     delete out._syncReceipts;
     return out;
   }
@@ -71,5 +87,5 @@
     if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
     return Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)+'-'+Math.random().toString(36).slice(2);
   }
-  return {clone:clone,equal:equal,compact:compact,reconcile:reconcile,request:request,id:id};
+  return {clone:clone,equal:equal,compact:compact,prune:prune,unusedDefault:unusedDefault,reconcile:reconcile,request:request,id:id};
 });

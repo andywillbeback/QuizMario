@@ -70,6 +70,8 @@ const extra=`(() => {
     await click('btn-back-gate');await click('btn-gate-ielts');await home();
     assert.equal(await evaluate('__QM.track'),'ielts');
     assert.equal(await evaluate('__QM.levels.length'),bank.sets.length);
+    assert.equal(await evaluate(`Object.keys(__QM.getSave().cards).filter(k=>k.startsWith('ielts|')).length`),0,'opening IELTS does not store an untouched card for every entry');
+    assert.equal(String(await evaluate(`document.getElementById('sync-status').textContent`)).includes('本机保存失败'),false);
     assert.equal(await evaluate('__IELTS_REQUESTS'),1,'loaded bank is reused');
     assert.equal(await evaluate(`__QM.getSave().cards['gaokao|0::evidence'].correct`),7,'school progress survives');
     assert.equal(await evaluate(`__QM.getSave().trackUnlock.gaokao`),3);

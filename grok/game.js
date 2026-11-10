@@ -218,7 +218,7 @@
         const data = JSON.parse(raw);
         const cards = Sense.migrateCards(data.cards || {}, catalogGroups());
         for (const k of Object.keys(cards)) cards[k] = migrateCard(cards[k]);
-        return extendSave({
+        return finishLoad(extendSave({
           points: data.points || 0,
           streak: data.streak || 0,
           bestStreak: data.bestStreak || 0,
@@ -227,10 +227,10 @@
           levelStars: data.levelStars || {},
           sortMode: publicSortMode(data.sortMode),
           voiceOn: data.voiceOn !== false,
-        }, data);
+        }, data));
       }
     } catch (_) {}
-    return extendSave({
+    return finishLoad(extendSave({
       points: 0,
       streak: 0,
       bestStreak: 0,
@@ -239,7 +239,12 @@
       levelStars: {},
       sortMode: "default",
       voiceOn: true,
-    }, {});
+    }, {}));
+  }
+
+  function finishLoad(sv) {
+    if (window.QuizMarioSyncCore && typeof window.QuizMarioSyncCore.prune === "function") window.QuizMarioSyncCore.prune(sv);
+    return sv;
   }
 
   function persist(opts) {
@@ -250,6 +255,7 @@
     if (!(opts.keepUpdatedAt && save.updatedAt)) {
       save.updatedAt = new Date().toISOString();
     }
+    if (window.QuizMarioSyncCore && typeof window.QuizMarioSyncCore.prune === "function") window.QuizMarioSyncCore.prune(save);
     try { writeLocalSave(save); }
     catch (e) {
       if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(e);
@@ -265,6 +271,11 @@
     if (!save.cards[key]) save.cards[key] = defaultCardProg();
     else save.cards[key] = migrateCard(save.cards[key]);
     return save.cards[key];
+  }
+
+  /** Read a stored card. Display counts must not create an untouched default. */
+  function peekProg(key) {
+    return save.cards[key] || null;
   }
 
   function isNewCard(p) {
@@ -288,7 +299,7 @@
       : LEVELS.map((lv, i) => [i, lv]);
     for (const [li, words] of range) {
       for (const w of words) {
-        const p = getProg(cardKey(li, w.word));
+        const p = peekProg(cardKey(li, w.word));
         if (SRS.isMasteredCard(p)) mastered++;
         if (isNewCard(p)) neu++;
         else if (isLearning(p)) {
@@ -305,7 +316,7 @@
     const words = LEVELS[levelNum - 1] || [];
     const now = Date.now();
     const progs = [];
-    for (const w of words) progs.push(getProg(cardKey(levelNum - 1, w.word)));
+    for (const w of words) progs.push(peekProg(cardKey(levelNum - 1, w.word)));
     return SRS.summarizeSet(progs, now);
   }
 
@@ -382,8 +393,8 @@
     if (!words.length) return 0;
     let sum = 0;
     for (const w of words) {
-      const p = getProg(cardKey(levelNum - 1, w.word));
-      sum += Math.min(3, p.mastery || 0);
+      const p = peekProg(cardKey(levelNum - 1, w.word));
+      sum += Math.min(3, (p && p.mastery) || 0);
     }
     const avg = sum / words.length;
     if (avg >= 2.5) return 3;
@@ -396,7 +407,7 @@
     const words = LEVELS[levelNum - 1] || [];
     let n = 0;
     for (const w of words) {
-      if (SRS.isMasteredCard(getProg(cardKey(levelNum - 1, w.word)))) n++;
+      if (SRS.isMasteredCard(peekProg(cardKey(levelNum - 1, w.word)))) n++;
     }
     return n;
   }
