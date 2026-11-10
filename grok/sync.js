@@ -16,7 +16,14 @@
     if(!user)return;
     var ev=window.QuizMarioLearnerEvents, signals=ev&&ev.syncState?ev.syncState():{};
     var pending=!!(journal&&journal.desired), n=signals.pending||0;
-    if(storageError||signals.localError){setStatus('本机保存失败 · 正在尝试云端同步',storageError||signals.localError);return;}
+    var localDetail=storageError||signals.localError||'';
+    var cloudTrouble=!!(retry||(signals.error&&signals.error!==signals.localError));
+    if(localDetail){
+      var acknowledged=ready&&!networkBootPending&&!pending&&!n&&!running&&!!lastAck&&!cloudTrouble;
+      if(acknowledged){setStatus('已自动同步'+(lastAck?' · '+new Date(lastAck).toLocaleTimeString():'')+' · 本机未再写入',localDetail);return;}
+      if(!navigator.onLine){setStatus('进度在本页 · 请保持页面打开，联网后自动同步',localDetail);return;}
+      setStatus('进度已保留 · 正在同步到云端',localDetail);return;
+    }
     if(!navigator.onLine){setStatus('离线 · 本机保留，联网后自动补传',user.email||'');return;}
     if(!ready){setStatus('正在读取本账号进度 · 自动重试中',user.email||'');return;}
     if(retry||signals.error){setStatus('自动同步待恢复 · 记录已保留',signals.error||'连接恢复后自动重试');return;}
@@ -32,10 +39,36 @@
   function sendToLogin(){document.documentElement.classList.remove('session-ok');location.replace('login.html'+(window.__QM_AUTH_PENDING?((location.search||'')+(location.hash||'')):''));}
   function renderAccount(){var out=$('btn-logout'),wipe=$('wipe-label'),link=$('login-link'),cta=$('login-cta');if(out)out.hidden=!user;if(wipe)wipe.hidden=!user;if(link)link.hidden=!!user;if(cta)cta.hidden=true;}
   function readJSON(key){try{return JSON.parse(STORE.raw.getItem(key)||'null');}catch(_){return null;}}
-  function cache(save,id){try{STORE.set(SAVE_KEY,JSON.stringify(CORE.compact(save)),id);savedLocally('cache');}catch(e){savedLocally('cache',e);}}
+  function reclaimOwnCache(){
+    if(!user||!STORE||!CORE)return false;
+    var raw;
+    try{raw=STORE.get(SAVE_KEY,user.id);}catch(_){return false;}
+    if(!raw||raw.length<100000)return false;
+    try{
+      var small=JSON.stringify(CORE.compact(JSON.parse(raw)));
+      if(!small||small.length>=raw.length)return false;
+      STORE.set(SAVE_KEY,small,user.id);
+      return true;
+    }catch(_){return false;}
+  }
+  function putAccount(base,value,id){
+    try{STORE.set(base,value,id);return;}
+    catch(first){
+      if(reclaimOwnCache()){try{STORE.set(base,value,id);return;}catch(second){throw second;}}
+      throw first;
+    }
+  }
+  function putRaw(key,value){
+    try{STORE.raw.setItem(key,value);return;}
+    catch(first){
+      if(reclaimOwnCache()){try{STORE.raw.setItem(key,value);return;}catch(second){throw second;}}
+      throw first;
+    }
+  }
+  function cache(save,id){try{putAccount(SAVE_KEY,JSON.stringify(CORE.compact(save)),id);savedLocally('cache');}catch(e){savedLocally('cache',e);}}
   function persistJournal(j){
     j.touched=Date.now();
-    try{STORE.raw.setItem(STORE.key(JOURNAL,j.owner)+':'+j.writer,JSON.stringify(j));savedLocally('journal');}
+    try{putRaw(STORE.key(JOURNAL,j.owner)+':'+j.writer,JSON.stringify(j));savedLocally('journal');}
     catch(e){savedLocally('journal',e);}
   }
   function dropJournal(j){try{STORE.raw.removeItem(STORE.key(JOURNAL,j.owner)+':'+j.writer);}catch(_){} }
@@ -208,7 +241,7 @@
     try{await client().auth.signOut();}catch(_){}
     user=null;window.__QM_SYNC_READY=false;window.__QM_EXPECT_SESSION=false;document.documentElement.classList.remove('session-ok');location.replace('login.html');
   }
-  window.QuizMarioCloud={onLocalSave:onLocalSave,flushNow:flushNow,loggedIn:function(){return !!user&&!stopped;},userId:function(){return user&&!stopped?user.id:'';},noteLocalFailure:function(e){storageError=String(e.message||e);renderStatus();},logout:logout,syncState:function(){return{ready:ready,checking:networkBootPending,pending:!!journal,retrying:retry>0,lastAcknowledged:lastAck};}};
+  window.QuizMarioCloud={onLocalSave:onLocalSave,flushNow:flushNow,loggedIn:function(){return !!user&&!stopped;},userId:function(){return user&&!stopped?user.id:'';},noteLocalFailure:function(e){savedLocally('cache',e);renderStatus();},logout:logout,syncState:function(){return{ready:ready,checking:networkBootPending,pending:!!journal,retrying:retry>0,lastAcknowledged:lastAck};}};
   window.addEventListener('pageshow',function(ev){if(ev.persisted&&user&&journal){suspend();return;}if(ev.persisted&&user)client().auth.getSession().then(function(r){var u=r.data&&r.data.session&&r.data.session.user;if(!u||u.id!==user.id)suspend();else flushNow();});});
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flushNow();else{if(journal && Date.now()-Number(journal.touched||0)>=45000){suspend();return;}if(user)flushNow();}});
   window.addEventListener('pagehide',function(){if(journal){journal.released=true;persistJournal(journal);}flushNow();});

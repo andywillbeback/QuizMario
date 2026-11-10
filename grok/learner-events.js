@@ -436,8 +436,14 @@
     }
     function persistStore(store,owner) {
       store=store||load();owner=owner||boundId;if(!owner)return;
-      try { root.localStorage.setItem(cacheKey(owner),JSON.stringify(trim(store))); }
-      catch(e) { localError=String(e.message||e); }
+      function write(body) { root.localStorage.setItem(cacheKey(owner),JSON.stringify(body)); }
+      try { write(trim(store)); localError=''; }
+      catch (e) {
+        // Acknowledged history can be dropped. Unsent practice stays in memory.
+        var slim={v:store.v,learner_id:store.learner_id,uploaded:{},events:(store.events||[]).filter(function(ev){return !(store.uploaded&&store.uploaded[ev.event_id]);})};
+        try { write(slim); store.events=slim.events; store.uploaded={}; localError=''; }
+        catch (again) { localError=String((again&&again.message)||again||(e&&e.message)||e); }
+      }
     }
     function migrateOwnedLegacy(id) {
       // Explicit ids can be recovered. Blank/unowned legacy events stay untouched.
@@ -479,7 +485,7 @@
       }
       var base = "本机 " + n + " 条学习信号（source=quizmario）";
       var pending = outbox(boundId).length;
-      if (localError) return base+'。本机保存失败，请保持页面打开；正在尝试上传：'+localError;
+      if (localError) return base+'。记录已留在本页，请保持页面打开，联网后会继续上传。';
       if (mode === "session" && cloudState === "ok") {
         return base+'，已确认写入 '+up+' 条，待补传 '+pending+' 条。网络恢复后会自动补传。';
       }
@@ -708,7 +714,7 @@
     };
     api.bindUser = bindUser;
     api.unbindUser = unbindUser;
-    api.syncState = function(){return {owner:boundId,pending:boundId?outbox(boundId).length:0,localError:localError,error:localError || (cloudState==='error' || cloudState==='missing' ? cloudState : '')};};
+    api.syncState = function(){return {owner:boundId,pending:boundId?outbox(boundId).length:0,localError:localError,error:(cloudState==='error' || cloudState==='missing') ? cloudState : ''};};
     api.flush = flush;
     api.clear = clear;
     api.list = function () { return exportEvents().map(publicEvent); };
