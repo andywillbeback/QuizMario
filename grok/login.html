@@ -123,15 +123,14 @@ window.__QM_AUTH_LOAD_TIMER = setTimeout(function () {
   if (msg) { msg.textContent = "登录组件加载较慢或被网络拦截，请刷新重试；微信内可用系统浏览器打开。"; msg.className = "bad"; }
 }, 12000);
 </script>
-<script src="orb.js" async></script>
-<script src="config.js?v=20261104-auth"></script>
-<script src="vendor/supabase.umd.js"></script>
-<script src="sync-merge.js"></script>
-<script src="cloud-client.js?v=20261104-auth"></script>
-  <script src="account-store.js?v=20261108-sync3"></script>
-  <script src="sync-core.js?v=20261108-sync3"></script>
-<script src="profile-name.js?v=20261109-ielts1"></script>
-<script src="auth-page.js?v=20261104-auth" onerror="document.getElementById('auth-msg').textContent='登录组件加载失败，请刷新页面后重试。'"></script>
+<script src="config.js?v=20261104-auth" defer></script>
+<script src="vendor/supabase.umd.js" defer></script>
+<script src="sync-merge.js" defer></script>
+<script src="cloud-client.js?v=20261104-auth" defer></script>
+  <script src="account-store.js?v=20261108-sync3" defer></script>
+<script src="profile-name.js?v=20261109-ielts1" defer></script>
+<script src="auth-page.js?v=20261111-loginfix" onerror="document.getElementById('auth-msg').textContent='登录组件加载失败，请刷新页面后重试。'" defer></script>
+<script src="orb.js?v=20261111-loginfix" defer></script>
 <script>
 (function () {
   if (!("serviceWorker" in navigator)) return;
