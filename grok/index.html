@@ -9,11 +9,30 @@ html:not(.session-ok),html:not(.session-ok) body{background:#03060f}
 html:not(.session-ok) body{visibility:hidden}
 html:not(.session-ok) #auth-hold{visibility:visible;display:flex;position:fixed;inset:0;z-index:5;margin:0;align-items:center;justify-content:center;text-align:center;color:#f4f7ff;font:600 16px/1.5 "PingFang SC","Hiragino Sans GB","Noto Sans SC",system-ui,sans-serif;letter-spacing:.04em}
 html.session-ok #auth-hold{display:none!important}
+html:not(.session-ok) #startup-help{visibility:visible;position:fixed;top:calc(50% + 3rem);left:20px;right:20px;z-index:6;text-align:center;color:#cdd8ee;font:14px/1.6 system-ui,sans-serif}
+#startup-help[hidden],html.session-ok #startup-help{display:none!important}
+#startup-help button{padding:10px 22px;border:1px solid #8aaaca;border-radius:8px;background:#15283e;color:#f4f7ff;font:inherit;cursor:pointer}
 html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(.session-ok) #login-cta{display:none!important}
 </style>
 <script>
 (function () {
   var blob = (location.search || "") + (location.hash || "");
+  var statusMessage = "";
+  var statusFailed = false;
+  window.__QM_ENTRY_PHASE = "session";
+  function paintStatus() {
+    var hold = document.getElementById("auth-hold");
+    var help = document.getElementById("startup-help");
+    if (hold && statusMessage) hold.textContent = statusMessage;
+    if (help) help.hidden = !statusFailed;
+  }
+  // This neutral loading message never reveals or changes a learner's save.
+  window.__QM_ENTRY_STATUS = function (message, failed) {
+    statusMessage = String(message || "");
+    statusFailed = !!failed;
+    paintStatus();
+  };
+  document.addEventListener("DOMContentLoaded", paintStatus);
   function plausible() {
     try {
       var raw = localStorage.getItem("quizmario-auth");
@@ -40,14 +59,24 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     window.__QM_EXPECT_SESSION = true;
     window.__QM_ENTRY_WATCHDOG = setTimeout(function () {
       if (document.documentElement.classList.contains("session-ok")) return;
-      window.__QM_ENTRY_REDIRECTING = true;
-      location.replace("login.html" + (pending ? blob : ""));
+      var phase = window.__QM_ENTRY_PHASE;
+      var message = phase === "content" ? "已登录，学习内容加载较慢，请检查网络后重试。"
+        : phase === "progress" ? "已登录，正在读取你的学习进度，请稍候或重试。"
+        : "登录验证较慢，请检查网络后重试。";
+      window.__QM_ENTRY_STATUS(message, true);
     }, 30000);
     return;
   }
   location.replace("login.html");
 })();
 </script>
+<script src="config.js?v=20261104-auth" defer></script>
+<script src="vendor/supabase.umd.js" defer></script>
+<script src="sync-merge.js" defer></script>
+<script src="cloud-client.js?v=20261104-auth" defer></script>
+<script src="account-store.js?v=20261108-sync3" defer></script>
+<script src="sync-core.js?v=20261110-localsave" defer></script>
+<script src="entry-guard.js?v=20261111-loginfix" defer></script>
 <meta name="theme-color" content="#070c18">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1299,6 +1328,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 </head>
 <body class="at-gate">
 <p id="auth-hold" role="status">聚光单词 · 1st edition<br>正在确认登录…</p>
+<div id="startup-help" hidden><button type="button" onclick="location.reload()">刷新重试</button></div>
 <canvas id="photon-spiral" aria-hidden="true"></canvas>
 <div class="vignette" aria-hidden="true"></div>
 
@@ -1535,39 +1565,32 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   </div>
 </div>
 
-  <script src="meteor.js"></script>
-  <script src="config.js?v=20261104-auth"></script>
-  <script src="vendor/supabase.umd.js"></script>
-  <script src="sync-merge.js"></script>
-  <script src="cloud-client.js?v=20261104-auth"></script>
-  <script src="account-store.js?v=20261108-sync3"></script>
-  <script src="sync-core.js?v=20261110-localsave"></script>
-  <script src="entry-guard.js?v=20261108-sync3"></script>
-  <script src="words.js"></script>
-  <script src="tracks.js"></script>
-  <script src="exam-tracks.js"></script>
-  <script src="ielts-loader.js?v=20261109-ielts1"></script>
-  <script src="sense-id.js"></script>
-  <script src="srs-rules.js"></script>
-  <script src="review-queues.js"></script>
-  <script src="learner-events.js?v=20261110-localsave"></script>
-  <script src="session-duration.js"></script>
-  <script src="cloze.js"></script>
-  <script src="sense-examples.js"></script>
-  <script src="practice.js"></script>
-  <script src="polysemy.js?v=20261109-ielts1"></script>
-  <script src="feedback.js"></script>
-  <script src="share-card.js"></script>
-  <script src="kill-streak.js"></script>
-  <script src="pronunciation.js"></script>
-  <script src="related-links.js"></script>
-  <script src="universe-progress.js?v=20261105"></script>
-  <script src="study-metrics.js?v=20261109-ielts1"></script>
-  <script src="own-study.js?v=20261105-mobile1"></script>
-  <script src="game.js?v=20261110-localsave"></script>
-  <script src="word-notebook.js?v=20261109-ielts1"></script>
-  <script src="profile-name.js?v=20261109-ielts1"></script>
-  <script src="sync.js?v=20261110-localsave"></script>
+  <script src="words.js" defer></script>
+  <script src="tracks.js" defer></script>
+  <script src="exam-tracks.js" defer></script>
+  <script src="ielts-loader.js?v=20261109-ielts1" defer></script>
+  <script src="sense-id.js" defer></script>
+  <script src="srs-rules.js" defer></script>
+  <script src="review-queues.js" defer></script>
+  <script src="learner-events.js?v=20261110-localsave" defer></script>
+  <script src="session-duration.js" defer></script>
+  <script src="cloze.js" defer></script>
+  <script src="sense-examples.js" defer></script>
+  <script src="practice.js" defer></script>
+  <script src="polysemy.js?v=20261109-ielts1" defer></script>
+  <script src="feedback.js" defer></script>
+  <script src="share-card.js" defer></script>
+  <script src="kill-streak.js" defer></script>
+  <script src="pronunciation.js" defer></script>
+  <script src="related-links.js" defer></script>
+  <script src="universe-progress.js?v=20261105" defer></script>
+  <script src="study-metrics.js?v=20261109-ielts1" defer></script>
+  <script src="own-study.js?v=20261105-mobile1" defer></script>
+  <script src="game.js?v=20261110-localsave" defer></script>
+  <script src="word-notebook.js?v=20261109-ielts1" defer></script>
+  <script src="profile-name.js?v=20261109-ielts1" defer></script>
+  <script src="sync.js?v=20261111-loginfix" defer></script>
+  <script src="meteor.js" defer></script>
   <script>
   (function () {
     if (!("serviceWorker" in navigator)) return;
