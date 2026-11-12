@@ -30,10 +30,15 @@
  * sense_ids as one comma-separated list. 「去 ALS 修语法」 stays the bare side door.
  */
 (function (root, factory) {
-  var api = factory();
+  var Sense = null;
+  if (typeof require === "function") {
+    try { Sense = require("./sense-id"); } catch (_) {}
+  }
+  if (!Sense && root && root.QuizMarioSense) Sense = root.QuizMarioSense;
+  var api = factory(Sense);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.QuizMarioHomeLoop = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (Sense) {
   var ALS_GRAMMAR_HREF = "http://127.0.0.1:8501/";
 
   /** Always null until real ALS rows can be mapped. See the file comment. */
@@ -60,14 +65,18 @@
     };
   }
 
-  /** Same provisional key as learner-events.js: lemma.pos.gloss, dot stripped from POS. */
+  /** Same provisional key as sense-id / learner-events (Q2 contract). */
   function posToken(pos) {
+    if (Sense && typeof Sense.posToken === "function") return Sense.posToken(pos);
     var p = String(pos || "").trim().toLowerCase();
     if (p.charAt(p.length - 1) === ".") p = p.slice(0, -1);
     return p;
   }
 
   function provisionalSenseId(lemma, pos, gloss) {
+    if (Sense && typeof Sense.provisionalSenseId === "function") {
+      return Sense.provisionalSenseId(lemma, pos, gloss);
+    }
     var l = String(lemma || "").trim().toLowerCase();
     var p = posToken(pos);
     var g = String(gloss || "").trim().replace(/\s+/g, " ");
