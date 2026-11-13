@@ -14,7 +14,7 @@ const extra=`(() => {
     const url=typeof input==='string'?input:input.url;
     const method=(init&&init.method||'GET').toUpperCase();
     if(url.includes('/user_progress')&&['POST','PATCH'].includes(method))window.__IELTS_UPLOADS.push(JSON.parse(init.body));
-    if(url.includes('ielts-v1/bank.json')){
+    if(url.includes('data/banks/20261113-set1/ielts/000.json') || url.includes('ielts-v1/bank.json')){
       window.__IELTS_REQUESTS++;
       if(window.__IELTS_HOLD)return new Promise((resolve,reject)=>{window.__IELTS_RELEASE=()=>original(input,init).then(resolve,reject);});
     }
@@ -49,11 +49,11 @@ const extra=`(() => {
     assert.equal(await evaluate('window.__IELTS_REQUESTS'),0,'profile guard precedes IELTS download');
     await evaluate(`document.getElementById('profile-name-input').value='验收同学';document.getElementById('profile-class-input').value='虚构雅思班';document.getElementById('profile-name-form').requestSubmit()`);
     await wait(`document.getElementById('profile-name-gate').hidden`,'profile saved');
-    await evaluate(`window.__savedIeltsLoader=window.QuizMarioIelts;window.QuizMarioIelts=null`);
+    await evaluate(`window.__savedIeltsLoader=window.QuizMarioIelts;window.QuizMarioIelts=null;window.__savedBanks=window.QuizMarioBanks;window.QuizMarioBanks=null`);
     assert.equal(await evaluate(`__QM.switchTrack('ielts')`),false,'a missing component cannot fall back to school data');
     assert.equal(await evaluate(`__QM.track`),'gaokao');
     assert.ok((await evaluate(`document.getElementById('gate-load-status').textContent`)).includes('组件未加载'));
-    await evaluate(`window.QuizMarioIelts=window.__savedIeltsLoader`);
+    await evaluate(`window.QuizMarioIelts=window.__savedIeltsLoader;window.QuizMarioBanks=window.__savedBanks`);
     await send('Emulation.setDeviceMetricsOverride',{width:1366,height:900,deviceScaleFactor:1,mobile:false});await sleep(300);await shot('desktop-gate');
     assert.ok(await evaluate(`[...document.querySelectorAll('.gate-actions button')].every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight})`),'desktop gate fits');
     await send('Emulation.setDeviceMetricsOverride',{width:375,height:667,deviceScaleFactor:1,mobile:true});await sleep(300);await shot('compact-gate');
