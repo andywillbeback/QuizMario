@@ -525,6 +525,7 @@
   function schedule(prog, quality, nowMs, opts) {
     const result = SRS.schedule(prog, quality, nowMs, opts);
     prog.lastAttemptAt = nowMs || Date.now();
+    prog.lastAttemptDirection = sessionDirection;
     return result;
   }
 
@@ -3484,9 +3485,16 @@
       track: currentTrack,
       gloss_zh: card.meaning_zh || "",
       outcome: kind,
+      hint_exposed: !!(card._hintSeen || card._collocAssisted),
+      answer_exposed: !!card._repeat,
+      first_try: !card._repeat,
+      grade_status: kind === 'unknown' ? 'self_reported' : 'verified',
+      pos: card.pos || '',
+      content_version: window.QuizMarioBanks ? window.QuizMarioBanks.version : 'legacy-static-vocabulary',
     };
     const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
     if (mode.evidence_kind) input.evidence_kind = mode.evidence_kind;
+    if (!mode.typed) input.independent = false;
     if (mode.typed) {
       const prog = card && card.key ? getProg(card.key) : null;
       input.independent = !!(prog && Practice.isIndependentSpelling && Practice.isIndependentSpelling(prog.spelling));
@@ -3648,6 +3656,7 @@
       const it = enrichItem(w, li, 0);
       it.levelIdx = li;
       const prog = save.cards[row.cardKey] || save.cards[it.key];
+      if (RQ.wrongBookNeedsPractice && !RQ.wrongBookNeedsPractice(row,prog,Date.now(),'form')) continue;
       it._wrong = prog ? (prog.wrong || 0) : (row.priority || 0);
       it._missAt = row.lastMissAt || 0;
       items.push(it);

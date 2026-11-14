@@ -2,7 +2,7 @@
    short network freshness window; background refresh stays alive through its
    cache write. Bank files are cache-first for this version path. Authentication,
    learner records and application scripts are never intercepted. */
-var CACHE = "juguang-shell-20261113-set1";
+var CACHE = "juguang-shell-20261114-loop1";
 var BANK_CACHE = "juguang-banks-20261113-set1";
 var SHELL = [
   "./index.html",

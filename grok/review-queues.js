@@ -318,7 +318,18 @@
     return out;
   }
 
+  function wrongBookNeedsPractice(row,prog,now,direction){
+    if(!row||!row.active)return false;
+    // Keep the notebook entry and its graduation count. Only defer a clean
+    // same-direction repeat until the existing SRS clock is due again.
+    if(prog&&prog.lastOutcome==='correct'&&prog.lastAttemptDirection===(direction||'form')&&
+      Number(prog.lastAttemptAt||0)>=Number(row.lastMissAt||0)&&Number(prog.due||0)>Number(now))return false;
+    return true;
+  }
+
   return {
+    VERSION:'queues-20261114-spaced-repeat-v1',
+    wrongBookNeedsPractice:wrongBookNeedsPractice,
     WRONG_BOOK_GRADUATE: WRONG_BOOK_GRADUATE,
     lemmaKey: lemmaKey,
     isOpenedGroup: isOpenedGroup,

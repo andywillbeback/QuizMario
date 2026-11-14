@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const source = fs.readFileSync(__dirname + '/../grok/sw.js', 'utf8');
-const currentCache = 'juguang-shell-20261113-set1';
+const currentCache = 'juguang-shell-20261114-loop1';
 const currentBanks = 'juguang-banks-20261113-set1';
 function deferred() { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; }
 async function drain() { for (let i = 0; i < 20; i++) await Promise.resolve(); await new Promise(setImmediate); }
