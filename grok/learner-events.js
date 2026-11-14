@@ -113,6 +113,11 @@
     var payload = {};
     if (head) payload.headword = head;
     if (input.track) payload.track = String(input.track);
+    // Observed provenance for ALS, stored in JSON payload, not extra scores.
+    ["sense_id","sense_id_kind","pos","content_version","grade_status","hint_exposed","answer_exposed","first_try"].forEach(function(key){
+      var value=input[key];
+      if(typeof value==='string'||typeof value==='boolean'||(typeof value==='number'&&isFinite(value)))payload[key]=value;
+    });
     var gloss = input.gloss_zh != null ? String(input.gloss_zh).trim() : "";
     if (gloss) payload.gloss_zh = gloss;
     if (type === TYPES.DUE) payload.due_at = normalizeIso(input.due_at) || dueAtIso(input.due_ms != null ? input.due_ms : input.dueAt) || created;

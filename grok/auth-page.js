@@ -4,6 +4,14 @@
 
   var CLIENT = window.QuizMarioCloudClient;
   var mode = "login";
+  var warmed=false;
+  function warmLearningPage(){
+    if(warmed||!document.head||!document.createElement)return;warmed=true;
+    // Low-priority public resources only; no auth or learner-data request.
+    ['index.html','course-catalog.js?v=20261114-fast1','course-loader.js?v=20261114-fast1','game.js?v=20261114-fast1','sync.js?v=20261111-loginfix'].forEach(function(url){
+      var link=document.createElement('link');link.rel='prefetch';link.href=url;document.head.appendChild(link);
+    });
+  }
 
   function $(id) { return document.getElementById(id); }
 
@@ -130,6 +138,7 @@
   }
 
   function showSession(email) {
+    warmLearningPage();
     var form = $("auth-form");
     var panel = $("session-panel");
     if (form) form.hidden = true;
@@ -249,6 +258,7 @@
       var submit = $("btn-submit");
       if (submit) submit.disabled = true;
       msg(mode === "register" ? "正在注册…" : "正在登录…");
+      warmLearningPage();
       try {
         requireStorage();
         var client = CLIENT.client();

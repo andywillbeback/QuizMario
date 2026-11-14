@@ -134,17 +134,19 @@
     const push = (track, sets) => {
       (sets || []).forEach((words, li) => {
         for (const w of words || []) {
-          if (w && w.word) groups.push({ track: track, levelIdx: li, word: w.word });
+          const word = typeof w === 'string' ? w : w && w.word;
+          if (word) groups.push({ track: track, levelIdx: li, word: word });
         }
       });
     };
-    push("core", window.VOCAB_LEVELS || []);
+    const core = TRACKS.find((t) => t.id === 'core');
+    push("core", (window.VOCAB_LEVELS || []).length ? window.VOCAB_LEVELS : core && core.card_index || []);
     const exams = window.VOCAB_EXAM_TRACKS || [];
-    for (const t of exams) push(t.id, t.sets);
+    for (const t of exams) push(t.id, t.loaded === false ? t.card_index : t.sets);
     for (const t of window.VOCAB_TRACKS || []) {
       if (!t || t.id === "core") continue;
       if (exams.some((e) => e.id === t.id)) continue;
-      push(t.id, t.sets);
+      push(t.id, t.loaded === false ? t.card_index : t.sets);
     }
     return groups;
   }
@@ -496,6 +498,7 @@
   function schedule(prog, quality, nowMs, opts) {
     const result = SRS.schedule(prog, quality, nowMs, opts);
     prog.lastAttemptAt = nowMs || Date.now();
+    prog.lastAttemptDirection = sessionDirection;
     return result;
   }
 
@@ -2888,7 +2891,7 @@
     const sel = $("track-select");
     if (sel) sel.value = t.id;
     const d = $("track-desc");
-    if (d) d.textContent = t.lazy && !t.loaded ? "选择雅思后加载词库，学习记录保留。" : (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + LEVELS.reduce((a, s) => a + s.length, 0) + " 词条";
+    if (d) d.textContent = t.lazy && !t.loaded ? "选择" + t.name + "后加载词库，学习记录保留。" : (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + LEVELS.reduce((a, s) => a + s.length, 0) + " 词条";
     const sourceLink = $("ielts-sources-link");
     if (sourceLink) sourceLink.hidden = t.id !== "ielts";
   }
@@ -2911,21 +2914,23 @@
     const generation = ++trackSelectionGeneration;
     const t = TRACKS.find((track) => track.id === id);
     if (!t) { trackLoadStatus("这个词库暂时未加载，请刷新后重试。"); return false; }
-    const loader = window.QuizMarioIelts;
+    const loader = t.id === 'ielts' ? window.QuizMarioIelts : window.QuizMarioCourses;
     const owner = window.QuizMarioAccountStore ? window.QuizMarioAccountStore.owner() : "";
-    if (t.id === "ielts" && !t.loaded && !loader) {
-      trackLoadStatus("雅思词库组件未加载，请刷新后重试。学习记录保留。"); return false;
+    if (t.lazy && !t.loaded && !loader) {
+      trackLoadStatus(t.name + "词库组件未加载，请刷新后重试。学习记录保留。"); return false;
     }
-    if (t.id === "ielts" && !t.loaded && loader) {
-      trackLoadStatus("正在加载雅思词库…");
+    if (t.lazy && !t.loaded && loader) {
+      trackLoadStatus("正在加载" + t.name + "词库…");
       const selector = $("track-select"); if (selector) selector.value = currentTrack;
-      return loader.ensure().then(() => {
+      return loader.ensure(t.id).then((loaded) => {
         if (generation !== trackSelectionGeneration || !document.documentElement.classList.contains("session-ok") ||
           (window.QuizMarioAccountStore && window.QuizMarioAccountStore.owner() !== owner)) return false;
+        Object.assign(t,loaded);
+        save.cards = Sense.migrateCards(save.cards || {}, catalogGroups());
         commitTrack(id); trackLoadStatus(""); return true;
       }).catch((error) => {
         if (generation === trackSelectionGeneration && (!window.QuizMarioAccountStore || window.QuizMarioAccountStore.owner() === owner))
-          trackLoadStatus(error.message || "雅思词库加载失败，请重试。");
+          trackLoadStatus(error.message || t.name + "词库加载失败，请重试。");
         return false;
       });
     }
@@ -2934,7 +2939,8 @@
 
   function withTrack(id, fn) {
     const prev = currentTrack, pl = LEVELS, pc = LEVEL_COUNT, pu = save.unlockedLevel, ps = save.levelStars;
-    currentTrack = id; LEVELS = findTrack(id).sets || []; LEVEL_COUNT = LEVELS.length;
+    const track = findTrack(id);
+    currentTrack = id; LEVELS = track.loaded === false && track.card_index ? track.card_index.map(set => set.map(word => ({word}))) : track.sets || []; LEVEL_COUNT = LEVELS.length;
     try { return fn(); } finally { currentTrack = prev; LEVELS = pl; LEVEL_COUNT = pc; save.unlockedLevel = pu; save.levelStars = ps; }
   }
 
@@ -3349,9 +3355,16 @@
       track: currentTrack,
       gloss_zh: card.meaning_zh || "",
       outcome: kind,
+      hint_exposed: !!(card._hintSeen || card._collocAssisted),
+      answer_exposed: !!card._repeat,
+      first_try: !card._repeat,
+      grade_status: kind === 'unknown' ? 'self_reported' : 'verified',
+      pos: card.pos || '',
+      content_version: findTrack(currentTrack).version || 'legacy-static-vocabulary',
     };
     const mode = Practice.sessionAnswerMode(sessionKind, sessionDirection);
     if (mode.evidence_kind) input.evidence_kind = mode.evidence_kind;
+    if (!mode.typed) input.independent = false;
     if (mode.typed) {
       const prog = card && card.key ? getProg(card.key) : null;
       input.independent = !!(prog && Practice.isIndependentSpelling && Practice.isIndependentSpelling(prog.spelling));
@@ -3512,6 +3525,7 @@
       const it = enrichItem(w, li, 0);
       it.levelIdx = li;
       const prog = save.cards[row.cardKey] || save.cards[it.key];
+      if (RQ.wrongBookNeedsPractice && !RQ.wrongBookNeedsPractice(row,prog,Date.now(),'form')) continue;
       it._wrong = prog ? (prog.wrong || 0) : (row.priority || 0);
       it._missAt = row.lastMissAt || 0;
       items.push(it);
@@ -4027,7 +4041,7 @@
   });
 
   // Boot
-  if (!LEVELS.length) {
+  if (!LEVELS.length && !window.QuizMarioCourses) {
     $("screen-home").innerHTML = "<p style='padding:24px;text-align:center'>No vocabulary loaded. Check words.js.</p>";
   }
   applyTrack(save.track, true);

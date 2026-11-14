@@ -7,6 +7,7 @@
 
   var openBuckets = Object.create(null);
   var glossCache = null;
+  if (root.addEventListener) root.addEventListener('quizmario:course-loaded',function(){glossCache=null;});
 
   function putGloss(into, word, gloss) {
     var key = String(word || "").trim().toLowerCase();

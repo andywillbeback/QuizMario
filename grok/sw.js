@@ -1,7 +1,7 @@
 /* Public shell only. A warm cache gets a short network freshness window;
    background refresh stays alive through its cache write. Authentication,
    learner records, word banks and application scripts are never intercepted. */
-var CACHE = "juguang-shell-20261111-loginfix";
+var CACHE = "juguang-shell-20261114-fast1";
 var SHELL = [
   "./index.html",
   "./login.html",

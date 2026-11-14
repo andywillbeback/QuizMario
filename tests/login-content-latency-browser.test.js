@@ -47,20 +47,20 @@ async function main() {
   const server = await startServer();
   const normalResponse = server.listeners('request')[0];
   assert.equal(typeof normalResponse, 'function');
-  let holdWords = true, wordsRequests = 0;
+  let holdCatalog = true, catalogRequests = 0;
   const held = [];
   server.removeAllListeners('request');
   server.on('request', (request, response) => {
     const pathname = (request.url || '').split('?')[0];
-    if (pathname === '/grok/words.js' && holdWords) {
-      wordsRequests++;
+    if (pathname === '/grok/course-catalog.js' && holdCatalog) {
+      catalogRequests++;
       held.push({ request, response });
       return;
     }
     normalResponse(request, response);
   });
-  function releaseWords() {
-    holdWords = false;
+  function releaseCatalog() {
+    holdCatalog = false;
     for (const { request, response } of held.splice(0)) {
       if (!response.destroyed) normalResponse(request, response);
     }
@@ -103,8 +103,8 @@ async function main() {
     await send('Page.navigate', { url: origin + '/grok/index.html' });
 
     await wait(`window.__QM_ENTRY_AUTH_READY === true && window.__QM_ENTRY_PHASE === 'content' &&
-      window.__CONTENT_PROGRESS_REQUESTS.some(r => r.method === 'GET')`, 'auth and own progress read while words.js is held');
-    assert.ok(wordsRequests > 0 && held.length > 0, 'the real vocabulary script response is still withheld');
+      window.__CONTENT_PROGRESS_REQUESTS.some(r => r.method === 'GET')`, 'auth and own progress read while course-catalog.js is held');
+    assert.ok(catalogRequests > 0 && held.length > 0, 'the real course catalog script response is still withheld');
     const before = await evaluate(`(() => {
       const hold = document.getElementById('auth-hold');
       const gate = document.getElementById('screen-gate');
@@ -124,7 +124,7 @@ async function main() {
     assert.equal(before.sessionVisible, false, 'a verified session cannot expose an uninitialised learner');
     assert.equal(before.holdVisible, true, 'the neutral loading shell paints before the stalled script');
     assert.equal(before.gateHidden, true);
-    assert.equal(before.gameExists, false, 'the game has not run ahead of its deferred vocabulary dependency');
+    assert.equal(before.gameExists, false, 'the game has not run ahead of its deferred course catalog dependency');
     assert.match(before.holdText, /登录已确认|已登录/);
     assert.match(before.holdText, /加载学习|学习内容/);
     assert.doesNotMatch(before.text, /其他账号内容测试|未归属内容测试/);
@@ -135,9 +135,9 @@ async function main() {
     const loadingShot = await send('Page.captureScreenshot', { format: 'png' });
     fs.writeFileSync(path.join(artifactDir, 'content-loading.png'), Buffer.from(loadingShot.data, 'base64'));
 
-    releaseWords();
+    releaseCatalog();
     await wait(`document.documentElement.classList.contains('session-ok') &&
-      window.QuizMarioCloud && !QuizMarioCloud.syncState().checking`, 'own server baseline is applied after vocabulary arrives', 20000);
+      window.QuizMarioCloud && !QuizMarioCloud.syncState().checking`, 'own server baseline is applied after the catalog arrives', 20000);
     const after = await evaluate(`({
       phase: window.__QM_ENTRY_PHASE, owner: QuizMarioCloud.userId(),
       save: __QM.getSave(), requests: window.__CONTENT_PROGRESS_REQUESTS,
@@ -155,7 +155,7 @@ async function main() {
     assert.equal(after.requests.filter(row => row.method === 'GET').length, 1, 'sync consumes the early read without a second startup fetch');
     assert.equal(after.checking, false);
     fs.writeFileSync(path.join(artifactDir, 'verification.json'), JSON.stringify({
-      wordsRequests, before, after,
+      catalogRequests, before, after,
       checks: ['real vocabulary response held', 'early verified-account progress request', 'visible neutral loading shell',
         'unverified learning hidden', 'first-device own baseline', 'foreign and unowned records preserved', 'single startup progress GET'],
     }, null, 2));
