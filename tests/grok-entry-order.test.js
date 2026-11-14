@@ -44,7 +44,10 @@ function staticGuards() {
   assert.ok(head.includes("html:not(.session-ok) #screen-gate"), "exam gate stays hidden until a confirmed session");
   assert.ok(head.includes("display:none!important"), "unsigned gate cannot paint over the login redirect");
   assert.ok(/src="entry-guard\.js(?:\?[^\"]*)?"/.test(index), "session check loads before the word lists");
-  assert.ok(index.indexOf('src="entry-guard.js') < index.indexOf('src="words.js"'));
+  assert.ok(!/src="words\.js"/.test(index), "the core bank is not a startup script");
+  assert.ok(!/src="exam-tracks\.js"/.test(index), "the exam banks are not a startup script");
+  assert.ok(index.indexOf('src="entry-guard.js') < index.indexOf('src="bank-loader.js'));
+  assert.ok(index.indexOf('src="bank-loader.js') < index.indexOf('src="sync.js'));
   assert.ok(index.includes('id="screen-gate"') && index.includes('id="btn-gate-zhongkao"') && index.includes('id="btn-gate-gaokao"'));
   assert.ok(/id="login-cta"[^>]*hidden/.test(index), "home login CTA is not the post-exam step");
   assert.ok(guard.includes("auth.getSession"), "gate waits for getSession");

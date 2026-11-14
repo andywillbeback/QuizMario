@@ -20,14 +20,20 @@
 
   const STORAGE_KEY = "vocabSpotlight_v1";
   const UniverseProgress = window.QuizMarioUniverseProgress;
-  const TRACKS = (window.VOCAB_TRACKS || [{ id: "core", name: "原版核心" }]).map((t) =>
-    t.id === "core" ? Object.assign({}, t, { sets: window.VOCAB_LEVELS || [], titles: (window.VOCAB_LEVELS || []).map((part, i) => {
+  function coreTitles(levels) {
+    return (levels || []).map((part, i) => {
       const setNum = Math.floor(i / 2) + 1;
       const partLetter = (i % 2 === 0) ? "A" : "B";
       const scene = (part && part[0] && part[0].scene) ? part[0].scene : "复习 · Review";
       return scene + " · 第" + setNum + "组 · Part " + partLetter;
-    }) }) : t
-  );
+    });
+  }
+  const TRACKS = (window.VOCAB_TRACKS || [{ id: "core", name: "原版核心" }]).map((t) => {
+    if (t.id !== "core") return t;
+    const levels = window.VOCAB_LEVELS;
+    if (!levels || !levels.length) return t;
+    return Object.assign({}, t, { sets: levels, titles: coreTitles(levels), lazy: false, loaded: true, manifestReady: true });
+  });
   // Keep the saved IELTS identity even if its small loader script failed.
   // Selecting it must show a retry message, never silently select 中考.
   if (!TRACKS.some((t) => t.id === "ielts")) TRACKS.push({id:"ielts",name:"雅思",sets:[],titles:[],lazy:true,loaded:false});
@@ -36,6 +42,7 @@
   let LEVEL_COUNT = LEVELS.length;
   let relatedIndex = null;
   let relatedIndexLevels = null;
+  let relatedIndexStamp = "";
   let trackSelectionGeneration = 0;
   const SRS = window.QuizMarioSRS;
   if (!SRS) throw new Error("srs-rules.js must load before game.js");
@@ -138,7 +145,8 @@
         }
       });
     };
-    push("core", window.VOCAB_LEVELS || []);
+    const coreBank = (window.VOCAB_TRACKS || []).find((t) => t && t.id === "core");
+    push("core", (window.VOCAB_LEVELS && window.VOCAB_LEVELS.length) ? window.VOCAB_LEVELS : (coreBank && coreBank.sets));
     const exams = window.VOCAB_EXAM_TRACKS || [];
     for (const t of exams) push(t.id, t.sets);
     for (const t of window.VOCAB_TRACKS || []) {
@@ -313,7 +321,9 @@
 
   /** Per-set clearance stats. Pass is solid >= 80%; see srs-rules.js. */
   function levelClearStats(levelNum) {
-    const words = LEVELS[levelNum - 1] || [];
+    const slot = LEVELS[levelNum - 1];
+    if (!Array.isArray(slot)) return { ready: false, solid: 0, need: 0 };
+    const words = slot;
     const now = Date.now();
     const progs = [];
     for (const w of words) progs.push(peekProg(cardKey(levelNum - 1, w.word)));
@@ -463,7 +473,9 @@
     if (!grid) return;
     grid.innerHTML = "";
     for (let i = 1; i <= LEVEL_COUNT; i++) {
-      const words = LEVELS[i - 1] || [];
+      const slot = LEVELS[i - 1];
+      const pending = !Array.isArray(slot);
+      const words = pending ? [] : slot;
       const locked = isSetLocked(i);
       const stars = levelStars(i);
       const mastered = levelMasteredCount(i);
@@ -471,11 +483,13 @@
       card.className = "level-card" + (locked ? " locked" : "");
       const cs = levelClearStats(i);
       const clearLabel = cs.ready ? "已通关" : ("通关 " + cs.solid + "/" + cs.need);
+      const meta = pending
+        ? "词组加载中"
+        : ("已学会 " + mastered + "/" + words.length + " · " + clearLabel + " · " +
+          (function(){ const c=countSrs(i); return "Due "+c.due; })());
       card.innerHTML =
         '<div class="ln">' + escapeHtml(setTitle(i)) + (cs.ready ? " ✓" : "") + "</div>" +
-        '<div class="meta">已学会 ' + mastered + "/" + words.length + " · " + clearLabel + " · " +
-        (function(){ const c=countSrs(i); return "Due "+c.due; })() +
-        "</div>" +
+        '<div class="meta">' + meta + "</div>" +
         '<div class="stars">' + "★".repeat(stars) + "☆".repeat(3 - stars) + "</div>";
       if (!locked) {
         card.insertAdjacentHTML("beforeend", '<button type="button" class="ghost set-challenge">12分钟挑战</button>');
@@ -624,10 +638,37 @@
       .replace(/"/g, "&quot;");
   }
 
-  function startLevel(levelNum, opts) {
+  let setOpenGeneration = 0;
+
+  async function ensurePlaySets(indexes) {
+    const banks = window.QuizMarioBanks;
+    const bank = findTrack(currentTrack);
+    if (!banks || !bank || !bank.lazy) return;
+    const missing = [];
+    for (let i = 0; i < indexes.length; i++) {
+      const index = indexes[i];
+      if (index < 0) continue;
+      if (!Array.isArray((bank.sets || [])[index])) missing.push(banks.ensureSet(currentTrack, index));
+    }
+    if (!missing.length) return;
+    trackLoadStatus(missing.length > 1 ? "正在打开这些词组…" : "正在打开这一组…");
+    await Promise.all(missing);
+    trackLoadStatus("");
+    absorbLoadedBanks();
+  }
+
+  async function startLevel(levelNum, opts) {
     opts = opts || {};
     const n = Math.floor(Number(levelNum) || 0);
     if (!isSetPlayable(n)) return;
+    const openGen = ++setOpenGeneration;
+    try {
+      await ensurePlaySets([n - 1]);
+    } catch (error) {
+      if (openGen === setOpenGeneration) trackLoadStatus((error && error.message) || "这一组加载失败，请重试。");
+      return;
+    }
+    if (openGen !== setOpenGeneration || !document.documentElement.classList.contains("session-ok")) return;
     levelNum = n;
     collocFlow.abandon();
     playGen += 1;
@@ -1716,10 +1757,30 @@
   function relatedTrackIndex() {
     const api = relatedApi();
     if (!api || typeof api.indexTrack !== "function") return null;
-    if (relatedIndexLevels !== LEVELS) {
+    const bank = findTrack(currentTrack);
+    const links = (bank && bank.linkCards) || [];
+    let loadedSets = 0;
+    for (let i = 0; i < LEVELS.length; i++) if (Array.isArray(LEVELS[i])) loadedSets++;
+    const stamp = LEVELS.length + ":" + loadedSets + ":" + links.length;
+    if (relatedIndexLevels !== LEVELS || relatedIndexStamp !== stamp) {
       relatedIndexLevels = LEVELS;
-      try { relatedIndex = api.indexTrack(LEVELS); }
-      catch (_) { relatedIndex = null; }
+      relatedIndexStamp = stamp;
+      try {
+        const map = new Map();
+        for (let i = 0; i < links.length; i++) {
+          const row = links[i];
+          if (!row || !row.word) continue;
+          const key = api.norm(row.word.word);
+          if (!key || map.has(key)) continue;
+          map.set(key, { levelIdx: row.levelIdx, word: row.word });
+        }
+        const fromSets = api.indexTrack(LEVELS);
+        fromSets.forEach((value, key) => {
+          const prev = map.get(key);
+          if (!prev || value.levelIdx < prev.levelIdx) map.set(key, value);
+        });
+        relatedIndex = map;
+      } catch (_) { relatedIndex = null; }
     }
     return relatedIndex;
   }
@@ -2888,7 +2949,12 @@
     const sel = $("track-select");
     if (sel) sel.value = t.id;
     const d = $("track-desc");
-    if (d) d.textContent = t.lazy && !t.loaded ? "选择雅思后加载词库，学习记录保留。" : (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + LEVELS.reduce((a, s) => a + s.length, 0) + " 词条";
+    if (d) {
+      const wordsIn = t.entryCount || LEVELS.reduce((a, s) => a + (s ? s.length : 0), 0);
+      d.textContent = t.lazy && !t.manifestReady
+        ? (t.id === "ielts" ? "选择雅思后加载词库，学习记录保留。" : ("选择" + (t.name || "词库") + "后加载，学习记录保留。"))
+        : (t.desc || "") + " · " + LEVEL_COUNT + " 组 · " + wordsIn + " 词条";
+    }
     const sourceLink = $("ielts-sources-link");
     if (sourceLink) sourceLink.hidden = t.id !== "ielts";
   }
@@ -2907,29 +2973,72 @@
     }
   }
 
+  function absorbLoadedBanks() {
+    if (!Sense || typeof Sense.migrateCards !== "function") return;
+    const next = Sense.migrateCards(save.cards || {}, catalogGroups());
+    save.cards = next;
+    for (const k of Object.keys(save.cards)) save.cards[k] = migrateCard(save.cards[k]);
+    relatedIndex = null;
+    relatedIndexStamp = "";
+    if (window.QuizMarioOwnStudy && typeof window.QuizMarioOwnStudy.invalidate === "function") {
+      try { window.QuizMarioOwnStudy.invalidate(); } catch (_) {}
+    }
+  }
+
   function switchTrack(id) {
     const generation = ++trackSelectionGeneration;
     const t = TRACKS.find((track) => track.id === id);
     if (!t) { trackLoadStatus("这个词库暂时未加载，请刷新后重试。"); return false; }
+    const banks = window.QuizMarioBanks;
     const loader = window.QuizMarioIelts;
     const owner = window.QuizMarioAccountStore ? window.QuizMarioAccountStore.owner() : "";
-    if (t.id === "ielts" && !t.loaded && !loader) {
-      trackLoadStatus("雅思词库组件未加载，请刷新后重试。学习记录保留。"); return false;
+    function still() {
+      return generation === trackSelectionGeneration && document.documentElement.classList.contains("session-ok") &&
+        (!window.QuizMarioAccountStore || window.QuizMarioAccountStore.owner() === owner);
     }
-    if (t.id === "ielts" && !t.loaded && loader) {
-      trackLoadStatus("正在加载雅思词库…");
+    if (t.id === "ielts" && t.lazy && !t.loaded && !banks && !loader) {
+      trackLoadStatus("雅思词库组件未加载，请刷新后重试。学习记录保留。");
+      return false;
+    }
+    if (t.lazy && !t.manifestReady && !banks) {
+      trackLoadStatus("词库组件未加载，请刷新后重试。学习记录保留。");
+      return false;
+    }
+    const needsManifest = t.lazy && !t.manifestReady;
+    const needsOldIelts = t.id === "ielts" && t.lazy && !t.loaded && !banks && loader;
+    if (needsManifest || needsOldIelts) {
+      trackLoadStatus(t.id === "ielts" ? "正在打开雅思…" : ("正在打开" + (t.name || "词库") + "…"));
       const selector = $("track-select"); if (selector) selector.value = currentTrack;
-      return loader.ensure().then(() => {
-        if (generation !== trackSelectionGeneration || !document.documentElement.classList.contains("session-ok") ||
-          (window.QuizMarioAccountStore && window.QuizMarioAccountStore.owner() !== owner)) return false;
-        commitTrack(id); trackLoadStatus(""); return true;
+      const ready = needsOldIelts ? loader.ensure() : banks.prepare(id);
+      return Promise.resolve(ready).then(() => {
+        if (!still()) return false;
+        absorbLoadedBanks();
+        commitTrack(id);
+        followBanks(id);
+        trackLoadStatus("");
+        return true;
       }).catch((error) => {
-        if (generation === trackSelectionGeneration && (!window.QuizMarioAccountStore || window.QuizMarioAccountStore.owner() === owner))
-          trackLoadStatus(error.message || "雅思词库加载失败，请重试。");
+        if (still()) trackLoadStatus((error && error.message) || "词库加载失败，请重试。学习记录保留。");
         return false;
       });
     }
-    trackLoadStatus(""); commitTrack(id); return true;
+    trackLoadStatus("");
+    commitTrack(id);
+    if (t.lazy) followBanks(id);
+    return true;
+  }
+
+  function followBanks(id) {
+    const banks = window.QuizMarioBanks;
+    if (!banks) return;
+    const unlock = Math.max(1, (save.trackUnlock && save.trackUnlock[id]) || 1);
+    if (banks.warm) banks.warm(id, unlock);
+    if (!banks.ensureSet || !banks.fillTrack) return;
+    banks.ensureSet(id, unlock - 1).then(function () {
+      banks.fillTrack(id);
+    }, function () {
+      banks.fillTrack(id);
+    });
   }
 
   function withTrack(id, fn) {
@@ -2975,6 +3084,7 @@
       let learned = 0, total = 0;
       const cleared = [];
       LEVELS.forEach((words, li) => {
+        if (!words) return;
         for (const w of words) {
           total++;
           const p = save.cards[cardKey(li, w.word)];
@@ -2982,6 +3092,8 @@
         }
         if (clearReadyPure(li, words)) cleared.push(li + 1);
       });
+      const bank = findTrack(id);
+      if (bank && bank.entryCount && !bank.loaded) total = bank.entryCount;
       return { learned, total, cleared, sets: LEVELS.length };
     });
   }
@@ -3213,6 +3325,14 @@
   }
 
   // test hook (harmless in production)
+  window.__QM_NOTE_BANKS = function () {
+    absorbLoadedBanks();
+    const home = $("screen-home");
+    if (home && home.classList.contains("active")) renderStats();
+    const levels = $("screen-levels");
+    if (levels && levels.classList.contains("active")) renderLevels();
+  };
+
   window.__QM = {
     switchTrack, computeStats,
     get track() { return currentTrack; },
@@ -3376,6 +3496,7 @@
   }
 
   function findSurface(words, lemma) {
+    if (!words || typeof words.find !== "function") return null;
     const id = Sense.senseId(lemma);
     return words.find((x) => Sense.senseId(x.word) === id)
       || words.find((x) => String(x.word).toLowerCase() === String(lemma || "").trim().toLowerCase());
@@ -3673,7 +3794,9 @@
     persist();
   }
 
-  function startMustPractice() {
+  async function startMustPractice() {
+    try { await ensurePlaySets(openedLevelIdxs()); }
+    catch (error) { trackLoadStatus((error && error.message) || "今日必练暂时无法打开，请重试。"); return; }
     const items = mustPracticeItems();
     markMust("start");
     dismissMustGate();
@@ -3693,7 +3816,16 @@
     refreshHomeQueues();
   }
 
-  function startPolysemySession() {
+  async function startPolysemySession() {
+    const banks = window.QuizMarioBanks;
+    const bank = findTrack(currentTrack);
+    if (bank && bank.lazy && banks && !bank.loaded && typeof banks.fillTrack === "function") {
+      trackLoadStatus("正在加载" + (bank.name || "词库") + "…");
+      try { await banks.fillTrack(currentTrack); }
+      catch (error) { trackLoadStatus((error && error.message) || "一词多义词库加载失败，请重试。"); return; }
+      trackLoadStatus("");
+      absorbLoadedBanks();
+    }
     const api = window.QuizMarioPolysemy;
     const built = [];
     if (api && typeof api.optionSet === "function") {
@@ -3720,12 +3852,14 @@
     startQueueSession("spelling", built.slice(0, 8), { direction: "polysemy" });
   }
 
-  function startSpellingSession() {
+  async function startSpellingSession() {
     if (currentTrack === "gaokao" && window.QuizMarioPolysemy && QuizMarioPolysemy.isPolysemyTrack(currentTrack)) {
-      startPolysemySession();
+      await startPolysemySession();
       return;
     }
     const lvl = Math.min(Math.max(1, save.unlockedLevel || 1), LEVEL_COUNT);
+    try { await ensurePlaySets([lvl - 1]); }
+    catch (error) { trackLoadStatus((error && error.message) || "这一组加载失败，请重试。"); return; }
     currentLevel = lvl;
     const words = LEVELS[lvl - 1] || [];
     const items = words.map((w, idx) => enrichItem(w, lvl - 1, idx));
@@ -4026,8 +4160,8 @@
     }
   });
 
-  // Boot
-  if (!LEVELS.length) {
+  // Boot. A lazy bank has no cards yet; do not replace the home shell.
+  if (!LEVELS.length && !TRACKS.some((t) => t.lazy)) {
     $("screen-home").innerHTML = "<p style='padding:24px;text-align:center'>No vocabulary loaded. Check words.js.</p>";
   }
   applyTrack(save.track, true);
