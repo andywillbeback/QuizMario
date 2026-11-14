@@ -8,7 +8,7 @@
   function warmLearningPage(){
     if(warmed||!document.head||!document.createElement)return;warmed=true;
     // Low-priority public resources only; no auth or learner-data request.
-    ['index.html','course-catalog.js?v=20261114-fast1','course-loader.js?v=20261114-fast1','game.js?v=20261114-fast1','sync.js?v=20261111-loginfix'].forEach(function(url){
+    ['index.html','data/banks/20261113-set1/manifest.js','bank-loader.js?v=20261113-set1','game.js?v=20261114-loop1','sync.js?v=20261111-loginfix'].forEach(function(url){
       var link=document.createElement('link');link.rel='prefetch';link.href=url;document.head.appendChild(link);
     });
   }

@@ -4,7 +4,8 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const source = fs.readFileSync(__dirname + '/../grok/sw.js', 'utf8');
-const currentCache = 'juguang-shell-20261114-fast1';
+const currentCache = 'juguang-shell-20261114-loop1';
+const currentBanks = 'juguang-banks-20261113-set1';
 function deferred() { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; }
 async function drain() { for (let i = 0; i < 20; i++) await Promise.resolve(); await new Promise(setImmediate); }
 function response(text) { const result = new Response(text); Object.defineProperty(result, 'type', { value: 'basic' }); return result; }
@@ -26,7 +27,7 @@ function harness(fetcher, hit, options = {}) {
     clearTimeout: number => timers.delete(number),
     fetch(request, init) { requests.push({ request, init }); return fetcher(request, init); },
     caches: { open: async () => cache,
-      keys: async () => ['juguang-shell-v1', 'juguang-shell-20261110-localsave', currentCache, 'another-app-cache'],
+      keys: async () => ['juguang-shell-v1', 'juguang-shell-20261110-localsave', 'juguang-banks-20261111-loginfix', currentCache, currentBanks, 'another-app-cache'],
       delete: async name => deleted.push(name) },
     self: { location: { origin: 'https://example.test' }, addEventListener: (name, fn) => { events[name] = fn; },
       skipWaiting: async () => {}, clients: { claim: async () => {} } },
@@ -118,10 +119,10 @@ test('without cache the worker does not invent a page at the warm-cache deadline
 test('activation removes old shell versions but preserves current and unrelated caches', async () => {
   const h = harness(async () => response('ok')); let pending;
   h.events.activate({ waitUntil(value) { pending = value; } }); await pending;
-  assert.deepEqual(h.deleted, ['juguang-shell-v1', 'juguang-shell-20261110-localsave']);
+  assert.deepEqual(h.deleted, ['juguang-shell-v1', 'juguang-shell-20261110-localsave', 'juguang-banks-20261111-loginfix']);
 });
 
-test('auth callbacks, private requests, scripts and word banks are never intercepted', () => {
+test('auth callbacks, private requests, scripts and legacy bank paths are never intercepted', () => {
   const h = harness(() => { throw Error('must not fetch'); });
   const base = 'https://example.test/QuizMario/grok/';
   for (const url of [
@@ -130,8 +131,22 @@ test('auth callbacks, private requests, scripts and word banks are never interce
     base + 'login.html?refresh_token=fixture-secret', base + 'login.html?error=fixture-error',
     base + 'index.html?error_description=fixture-error', base + 'user_progress',
     base + 'words.js', base + 'exam-tracks.js', base + 'bank-data/gaokao/unit-001.json',
+    base + 'game.js', base + 'sync.js',
     base + 'word-universe.html',
   ]) assert.equal(h.fetch(url), undefined, url);
   assert.equal(h.fetch(base + 'login.html', 'POST'), undefined);
   assert.equal(h.requests.length, 0); assert.equal(h.lifetimes.length, 0);
+});
+
+test('a versioned set file is cached after the first fetch and reused', async () => {
+  let calls = 0;
+  const h = harness(async () => { calls++; return response('{"cards":[{"word":"a"}]}'); });
+  const url = 'https://example.test/QuizMario/grok/data/banks/20261113-set1/zhongkao/000.json';
+  assert.equal(await (await h.fetch(url)).text(), '{"cards":[{"word":"a"}]}');
+  await Promise.all(h.lifetimes);
+  assert.equal(calls, 1);
+  assert.equal(h.writes.length, 1);
+  assert.equal(await (await h.fetch(url)).text(), '{"cards":[{"word":"a"}]}');
+  assert.equal(calls, 1, 'the second read is served from the bank cache');
+  assert.equal(h.requests.length, 1);
 });

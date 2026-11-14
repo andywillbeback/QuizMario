@@ -7,7 +7,6 @@
 
   var openBuckets = Object.create(null);
   var glossCache = null;
-  if (root.addEventListener) root.addEventListener('quizmario:course-loaded',function(){glossCache=null;});
 
   function putGloss(into, word, gloss) {
     var key = String(word || "").trim().toLowerCase();
@@ -99,7 +98,11 @@
     host.addEventListener("click", onMore);
   }
 
-  var api = { render: render, install: install };
+  var api = {
+    render: render,
+    install: install,
+    invalidate: function () { glossCache = null; },
+  };
   root.QuizMarioOwnStudy = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root.document) install();

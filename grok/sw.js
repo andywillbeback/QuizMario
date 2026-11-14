@@ -1,7 +1,9 @@
-/* Public shell only. A warm cache gets a short network freshness window;
-   background refresh stays alive through its cache write. Authentication,
-   learner records, word banks and application scripts are never intercepted. */
-var CACHE = "juguang-shell-20261114-fast1";
+/* Public shell, plus versioned vocabulary set files. A warm shell cache gets a
+   short network freshness window; background refresh stays alive through its
+   cache write. Bank files are cache-first for this version path. Authentication,
+   learner records and application scripts are never intercepted. */
+var CACHE = "juguang-shell-20261114-loop1";
+var BANK_CACHE = "juguang-banks-20261113-set1";
 var SHELL = [
   "./index.html",
   "./login.html",
@@ -28,7 +30,9 @@ self.addEventListener("activate", function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(keys.map(function (key) {
-        if (key === CACHE || key.indexOf("juguang-shell-") !== 0) return Promise.resolve();
+        var oldShell = key.indexOf("juguang-shell-") === 0 && key !== CACHE;
+        var oldBanks = key.indexOf("juguang-banks-") === 0 && key !== BANK_CACHE;
+        if (!oldShell && !oldBanks) return Promise.resolve();
         return caches.delete(key);
       }));
     }).then(function () {
@@ -36,6 +40,25 @@ self.addEventListener("activate", function (event) {
     })
   );
 });
+
+function isBankPath(pathname) {
+  return /\/data\/banks\/20261113-set1\//.test(pathname);
+}
+
+function bankResponse(req, event) {
+  return caches.open(BANK_CACHE).then(function (cache) {
+    return cache.match(req).then(function (hit) {
+      if (hit) return hit;
+      return fetch(req).then(function (res) {
+        if (res && res.ok && res.type === "basic") {
+          var saved = cache.put(req, res.clone());
+          if (event && event.waitUntil) event.waitUntil(Promise.resolve(saved).catch(function () {}));
+        }
+        return res;
+      });
+    });
+  });
+}
 
 function isShellPath(pathname) {
   return /\/(?:index|login)\.html$/.test(pathname)
@@ -57,6 +80,10 @@ self.addEventListener("fetch", function (event) {
     return;
   }
   if (url.origin !== self.location.origin) return;
+  if (isBankPath(url.pathname)) {
+    event.respondWith(bankResponse(req, event));
+    return;
+  }
   if (!isShellPath(url.pathname)) return;
   if (/[?&](?:code|access_token|refresh_token|error|error_description)=/.test(url.search)) return;
 
