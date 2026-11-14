@@ -264,6 +264,7 @@
       save.updatedAt = new Date().toISOString();
     }
     if (window.QuizMarioSyncCore && typeof window.QuizMarioSyncCore.prune === "function") window.QuizMarioSyncCore.prune(save);
+    restorePolysemyShell();
     try { writeLocalSave(save); }
     catch (e) {
       if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(e);
@@ -284,6 +285,20 @@
   /** Read a stored card. Display counts must not create an untouched default. */
   function peekProg(key) {
     return save.cards[key] || null;
+  }
+
+  /**
+   * The visible 一词多义 card is shown from an in-memory recognition shell.
+   * Prune drops that shell because it is still an unused default, and a sync
+   * rebase then replaces the live save. Restore it while the question is on
+   * screen so the answer does not look like a new recognition write.
+   * The on-disk copy stays pruned until polysemy evidence keeps the card.
+   */
+  function restorePolysemyShell() {
+    const play = $("screen-play");
+    if (sessionDirection !== "polysemy" || !currentCard || !currentCard.key) return;
+    if (!play || !play.classList.contains("active")) return;
+    if (!save.cards[currentCard.key]) getProg(currentCard.key);
   }
 
   function isNewCard(p) {
