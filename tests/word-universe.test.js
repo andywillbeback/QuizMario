@@ -77,7 +77,7 @@ check('all 372 units are complete and classified, including 22 phrase-only exam 
 check('gate failures persist and emit phrase-specific events before retry',()=>{
  const source=read('grok/game.js'),gate=related.createCollocGate(),card={...tracks[0].sets[0][0],key:'gaokao|0::advantage'};
  gate.onLemmaCorrect(card,related.indexTrack(tracks[0].sets),'meaning');const events=[],save={cards:{[card.key]:{state:'review',mastery:3,reps:4}}};let writes=0;
- const ctx={UniverseProgress:progress,save,currentTrack:'gaokao',currentCard:card,collocFlow:gate,collocGateRetries:0,awaiting:false,pendingRate:false,Practice:practice,sessionKind:'level',sessionDirection:'meaning',showCollocRetry(){},
+ const ctx={UniverseProgress:progress,save,currentTrack:'gaokao',currentCard:card,collocFlow:gate,collocGateRetries:0,awaiting:false,pendingRate:false,Practice:practice,sessionKind:'level',sessionDirection:'meaning',showCollocRetry(){},noteNotebookAnswer(){},noteNotebookFeedback(){},
  learnerEvents(){return{TYPES:{WRONG:'vocab.answer_wrong',CORRECT:'vocab.answer_correct'},record(x){events.push(x)}}},persist(){writes++}};vm.createContext(ctx);
  const grade=source.slice(source.indexOf('  function grade(correct,'),source.indexOf('  function confirmCorrect('));
  const record=source.slice(source.indexOf('  function recordCollocationAnswer('),source.indexOf('  function bindCollocFlow('));

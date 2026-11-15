@@ -33,7 +33,7 @@ function staticGuards() {
     assert.ok(html.includes('src="vendor/supabase.umd.js"'), file + " loads the vendored SDK");
     assert.ok(!html.includes("cdn.jsdelivr.net/npm/@supabase/supabase-js"), file + " still loads supabase from jsDelivr");
     assert.ok(html.indexOf('src="config.js') < html.indexOf('src="vendor/supabase.umd.js"'), file + " loads config before the SDK");
-    assert.ok(html.indexOf('src="vendor/supabase.umd.js"') < html.indexOf('src="sync-merge.js"'), file + " loads the SDK before sync-merge");
+    assert.ok(html.indexOf('src="vendor/supabase.umd.js"') < html.search(/src="sync-merge\.js(?:\?[^"]*)?"/), file + " loads the SDK before sync-merge");
   }
   const grokUmd = read("grok/vendor/supabase.umd.js");
   const rootUmd = read("vendor/supabase.umd.js");

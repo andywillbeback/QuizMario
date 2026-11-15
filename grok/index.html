@@ -13,6 +13,8 @@ html:not(.session-ok) #startup-help{visibility:visible;position:fixed;top:calc(5
 #startup-help[hidden],html.session-ok #startup-help{display:none!important}
 #startup-help button{padding:10px 22px;border:1px solid #8aaaca;border-radius:8px;background:#15283e;color:#f4f7ff;font:inherit;cursor:pointer}
 html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(.session-ok) #login-cta{display:none!important}
+  .question-bookmark-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.question-bookmark-row button{font-size:.8rem;padding:6px 10px;white-space:nowrap}#question-bookmark-status{display:block;color:var(--muted);font-size:.75rem}#question-bookmark-status:empty{display:none}
+  #question-notebook{width:min(820px,calc(100vw - 24px));max-height:88vh;overflow:auto;background:#10192b;color:var(--text);border:1px solid var(--line);border-radius:20px;padding:22px;box-sizing:border-box}#question-notebook::backdrop{background:rgba(0,0,0,.7)}#question-notebook input[type=search],#question-notebook select{max-width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#080f1c;color:var(--text);font:inherit}.question-notebook-copy{white-space:pre-wrap;overflow-wrap:anywhere}.question-notebook-prompt{font-size:1.2rem}.question-notebook-label{color:var(--muted);font-size:.85rem}.question-notebook-history{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}#question-notebook .notebook-entry{overflow-wrap:anywhere}#question-notebook button{min-height:36px}
 </style>
 <script>
 (function () {
@@ -72,7 +74,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 </script>
 <script src="config.js?v=20261104-auth" defer></script>
 <script src="vendor/supabase.umd.js" defer></script>
-<script src="sync-merge.js" defer></script>
+<script src="sync-merge.js?v=20261115-notebook1" defer></script>
 <script src="cloud-client.js?v=20261104-auth" defer></script>
 <script src="account-store.js?v=20261108-sync3" defer></script>
 <script src="sync-core.js?v=20261110-localsave" defer></script>
@@ -806,7 +808,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 
   /* LoL kill banner */
   #kill-banner {
-    pointer-events: none;
+    pointer-events: none !important;
     position: absolute; left: 50%; top: 18%;
     transform: translate(-50%, -20px) scale(.8);
     z-index: 9;
@@ -821,7 +823,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     white-space: nowrap;
   }
   #kill-banner.show {
-    animation: killPop 1.5s cubic-bezier(.22,.61,.36,1) forwards;
+    animation: killPop 1s cubic-bezier(.22,.61,.36,1) forwards;
   }
   #kill-banner.shutdown {
     color: #fff;
@@ -832,7 +834,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
       0 2px 0 #5a0010;
   }
   #kill-banner.shutdown.show {
-    animation: shutPop 1.9s cubic-bezier(.22,.61,.36,1) forwards;
+    animation: shutPop 1s cubic-bezier(.22,.61,.36,1) forwards;
   }
   @keyframes killPop {
     0% { opacity: 0; transform: translate(-50%, 10px) scale(.6); }
@@ -1223,14 +1225,14 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
     }
     body.at-play #kill-banner.show {
       animation-name: killPopTop;
-      animation-duration: 1.15s;
+      animation-duration: 1s;
     }
     body.at-play #kill-banner.shutdown {
       letter-spacing: 0.06em;
     }
     body.at-play #kill-banner.shutdown.show {
       animation-name: shutPopTop;
-      animation-duration: 1.35s;
+      animation-duration: 1s;
     }
     body.at-play #prompt-main { font-size: 1.28rem; margin: 0; }
     body.at-play #prompt-ipa { font-size: .72rem; margin: 0; line-height: 1.25; }
@@ -1390,6 +1392,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
           <button id="btn-spelling" class="secondary" type="button">拼写</button>
           <button id="btn-polysemy" class="secondary" type="button" hidden>一词多义</button>
           <button id="btn-levels" class="secondary" type="button">单元目录</button>
+          <button id="btn-question-notebook" class="secondary" type="button">错题本</button>
           <button id="btn-notebook" class="secondary" type="button">错词笔记本</button>
           <a id="login-cta" class="btn secondary" href="login.html" hidden>登录 / 注册</a>
           <button id="btn-back-gate" class="ghost" type="button">更换考级</button>
@@ -1435,12 +1438,14 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         </div>
       </div>
       <nav class="practice-universe-nav" aria-label="本组学习反馈">
+        <button id="btn-play-question-notebook" class="ghost" type="button">错题本</button>
         <a id="btn-play-universe" href="word-universe.html" target="_blank" rel="noopener" hidden>本组宇宙</a>
         <a id="btn-play-universe-list" href="word-universe.html?view=list" target="_blank" rel="noopener" hidden>本组分类列表</a>
         <span id="play-universe-scope">学习参考 · 新窗口打开，返回后继续练习</span>
       </nav>
       <div id="prompt-box">
-        <div id="prompt-label">英文 → 中文意思</div>
+        <div class="question-bookmark-row"><div id="prompt-label">英文 → 中文意思</div><button id="btn-bookmark-question" class="ghost" type="button" aria-pressed="false">☆ 收藏本题</button></div>
+        <small id="question-bookmark-status" role="status"></small>
         <div id="prompt-main">—</div>
         <div id="prompt-ipa" hidden></div>
         <div id="sort-bar" class="sort-bar" role="group" aria-label="语音">
@@ -1535,6 +1540,13 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   </div>
 </div>
 
+<dialog id="question-notebook" aria-labelledby="question-notebook-title">
+  <div class="notebook-heading"><h2 id="question-notebook-title">我的错题本 <small id="question-notebook-count"></small></h2><button id="question-notebook-close" type="button" class="ghost">关闭</button></div>
+  <p class="sub">在题旁手动收藏，保留原题、我的作答和当时已展示的讲解。查看或收藏不改变分数及复习安排。</p>
+  <div class="notebook-filters"><input id="question-notebook-search" type="search" aria-label="搜索错题" placeholder="搜索题目、作答或讲解"><select id="question-notebook-scope" aria-label="错题词库范围"><option value="current">当前词库</option><option value="all">全部词库</option></select><label><input id="question-notebook-archived" type="checkbox">显示已移出</label></div>
+  <p id="question-notebook-status" role="status"></p><div id="question-notebook-list"></div>
+</dialog>
+
 <dialog id="word-notebook" aria-labelledby="notebook-title">
   <div class="notebook-heading"><h2 id="notebook-title">我的错词笔记本 <small id="notebook-count"></small></h2><button id="notebook-close" type="button" class="ghost">关闭</button></div>
   <p class="sub">单词和词组累计答错两次自动加入；点击“不会”也会加入待巩固。可以手动添加和写笔记，手动添加及“不会”都不计成答错。词库内的条目可在今日必练巩固；词库外的条目保存在笔记里。移出后笔记仍保留。</p>
@@ -1586,7 +1598,8 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="universe-progress.js?v=20261105" defer></script>
   <script src="study-metrics.js?v=20261109-ielts1" defer></script>
   <script src="own-study.js?v=20261113-set1" defer></script>
-  <script src="game.js?v=20261113-set1" defer></script>
+  <script src="game.js?v=20261115-notebook1" defer></script>
+  <script src="question-notebook.js?v=20261115-notebook1" defer></script>
   <script src="word-notebook.js?v=20261109-ielts1" defer></script>
   <script src="profile-name.js?v=20261109-ielts1" defer></script>
   <script src="sync.js?v=20261111-loginfix" defer></script>
