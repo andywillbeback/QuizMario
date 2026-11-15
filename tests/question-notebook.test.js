@@ -1,0 +1,50 @@
+'use strict';
+const assert=require('assert'),fs=require('fs'),vm=require('vm');
+const bookApi=require('../grok/question-notebook'),core=require('../grok/sync-core'),merge=require('../grok/sync-merge');
+const make=extra=>Object.assign({track:'synthetic',item_id:'synthetic|0::apple',mode:'meaning',label:'英文 → 中文意思',prompt:'apple',hint:'An ____ a day.',choices:['苹果','梨','书','狗'],answer:'',outcome:'unanswered',feedback:''},extra||{});
+assert.throws(()=>bookApi.put({},make({outcome:'wrong'}),{}),/手动/, 'a wrong response alone cannot auto-collect');
+const book={};let first=bookApi.put(book,make(),{manual:true,now:100});
+assert(first.favorite&&!first.hasWrong);assert.strictEqual(bookApi.history(first).length,1);
+bookApi.put(book,make(),{manual:true,now:200});assert.strictEqual(Object.keys(book).length,1);assert.strictEqual(bookApi.history(first).length,1,'identical collection is idempotent');
+bookApi.put(book,make({answer:'梨',outcome:'wrong'}),{now:300});
+bookApi.put(book,make({answer:'梨',outcome:'wrong',feedback:'已展示：apple 是苹果。'}),{now:400});
+assert.strictEqual(bookApi.history(first).length,3);assert.strictEqual(bookApi.history(first)[0].snapshot.answer,'');assert.strictEqual(bookApi.history(first)[1].snapshot.answer,'梨');assert.strictEqual(bookApi.history(first)[2].snapshot.feedback,'已展示：apple 是苹果。');
+assert.strictEqual(Object.keys(book).length,1);assert(first.hasWrong);
+const unknown=bookApi.put(book,make({item_id:'other',outcome:'unknown',answer:'不会'}),{manual:true,now:500});assert(!unknown.hasWrong,'unknown and manual collection are not wrong evidence');
+assert.notStrictEqual(bookApi.key(make()),bookApi.key(make({mode:'spelling'})));
+assert.notStrictEqual(bookApi.key(make()),bookApi.key(make({item_id:'sense-split'})));
+assert.notStrictEqual(bookApi.key(make({mode:'polysemy',context:'The bank is closed.'})),bookApi.key(make({mode:'polysemy',context:'We sat on the bank.'})), 'different sense contexts are different questions');
+first.archived=true;assert.strictEqual(bookApi.rows(book).length,1);assert.strictEqual(bookApi.rows(book,{archived:true}).length,2);assert.strictEqual(bookApi.history(first).length,3);
+assert.strictEqual(merge.isBlank({cards:{},questionNotebook:book}),false,'a notebook-only account is not a blank save');
+const base={cards:{},questionNotebook:{},updatedAt:'2026-11-15T00:00:00Z'},left=JSON.parse(JSON.stringify(base)),right=JSON.parse(JSON.stringify(base));
+bookApi.put(left.questionNotebook,make({answer:'左边的答案',outcome:'wrong'}),{manual:true,now:600});
+bookApi.put(right.questionNotebook,make({answer:'右边的答案',outcome:'wrong'}),{manual:true,now:601});
+left.updatedAt='2026-11-15T00:00:01Z';right.updatedAt='2026-11-15T00:00:02Z';
+const combined=core.reconcile(base,left,right);assert.strictEqual(bookApi.history(combined.questionNotebook[bookApi.key(make())]).length,2,'concurrent records survive merge');assert.deepStrictEqual(core.compact(combined).questionNotebook,combined.questionNotebook);
+const game=fs.readFileSync(require('path').join(__dirname,'../grok/game.js'),'utf8');
+const method=game.slice(game.indexOf('    updateQuestionNotebook(change, expectedOwner) {'),game.indexOf('    updateNotebook(change) {'));
+const context={JSON,Date,Error,save:{cards:{a:{correct:3,wrong:1,due:123}},points:10,wrongBook:{original:{active:true}},studyDaily:{today:123}},document:{documentElement:{classList:{contains:()=>true}}},window:{QuizMarioAccountStore:{owner:()=> 'synthetic-A'}},writeLocalSave:value=>{context.written=JSON.parse(JSON.stringify(value));},persist:()=>{context.persisted=true;}};
+vm.createContext(context);vm.runInContext('api={'+method+'}',context);
+const evidence=JSON.stringify(context.save);
+assert.throws(()=>context.api.updateQuestionNotebook(()=>{},'synthetic-B'),/账号/);assert.strictEqual(JSON.stringify(context.save),evidence);
+context.api.updateQuestionNotebook(b=>bookApi.put(b,make(),{manual:true,now:700}),'synthetic-A');
+assert.deepStrictEqual(context.save.cards,JSON.parse(evidence).cards);assert.strictEqual(context.save.points,10);assert.deepStrictEqual(context.save.wrongBook,JSON.parse(evidence).wrongBook);assert.deepStrictEqual(context.save.studyDaily,JSON.parse(evidence).studyDaily);assert(context.written.questionNotebook&&context.persisted);
+const beforeFailure=JSON.stringify(context.save);context.writeLocalSave=()=>{throw Error('storage full');};
+assert.throws(()=>context.api.updateQuestionNotebook(b=>bookApi.put(b,make({item_id:'new'}),{manual:true,now:800}),'synthetic-A'),/storage full/);assert.strictEqual(JSON.stringify(context.save),beforeFailure,'failed local durability cannot claim a saved collection');
+console.log('question-notebook ok: immutable visible snapshots, dedupe, separate unknown/manual evidence, concurrent merge, owner guard, durable save and unchanged learning counters');
+// Run the installed view in a minimal DOM model, without starting a browser.
+{
+ const listeners={},elements={};let account='synthetic-A',verified=true,question=make(),save={points:22,cards:{original:{wrong:2}},questionNotebook:{}};
+ function el(id){if(!elements[id])elements[id]={listeners:{},value:id==='question-notebook-scope'?'current':'',checked:false,open:false,textContent:'',innerHTML:'',disabled:false,attrs:{},addEventListener(k,cb){this.listeners[k]=cb;},setAttribute(k,v){this.attrs[k]=v;},showModal(){this.open=true;},close(){this.open=false;},removeAttribute(){this.open=false;},replaceChildren(){this.innerHTML='';}};return elements[id];}
+ const ctx={console,JSON,Date,Error,Math,crypto,document:{getElementById:el,documentElement:{classList:{contains:()=>verified}}},QuizMarioAccountStore:{owner:()=>account},MutationObserver:class{constructor(cb){ctx.checkOwner=cb;}observe(){}},addEventListener:(kind,cb)=>{listeners[kind]=cb;},__QM:{track:'synthetic',getSave:()=>save,questionSnapshot:()=>question,updateQuestionNotebook(change,id){assert.strictEqual(id,account);change(save.questionNotebook);if(listeners['quizmario:progress'])listeners['quizmario:progress']();}}};
+ vm.createContext(ctx);vm.runInContext(fs.readFileSync(require('path').join(__dirname,'../grok/question-notebook.js'),'utf8'),ctx);
+ question=make({answer:'梨',outcome:'wrong'});listeners['quizmario:question-snapshot']();assert.strictEqual(Object.keys(save.questionNotebook).length,0,'wrong alone does not auto-collect');
+ el('btn-bookmark-question').listeners.click();assert.strictEqual(Object.keys(save.questionNotebook).length,1);assert.strictEqual(el('btn-bookmark-question').textContent,'★ 已收入错题本');
+ question=make({answer:'梨',outcome:'wrong',feedback:'Shown only: <script>malicious()</script>'});listeners['quizmario:question-snapshot']();
+ el('btn-play-question-notebook').listeners.click();assert(el('question-notebook').open);assert(el('question-notebook-list').innerHTML.includes('&lt;script&gt;malicious()&lt;/script&gt;'));assert(!el('question-notebook-list').innerHTML.includes('<script>'));
+ assert.strictEqual(save.points,22);assert.deepStrictEqual(save.cards,{original:{wrong:2}});
+ el('btn-bookmark-question').listeners.click();assert.strictEqual(Object.keys(save.questionNotebook).length,1);assert.strictEqual(Object.keys(Object.values(save.questionNotebook)[0].history).length,2);
+ verified=false;ctx.checkOwner();assert(!el('question-notebook').open);assert.strictEqual(el('question-notebook-list').innerHTML,'');
+ account='synthetic-B';save={points:0,cards:{},questionNotebook:{}};verified=true;question=null;ctx.checkOwner();el('btn-question-notebook').listeners.click();assert(!el('question-notebook-list').innerHTML.includes('malicious'));assert(el('question-notebook-list').innerHTML.includes('还没有收藏'));
+}
+console.log('question-notebook DOM model ok: manual-only entry, later explanation update, one-click view, XSS escaping, dedupe, unchanged scores and immediate account hiding');

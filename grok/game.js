@@ -71,6 +71,8 @@
   let currentLevel = 1;
   let queue = [];
   let currentCard = null;
+  let currentNotebookQuestion = null, lemmaNotebookQuestion = null;
+  let killBannerTimer = null;
   let awaiting = false;
   let sessionSeen = 0;
   let sessionTarget = 0;
@@ -175,6 +177,7 @@
         ? data.wrongBook
         : {}
     );
+    sv.questionNotebook = data.questionNotebook && typeof data.questionNotebook === "object" && !Array.isArray(data.questionNotebook) ? JSON.parse(JSON.stringify(data.questionNotebook)) : {};
     sv.mustPractice = normalizeMustPractice(data.mustPractice);
     const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
     sv.practice = {
@@ -1226,6 +1229,8 @@
   }
 
   function hideKillBanner() {
+    if (killBannerTimer) clearTimeout(killBannerTimer);
+    killBannerTimer = null;
     const b = $("kill-banner");
     if (!b) return;
     b.classList.remove("show", "shutdown", "cheer");
@@ -1235,15 +1240,14 @@
   function showKillBanner(text, kind) {
     const b = $("kill-banner");
     if (!b || !text) return;
+    hideKillBanner();
     b.textContent = text;
     b.classList.remove("show", "shutdown", "cheer");
     if (kind === "shutdown" || kind === "regret") b.classList.add("shutdown");
     if (kind === "cheer") b.classList.add("cheer");
     void b.offsetWidth;
     b.classList.add("show");
-    setTimeout(() => {
-      b.classList.remove("show", "shutdown", "cheer");
-    }, (kind === "shutdown" || kind === "regret") ? 2200 : 1600);
+    killBannerTimer = setTimeout(hideKillBanner, 1000);
   }
 
   function announceKillStreak() {
@@ -1285,6 +1289,45 @@
       return { label: "拼写 · 中文 → 键入英文", main: currentCard.meaning_zh || "" };
     }
     return { label: "中文意思 → 英文单词", main: currentCard.meaning_zh || "" };
+  }
+
+  function announceNotebookSnapshot() {
+    try { window.dispatchEvent(new CustomEvent("quizmario:question-snapshot")); } catch (_) {}
+  }
+
+  function captureNotebookQuestion(gate) {
+    const owner = window.QuizMarioAccountStore && window.QuizMarioAccountStore.owner();
+    if (!currentCard || !owner) { currentNotebookQuestion = null; return; }
+    const value = (id) => $(id) ? $(id).textContent : "";
+    currentNotebookQuestion = {
+      owner:owner, track:currentTrack, item_id:gate ? currentCard.key + "::collocation::" + gate.primary.lemma : currentCard.key,
+      mode:gate ? "collocation" : sessionDirection, label:value("prompt-label"), prompt:value("prompt-main"),
+      context:sessionDirection === "polysemy" ? (currentCard.senseContext || "") : "",
+      hint:value("prompt-hint"), choices:Array.from(document.querySelectorAll("#choices .choice")).map((b) => b.textContent),
+      answer:"", outcome:"unanswered", feedback:""
+    };
+    announceNotebookSnapshot();
+  }
+
+  function noteNotebookAnswer(chosen, outcome) {
+    if (!currentNotebookQuestion) return;
+    currentNotebookQuestion.answer = outcome === "unknown" ? "不会" : String(chosen == null ? "" : chosen);
+    currentNotebookQuestion.outcome = outcome;
+    currentNotebookQuestion.feedback = "";
+    announceNotebookSnapshot();
+  }
+
+  function noteNotebookFeedback() {
+    if (!currentNotebookQuestion) return;
+    const node = $("feedback");
+    if (node && node.classList.contains("show")) {
+      const visible = node.cloneNode(true);
+      visible.querySelectorAll("button, a, [hidden], [aria-hidden='true']").forEach((n) => n.remove());
+      visible.querySelectorAll("br").forEach((n) => n.replaceWith(document.createTextNode("\n")));
+      visible.querySelectorAll("div, p, li, section, h1, h2, h3, summary").forEach((n) => n.appendChild(document.createTextNode("\n")));
+      currentNotebookQuestion.feedback = visible.textContent.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    }
+    announceNotebookSnapshot();
   }
 
   function fillCardContent() {
@@ -1342,6 +1385,8 @@
     renderChoices();
     renderCardSpeech();
     renderRelated(false);
+    lemmaNotebookQuestion = null;
+    captureNotebookQuestion();
   }
 
   function stopChallenge() {
@@ -2097,10 +2142,12 @@
     const queueEl = $("play-queue");
     if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
     updateProgress();
+    noteNotebookFeedback();
   }
 
   function grade(correct, easy, chosen, outcome) {
     if (awaiting || !currentCard || pendingRate) return;
+    noteNotebookAnswer(chosen, outcome || (correct ? "correct" : "wrong"));
     if (Practice.sessionAnswerMode(sessionKind, sessionDirection).typed) {
       gradeSpelling(correct, chosen, outcome);
       return;
@@ -2276,6 +2323,7 @@
     }
     $("play-queue").textContent = String(queue.length + requeueSoon.length);
     updateProgress();
+    noteNotebookFeedback();
   }
 
   function nextAfterFeedback() {
@@ -2399,6 +2447,7 @@
     if (promptMain) promptMain.textContent = facing.main;
     renderPromptIpa(currentCard && currentCard.ipa);
     if (wasGate) {
+      if (lemmaNotebookQuestion) currentNotebookQuestion = lemmaNotebookQuestion;
       const hintEl = $("prompt-hint");
       if (hintEl) hintEl.textContent = "";
     }
@@ -2418,12 +2467,14 @@
       animRestart(box, "shake");
       clearAnim(box, "shake", 500);
     }
+    noteNotebookFeedback();
   }
 
   function renderCollocGate() {
     const gate = collocFlow.gate();
     if (!gate || !gate.primary) return;
     const phrase = gate.primary;
+    lemmaNotebookQuestion = currentNotebookQuestion;
     closeRelatedPeek();
     awaiting = false;
     pendingRate = false;
@@ -2467,6 +2518,7 @@
     paintChoices(opts, correct, meaningsMatch);
     setUnknownVisible(false);
     renderRelated(true);
+    captureNotebookQuestion(gate);
   }
 
   /** Hard MC distractors: same POS / scene / root_group / similar length·spelling */
@@ -2820,6 +2872,7 @@
       wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
       practice: payload.practice && typeof payload.practice === "object" ? payload.practice : {},
       mustPractice: payload.mustPractice,
+      questionNotebook: payload.questionNotebook,
     });
   }
 
@@ -3375,6 +3428,23 @@
         if (found) return {levelIdx:li,cardKey:Sense.cardKeyFor(bank.id,li,found.word),gloss:found.meaning_zh || ""};
       }
       return null;
+    },
+    questionSnapshot() {
+      const owner = window.QuizMarioAccountStore && window.QuizMarioAccountStore.owner();
+      if (!document.documentElement.classList.contains("session-ok") || !owner || !currentNotebookQuestion ||
+          currentNotebookQuestion.owner !== owner || !$("screen-play").classList.contains("active")) return null;
+      return JSON.parse(JSON.stringify(currentNotebookQuestion));
+    },
+    updateQuestionNotebook(change, expectedOwner) {
+      const owner = window.QuizMarioAccountStore && window.QuizMarioAccountStore.owner();
+      if (!owner || owner !== expectedOwner || !document.documentElement.classList.contains("session-ok")) throw new Error("请先完成本账号的进度读取。");
+      const next = JSON.parse(JSON.stringify(save));
+      if (!next.questionNotebook) next.questionNotebook = {};
+      change(next.questionNotebook);
+      next.updatedAt = new Date().toISOString();
+      writeLocalSave(next); // Fail visibly before accepting an in-memory-only collection.
+      save = next;
+      persist({keepUpdatedAt:true});
     },
     updateNotebook(change) {
       if (!document.documentElement.classList.contains("session-ok")) throw new Error("请先完成本账号的进度读取。");
@@ -4135,6 +4205,7 @@
 
   // Number keys: Good/Easy while rating; else MC 1–4
   document.addEventListener("keydown", (e) => {
+    if (document.querySelector("dialog[open]")) return;
     if (closeRelatedPeekOnKey(e)) return;
     const play = $("screen-play");
     if (!play || !play.classList.contains("active")) return;
