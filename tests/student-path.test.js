@@ -1300,7 +1300,7 @@ async function main() {
     assert.strictEqual(signals.wrongSchema, 2, "the wrong answer is schema v2");
     assert.ok(signals.wrongSense && signals.wrongSense.indexOf(String(planted.word).toLowerCase()) === 0, signals.wrongSense);
     assert.strictEqual(signals.wrongDir, "production", "今日必练 is ZH → EN");
-    assert.strictEqual(signals.wrongDetail, "form");
+    assert.strictEqual(signals.wrongDetail, "zh_en", "Q2 canonical detail for 看中文选英文");
     assert.strictEqual(signals.wrongAttempt, "first_attempt");
     assert.strictEqual(signals.wrongExposed, false);
     assert.strictEqual(signals.wrongGrade, "again");
