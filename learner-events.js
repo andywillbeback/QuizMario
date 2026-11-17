@@ -6,6 +6,8 @@
  * own learner_id with no source filter; INSERT still requires source=quizmario.
  * Those returns stay source=als in the local store, clear deep-train debt, and
  * are never uploaded or copied into the QM JSONL export.
+ * The 800-row local cap never drops unuploaded quizmario rows (soft overflow);
+ * online / pageshow / visible retries flush pending and re-pull ALS returns.
  * A failed insert must not affect user_progress sync.
  * The ingest panel is not part of the student login or home. download() and
  * copyJsonl() stay on the API. ?alsDebug=1 or localStorage quizmario_als_debug=1
@@ -341,30 +343,44 @@
   }
 
   /**
-   * Keep ALS sense returns when the cap is hit. A busy quizmario outbox
-   * must not drop the return before home can set alsDeepDone.
+   * Cap the local store at MAX_EVENTS without dropping unuploaded
+   * quizmario rows (Q6) or ALS sense returns needed for alsDeepDone.
+   * Soft-overflow above the cap when pending + returns exceed it.
+   * Uploaded quizmario rows are the only ones the cap may drop.
    */
   function trim(store) {
     sortEvents(store.events);
     if (store.events.length <= MAX_EVENTS) return store;
     var returns = [];
+    var pending = [];
     var rest = [];
     var events = store.events;
+    var uploadedMap = store.uploaded || {};
     for (var i = 0; i < events.length; i++) {
-      if (isAlsSenseReturn(events[i] && events[i].source, events[i] && events[i].event_type)) returns.push(events[i]);
-      else rest.push(events[i]);
+      var ev = events[i];
+      if (isAlsSenseReturn(ev && ev.source, ev && ev.event_type)) {
+        returns.push(ev);
+      } else if (ev && (!ev.source || ev.source === SOURCE) && !uploadedMap[ev.event_id]) {
+        pending.push(ev);
+      } else {
+        rest.push(ev);
+      }
     }
-    var keptReturns = returns;
+    // Never drop unuploaded quizmario or ALS sense returns. A partial
+    // budget (pending just under 800) must not keep one return and drop
+    // the rest: that cliff deleted sense_return rows Q4 had just pulled.
+    // Soft-overflow above the cap when pending + returns exceed it.
+    // Uploaded quizmario rows are the only ones the cap may drop.
+    var must = pending.concat(returns);
     var keptRest = rest;
-    if (keptReturns.length >= MAX_EVENTS) {
-      keptReturns = keptReturns.slice(keptReturns.length - MAX_EVENTS);
+    if (must.length >= MAX_EVENTS) {
       keptRest = [];
     } else {
-      var room = MAX_EVENTS - keptReturns.length;
+      var room = MAX_EVENTS - must.length;
       if (keptRest.length > room) keptRest = keptRest.slice(keptRest.length - room);
     }
     var keep = {};
-    var next = keptRest.concat(keptReturns);
+    var next = keptRest.concat(must);
     for (var k = 0; k < next.length; k++) keep[next[k].event_id] = true;
     var uploaded = store.uploaded || {};
     for (var j = 0; j < events.length; j++) {
@@ -887,20 +903,26 @@
         refreshStatus();
         return;
       }
+      var uploadError = null;
       var rows = pendingRows(store, { force: !!force });
       if (rows.length) {
         var res = await client.from("learner_events").upsert(rows, {
           onConflict: "event_id",
           ignoreDuplicates: true,
         });
-        if (res.error) throw res.error;
-        var ids = [];
-        for (var i = 0; i < rows.length; i++) ids.push(rows[i].event_id);
-        markUploaded(store, ids);
-        persistStore();
-        cloudState = "ok";
-        cloudBlocked = "";
-        warned = false;
+        if (res.error) {
+          // Q4: a stuck outbox must not skip the ALS re-pull. The upload
+          // error is still reported after pullOnce.
+          uploadError = res.error;
+        } else {
+          var ids = [];
+          for (var i = 0; i < rows.length; i++) ids.push(rows[i].event_id);
+          markUploaded(store, ids);
+          persistStore();
+          cloudState = "ok";
+          cloudBlocked = "";
+          warned = false;
+        }
       } else if (cloudState !== "missing" && cloudState !== "error") {
         cloudState = "ok";
       }
@@ -912,6 +934,7 @@
           console.warn("QuizMario learner_events pull", pullErr);
         }
       }
+      if (uploadError) throw uploadError;
       refreshStatus();
     }
 
@@ -1081,10 +1104,23 @@
     var copyBtn = $("btn-copy-learner-events");
     if (copyBtn) copyBtn.addEventListener("click", function () { copyJsonl(); });
 
+    function retryOutboxAndPull() {
+      // Q4/Q6: returning to the tab (from ALS) must re-pull sense_return
+      // and retry any still-pending quizmario rows. dueDedupe + upsert
+      // ignoreDuplicates keep retries idempotent.
+      pulled = false;
+      return flush();
+    }
+
     root.document.addEventListener("visibilitychange", function () {
       if (root.document.visibilityState === "hidden") flush();
+      else if (root.document.visibilityState === "visible") retryOutboxAndPull();
     });
     root.addEventListener("pagehide", function () { flush(); });
+    root.addEventListener("pageshow", function () { retryOutboxAndPull(); });
+    if (root.addEventListener) {
+      root.addEventListener("online", function () { retryOutboxAndPull(); });
+    }
 
     refreshStatus();
 
@@ -1184,6 +1220,7 @@
     publicEvent: publicEvent,
     toJsonl: toJsonl,
     pendingRows: pendingRows,
+    trim: trim,
     markUploaded: markUploaded,
     countUploaded: countUploaded,
     isAlsSenseReturn: isAlsSenseReturn,

@@ -16,7 +16,9 @@
  * source=als sense_return qualifies that sense_id. The return counts
  * only when its created_at is newer than that row's last miss. A later
  * miss clears alsDeepDone, and the stored return does not close the
- * debt again. That debt is not alsReturnCounts, and it is not the
+ * debt again. When ALS payload marks qualified_for_sense_return=false
+ * or independent=false (or recognition-only), the return does not close
+ * debt. That debt is not alsReturnCounts, and it is not the
  * 今日必练 count. The signed-in home
  * shows 「N 个错词待 ALS 深练」 whenever the debt is above zero, including
  * while 今日必练 still has cards. This slice does not auto-open ALS
@@ -95,6 +97,37 @@
     return isFinite(t) ? t : 0;
   }
 
+  function payloadField(ev, key) {
+    if (!ev) return undefined;
+    if (ev[key] !== undefined) return ev[key];
+    if (ev.payload && ev.payload[key] !== undefined) return ev.payload[key];
+    return undefined;
+  }
+
+  /**
+   * Q5 strict ALS回流验收 — honor ALS emit contract fields when present.
+   * Legacy returns without these keys still qualify (PR #41 path).
+   * Does not invent new required fields; only rejects explicit fails:
+   * qualified_for_sense_return=false, independent=false, recognition-only.
+   * Miss-clock (returnClearsMiss / lastMissAt) stays unchanged.
+   */
+  function returnEvidenceOk(ev) {
+    if (!ev) return false;
+    var qualified = payloadField(ev, "qualified_for_sense_return");
+    if (qualified === false) return false;
+    var independent = payloadField(ev, "independent");
+    if (independent === false) return false;
+    var dir = payloadField(ev, "task_direction");
+    if (dir === "recognition") return false;
+    var kind = payloadField(ev, "evidence_kind");
+    if (kind === "recognition" || kind === "mc_recognition") return false;
+    return true;
+  }
+
+  function qualifiesAlsReturn(ev) {
+    return isAlsSenseReturn(ev) && returnEvidenceOk(ev);
+  }
+
   /**
    * source=als sense_return qualifies one sense. Unknown ALS rows,
    * including session summaries, do not. QuizMario signals never do.
@@ -107,7 +140,7 @@
     var list = events || [];
     for (var i = 0; i < list.length; i++) {
       var ev = list[i];
-      if (!isAlsSenseReturn(ev)) continue;
+      if (!qualifiesAlsReturn(ev)) continue;
       var id = eventSenseId(ev);
       if (!id || seen[id]) continue;
       seen[id] = true;
@@ -122,7 +155,7 @@
     var list = events || [];
     for (var i = 0; i < list.length; i++) {
       var ev = list[i];
-      if (!isAlsSenseReturn(ev)) continue;
+      if (!qualifiesAlsReturn(ev)) continue;
       var id = eventSenseId(ev);
       if (!id) continue;
       var t = returnTimeMs(ev);
@@ -486,6 +519,9 @@
     alsReturnCounts: alsReturnCounts,
     provisionalSenseId: provisionalSenseId,
     alsDeepQualifiedIds: alsDeepQualifiedIds,
+    returnClearsMiss: returnClearsMiss,
+    returnEvidenceOk: returnEvidenceOk,
+    qualifiesAlsReturn: qualifiesAlsReturn,
     markDeepQualified: markDeepQualified,
     deepTrainDebt: deepTrainDebt,
     alsDeepHref: alsDeepHref,
