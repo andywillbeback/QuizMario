@@ -43,6 +43,30 @@
     if (first === 'practice') return /^(n|good)$/.test(last);
     return first === 'cards' && /^(correct|wrong|unknown)$/.test(last);
   }
+  /* Recording attempts are immutable, append-only facts. A stale writer may
+     omit a field that it has never understood; that is not a deletion. Keep
+     complete original rows rather than mixing fields on an ID collision.
+     Baseline rows win, then already committed remote rows, then new local rows. */
+  function preserveOralAttempts(base, local, remote, merged) {
+    var sources = [local, remote, base], keys = new Set();
+    sources.forEach(function (save) { Object.keys(save.cards || {}).forEach(function (key) { keys.add(key); }); });
+    keys.forEach(function (key) {
+      var attempts = Object.create(null), found = false;
+      sources.forEach(function (save) {
+        var card = save.cards && save.cards[key], oral = card && card.oralOutput;
+        if (!oral || !object(oral.attempts)) return;
+        Object.keys(oral.attempts).forEach(function (id) {
+          attempts[id] = clone(oral.attempts[id]); found = true;
+        });
+      });
+      if (!found) return;
+      if (!object(merged.cards)) merged.cards = {};
+      if (!object(merged.cards[key])) merged.cards[key] = {};
+      if (!object(merged.cards[key].oralOutput)) merged.cards[key].oralOutput = {version:1};
+      merged.cards[key].oralOutput.attempts = clone(attempts);
+    });
+    return merged;
+  }
   /* Add only this writer's changes since its acknowledged baseline. Counters
      accumulate; SRS state uses the latest save when both writers changed it.
      A write receipt makes an uncertain/duplicated delivery idempotent. */
@@ -69,7 +93,7 @@
       }
       return clone(preferLocal ? l : r);
     }
-    return merge(base,local,remote,[]);
+    return preserveOralAttempts(base,local,remote,merge(base,local,remote,[]));
   }
   function request(query, ms) {
     var controller = typeof AbortController === 'function' ? new AbortController() : null;

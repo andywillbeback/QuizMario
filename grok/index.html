@@ -74,10 +74,10 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 </script>
 <script src="config.js?v=20261104-auth" defer></script>
 <script src="vendor/supabase.umd.js" defer></script>
-<script src="sync-merge.js?v=20261115-notebook1" defer></script>
+<script src="sync-merge.js?v=20261120-oral1" defer></script>
 <script src="cloud-client.js?v=20261104-auth" defer></script>
 <script src="account-store.js?v=20261108-sync3" defer></script>
-<script src="sync-core.js?v=20261110-localsave" defer></script>
+<script src="sync-core.js?v=20261120-oral1" defer></script>
 <script src="entry-guard.js?v=20261111-loginfix" defer></script>
 <meta name="theme-color" content="#070c18">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1326,7 +1326,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   .notebook-entry{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.notebook-entry p{margin:8px 0}.notebook-note{white-space:pre-wrap;overflow-wrap:anywhere}.notebook-tag{font-size:.75rem;padding:3px 7px;border-radius:5px;background:#25334a;margin-left:8px}.notebook-entry small{color:var(--muted)}
   @media(max-width:540px){.notebook-form{grid-template-columns:1fr}.notebook-entry .btn-row{gap:6px}#word-notebook{padding:16px}}
 </style>
-<link rel="stylesheet" href="mobile-ui.css?v=20261106-chartink">
+<link rel="stylesheet" href="mobile-ui.css?v=20261120-oral1">
 </head>
 <body class="at-gate">
 <p id="auth-hold" role="status">聚光单词 · 1st edition<br>正在确认登录…</p>
@@ -1455,6 +1455,19 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
         <div id="prompt-hint"></div>
         <div id="card-related" hidden></div>
         <div id="card-speak" class="speak-row" hidden></div>
+        <section id="oral-output" aria-labelledby="oral-title" hidden>
+          <div class="oral-heading">
+            <h3 id="oral-title">单词朗读</h3>
+            <span id="oral-status">未练习</span>
+          </div>
+          <div class="oral-actions">
+            <button id="oral-record" type="button" aria-pressed="false">录下我的朗读</button>
+            <button id="oral-replay" class="secondary" type="button" hidden>回听录音</button>
+          </div>
+          <p id="oral-note" role="status" aria-live="polite">读出这个单词，录好后回听。每次最多 8 秒。</p>
+          <p id="oral-count">还没有朗读记录</p>
+          <p class="oral-policy">发音评测尚未开通，准确度待验证。<br>练习记录随账号保存；录音仅供本次回听。</p>
+        </section>
       </div>
       <div id="answer-area">
         <div id="type-row" hidden>
@@ -1598,7 +1611,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="universe-progress.js?v=20261105" defer></script>
   <script src="study-metrics.js?v=20261109-ielts1" defer></script>
   <script src="own-study.js?v=20261113-set1" defer></script>
-  <script src="game.js?v=20261115-notebook1" defer></script>
+  <script src="game.js?v=20261120-oral1" defer></script>
   <script src="question-notebook.js?v=20261115-notebook1" defer></script>
   <script src="word-notebook.js?v=20261109-ielts1" defer></script>
   <script src="profile-name.js?v=20261109-ielts1" defer></script>
