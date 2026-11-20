@@ -40,6 +40,17 @@
     return n;
   }
 
+  /** A recording is durable practice evidence, not an independently tested skill. */
+  function hasOralEvidence(save) {
+    var cards = save && save.cards;
+    if (!cards || typeof cards !== "object") return false;
+    return Object.keys(cards).some(function (key) {
+      var oral = cards[key] && cards[key].oralOutput;
+      var attempts = oral && oral.attempts;
+      return attempts && typeof attempts === "object" && !Array.isArray(attempts) && Object.keys(attempts).length > 0;
+    });
+  }
+
   function isBlank(save) {
     if (!save || typeof save !== "object") return true;
     if ((save.points || 0) > 0) return false;
@@ -66,7 +77,7 @@
         if ((Number(save.studyDaily[studyDays[s]]) || 0) > 0) return false;
       }
     }
-    if (studiedCount(save) > 0) return false;
+    if (studiedCount(save) > 0 || hasOralEvidence(save)) return false;
     if (save.questionNotebook && Object.keys(save.questionNotebook).length) return false;
     if (save.wrongBook && typeof save.wrongBook === "object") {
       var lemmas = Object.keys(save.wrongBook);

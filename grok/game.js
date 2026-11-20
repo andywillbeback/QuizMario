@@ -105,6 +105,12 @@
   let voiceOn = save.voiceOn !== false; // default on
   /** Teaching voice for words and examples. Streak clips stay on speakLine. */
   let wordSpeech = null;
+  // Oral evidence is separate from SRS, recognition and spelling. Audio stays
+  // in memory for this card only; account sync carries immutable metadata.
+  let oralRecorder = null, oralLoader = null, oralSession = null;
+  let oralPlayback = null, oralUrl = "", oralGeneration = 0;
+  let oralVisible = false, oralPhase = "idle", oralMessage = "", oralElapsed = 0;
+  let oralReferencePlayed = false;
   let killStreak = 0; // consecutive corrects this session (resets on wrong)
   /** When true, waiting for Good/Easy after a correct answer */
   let pendingRate = false;
@@ -393,6 +399,7 @@
   function showScreen(name) {
     closeRelatedPeek();
     if (name !== "play") {
+      cancelOralOutput();
       collocFlow.abandon();
       clearCollocChrome();
     }
@@ -855,6 +862,12 @@
     try {
       wordSpeech = api.create({
         onBeforeSpeak: function () { speakGen += 1; },
+        onState: function (state) {
+          if (state.status === "speaking" && currentCard && !state.example &&
+              state.text === currentCard.word && $("screen-play").classList.contains("active")) {
+            oralReferencePlayed = true;
+          }
+        },
       });
     } catch (_) {
       wordSpeech = null;
@@ -1468,6 +1481,7 @@
   }
 
   function nextCard() {
+    cancelOralOutput();
     collocFlow.abandon();
     clearCollocChrome();
     clearRateDock();
@@ -1782,6 +1796,7 @@
    * so 读例句 cannot leak the headword. The hint on screen stays blanked.
    */
   function renderCardSpeech(revealed) {
+    renderOralOutput(revealed);
     const row = $("card-speak");
     if (!row) return;
     const api = window.QuizMarioCloze;
@@ -2147,6 +2162,9 @@
 
   function grade(correct, easy, chosen, outcome) {
     if (awaiting || !currentCard || pendingRate) return;
+    if (/^(loading|requesting|recording|stopping)$/.test(oralPhase)) {
+      cancelOralOutput({ keepVisible: true, message: "本次录音已取消，可在查看答案后重新录制。" });
+    }
     noteNotebookAnswer(chosen, outcome || (correct ? "correct" : "wrong"));
     if (Practice.sessionAnswerMode(sessionKind, sessionDirection).typed) {
       gradeSpelling(correct, chosen, outcome);
@@ -2473,6 +2491,7 @@
   function renderCollocGate() {
     const gate = collocFlow.gate();
     if (!gate || !gate.primary) return;
+    cancelOralOutput();
     const phrase = gate.primary;
     lemmaNotebookQuestion = currentNotebookQuestion;
     closeRelatedPeek();
@@ -2878,6 +2897,7 @@
 
   function applySaveObject(next, opts) {
     opts = opts || {};
+    cancelOralOutput();
     save = next;
     applyTrack(save.track || "core", true);
     sortMode = publicSortMode(save.sortMode);
@@ -2997,6 +3017,7 @@
 
   /** Switch active word track; per-track unlock/stars are swapped in and out of save. */
   function applyTrack(id, initial) {
+    cancelOralOutput();
     const t = findTrack(id);
     if (initial) {
       // on load/import, save.unlockedLevel/levelStars belong to save.track
@@ -3283,6 +3304,265 @@
     return '<p class="stats-legend">' + line + "</p>";
   }
 
+  // ---- Student read-aloud: local audio, durable practice evidence, no scoring ----
+  function oralOwner() {
+    const store = window.QuizMarioAccountStore;
+    return store && typeof store.owner === "function" ? store.owner() : "";
+  }
+
+  function oralIsCurrent(context) {
+    return !!(context && oralSession === context && context.generation === oralGeneration &&
+      context.owner && context.owner === oralOwner() &&
+      (!window.__QM_ENTRY_OWNER || window.__QM_ENTRY_OWNER === context.owner) &&
+      document.documentElement.classList.contains("session-ok") &&
+      currentCard && currentCard.key === context.key && oralVisible &&
+      $("screen-play") && $("screen-play").classList.contains("active"));
+  }
+
+  function releaseOralPlayback() {
+    if (oralPlayback) {
+      try { oralPlayback.pause(); oralPlayback.removeAttribute("src"); oralPlayback.load(); } catch (_) {}
+      oralPlayback = null;
+    }
+    if (oralUrl) {
+      try { URL.revokeObjectURL(oralUrl); } catch (_) {}
+      oralUrl = "";
+    }
+  }
+
+  function cancelOralOutput(options) {
+    options = options || {};
+    oralGeneration += 1;
+    oralSession = null; // Invalidate callbacks before stopping asynchronous media.
+    const recorder = oralRecorder;
+    oralRecorder = null;
+    if (recorder) { try { recorder.destroy(); } catch (_) {} }
+    releaseOralPlayback();
+    oralPhase = "idle";
+    oralElapsed = 0;
+    oralMessage = options.message || "";
+    if (!options.keepVisible) {
+      oralVisible = false;
+      oralReferencePlayed = false;
+    }
+    paintOralOutput();
+  }
+
+  function oralSummary() {
+    const progress = currentCard && peekProg(currentCard.key);
+    const evidence = progress && progress.oralOutput;
+    if (window.QMOralOutput) return window.QMOralOutput.summarize(evidence);
+    // Reading saved metadata does not fetch the recorder or request a mic.
+    const rows = Object.values(evidence && evidence.attempts || {}).filter((row) =>
+      row && typeof row === "object" && typeof row.id === "string" &&
+      /^[a-zA-Z0-9:_-]{1,120}$/.test(row.id) && !/^(?:__proto__|prototype|constructor)$/.test(row.id) &&
+      row.status === "recorded" && Number.isFinite(Date.parse(row.at)) &&
+      Number(row.durationMs) >= 350 && Number(row.durationMs) <= 10000);
+    rows.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    return { attemptCount: rows.length, lastAt: rows.length ? rows[0].at : "",
+      label: rows.length ? "已录音 · 待验证" : "未练习" };
+  }
+
+  function paintOralOutput() {
+    const panel = $("oral-output");
+    if (!panel) return;
+    panel.hidden = !oralVisible;
+    if (!oralVisible) return;
+    const summary = oralSummary();
+    const working = /^(loading|requesting|recording|stopping)$/.test(oralPhase);
+    const record = $("oral-record"), replay = $("oral-replay"), status = $("oral-status");
+    panel.dataset.state = oralPhase;
+    status.textContent = oralPhase === "recording" ? "录音中 · " + (oralElapsed / 1000).toFixed(1) + " 秒" : summary.label;
+    status.classList.toggle("is-recording", oralPhase === "recording");
+    record.disabled = oralPhase === "stopping";
+    record.textContent = oralPhase === "recording" ? "结束录音" :
+      oralPhase === "requesting" || oralPhase === "loading" ? "取消录音" :
+      oralPhase === "stopping" ? "正在保存…" : summary.attemptCount ? "再录一次" : "录下我的朗读";
+    record.setAttribute("aria-pressed", String(oralPhase === "recording"));
+    replay.hidden = !oralUrl || working;
+    replay.disabled = working;
+    let count = summary.attemptCount ? "已练 " + summary.attemptCount + " 次" : "还没有朗读记录";
+    if (summary.lastAt) {
+      const date = new Date(summary.lastAt);
+      count += " · 最近 " + date.toLocaleString("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+    $("oral-count").textContent = count;
+    $("oral-note").textContent = oralPhase === "loading" ? "正在准备录音…" :
+      oralPhase === "requesting" ? "请允许使用麦克风，然后读出这个单词。" :
+      oralPhase === "recording" ? "读出当前单词，完成后点「结束录音」。最多录 8 秒。" :
+      oralPhase === "stopping" ? "正在保存这次朗读记录…" :
+      oralMessage || "读出这个单词，录好后回听。每次最多 8 秒。";
+  }
+
+  function renderOralOutput(revealed) {
+    const api = window.QuizMarioCloze;
+    const plan = currentCard && api && api.cardSpeechPlan
+      ? api.cardSpeechPlan(currentCard, sessionDirection, { revealed: !!revealed }) : null;
+    if (!plan || !plan.showWord || collocFlow.gate()) {
+      cancelOralOutput();
+      return;
+    }
+    oralVisible = true;
+    paintOralOutput();
+  }
+
+  function loadOralRecorder() {
+    if (window.QMOralOutput) return Promise.resolve(window.QMOralOutput);
+    if (oralLoader) return oralLoader;
+    oralLoader = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      let finished = false;
+      script.src = "oral-output.js?v=20261120-oral1";
+      script.async = true;
+      const timer = setTimeout(() => fail(), 15000);
+      function fail() {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        script.onload = script.onerror = null;
+        script.remove();
+        oralLoader = null;
+        reject(new Error("录音功能加载失败，请检查网络后重试。"));
+      }
+      script.onload = () => {
+        if (finished) return;
+        clearTimeout(timer);
+        if (!window.QMOralOutput) { fail(); return; }
+        finished = true;
+        script.onload = script.onerror = null;
+        resolve(window.QMOralOutput);
+      };
+      script.onerror = fail;
+      document.head.appendChild(script);
+    });
+    return oralLoader;
+  }
+
+  function finishOralOutput(context, result) {
+    if (!oralIsCurrent(context)) return;
+    const api = window.QMOralOutput;
+    try {
+      const attempt = api.makeAttempt({ id: context.id, at: new Date().toISOString(),
+        durationMs: result.durationMs, mimeType: result.mimeType, audioCheck: result.audioCheck,
+        assisted: true, referencePlayed: context.referencePlayed });
+      const next = JSON.parse(JSON.stringify(save));
+      const progress = next.cards[context.key] || defaultCardProg();
+      progress.oralOutput = api.appendAttempt(progress.oralOutput, attempt);
+      next.cards[context.key] = progress;
+      next.updatedAt = attempt.at;
+      // Confirm local durability before showing a saved state or requesting sync.
+      // The captured owner is still current; no late recording may cross accounts.
+      if (!oralIsCurrent(context)) return;
+      writeLocalSave(next);
+      save = next;
+      persist({ keepUpdatedAt: true });
+      if (!oralIsCurrent(context)) return;
+      releaseOralPlayback();
+      try { oralUrl = URL.createObjectURL(result.blob); } catch (_) {}
+      oralPhase = "complete";
+      oralMessage = oralUrl ? "本次朗读已记录。回听一下，再和示范发音对照。" : "本次朗读已记录，当前浏览器暂时无法回听。";
+    } catch (error) {
+      oralPhase = "error";
+      oralMessage = "本次记录未能保存，请检查浏览器存储空间后重新录制。";
+      if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(error);
+    }
+    paintOralOutput();
+  }
+
+  async function toggleOralRecording() {
+    if (oralPhase === "recording" && oralRecorder) { oralRecorder.stop(); return; }
+    if (oralPhase === "loading" || oralPhase === "requesting") {
+      cancelOralOutput({ keepVisible: true, message: "已取消录音，可以准备好后再试。" });
+      return;
+    }
+    if (oralPhase === "stopping" || !oralVisible || !currentCard) return;
+    const owner = oralOwner();
+    if (!owner || !document.documentElement.classList.contains("session-ok")) return;
+    cancelOralOutput({ keepVisible: true });
+    const context = { owner, key: currentCard.key, generation: oralGeneration,
+      referencePlayed: oralReferencePlayed,
+      id: "oral_" + (window.crypto && typeof window.crypto.randomUUID === "function"
+        ? window.crypto.randomUUID() : Date.now().toString(36) + "_" + Math.random().toString(36).slice(2)) };
+    oralSession = context;
+    oralPhase = "loading";
+    paintOralOutput();
+    try {
+      const api = await loadOralRecorder();
+      if (!oralIsCurrent(context)) return;
+      context.referencePlayed = oralReferencePlayed;
+      cancelSpeech();
+      stopCustomVo();
+      oralRecorder = api.createRecorder({ window,
+        onState(state) {
+          if (!oralIsCurrent(context)) return;
+          oralPhase = state.status;
+          oralElapsed = state.elapsedMs;
+          if (state.message) oralMessage = state.message;
+          paintOralOutput();
+        },
+        onComplete(result) { finishOralOutput(context, result); },
+        onError(error) {
+          if (!oralIsCurrent(context)) return;
+          oralPhase = "error";
+          oralMessage = error.message || "录音未完成，请重新试一次。";
+          paintOralOutput();
+        },
+      });
+      await oralRecorder.start();
+    } catch (error) {
+      if (!oralIsCurrent(context)) return;
+      oralPhase = "error";
+      oralMessage = error && error.message || "录音未完成，请重新试一次。";
+      paintOralOutput();
+    }
+  }
+
+  function replayOralOutput() {
+    const context = oralSession;
+    if (!oralIsCurrent(context) || !oralUrl) return;
+    cancelSpeech();
+    stopCustomVo();
+    try {
+      if (oralPlayback) oralPlayback.pause();
+      oralPlayback = new Audio(oralUrl);
+      oralPlayback.onerror = () => {
+        if (!oralIsCurrent(context)) return;
+        oralMessage = "当前浏览器无法播放这段录音，可以重新录制。练习记录已保留。";
+        paintOralOutput();
+      };
+      const playing = oralPlayback.play();
+      if (playing && playing.catch) playing.catch(() => {
+        if (!oralIsCurrent(context)) return;
+        oralMessage = "回听未能开始，请再点一次「回听录音」。";
+        paintOralOutput();
+      });
+    } catch (_) {
+      oralMessage = "当前浏览器暂时无法回听，练习记录已保留。";
+      paintOralOutput();
+    }
+  }
+
+  function bindOralOutput() {
+    const record = $("oral-record"), replay = $("oral-replay");
+    if (!record || !replay) return;
+    record.addEventListener("click", toggleOralRecording);
+    replay.addEventListener("click", replayOralOutput);
+    const logout = $("btn-logout");
+    if (logout) logout.addEventListener("click", () => cancelOralOutput(), true);
+    window.addEventListener("pagehide", () => cancelOralOutput({ keepVisible: true }));
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) return;
+      const working = /^(loading|requesting|recording|stopping)$/.test(oralPhase);
+      cancelOralOutput({ keepVisible: true, message: working ? "本次录音已取消，回到页面后可重新录制。" : "" });
+    });
+    window.addEventListener("storage", (event) => {
+      if (event.key === "quizmario-auth" || event.key === null) cancelOralOutput();
+    });
+    if (window.MutationObserver) new MutationObserver(() => {
+      if (!document.documentElement.classList.contains("session-ok")) cancelOralOutput();
+    }).observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+  }
+
   // ---- pronunciation (browser speechSynthesis teaching voice, en-GB default) ----
   function slowSpeakButton(text, kind) {
     if (!text) return "";
@@ -3294,6 +3574,10 @@
   function speakTeaching(text, opts) {
     const spoken = String(text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
     if (!spoken) return false;
+    if (/^(loading|requesting|recording|stopping)$/.test(oralPhase)) {
+      cancelOralOutput({ keepVisible: true, message: "已停止录音。听完示范后，再录自己的朗读。" });
+    }
+    if (oralPlayback) { try { oralPlayback.pause(); } catch (_) {} }
     opts = opts || {};
     if (wordSpeech) {
       try {
@@ -3348,6 +3632,7 @@
   }
 
   function initV6Ui() {
+    bindOralOutput();
     const sel = $("track-select");
     if (sel) {
       sel.innerHTML = TRACKS.map((t) => '<option value="' + t.id + '">' + escapeHtml(t.name) + "</option>").join("");
@@ -3469,6 +3754,7 @@
       save.unlockedLevel = Math.max(1, save.trackUnlock[currentTrack] || 1);
       save.levelStars = save.trackStars[currentTrack] || {};
       persist({ keepUpdatedAt: true, upload: false });
+      paintOralOutput();
       const home = $("screen-home");
       if (home && home.classList.contains("active")) renderStats();
     },
