@@ -153,10 +153,15 @@ const SNAP = "(" + function () {
     const el=document.getElementById(id);
     return !!(el&&!el.hidden&&!el.closest('[hidden]')&&getComputedStyle(el).display!=='none'&&el.getBoundingClientRect().width);
   }
-  const api=window.__QM,save=api&&api.getSave(),q=api&&api.questionSnapshot();
+  const api=window.__QM,save=api?.getSave?.(),q=api?.questionSnapshot?.(),test=window.__oralTest;
+  const promptBox=document.getElementById('prompt-box'),playScreen=document.getElementById('screen-play');
+  const moving=element=>!!element&&element.getAnimations().some(animation=>
+    animation.playState==='running'||animation.pending);
   const all={};
   if(save)for(const [key,row]of Object.entries(save.cards||{}))if(row.oralOutput)all[key]=row.oralOutput;
-  return {href:location.href,ready:document.documentElement.classList.contains('session-ok'),
+  return {href:location.href,ready:!!(document.documentElement?.classList.contains('session-ok')&&api&&test&&
+      document.getElementById('screen-home')&&playScreen&&document.getElementById('prompt-main')&&
+      document.getElementById('prompt-label')&&window.QuizMarioAccountStore?.owner),
     timeOrigin:performance.timeOrigin,
     home:!!document.getElementById('screen-home')?.classList.contains('active'),
     play:!!document.getElementById('screen-play')?.classList.contains('active'),
@@ -166,13 +171,14 @@ const SNAP = "(" + function () {
     recordText:document.getElementById('oral-record')?.textContent||'',
     label:document.getElementById('prompt-label')?.textContent||'',
     prompt:document.getElementById('prompt-main')?.textContent||'',
-    key:q&&q.item_id,all,card:q&&save.cards[q.item_id],loaded:!!window.QMOralOutput,
+    key:q?.item_id,all,card:q&&save?.cards?.[q.item_id],loaded:!!window.QMOralOutput,
     learning:save&&{points:save.points,streak:save.streak,bestStreak:save.bestStreak,practice:save.practice},
-    mic:window.__oralTest.micCalls,stopped:window.__oralTest.stopped,replays:window.__oralTest.replayCalls,
-    pending:window.__oralTest.pending.length,recording:window.__oralTest.recorders.some(r=>r.state==='recording'),
+    mic:test?.micCalls??0,stopped:test?.stopped??0,replays:test?.replayCalls??0,
+    pending:test?.pending?.length??0,recording:test?.recorders?.some(r=>r.state==='recording')??false,
     scriptLoads:performance.getEntriesByType('resource').filter(e=>/oral-output\.js/.test(e.name)).length,
-    width:innerWidth,scrollWidth:document.documentElement.scrollWidth,
-    owner:window.QuizMarioAccountStore?.owner(),continue:shown('btn-feedback-continue')};
+    width:innerWidth,scrollWidth:document.documentElement?.scrollWidth??0,
+    cardAnimating:!!promptBox&&(/(?:^|\s)card-(?:enter|exit)(?:\s|$)/.test(promptBox.className)||moving(promptBox)||moving(playScreen)),
+    owner:window.QuizMarioAccountStore?.owner?.(),continue:shown('btn-feedback-continue')};
 }.toString() + ")()";
 
 function evidence(card) {
@@ -236,6 +242,42 @@ async function main() {
       const result=await cdp.send('Page.captureScreenshot',{format:'png'},sessionId);
       fs.writeFileSync(path.join(artifacts,name+'.png'),Buffer.from(result.data,'base64'));
     }
+    async function diagnoseOverflow() {
+      try {
+        const details=await run('('+function () {
+          const width=innerWidth,round=value=>Math.round(value*100)/100;
+          const bounds=element=>{
+            const rect=element.getBoundingClientRect(),css=getComputedStyle(element);
+            return {tag:element.tagName,id:element.id,classes:String(element.className).slice(0,160),
+              parent:element.parentElement&&(element.parentElement.id||element.parentElement.tagName),
+              rect:{left:round(rect.left),right:round(rect.right),top:round(rect.top),bottom:round(rect.bottom),width:round(rect.width),height:round(rect.height)},
+              scrollWidth:element.scrollWidth,clientWidth:element.clientWidth,
+              css:{display:css.display,position:css.position,width:css.width,minWidth:css.minWidth,maxWidth:css.maxWidth,
+                overflowX:css.overflowX,whiteSpace:css.whiteSpace,flex:css.flex,transform:css.transform,
+                animation:css.animationName,boxSizing:css.boxSizing,padding:css.padding},
+              text:(element.textContent||'').replace(/\s+/g,' ').trim().slice(0,80)};
+          };
+          const overflowing=Array.from(document.body.querySelectorAll('*')).filter(element=>{
+            const rect=element.getBoundingClientRect(),css=getComputedStyle(element);
+            return rect.width>0&&rect.height>0&&css.display!=='none'&&css.visibility!=='hidden'&&!element.closest('[hidden]')&&
+              (rect.right>width+1||rect.left< -1||element.scrollWidth>element.clientWidth+1);
+          }).map(bounds);
+          overflowing.sort((a,b)=>Math.max(b.rect.right-width,-b.rect.left)-Math.max(a.rect.right-width,-a.rect.left));
+          return {width,height:innerHeight,scrollX,scrollY,
+            visualViewport:window.visualViewport&&{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale},
+            root:bounds(document.documentElement),body:bounds(document.body),
+            prompt:bounds(document.getElementById('prompt-box')),
+            overflowingCount:overflowing.length,overflowing:overflowing.slice(0,20)};
+        }.toString()+')()');
+        console.error('QM_ORAL_OVERFLOW_DIAGNOSTIC '+JSON.stringify(details));
+        const shot=await cdp.send('Page.captureScreenshot',{format:'jpeg',quality:40,fromSurface:true,captureBeyondViewport:false},sessionId);
+        fs.mkdirSync(artifacts,{recursive:true});
+        fs.writeFileSync(path.join(artifacts,'oral-output-overflow-375.jpg'),Buffer.from(shot.data,'base64'));
+        console.error('QM_ORAL_OVERFLOW_JPEG_BASE64_BEGIN\n'+shot.data+'\nQM_ORAL_OVERFLOW_JPEG_BASE64_END');
+      } catch(error) {
+        console.error('QM_ORAL_OVERFLOW_DIAGNOSTIC_ERROR '+(error.stack||error));
+      }
+    }
     async function until(predicate,label,timeout=12000) {
       const start=Date.now();let last;
       while(Date.now()-start<timeout){last=await snap();if(await predicate(last))return last;await pause(70);}
@@ -253,11 +295,18 @@ async function main() {
     await click('btn-gate-zhongkao');
     await until(s=>s.home,'course home',20000);
     let state=await begin();
+    // Product cardEnter translates +40px for 400ms and clears its class at
+    // 420ms; cardExit lasts 280ms. Inspect the settled layout, without disabling
+    // animations or changing the horizontal-overflow acceptance threshold.
+    await until(s=>!s.cardAnimating,'card entry animation settled');
+    await run('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve(true))))');
+    state=await snap();
     assert.equal(state.loaded,false,'Recording module is not loaded at startup.');
     assert.equal(state.scriptLoads,0,'No eager recording script request.');
     assert.equal(state.mic,0,'No microphone request before a student action.');
     assert.equal(state.width,375);
-    assert.ok(state.scrollWidth<=377,'The phone page must not scroll horizontally.');
+    if(state.scrollWidth>377)await diagnoseOverflow();
+    assert.ok(state.scrollWidth<=377,'The phone page must not scroll horizontally (viewport '+state.width+', scrollWidth '+state.scrollWidth+').');
     assert.match(state.status,/未练/);
     const before=state.card,key=state.key,learningBefore=state.learning;
     await click('oral-record');
