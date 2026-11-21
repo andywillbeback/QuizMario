@@ -61,11 +61,58 @@ function browser({id='A',disk=storage(),db={},now=Date.parse('2026-11-08T01:00:0
     async online(v){context.navigator.onLine=v;context.dispatchEvent({type:v?'online':'offline'});await settle();},
   };
 }
+function gamePersistence(disk,owner){
+  const source=fs.readFileSync(require('path').join(__dirname,'../grok/game.js'),'utf8');
+  const storageStart=source.indexOf('  function saveAccountOwner('),storageEnd=source.indexOf('  function loadSave()',storageStart);
+  const persistStart=source.indexOf('  function persist('),persistEnd=source.indexOf('  function getProg(',persistStart);
+  const applyStart=source.indexOf('    applyCloudSave('),applyEnd=source.indexOf('    touchUpdatedAt()',applyStart);
+  assert.ok(storageStart>=0&&storageEnd>storageStart&&persistStart>=0&&persistEnd>persistStart&&applyStart>=0&&applyEnd>applyStart);
+  const store=createStore(disk),uploads=[],failures=[],writes=[];
+  store.activate(owner||'A');
+  const set=store.set;
+  store.set=function(base,value,id){writes.push({base,id});return set(base,value,id);};
+  const context={saveOwner:owner,STORAGE_KEY:'vocabSpotlight_v1',save:save(4),localStorage:disk,
+    sortMode:'default',voiceOn:true,currentTrack:'gaokao',
+    snapshotToSave:clone,applySaveObject(next,opts){context.save=clone(next);context.persist(opts);},
+    restorePolysemyShell(){},refreshHud(){},paintOralOutput(){},renderStats(){},$(){return null;},
+    CustomEvent:function(type){this.type=type;},
+    window:{QuizMarioAccountStore:store,QuizMarioSyncCore:core,__QM_ENTRY_OWNER:owner||'A',
+      QuizMarioCloud:{onLocalSave(value){uploads.push(clone(value));},noteLocalFailure(error){failures.push(error.code);}},
+      dispatchEvent(){}},
+  };
+  vm.createContext(context);
+  vm.runInContext(source.slice(storageStart,storageEnd)+source.slice(persistStart,persistEnd)+
+    'globalThis.api={'+source.slice(applyStart,applyEnd)+'};',context);
+  return{context,store,uploads,failures,writes};
+}
 async function main(){
   const disk=storage();disk.setItem('vocabSpotlight_v1',JSON.stringify(save(99,'另一个账号')));
   const owned=createStore(disk);owned.activate('A');assert.strictEqual(owned.get('vocabSpotlight_v1'),null,'unowned legacy save cannot be adopted');owned.set('vocabSpotlight_v1','A');owned.activate('B');assert.strictEqual(owned.get('vocabSpotlight_v1'),null);owned.set('vocabSpotlight_v1','B');owned.activate('A');assert.strictEqual(owned.get('vocabSpotlight_v1'),'A');
   const blank={cards:{a:{state:'new',correct:0,wrong:0,unknown:0,mastery:0},b:{state:'new',collocationEvidence:{wrong:1}}}};
   assert.deepStrictEqual(Object.keys(core.compact(blank).cards),['b'],'only exact default cards are omitted');
+  const pinnedDisk=storage(),pinned=gamePersistence(pinnedDisk,'A');
+  pinned.context.writeLocalSave(pinned.context.save);
+  assert.strictEqual(pinned.writes[0].id,'A','The real page writes using its captured owner explicitly');
+  const pinnedOriginal=pinnedDisk.getItem('vocabSpotlight_v1:account:A'),pinnedState=JSON.stringify(pinned.context.save);
+  pinned.store.activate('B');pinned.context.window.__QM_ENTRY_OWNER='B';
+  for(const change of [
+    ()=>pinned.context.writeLocalSave(save(99)),
+    ()=>pinned.context.api.applySyncedSave(save(99),'A'),
+    ()=>pinned.context.api.applyCloudSave(save(99),'A'),
+    ()=>pinned.context.api.applyCloudSave(save(99),'B'),
+  ])assert.throws(change,error=>error.code==='QM_ACCOUNT_CHANGED','A bound page cannot adopt or write another account');
+  assert.strictEqual(pinned.context.persist(),false,'Persistence stops before publishing a stale snapshot to sync');
+  assert.strictEqual(pinnedDisk.getItem('vocabSpotlight_v1:account:B'),null);
+  assert.strictEqual(pinnedDisk.getItem('vocabSpotlight_v1:account:A'),pinnedOriginal);
+  assert.strictEqual(JSON.stringify(pinned.context.save),pinnedState);
+  assert.strictEqual(pinned.uploads.length,0);
+  const unboundDisk=storage();unboundDisk.setItem('vocabSpotlight_v1',JSON.stringify(save(99,'未归属旧记录')));
+  const unbound=gamePersistence(unboundDisk,'');
+  assert.throws(()=>unbound.context.writeLocalSave(unbound.context.save),error=>error.code==='QM_ACCOUNT_CHANGED');
+  unbound.context.api.applyCloudSave(save(2,'本账号记录'),'A');
+  assert.strictEqual(unbound.context.saveOwner,'A','Only an explicit authenticated initial snapshot binds an unbound page');
+  assert.strictEqual(JSON.parse(unboundDisk.getItem('vocabSpotlight_v1:account:A')).points,2);
+  assert.strictEqual(JSON.parse(unboundDisk.getItem('vocabSpotlight_v1')).points,99,'Unowned legacy progress stays quarantined');
   const base=save(10),left=save(11),right=save(12);assert.strictEqual(core.reconcile(base,left,right).daily['2026-11-08'].c,13,'independent concurrent increments survive');
   const b=browser({disk,db:{A:{save:save(2),updated_at:'v0'},B:{save:save(7,'乙同学'),updated_at:'v0'}}});await settle();assert.strictEqual(b.state.points,2);assert.ok(b.classes.has('session-ok'));
   b.edit(s=>{s.points++;s.cards['gaokao|0::apple'].correct++;s.daily['2026-11-08'].c++;});await b.advance(1300);assert.strictEqual(b.db.A.save.points,3);assert.strictEqual(b.ctx.QuizMarioCloud.syncState().pending,false);
@@ -75,6 +122,28 @@ async function main(){
   const d=deferred();b.hold(d);b.edit(s=>{s.points++;});await b.advance(1300);b.edit(s=>{s.points++;});d.resolve();await settle();await b.advance(1300);assert.strictEqual(b.db.A.save.points,18,'edits made during an upload remain queued');
   const d2=deferred();b.hold(d2);b.edit(s=>{s.points++;});await b.advance(1300);await b.switchTo('B');d2.resolve();await settle();assert.strictEqual(b.db.B.save.points,7,'an old A request cannot write A data to B');assert.ok(!b.classes.has('session-ok'));assert.ok(b.calls.filter(x=>x.op==='update').every(x=>x.filters.find(v=>v[0]==='user_id')[1]==='A'));
   const second=browser({id:'B',disk,db:b.db});await settle();assert.strictEqual(second.state.profile.name,'乙同学');assert.strictEqual(second.state.points,7);assert.strictEqual(JSON.parse(disk.getItem('vocabSpotlight_v1')).profile.name,'另一个账号','legacy backup remains intact');
+  // Explicit cache-owner rebinding can precede an auth notification. A delayed
+  // A acknowledgement must not enter the newly selected B page/cache at all.
+  const ownerRace=browser({db:{A:{save:save(4),updated_at:'owner-race0'}}});await settle();
+  const heldOwnerAck=deferred();ownerRace.hold(heldOwnerAck);
+  let admittedAfterSwitch=0;
+  const originalApply=ownerRace.ctx.__QM.applySyncedSave;
+  ownerRace.ctx.__QM.applySyncedSave=function(value,expectedOwner){
+    admittedAfterSwitch++;
+    originalApply(value,expectedOwner);
+    ownerRace.ctx.QuizMarioAccountStore.set('vocabSpotlight_v1',JSON.stringify(value));
+  };
+  ownerRace.edit(s=>{s.points++;});await ownerRace.advance(1300);
+  const otherBefore=ownerRace.disk.getItem('vocabSpotlight_v1:account:B');
+  ownerRace.ctx.QuizMarioAccountStore.activate('B');ownerRace.classes.delete('session-ok');
+  heldOwnerAck.resolve();await settle();
+  assert.strictEqual(admittedAfterSwitch,0,'A late acknowledgement cannot be admitted after the account store selects B');
+  assert.strictEqual(ownerRace.disk.getItem('vocabSpotlight_v1:account:B'),otherBefore,'A progress must never be copied into the B cache');
+  assert.ok(ownerRace.ctx.QuizMarioCloud.syncState().pending,'The original A journal remains pending until its account can verify the receipt');
+  assert.ok(ownerRace.ctx.QuizMarioAccountStore.keys('quizmario-progress-pending-v2','A').length>0,'The original account keeps its durable journal');
+  const updateCount=ownerRace.calls.filter(x=>x.op==='update'||x.op==='insert').length;
+  ownerRace.ctx.QuizMarioCloud.onLocalSave(save(99,'错误账号'));await ownerRace.advance(1300);
+  assert.strictEqual(ownerRace.calls.filter(x=>x.op==='update'||x.op==='insert').length,updateCount,'An inactive owner cannot enqueue another account snapshot');
   const offline=browser({id:'C',db:{C:{save:save(0),updated_at:'c0'}},events:true});await settle();await offline.online(false);
   for(let i=0;i<805;i++)offline.ctx.QuizMarioLearnerEvents.record({event_type:'vocab.answer_correct',headword:'apple',track:'gaokao'});
   assert.strictEqual(offline.ctx.QuizMarioLearnerEvents.syncState().pending,805,'offline queue is never truncated at 800');

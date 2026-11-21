@@ -42,7 +42,7 @@ function setupBrowser(session, saveKey) {
   const realFetch = window.fetch.bind(window);
   window.__oralTest = {micCalls: 0, mode: 'normal', stopped: 0, recorders: [], pending: [],
     replayCalls: 0, requests: [], stopDelay: 10, assessmentMode: 'unavailable',
-    assessmentRequests: [], pendingAssessments: [],
+    assessmentRequests: [], pendingAssessments: [], holdProgressAck: false, pendingProgressAcks: [],
     outcomes: JSON.parse(localStorage.getItem('__oral_test_outcomes') || '{}')};
   const test = window.__oralTest;
   function reply(status, body) {
@@ -106,7 +106,10 @@ function setupBrowser(session, saveKey) {
       cloud = (Array.isArray(payload) ? payload[0] : payload).save;
       version = new Date(Date.now() + (++revision)).toISOString();
       localStorage.setItem('__oral_test_cloud', JSON.stringify(cloud));
-      return reply(200, {user_id: session.user.id, save: cloud, updated_at: version});
+      const acknowledgement = {user_id: session.user.id, save: cloud, updated_at: version};
+      if (test.holdProgressAck) return new Promise(resolve =>
+        test.pendingProgressAcks.push(() => reply(200, acknowledgement).then(resolve)));
+      return reply(200, acknowledgement);
     }
     if (url.includes('/learner_events')) return reply(200, []);
     if (url.includes('/auth/v1/user')) return reply(200, session.user);
@@ -235,6 +238,7 @@ const SNAP = "(" + function () {
     pending:test?.pending?.length??0,recording:test?.recorders?.some(r=>r.state==='recording')??false,
     assessmentLoaded:!!window.QMOralAssessment,assessmentRequests:test?.assessmentRequests||[],
     pendingAssessments:test?.pendingAssessments?.length??0,
+    pendingProgressAcks:test?.pendingProgressAcks?.length??0,
     assessmentScriptLoads:performance.getEntriesByType('resource').filter(e=>/oral-assessment\.js/.test(e.name)).length,
     scriptLoads:performance.getEntriesByType('resource').filter(e=>/oral-output\.js/.test(e.name)).length,
     width:innerWidth,scrollWidth:document.documentElement?.scrollWidth??0,
@@ -571,11 +575,16 @@ async function main() {
     await cdp.send('Page.reload',{},sessionId);
     await until(s=>s.timeOrigin!==beforeAuthReload&&s.ready,'restored fictional owner session',30000);
     await click('btn-gate-zhongkao');await until(s=>s.home,'restored owner course home',20000);
-    await begin();await recordOnce('pending');
+    await begin();await run('window.__oralTest.holdProgressAck=true');await recordOnce('pending');
     state=await until(s=>s.pendingAssessments===1,'provider response pending before account change');
+    // Both requests belong to A and were sent while A was current. Hold the
+    // progress ACK as well as the evaluator response across the owner change;
+    // an old sync callback must not persist A's whole save under B's cache key.
+    await run('void window.QuizMarioCloud.flushNow()');
+    state=await until(s=>s.pendingProgressAcks>0,'old owner progress acknowledgement held');
     const attemptsBeforeOwner=attemptCount(state.all),scoresBeforeOwner=assessmentCount(state.all);
     const untouchedOther=await run('localStorage.getItem('+JSON.stringify('vocabSpotlight_v1:account:'+OTHER)+')');
-    await run('window.QuizMarioAccountStore.activate('+JSON.stringify(OTHER)+');document.documentElement.classList.remove("session-ok");Promise.all(window.__oralTest.pendingAssessments.splice(0).map(f=>f()))');
+    await run('window.QuizMarioAccountStore.activate('+JSON.stringify(OTHER)+');document.documentElement.classList.remove("session-ok");window.__oralTest.holdProgressAck=false;Promise.all(window.__oralTest.pendingAssessments.splice(0).concat(window.__oralTest.pendingProgressAcks.splice(0)).map(f=>f()))');
     await pause(200);
     state=await snap();
     assert.equal(assessmentCount(state.all),scoresBeforeOwner,'A delayed evaluator cannot write after its captured owner changes.');

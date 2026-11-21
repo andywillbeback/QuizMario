@@ -11,7 +11,7 @@
   var writer=CORE && CORE.id(), writeSeq=0, heartbeat=null, storageError='', storageFailures={};
   function savedLocally(kind,error){if(error)storageFailures[kind]=String(error.message||error);else delete storageFailures[kind];storageError=Object.keys(storageFailures).map(function(k){return storageFailures[k];}).join('; ');}
   function $(id){return document.getElementById(id);}
-  function owned(id,token){return !stopped && user && user.id===id && token===epoch &&
+  function owned(id,token){return !stopped && user && user.id===id && token===epoch && STORE && STORE.owner()===id &&
     (!window.__QM_ENTRY_SESSION||(window.__QM_ENTRY_AUTH_READY&&window.__QM_ENTRY_OWNER===id));}
   function startupStatus(phase,message,failed){
     if(stopped||window.__QM_ENTRY_REDIRECTING)return;
@@ -45,6 +45,7 @@
   }
   function revealApp(){
     if(!user||stopped||window.__QM_ENTRY_REDIRECTING)return;
+    if(!STORE||STORE.owner()!==user.id)return;
     if(window.__QM_ENTRY_SESSION&&(!window.__QM_ENTRY_AUTH_READY||window.__QM_ENTRY_OWNER!==user.id))return;
     window.__QM_SYNC_READY=true;clearTimeout(window.__QM_ENTRY_WATCHDOG);
     startupStatus('ready','学习页面已就绪。',false);
@@ -88,7 +89,7 @@
   }
   function dropJournal(j){try{STORE.raw.removeItem(STORE.key(JOURNAL,j.owner)+':'+j.writer);}catch(_){} }
   function recordDesired(save){
-    if(!user||!ready||stopped)return;
+    if(!user||!ready||!owned(user.id,epoch))return;
     var target=CORE.compact(save||window.__QM.getSave());
     var merge=window.QuizMarioMerge, profile=target.profile||{};
     if(merge && merge.isBlank(target) && !(profile.name && profile.cls))return;
@@ -146,12 +147,12 @@
     latest.base=CORE.compact(row.save);latest.desired=desired;delete latest.attempt;
     if(isCurrent){
       localBase=CORE.compact(row.save);
-      if(window.__QM&&typeof window.__QM.applySyncedSave==='function')window.__QM.applySyncedSave(desired);
+      if(window.__QM&&typeof window.__QM.applySyncedSave==='function')window.__QM.applySyncedSave(desired,j.owner);
       cache(window.__QM.getSave(),j.owner);
       if(clean){dropJournal(latest);journal=null;}else persistJournal(latest);
     }else{
       if(clean)dropJournal(latest);else persistJournal(latest);
-      if(ready && !journal){localBase=CORE.compact(row.save);if(window.__QM.applySyncedSave)window.__QM.applySyncedSave(row.save);cache(window.__QM.getSave(),j.owner);}
+      if(ready && !journal){localBase=CORE.compact(row.save);if(window.__QM.applySyncedSave)window.__QM.applySyncedSave(row.save,j.owner);cache(window.__QM.getSave(),j.owner);}
     }
     lastAck=row.updated_at;retry=0;
   }
@@ -167,7 +168,7 @@
     }
   }
   async function flushNow(){
-    if(stopped||!user||running)return;
+    if(stopped||!user||running||!owned(user.id,epoch))return;
     if(timer){clearTimeout(timer);timer=null;}
     if(!navigator.onLine){renderStatus();return;}
     if(!ready || networkBootPending){return boot();}
@@ -209,7 +210,7 @@
         try{parsed=ownCache?JSON.parse(ownCache):null;}catch(_){}
         hadOwnedCache=!!(parsed && typeof parsed==='object' && !Array.isArray(parsed));
         localBase=hadOwnedCache?CORE.compact(parsed):{};
-        window.__QM.applyCloudSave(localBase);
+        window.__QM.applyCloudSave(localBase,user.id);
         startupStatus('progress','登录已确认，正在读取本账号进度…',false);
         // Auth and the explicit owner are established. Restore only this cache;
         // a slow remote baseline must not block practice. New work stays in its
@@ -230,7 +231,7 @@
       // On initial online load the server/recovered journal supplies the baseline.
       if(!ready || !journal){
         localBase=CORE.compact(row&&row.save||{});
-        if(ready)window.__QM.applySyncedSave(localBase);else window.__QM.applyCloudSave(localBase);
+        if(ready)window.__QM.applySyncedSave(localBase,owner);else window.__QM.applyCloudSave(localBase,owner);
         cache(window.__QM.getSave(),owner);
       }
       else if(journal){remote={owner:owner,row:row};}

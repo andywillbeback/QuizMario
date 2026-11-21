@@ -65,6 +65,9 @@
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
   /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, updatedAt?:string}} SaveData */
 
+  // The in-memory snapshot keeps its original account even if the active
+  // cache selection changes before an auth callback reloads this page.
+  let saveOwner = window.QuizMarioAccountStore ? window.QuizMarioAccountStore.owner() : "";
   /** @type {SaveData} */
   let save = loadSave();
 
@@ -220,12 +223,28 @@
     return p;
   }
 
+  function saveAccountOwner(expectedOwner, allowInitialBind) {
+    const store = window.QuizMarioAccountStore;
+    if (!store) return "";
+    const owner = expectedOwner === undefined ? saveOwner : expectedOwner;
+    if (typeof owner !== "string" || !owner || store.owner() !== owner ||
+        (window.__QM_ENTRY_OWNER && window.__QM_ENTRY_OWNER !== owner) ||
+        (saveOwner !== owner && (!allowInitialBind || saveOwner))) {
+      const error = new Error("账号已切换，原账号的学习记录已保留，请重新打开学习页。");
+      error.code = "QM_ACCOUNT_CHANGED";
+      throw error;
+    }
+    if (!saveOwner && allowInitialBind) saveOwner = owner;
+    return owner;
+  }
+
   function readLocalSave() {
-    return window.QuizMarioAccountStore ? window.QuizMarioAccountStore.get(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY);
+    return window.QuizMarioAccountStore ? window.QuizMarioAccountStore.get(STORAGE_KEY, saveAccountOwner()) : localStorage.getItem(STORAGE_KEY);
   }
   function writeLocalSave(value) {
+    const owner = saveAccountOwner();
     const data = window.QuizMarioSyncCore ? window.QuizMarioSyncCore.compact(value) : value;
-    if (window.QuizMarioAccountStore) window.QuizMarioAccountStore.set(STORAGE_KEY, JSON.stringify(data));
+    if (window.QuizMarioAccountStore) window.QuizMarioAccountStore.set(STORAGE_KEY, JSON.stringify(data), owner);
     else localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
@@ -267,6 +286,13 @@
 
   function persist(opts) {
     opts = opts || {};
+    // A late callback must neither write the old snapshot into a new cache nor
+    // offer it to a new sync owner. Storage failures below remain retryable.
+    try { saveAccountOwner(); }
+    catch (error) {
+      if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(error);
+      return false;
+    }
     save.sortMode = sortMode;
     save.voiceOn = voiceOn;
     delete save.dueOnly;
@@ -3957,13 +3983,15 @@
       persist();
       refreshHomeQueues();
     },
-    applyCloudSave(data) {
+    applyCloudSave(data, expectedOwner) {
       let payload = data;
       if (payload && payload.save && !payload.cards) payload = payload.save;
       if (!payload || typeof payload !== "object") throw new Error("Invalid cloud save");
+      saveAccountOwner(expectedOwner, true);
       applySaveObject(snapshotToSave(payload), { keepUpdatedAt: true, upload: false });
     },
-    applySyncedSave(data) {
+    applySyncedSave(data, expectedOwner) {
+      saveAccountOwner(expectedOwner);
       // Rebase acknowledged counters without leaving the current exercise.
       save = snapshotToSave(data);
       // The received snapshot's globals belong to its selected course. Swap
