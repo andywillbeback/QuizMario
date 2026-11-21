@@ -71,6 +71,11 @@ assert.ok(!js.includes('statChip("已学会"'), "detail chips do not say 已学�
 assert.ok(html.includes('id="board-class"'), "class filter");
 assert.ok(html.includes("未填班级"));
 assert.ok(js.includes("下载该班学情"), "per-class zip button");
+assert.ok(html.includes('id="btn-export-student-class"'), "student page can download that class");
+assert.ok(js.includes("btn-export-student-class"), "student page download is wired");
+assert.ok(js.includes("rosterHidden"), "one-click can see when the class controls are hidden");
+assert.ok(js.includes("mobileShareTarget") && js.includes("nav.share") && js.includes("canShare"), "touch phones can hand the same zip to the system share sheet");
+assert.ok(js.includes("application/octet-stream"), "share falls forward when a phone rejects the zip mime type");
 assert.ok(js.includes("classPack"), "one zip per class");
 assert.ok(html.includes("样本不足"), "thin-sample copy");
 assert.ok(html.includes("chart.js"), "Chart.js CDN");
