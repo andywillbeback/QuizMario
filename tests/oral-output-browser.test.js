@@ -2,8 +2,10 @@
 
 /*
  * Real /grok/ page at phone width, with fictional auth/cloud data and simulated
- * microphone/MediaRecorder. This verifies UI, ownership and persistence, not
- * real microphones, acoustic accuracy or iPhone/Android hardware compatibility.
+ * microphone/MediaRecorder and authenticated evaluation responses. Native Web
+ * Audio decodes a synthetic WAV through the real assessment helper. This tests
+ * UI, ownership and persistence, not real microphones, acoustic accuracy or
+ * iPhone/Android hardware compatibility.
  * No student recordings or credentials are used or sent to any external API.
  */
 const assert = require('node:assert/strict');
@@ -39,7 +41,9 @@ function setupBrowser(session, saveKey) {
   let revision = 0, version = '2026-11-01T00:00:00.000Z';
   const realFetch = window.fetch.bind(window);
   window.__oralTest = {micCalls: 0, mode: 'normal', stopped: 0, recorders: [], pending: [],
-    replayCalls: 0, requests: [], stopDelay: 10};
+    replayCalls: 0, requests: [], stopDelay: 10, assessmentMode: 'unavailable',
+    assessmentRequests: [], pendingAssessments: [], holdProgressAck: false, pendingProgressAcks: [],
+    outcomes: JSON.parse(localStorage.getItem('__oral_test_outcomes') || '{}')};
   const test = window.__oralTest;
   function reply(status, body) {
     return Promise.resolve(new Response(JSON.stringify(body), {status, headers: {'content-type': 'application/json'}}));
@@ -54,6 +58,46 @@ function setupBrowser(session, saveKey) {
       }
       return realFetch(input, init);
     }
+    if (url.includes('/functions/v1/word-pronunciation')) {
+      const parsed = new URL(url), headers = new Headers(init && init.headers);
+      const body = method === 'POST' ? JSON.parse(init.body || '{}') : {};
+      const attemptId = body.attemptId || parsed.searchParams.get('attemptId');
+      const disk = JSON.parse(localStorage.getItem(saveKey) || '{}');
+      test.assessmentRequests.push({method, attemptId,
+        authenticated: headers.get('authorization') === 'Bearer ' + session.access_token,
+        publicKey: /^sb_publishable_/.test(headers.get('apikey') || ''),
+        persistedBeforeSend: !!(body.cardKey && disk.cards?.[body.cardKey]?.oralOutput?.attempts?.[attemptId]),
+        format: body.audio?.format, sampleRate: body.audio?.sampleRate, channels: body.audio?.channels,
+        audioBytes: body.audio?.data ? atob(body.audio.data).length : 0});
+      if (method === 'GET' && !attemptId) return reply(200, {ok: true,
+        ready: test.assessmentMode !== 'unavailable', provider: 'xfyun-ise',
+        limits: {rollingHours: 24, global: 400, perStudent: 40}});
+      if (method === 'GET') {
+        const outcome = test.outcomes[attemptId];
+        return outcome ? reply(outcome.status, outcome.body) : reply(404,
+          {ok: false, code: 'not_found', message: 'No result for this fictional attempt.'});
+      }
+      if (method !== 'POST') return reply(405, {ok: false});
+      const outcome = test.assessmentMode === 'rejected'
+        ? {status: 422, body: {ok: false, code: 'assessment_rejected', message: 'Synthetic rejection.'}}
+        : {status: 200, body: {ok: true, assessment: {
+          id: 'ise_mock_' + attemptId, attemptId, owner: session.user.id,
+          cardKey: body.cardKey, word: body.word, provider: 'xfyun-ise',
+          at: new Date().toISOString(), scale: 100,
+          accuracyScore: test.assessmentMode === 'totalOnly' ? null : test.assessmentMode === 'zero' ? 0 : 84.5,
+          totalScore: test.assessmentMode === 'totalOnly' ? 62 : 81,
+          status: 'assessed', modelVersion: 'xfyun-ise-en-v1'}}};
+      const finish = () => {
+        test.outcomes[attemptId] = outcome;
+        localStorage.setItem('__oral_test_outcomes', JSON.stringify(test.outcomes));
+        return reply(outcome.status, outcome.body);
+      };
+      // Deliberately ignore AbortSignal in this fake transport: the product
+      // must also guard a late response after changing card or account.
+      if (test.assessmentMode === 'pending') return new Promise(resolve =>
+        test.pendingAssessments.push(() => finish().then(resolve)));
+      return finish();
+    }
     if (url.includes('/user_progress')) {
       if (method === 'GET' || method === 'HEAD') return reply(200, [{save: cloud, updated_at: version}]);
       const expected = new URL(url).searchParams.get('updated_at');
@@ -62,7 +106,10 @@ function setupBrowser(session, saveKey) {
       cloud = (Array.isArray(payload) ? payload[0] : payload).save;
       version = new Date(Date.now() + (++revision)).toISOString();
       localStorage.setItem('__oral_test_cloud', JSON.stringify(cloud));
-      return reply(200, {user_id: session.user.id, save: cloud, updated_at: version});
+      const acknowledgement = {user_id: session.user.id, save: cloud, updated_at: version};
+      if (test.holdProgressAck) return new Promise(resolve =>
+        test.pendingProgressAcks.push(() => reply(200, acknowledgement).then(resolve)));
+      return reply(200, acknowledgement);
     }
     if (url.includes('/learner_events')) return reply(200, []);
     if (url.includes('/auth/v1/user')) return reply(200, session.user);
@@ -95,7 +142,18 @@ function setupBrowser(session, saveKey) {
       this.dispatchEvent(ev);
     }
     start() { this.state = 'recording'; setTimeout(() => this.emit('start'), 0); }
-    requestData() { this.emit('dataavailable', {data: new Blob([new Uint8Array(512)], {type: this.mimeType})}); }
+    requestData() {
+      // Valid non-silent PCM WAV, generated here rather than recorded from a
+      // person. decodeAudioData recognizes its header independently of MIME.
+      const length = 11200, wav = new ArrayBuffer(44 + length * 2), view = new DataView(wav);
+      const tag = (offset, text) => { for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i)); };
+      tag(0, 'RIFF'); view.setUint32(4, wav.byteLength - 8, true); tag(8, 'WAVE'); tag(12, 'fmt ');
+      view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+      view.setUint32(24, 16000, true); view.setUint32(28, 32000, true);
+      view.setUint16(32, 2, true); view.setUint16(34, 16, true); tag(36, 'data'); view.setUint32(40, length * 2, true);
+      for (let i = 0; i < length; i++) view.setInt16(44 + i * 2, Math.round(Math.sin(i / 8) * 4000), true);
+      this.emit('dataavailable', {data: new Blob([wav], {type: this.mimeType})});
+    }
     stop() {
       if (this.state === 'inactive') return;
       this.state = 'inactive';
@@ -166,6 +224,9 @@ const SNAP = "(" + function () {
     home:!!document.getElementById('screen-home')?.classList.contains('active'),
     play:!!document.getElementById('screen-play')?.classList.contains('active'),
     oral:shown('oral-output'),record:shown('oral-record'),replay:shown('oral-replay'),
+    assess:shown('oral-assess'),assessDisabled:!!document.getElementById('oral-assess')?.disabled,
+    result:shown('oral-result'),accuracy:document.getElementById('oral-accuracy')?.textContent||'',
+    total:document.getElementById('oral-total')?.textContent||'',
     status:document.getElementById('oral-status')?.textContent||'',
     note:document.getElementById('oral-note')?.textContent||'',
     recordText:document.getElementById('oral-record')?.textContent||'',
@@ -175,6 +236,10 @@ const SNAP = "(" + function () {
     learning:save&&{points:save.points,streak:save.streak,bestStreak:save.bestStreak,practice:save.practice},
     mic:test?.micCalls??0,stopped:test?.stopped??0,replays:test?.replayCalls??0,
     pending:test?.pending?.length??0,recording:test?.recorders?.some(r=>r.state==='recording')??false,
+    assessmentLoaded:!!window.QMOralAssessment,assessmentRequests:test?.assessmentRequests||[],
+    pendingAssessments:test?.pendingAssessments?.length??0,
+    pendingProgressAcks:test?.pendingProgressAcks?.length??0,
+    assessmentScriptLoads:performance.getEntriesByType('resource').filter(e=>/oral-assessment\.js/.test(e.name)).length,
     scriptLoads:performance.getEntriesByType('resource').filter(e=>/oral-output\.js/.test(e.name)).length,
     width:innerWidth,scrollWidth:document.documentElement?.scrollWidth??0,
     cardAnimating:!!promptBox&&(/(?:^|\s)card-(?:enter|exit)(?:\s|$)/.test(promptBox.className)||moving(promptBox)||moving(playScreen)),
@@ -189,6 +254,9 @@ function evidence(card) {
 }
 function attemptCount(all) {
   return Object.values(all||{}).reduce((sum,row)=>sum+Object.keys(row.attempts||{}).length,0);
+}
+function assessmentCount(all) {
+  return Object.values(all||{}).reduce((sum,row)=>sum+Object.keys(row.assessments||{}).length,0);
 }
 
 async function main() {
@@ -288,7 +356,22 @@ async function main() {
       await click('btn-quit');await until(s=>s.home,'home');
       await run("if(!document.getElementById('must-gate').hidden)document.getElementById('btn-must-later').click()");
     }
-    async function begin() {await click('btn-continue');return until(s=>s.play&&s.key&&s.record,'meaning card');}
+    async function begin() {
+      // Keep the randomly shuffled first set reproducible. Its first words are
+      // single headwords; a phrase fixture belongs to unsupported-target tests.
+      await run('window.__oralTest.savedRandom=Math.random;Math.random=()=>0.5');
+      try {await click('btn-continue');return await until(s=>s.play&&s.key&&s.record,'meaning card');}
+      finally {await run('Math.random=window.__oralTest.savedRandom;delete window.__oralTest.savedRandom');}
+    }
+    async function recordOnce(mode) {
+      const count = attemptCount((await snap()).all);
+      await run('window.__oralTest.mode="normal";window.__oralTest.assessmentMode='+JSON.stringify(mode));
+      await click('oral-record');
+      await until(s=>s.recording,'assessment recording started');
+      await pause(700);
+      await click('oral-record');
+      return until(s=>attemptCount(s.all)===count+1,'assessment recording durably saved');
+    }
 
     await cdp.send('Page.navigate',{url:origin+'/grok/index.html'},sessionId);
     await until(s=>s.ready,'authenticated page',30000);
@@ -303,6 +386,9 @@ async function main() {
     state=await snap();
     assert.equal(state.loaded,false,'Recording module is not loaded at startup.');
     assert.equal(state.scriptLoads,0,'No eager recording script request.');
+    assert.equal(state.assessmentLoaded,false,'Assessment conversion is not loaded at startup.');
+    assert.equal(state.assessmentScriptLoads,0,'No eager assessment script request.');
+    assert.equal(state.assessmentRequests.length,0,'Entering a word makes no assessment or availability request.');
     assert.equal(state.mic,0,'No microphone request before a student action.');
     assert.equal(state.width,375);
     if(state.scrollWidth>377)await diagnoseOverflow();
@@ -314,7 +400,11 @@ async function main() {
     await pause(700);
     await click('oral-record');
     state=await until(s=>attemptCount(s.all)===1,'recording saved');
+    state=await until(s=>/评测服务待开通/.test(s.note)&&!s.assessDisabled,'unconfigured evaluation explanation');
     assert.match(state.status,/待验证/,'Recording completion must remain unverified.');
+    assert.equal(state.result,false,'Missing provider configuration cannot display a pronunciation score.');
+    assert.equal(state.assessmentRequests.filter(r=>r.method==='POST').length,0,'No audio is uploaded while evaluation is unconfigured.');
+    assert.equal(state.assessmentRequests.filter(r=>r.method==='GET'&&!r.attemptId).length,1,'Availability is checked only after recording is saved.');
     assert.equal(state.replay,true,'Current recording can be replayed.');
     assert.deepEqual(evidence(state.card),evidence(before),'Recording must not change spelling, meaning or SRS evidence.');
     assert.deepEqual(state.learning,learningBefore,'Recording gives no answer counts, points or streak.');
@@ -395,6 +485,80 @@ async function main() {
     assert.equal(state.replay,false,'Local-only audio is not presented as available after a reload.');
     assert.equal(state.loaded,false,'Saved recording metadata does not eagerly load the recorder.');
     assert.equal(state.mic,0,'Reloading does not request a microphone.');
+    assert.equal(state.assessmentLoaded,false,'Saved metadata does not eagerly load assessment code.');
+    assert.equal(state.assessmentRequests.length,0,'Reloading does not probe evaluation or consume quota.');
+
+    const scoreCardBefore=state.card,scoreLearningBefore=state.learning,scoreKey=state.key;
+    await recordOnce('success');
+    state=await until(s=>s.result&&!s.assessDisabled&&/84\.5/.test(s.accuracy),'valid evaluation rendered');
+    assert.match(state.status,/已评测/);
+    assert.match(state.accuracy,/84\.5\s*\/\s*100/,'The returned accuracy is displayed without an invented pass verdict.');
+    assert.match(state.total,/81\s*\/\s*100/,'The provider total is separately labelled.');
+    assert.equal(assessmentCount(state.all),1);
+    assert.deepEqual(evidence(state.card),evidence(scoreCardBefore),'A pronunciation result cannot alter recognition, spelling or SRS evidence.');
+    assert.deepEqual(state.learning,scoreLearningBefore,'A pronunciation score gives no answer counts, points or streak.');
+    const sent=state.assessmentRequests.filter(r=>r.method==='POST');
+    assert.equal(sent.length,1,'Exactly one provider request is made for this recording.');
+    assert.equal(sent[0].persistedBeforeSend,true,'The attempt is durably saved before audio leaves the page.');
+    assert.equal(sent[0].authenticated,true,'The evaluator request carries the captured user session.');
+    assert.equal(sent[0].publicKey,true,'Only the existing publishable project key is sent by the browser.');
+    assert.equal(sent[0].format,'pcm_s16le');assert.equal(sent[0].sampleRate,16000);assert.equal(sent[0].channels,1);
+    assert.equal(sent[0].audioBytes,22400,'Native Web Audio decoded the generated WAV into mono PCM.');
+    const firstResult=Object.values(state.all[scoreKey].assessments)[0];
+    assert.equal(state.all[scoreKey].attempts[firstResult.attemptId].status,'recorded','Assessment appends without rewriting original recording evidence.');
+    assert.ok(!('accuracyScore'in state.all[scoreKey].attempts[firstResult.attemptId]));
+    await screenshot('oral-output-assessed-375');
+
+    const requestsBeforeRecovery=state.assessmentRequests.length;
+    await click('oral-assess');
+    state=await until(s=>s.assessmentRequests.length>requestsBeforeRecovery&&!s.assessDisabled,'stored result recovered');
+    assert.equal(state.assessmentRequests.filter(r=>r.method==='POST').length,1,'Querying an existing result never sends audio or evaluates again.');
+    assert.equal(state.assessmentRequests.at(-1).method,'GET');
+    assert.equal(state.assessmentRequests.at(-1).attemptId,firstResult.attemptId);
+    assert.equal(assessmentCount(state.all),1,'Recovery does not duplicate immutable evidence.');
+
+    // A loaded save must render truthful scores even before either optional
+    // audio module is present. Repaint via the normal synced-save entrypoint.
+    await run('window.__oralTest.savedAssessmentHelper=window.QMOralAssessment;window.__oralTest.savedRecorderHelper=window.QMOralOutput;delete window.QMOralAssessment;delete window.QMOralOutput;window.__QM.applySyncedSave(JSON.parse(JSON.stringify(window.__QM.getSave())))');
+    state=await snap();
+    assert.equal(state.assessmentLoaded,false);assert.equal(state.loaded,false);
+    assert.equal(state.result,true,'Stored valid assessment renders without eager audio/helper initialization.');
+    assert.match(state.accuracy,/84\.5/);
+    assert.equal(state.assessmentRequests.length,requestsBeforeRecovery+1,'Reading stored scores does not make a network request.');
+    await run('window.QMOralAssessment=window.__oralTest.savedAssessmentHelper;window.QMOralOutput=window.__oralTest.savedRecorderHelper;delete window.__oralTest.savedAssessmentHelper;delete window.__oralTest.savedRecorderHelper');
+
+    await recordOnce('rejected');
+    state=await until(s=>/可靠评测/.test(s.note)&&!s.assessDisabled,'provider rejection shown');
+    assert.equal(state.result,false,'An unverified latest recording cannot inherit the previous high score.');
+    assert.match(state.status,/待验证/);
+    assert.equal(assessmentCount(state.all),1,'Rejected audio does not create a score.');
+    assert.deepEqual(state.all[scoreKey].assessments[firstResult.id],firstResult,'A failed later attempt preserves original assessment history.');
+
+    await recordOnce('totalOnly');
+    state=await until(s=>s.result&&!s.assessDisabled&&/62/.test(s.total),'total-only evaluation shown');
+    assert.match(state.accuracy,/暂无可靠分数/,'Missing accuracy remains unknown.');
+    assert.ok(!/62/.test(state.accuracy),'The total is never substituted for pronunciation accuracy.');
+    assert.match(state.total,/62\s*\/\s*100/);
+    assert.equal(assessmentCount(state.all),2);
+
+    await recordOnce('zero');
+    state=await until(s=>s.result&&!s.assessDisabled&&/0\s*\/\s*100/.test(s.accuracy),'genuine zero accuracy shown');
+    assert.equal(assessmentCount(state.all),3,'A genuine zero is a valid score, not missing data.');
+    assert.deepEqual(evidence(state.card),evidence(scoreCardBefore));
+    assert.deepEqual(state.learning,scoreLearningBefore);
+
+    await recordOnce('pending');
+    state=await until(s=>s.pendingAssessments===1,'provider response pending before card change');
+    assert.equal(state.result,false,'A new pending recording hides the previous result immediately.');
+    const beforeLateCard=assessmentCount(state.all),attemptsBeforeLateCard=attemptCount(state.all),pendingCard=state.key;
+    await click('btn-unknown');await until(s=>s.continue,'answer revealed before next word');
+    await click('btn-feedback-continue');await until(s=>s.play&&s.key&&s.key!==pendingCard,'new word before provider response');
+    await run('Promise.all(window.__oralTest.pendingAssessments.splice(0).map(f=>f()))');
+    await pause(200);
+    state=await snap();
+    assert.equal(assessmentCount(state.all),beforeLateCard,'A late result after leaving the card cannot alter local evidence.');
+    assert.equal(attemptCount(state.all),attemptsBeforeLateCard,'The original recording survives cancellation.');
+    assert.equal(state.result,false,'The next word cannot display the previous word\'s delayed score.');
 
     await home();await run("window.__oralTest.mode='pending'");await begin();await click('oral-record');
     await until(s=>s.pending===1,'pending microphone before account change');
@@ -402,12 +566,34 @@ async function main() {
     await run('window.QuizMarioAccountStore.activate('+JSON.stringify(OTHER)+');document.documentElement.classList.remove("session-ok");window.__oralTest.resolveMicrophone()');
     await pause(200);
     state=await snap();
-    assert.equal(attemptCount(state.all),1,'A pending recording cannot write after its owner changes.');
+    assert.equal(attemptCount(state.all),attemptsBeforeLateCard,'A pending recording cannot write after its owner changes.');
     assert.equal(await run('localStorage.getItem('+JSON.stringify('vocabSpotlight_v1:account:'+OTHER)+')'),beforeOther,'No record is assigned to the next account.');
     assert.equal(state.recording,false);
     assert.equal(state.replay,false,'Previous account audio is hidden immediately.');
 
-    console.log('PASS oral-output browser: lazy entry, 375px layout, metadata-only persistence, unverified status, replay, permission errors, card/account races and recall gates (simulated audio).');
+    const beforeAuthReload=state.timeOrigin;
+    await cdp.send('Page.reload',{},sessionId);
+    await until(s=>s.timeOrigin!==beforeAuthReload&&s.ready,'restored fictional owner session',30000);
+    await click('btn-gate-zhongkao');await until(s=>s.home,'restored owner course home',20000);
+    await begin();await run('window.__oralTest.holdProgressAck=true');await recordOnce('pending');
+    state=await until(s=>s.pendingAssessments===1,'provider response pending before account change');
+    // Both requests belong to A and were sent while A was current. Hold the
+    // progress ACK as well as the evaluator response across the owner change;
+    // an old sync callback must not persist A's whole save under B's cache key.
+    await run('void window.QuizMarioCloud.flushNow()');
+    state=await until(s=>s.pendingProgressAcks>0,'old owner progress acknowledgement held');
+    const attemptsBeforeOwner=attemptCount(state.all),scoresBeforeOwner=assessmentCount(state.all);
+    const untouchedOther=await run('localStorage.getItem('+JSON.stringify('vocabSpotlight_v1:account:'+OTHER)+')');
+    await run('window.QuizMarioAccountStore.activate('+JSON.stringify(OTHER)+');document.documentElement.classList.remove("session-ok");window.__oralTest.holdProgressAck=false;Promise.all(window.__oralTest.pendingAssessments.splice(0).concat(window.__oralTest.pendingProgressAcks.splice(0)).map(f=>f()))');
+    await pause(200);
+    state=await snap();
+    assert.equal(assessmentCount(state.all),scoresBeforeOwner,'A delayed evaluator cannot write after its captured owner changes.');
+    assert.equal(attemptCount(state.all),attemptsBeforeOwner,'The original account keeps its already saved recording.');
+    assert.equal(await run('localStorage.getItem('+JSON.stringify('vocabSpotlight_v1:account:'+OTHER)+')'),untouchedOther,'No pronunciation result is assigned to the next account.');
+    assert.equal(state.result,false,'Previous account pronunciation scores are hidden immediately.');
+    assert.equal(state.replay,false);
+
+    console.log('PASS oral-output browser: lazy entry, 375px layout, native synthetic-WAV conversion, saved-before-upload, authenticated evaluation, unknown/zero scores, immutable recovery, card/account races and recall gates (simulated audio and evaluator).');
   } finally {
     if(socket)socket.close();
     chrome.kill('SIGTERM');

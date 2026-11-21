@@ -43,27 +43,33 @@
     if (first === 'practice') return /^(n|good)$/.test(last);
     return first === 'cards' && /^(correct|wrong|unknown)$/.test(last);
   }
-  /* Recording attempts are immutable, append-only facts. A stale writer may
-     omit a field that it has never understood; that is not a deletion. Keep
-     complete original rows rather than mixing fields on an ID collision.
-     Baseline rows win, then already committed remote rows, then new local rows. */
-  function preserveOralAttempts(base, local, remote, merged) {
-    var sources = [local, remote, base], keys = new Set();
+  /* Recordings and their provider assessments are separate immutable facts.
+     A stale writer may omit either collection; that is not a deletion. Keep
+     complete original rows rather than mixing identities or scores on an ID
+     collision. Baseline rows win, then committed remote rows, then local rows.
+     These histories have no count cap and never contribute learning counters. */
+  function preserveOralEvidence(base, local, remote, merged) {
+    var sources = [local, remote, base], fields = ['attempts', 'assessments'], keys = new Set();
     sources.forEach(function (save) { Object.keys(save.cards || {}).forEach(function (key) { keys.add(key); }); });
     keys.forEach(function (key) {
-      var attempts = Object.create(null), found = false;
+      var rows = {attempts:Object.create(null), assessments:Object.create(null)}, found = false;
       sources.forEach(function (save) {
         var card = save.cards && save.cards[key], oral = card && card.oralOutput;
-        if (!oral || !object(oral.attempts)) return;
-        Object.keys(oral.attempts).forEach(function (id) {
-          attempts[id] = clone(oral.attempts[id]); found = true;
+        if (!oral) return;
+        fields.forEach(function (field) {
+          if (!object(oral[field])) return;
+          Object.keys(oral[field]).forEach(function (id) {
+            rows[field][id] = clone(oral[field][id]); found = true;
+          });
         });
       });
       if (!found) return;
       if (!object(merged.cards)) merged.cards = {};
       if (!object(merged.cards[key])) merged.cards[key] = {};
       if (!object(merged.cards[key].oralOutput)) merged.cards[key].oralOutput = {version:1};
-      merged.cards[key].oralOutput.attempts = clone(attempts);
+      fields.forEach(function (field) {
+        if (Object.keys(rows[field]).length) merged.cards[key].oralOutput[field] = clone(rows[field]);
+      });
     });
     return merged;
   }
@@ -93,7 +99,7 @@
       }
       return clone(preferLocal ? l : r);
     }
-    return preserveOralAttempts(base,local,remote,merge(base,local,remote,[]));
+    return preserveOralEvidence(base,local,remote,merge(base,local,remote,[]));
   }
   function request(query, ms) {
     var controller = typeof AbortController === 'function' ? new AbortController() : null;

@@ -40,14 +40,16 @@
     return n;
   }
 
-  /** A recording is durable practice evidence, not an independently tested skill. */
+  /** Oral records are durable evidence; their presence does not establish mastery. */
   function hasOralEvidence(save) {
     var cards = save && save.cards;
     if (!cards || typeof cards !== "object") return false;
     return Object.keys(cards).some(function (key) {
       var oral = cards[key] && cards[key].oralOutput;
-      var attempts = oral && oral.attempts;
-      return attempts && typeof attempts === "object" && !Array.isArray(attempts) && Object.keys(attempts).length > 0;
+      return ['attempts', 'assessments'].some(function (field) {
+        var rows = oral && oral[field];
+        return rows && typeof rows === "object" && !Array.isArray(rows) && Object.keys(rows).length > 0;
+      });
     });
   }
 

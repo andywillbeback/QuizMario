@@ -65,6 +65,9 @@
   /** @typedef {{ef:number, interval:number, reps:number, lapses:number, due:number, correct:number, wrong:number, mastery:number, state:string}} CardProg */
   /** @typedef {{points:number, streak:number, bestStreak:number, unlockedLevel:number, cards:Object.<string, CardProg>, levelStars:Object.<string, number>, sortMode?:string, voiceOn?:boolean, updatedAt?:string}} SaveData */
 
+  // The in-memory snapshot keeps its original account even if the active
+  // cache selection changes before an auth callback reloads this page.
+  let saveOwner = window.QuizMarioAccountStore ? window.QuizMarioAccountStore.owner() : "";
   /** @type {SaveData} */
   let save = loadSave();
 
@@ -105,9 +108,10 @@
   let voiceOn = save.voiceOn !== false; // default on
   /** Teaching voice for words and examples. Streak clips stay on speakLine. */
   let wordSpeech = null;
-  // Oral evidence is separate from SRS, recognition and spelling. Audio stays
-  // in memory for this card only; account sync carries immutable metadata.
-  let oralRecorder = null, oralLoader = null, oralSession = null;
+  // Oral evidence is separate from SRS, recognition and spelling. Audio is
+  // transient; only immutable practice and assessment metadata is saved.
+  let oralRecorder = null, oralSession = null, oralAssessmentRun = null;
+  const oralLoaders = {};
   let oralPlayback = null, oralUrl = "", oralGeneration = 0;
   let oralVisible = false, oralPhase = "idle", oralMessage = "", oralElapsed = 0;
   let oralReferencePlayed = false;
@@ -219,12 +223,28 @@
     return p;
   }
 
+  function saveAccountOwner(expectedOwner, allowInitialBind) {
+    const store = window.QuizMarioAccountStore;
+    if (!store) return "";
+    const owner = expectedOwner === undefined ? saveOwner : expectedOwner;
+    if (typeof owner !== "string" || !owner || store.owner() !== owner ||
+        (window.__QM_ENTRY_OWNER && window.__QM_ENTRY_OWNER !== owner) ||
+        (saveOwner !== owner && (!allowInitialBind || saveOwner))) {
+      const error = new Error("账号已切换，原账号的学习记录已保留，请重新打开学习页。");
+      error.code = "QM_ACCOUNT_CHANGED";
+      throw error;
+    }
+    if (!saveOwner && allowInitialBind) saveOwner = owner;
+    return owner;
+  }
+
   function readLocalSave() {
-    return window.QuizMarioAccountStore ? window.QuizMarioAccountStore.get(STORAGE_KEY) : localStorage.getItem(STORAGE_KEY);
+    return window.QuizMarioAccountStore ? window.QuizMarioAccountStore.get(STORAGE_KEY, saveAccountOwner()) : localStorage.getItem(STORAGE_KEY);
   }
   function writeLocalSave(value) {
+    const owner = saveAccountOwner();
     const data = window.QuizMarioSyncCore ? window.QuizMarioSyncCore.compact(value) : value;
-    if (window.QuizMarioAccountStore) window.QuizMarioAccountStore.set(STORAGE_KEY, JSON.stringify(data));
+    if (window.QuizMarioAccountStore) window.QuizMarioAccountStore.set(STORAGE_KEY, JSON.stringify(data), owner);
     else localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }
 
@@ -266,6 +286,13 @@
 
   function persist(opts) {
     opts = opts || {};
+    // A late callback must neither write the old snapshot into a new cache nor
+    // offer it to a new sync owner. Storage failures below remain retryable.
+    try { saveAccountOwner(); }
+    catch (error) {
+      if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(error);
+      return false;
+    }
     save.sortMode = sortMode;
     save.voiceOn = voiceOn;
     delete save.dueOnly;
@@ -3304,7 +3331,7 @@
     return '<p class="stats-legend">' + line + "</p>";
   }
 
-  // ---- Student read-aloud: local audio, durable practice evidence, no scoring ----
+  // ---- Student read-aloud: durable attempts, optional server assessment ----
   function oralOwner() {
     const store = window.QuizMarioAccountStore;
     return store && typeof store.owner === "function" ? store.owner() : "";
@@ -3315,7 +3342,7 @@
       context.owner && context.owner === oralOwner() &&
       (!window.__QM_ENTRY_OWNER || window.__QM_ENTRY_OWNER === context.owner) &&
       document.documentElement.classList.contains("session-ok") &&
-      currentCard && currentCard.key === context.key && oralVisible &&
+      currentCard && currentCard.key === context.key && currentCard.word === context.word && oralVisible &&
       $("screen-play") && $("screen-play").classList.contains("active"));
   }
 
@@ -3334,6 +3361,9 @@
     options = options || {};
     oralGeneration += 1;
     oralSession = null; // Invalidate callbacks before stopping asynchronous media.
+    const evaluation = oralAssessmentRun;
+    oralAssessmentRun = null;
+    if (evaluation) evaluation.controller.abort();
     const recorder = oralRecorder;
     oralRecorder = null;
     if (recorder) { try { recorder.destroy(); } catch (_) {} }
@@ -3358,9 +3388,54 @@
       /^[a-zA-Z0-9:_-]{1,120}$/.test(row.id) && !/^(?:__proto__|prototype|constructor)$/.test(row.id) &&
       row.status === "recorded" && Number.isFinite(Date.parse(row.at)) &&
       Number(row.durationMs) >= 350 && Number(row.durationMs) <= 10000);
-    rows.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+    rows.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || String(b.id).localeCompare(String(a.id)));
     return { attemptCount: rows.length, lastAt: rows.length ? rows[0].at : "",
+      lastAttempt: rows.length ? rows[0] : null,
       label: rows.length ? "已录音 · 待验证" : "未练习" };
+  }
+
+  function oralExpected(context) {
+    return { owner: context.owner, attemptId: context.id, cardKey: context.key, word: context.word };
+  }
+
+  function oralTargetSupported(word) {
+    return typeof word === "string" && word.length <= 80 && /^[A-Za-z][A-Za-z.'-]*$/.test(word) && !/[.'-]{3}/.test(word);
+  }
+
+  function oralSavedAssessment(summary) {
+    const latest = summary && summary.lastAttempt, owner = oralOwner();
+    const evidence = currentCard && peekProg(currentCard.key) && peekProg(currentCard.key).oralOutput;
+    if (!latest || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(owner || "") ||
+        !evidence || !evidence.assessments || !evidence.attempts ||
+        !Object.prototype.hasOwnProperty.call(evidence.attempts, latest.id) ||
+        !evidence.attempts[latest.id] || evidence.attempts[latest.id].id !== latest.id ||
+        evidence.attempts[latest.id].status !== "recorded") return null;
+    const expected = { owner, attemptId: latest.id, cardKey: currentCard.key, word: currentCard.word };
+    if (window.QMOralAssessment) return window.QMOralAssessment.getAssessment(evidence, latest.id, expected);
+    // A saved result can render without loading an audio/network module. Keep
+    // the same strict binding and score boundary as validateAssessment().
+    function validScore(value) {
+      return value === null || value === undefined || (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100);
+    }
+    const rows = Object.entries(evidence.assessments).filter(([id, row]) =>
+      row && typeof row === "object" && !Array.isArray(row) && row.id === id &&
+      /^[a-zA-Z0-9:_-]{1,200}$/.test(id) && !/^(?:__proto__|prototype|constructor)$/.test(id) &&
+      row.owner === expected.owner && row.attemptId === expected.attemptId &&
+      row.cardKey === expected.cardKey && row.word === expected.word &&
+      row.provider === "xfyun-ise" && row.modelVersion === "xfyun-ise-en-v1" &&
+      row.status === "assessed" && row.scale === 100 &&
+      row.is_rejected !== true && row.is_rejected !== "true" && row.rejected !== true &&
+      (row.except_info === undefined || row.except_info === null || row.except_info === 0 || row.except_info === "0") &&
+      typeof row.at === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(row.at) &&
+      Number.isFinite(Date.parse(row.at)) && validScore(row.accuracyScore) && validScore(row.totalScore) &&
+      (typeof row.accuracyScore === "number" || typeof row.totalScore === "number")
+    ).map(([, row]) => row);
+    rows.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || b.id.localeCompare(a.id));
+    return rows[0] || null;
+  }
+
+  function oralScoreText(value) {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
   }
 
   function paintOralOutput() {
@@ -3370,10 +3445,14 @@
     if (!oralVisible) return;
     const summary = oralSummary();
     const working = /^(loading|requesting|recording|stopping)$/.test(oralPhase);
-    const record = $("oral-record"), replay = $("oral-replay"), status = $("oral-status");
+    const evaluating = /^(assessing|recovering)$/.test(oralPhase);
+    const assessed = !working ? oralSavedAssessment(summary) : null;
+    const record = $("oral-record"), replay = $("oral-replay"), status = $("oral-status"), check = $("oral-assess");
     panel.dataset.state = oralPhase;
-    status.textContent = oralPhase === "recording" ? "录音中 · " + (oralElapsed / 1000).toFixed(1) + " 秒" : summary.label;
+    status.textContent = oralPhase === "recording" ? "录音中 · " + (oralElapsed / 1000).toFixed(1) + " 秒"
+      : assessed ? "已评测 · 参考分" : summary.label;
     status.classList.toggle("is-recording", oralPhase === "recording");
+    status.classList.toggle("is-assessed", !!assessed);
     record.disabled = oralPhase === "stopping";
     record.textContent = oralPhase === "recording" ? "结束录音" :
       oralPhase === "requesting" || oralPhase === "loading" ? "取消录音" :
@@ -3381,6 +3460,20 @@
     record.setAttribute("aria-pressed", String(oralPhase === "recording"));
     replay.hidden = !oralUrl || working;
     replay.disabled = working;
+    if (check) {
+      check.hidden = !summary.lastAttempt || working;
+      check.disabled = working || evaluating;
+      check.textContent = oralPhase === "recovering" ? "正在查询…" : evaluating ? "正在评测…" : "查询本次结果";
+    }
+    const result = $("oral-result"), accuracy = $("oral-accuracy"), total = $("oral-total");
+    if (result) result.hidden = !assessed;
+    if (accuracy) accuracy.textContent = assessed && typeof assessed.accuracyScore === "number"
+      ? "发音准确度 " + oralScoreText(assessed.accuracyScore) + " / 100" : "发音准确度：暂无可靠分数";
+    if (total) {
+      total.hidden = !assessed || typeof assessed.totalScore !== "number";
+      total.textContent = assessed && typeof assessed.totalScore === "number"
+        ? "综合参考分 " + oralScoreText(assessed.totalScore) + " / 100" : "";
+    }
     let count = summary.attemptCount ? "已练 " + summary.attemptCount + " 次" : "还没有朗读记录";
     if (summary.lastAt) {
       const date = new Date(summary.lastAt);
@@ -3391,7 +3484,10 @@
       oralPhase === "requesting" ? "请允许使用麦克风，然后读出这个单词。" :
       oralPhase === "recording" ? "读出当前单词，完成后点「结束录音」。最多录 8 秒。" :
       oralPhase === "stopping" ? "正在保存这次朗读记录…" :
-      oralMessage || "读出这个单词，录好后回听。每次最多 8 秒。";
+      oralMessage || (oralTargetSupported(currentCard && currentCard.word)
+        ? summary.lastAttempt && !assessed ? "最近一次朗读已记录，准确度待验证。可以查询已有结果，或重新录制。"
+          : "读出这个单词，录好后自动评测，也可回听。每次最多 8 秒。"
+        : "当前只评测单个英文单词；短语、数字可录音回听，准确度待验证。");
   }
 
   function renderOralOutput(revealed) {
@@ -3406,13 +3502,15 @@
     paintOralOutput();
   }
 
-  function loadOralRecorder() {
-    if (window.QMOralOutput) return Promise.resolve(window.QMOralOutput);
-    if (oralLoader) return oralLoader;
-    oralLoader = new Promise((resolve, reject) => {
+  function loadOralModule(kind) {
+    const assessment = kind === "assessment";
+    const name = assessment ? "QMOralAssessment" : "QMOralOutput";
+    if (window[name]) return Promise.resolve(window[name]);
+    if (oralLoaders[kind]) return oralLoaders[kind];
+    oralLoaders[kind] = new Promise((resolve, reject) => {
       const script = document.createElement("script");
       let finished = false;
-      script.src = "oral-output.js?v=20261120-oral1";
+      script.src = (assessment ? "oral-assessment.js" : "oral-output.js") + "?v=20261120-ise1";
       script.async = true;
       const timer = setTimeout(() => fail(), 15000);
       function fail() {
@@ -3421,21 +3519,161 @@
         clearTimeout(timer);
         script.onload = script.onerror = null;
         script.remove();
-        oralLoader = null;
-        reject(new Error("录音功能加载失败，请检查网络后重试。"));
+        oralLoaders[kind] = null;
+        reject(new Error(assessment ? "评测功能暂时无法加载，朗读记录已保留。" : "录音功能加载失败，请检查网络后重试。"));
       }
       script.onload = () => {
         if (finished) return;
         clearTimeout(timer);
-        if (!window.QMOralOutput) { fail(); return; }
+        if (!window[name]) { fail(); return; }
         finished = true;
         script.onload = script.onerror = null;
-        resolve(window.QMOralOutput);
+        resolve(window[name]);
       };
       script.onerror = fail;
       document.head.appendChild(script);
     });
-    return oralLoader;
+    return oralLoaders[kind];
+  }
+  function loadOralRecorder() { return loadOralModule("recorder"); }
+  function loadOralAssessment() { return loadOralModule("assessment"); }
+
+  function oralAssessmentError(code, message) {
+    const error = new Error(message);
+    error.code = code;
+    return error;
+  }
+
+  function waitForOralTask(promise, signal, milliseconds) {
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      const timer = setTimeout(() => finish(oralAssessmentError("assessment_timeout",
+        "评测准备超时，朗读记录已保留。可以稍后查询已有结果。")), milliseconds);
+      function finish(error, value) {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        signal.removeEventListener("abort", cancel);
+        if (error) reject(error); else resolve(value);
+      }
+      function cancel() { finish(oralAssessmentError("cancelled", "本次评测已取消，朗读记录已保留。")); }
+      if (signal.aborted) cancel();
+      else signal.addEventListener("abort", cancel, { once: true });
+      // Observe even a late rejection after cancellation.
+      Promise.resolve(promise).then(value => finish(null, value), error => finish(error));
+    });
+  }
+
+  async function oralCredentials(context, signal) {
+    const api = window.QuizMarioCloudClient;
+    const client = api && typeof api.client === "function" ? api.client() : null;
+    const config = api && typeof api.config === "function" ? api.config() : window.QUIZMARIO_CONFIG || {};
+    const endpoint = String(config.SUPABASE_URL || "").replace(/\/+$/, "") + "/functions/v1/word-pronunciation";
+    if (!client || !client.auth || typeof client.auth.getSession !== "function") {
+      throw oralAssessmentError("unauthorized", "暂时无法确认登录状态，朗读记录已保留。");
+    }
+    const response = await waitForOralTask(client.auth.getSession(), signal, 15000);
+    if (!oralIsCurrent(context) || signal.aborted) throw oralAssessmentError("cancelled", "本次评测已取消。");
+    const session = response && response.data && response.data.session;
+    if (!response || response.error || !session || !session.user || session.user.id !== context.owner ||
+        !session.access_token || (session.expires_at && Number(session.expires_at) * 1000 <= Date.now())) {
+      throw oralAssessmentError("unauthorized", "登录状态已失效，请重新登录。朗读记录已保留。");
+    }
+    return Object.assign(oralExpected(context), {
+      accessToken: session.access_token, publicKey: config.SUPABASE_ANON_KEY, endpoint, signal,
+    });
+  }
+
+  async function assessOralOutput(context, blob, recovering) {
+    if (!oralIsCurrent(context) || oralAssessmentRun) return;
+    if (!oralTargetSupported(context.word)) {
+      oralPhase = "complete";
+      oralMessage = "当前只评测单个英文单词；短语、数字暂不自动打分。本次朗读已记录，可以回听。";
+      paintOralOutput();
+      return;
+    }
+    if (typeof window.AbortController !== "function") {
+      oralPhase = "complete";
+      oralMessage = "当前浏览器暂不支持发音评测，朗读记录已保留，可以回听。";
+      paintOralOutput();
+      return;
+    }
+    const operation = { context, controller: new AbortController() };
+    oralAssessmentRun = operation;
+    const signal = operation.controller.signal;
+    function active() { return oralIsCurrent(context) && oralAssessmentRun === operation && !signal.aborted; }
+    oralPhase = recovering ? "recovering" : "assessing";
+    oralMessage = recovering ? "正在查询这次录音的已有结果，不会再次提交评测。"
+      : "朗读记录已保存，正在准备讯飞发音评测。也可以先回听录音。";
+    paintOralOutput();
+    try {
+      const api = await waitForOralTask(loadOralAssessment(), signal, 15000);
+      if (!active()) return;
+      const credentials = await oralCredentials(context, signal);
+      if (!active()) return;
+      let assessment;
+      if (recovering) {
+        assessment = await api.recover(credentials);
+      } else {
+        // Checking readiness sends no audio and consumes no provider quota.
+        const service = await api.availability(credentials);
+        if (!active()) return;
+        if (!service.ready) {
+          oralPhase = "complete";
+          oralMessage = "评测服务待开通。本次朗读已记录，可以回听；开通后重新录制即可评测。";
+          return;
+        }
+        oralMessage = "讯飞正在评测这次朗读，通常需要几秒。也可以先回听录音。";
+        paintOralOutput();
+        assessment = await api.assess(Object.assign({}, credentials, { blob }));
+      }
+      if (!active()) return;
+      const next = JSON.parse(JSON.stringify(save));
+      const progress = next.cards[context.key];
+      if (!progress) throw oralAssessmentError("missing_attempt", "原朗读记录暂不可用，请稍后查询结果。");
+      progress.oralOutput = api.appendAssessment(progress.oralOutput, assessment, oralExpected(context));
+      next.updatedAt = new Date().toISOString();
+      if (!active()) return;
+      try { writeLocalSave(next); }
+      catch (error) {
+        if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(error);
+        throw oralAssessmentError("assessment_storage", "评测结果已返回，但本机保存失败。请检查存储空间后点「查询本次结果」，不会再次评测。");
+      }
+      save = next;
+      persist({ keepUpdatedAt: true });
+      if (!active()) return;
+      oralPhase = "complete";
+      oralMessage = assessment.accuracyScore === null
+        ? "已收到综合参考分；这次没有可靠的发音准确度分数，可结合回听继续练习。"
+        : "本次发音评测已记录。分数仅作朗读参考，可以回听后再练一次。";
+    } catch (error) {
+      if (!active()) return;
+      oralPhase = "complete";
+      if (error && error.code === "service_unavailable") {
+        oralMessage = "评测服务待开通或暂不可用，朗读记录已保留，可以回听或稍后查询已有结果。";
+      } else if (error && (error.name === "OralAssessmentError" || error.code)) {
+        oralMessage = error.message;
+      } else {
+        oralMessage = "本次评测暂未完成，朗读记录已保留。可以稍后查询已有结果，或重新录制。";
+      }
+    } finally {
+      if (oralAssessmentRun === operation) oralAssessmentRun = null;
+      if (oralIsCurrent(context)) paintOralOutput();
+    }
+  }
+
+  function recoverOralAssessment() {
+    if (!oralVisible || !currentCard || /^(loading|requesting|recording|stopping|assessing|recovering)$/.test(oralPhase)) return;
+    const summary = oralSummary(), owner = oralOwner();
+    if (!summary.lastAttempt || !owner || !document.documentElement.classList.contains("session-ok")) return;
+    let context = oralSession;
+    if (!oralIsCurrent(context) || context.id !== summary.lastAttempt.id) {
+      cancelOralOutput({ keepVisible: true });
+      context = { owner, key: currentCard.key, word: currentCard.word, generation: oralGeneration, id: summary.lastAttempt.id };
+      oralSession = context;
+    }
+    // Recovery always queries a stored result. An old Blob is never resubmitted.
+    void assessOralOutput(context, null, true);
   }
 
   function finishOralOutput(context, result) {
@@ -3465,8 +3703,13 @@
       oralPhase = "error";
       oralMessage = "本次记录未能保存，请检查浏览器存储空间后重新录制。";
       if (window.QuizMarioCloud && window.QuizMarioCloud.noteLocalFailure) window.QuizMarioCloud.noteLocalFailure(error);
+      paintOralOutput();
+      return;
     }
     paintOralOutput();
+    if (!oralIsCurrent(context) || context.assessmentStarted) return;
+    context.assessmentStarted = true;
+    void assessOralOutput(context, result.blob, false);
   }
 
   async function toggleOralRecording() {
@@ -3479,7 +3722,7 @@
     const owner = oralOwner();
     if (!owner || !document.documentElement.classList.contains("session-ok")) return;
     cancelOralOutput({ keepVisible: true });
-    const context = { owner, key: currentCard.key, generation: oralGeneration,
+    const context = { owner, key: currentCard.key, word: currentCard.word, generation: oralGeneration,
       referencePlayed: oralReferencePlayed,
       id: "oral_" + (window.crypto && typeof window.crypto.randomUUID === "function"
         ? window.crypto.randomUUID() : Date.now().toString(36) + "_" + Math.random().toString(36).slice(2)) };
@@ -3543,17 +3786,20 @@
   }
 
   function bindOralOutput() {
-    const record = $("oral-record"), replay = $("oral-replay");
+    const record = $("oral-record"), replay = $("oral-replay"), check = $("oral-assess");
     if (!record || !replay) return;
     record.addEventListener("click", toggleOralRecording);
     replay.addEventListener("click", replayOralOutput);
+    if (check) check.addEventListener("click", recoverOralAssessment);
     const logout = $("btn-logout");
     if (logout) logout.addEventListener("click", () => cancelOralOutput(), true);
     window.addEventListener("pagehide", () => cancelOralOutput({ keepVisible: true }));
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) return;
       const working = /^(loading|requesting|recording|stopping)$/.test(oralPhase);
-      cancelOralOutput({ keepVisible: true, message: working ? "本次录音已取消，回到页面后可重新录制。" : "" });
+      const evaluating = /^(assessing|recovering)$/.test(oralPhase);
+      cancelOralOutput({ keepVisible: true, message: working ? "本次录音已取消，回到页面后可重新录制。"
+        : evaluating ? "已停止等待评测，朗读记录已保留。回到页面后可点「查询本次结果」。" : "" });
     });
     window.addEventListener("storage", (event) => {
       if (event.key === "quizmario-auth" || event.key === null) cancelOralOutput();
@@ -3737,13 +3983,15 @@
       persist();
       refreshHomeQueues();
     },
-    applyCloudSave(data) {
+    applyCloudSave(data, expectedOwner) {
       let payload = data;
       if (payload && payload.save && !payload.cards) payload = payload.save;
       if (!payload || typeof payload !== "object") throw new Error("Invalid cloud save");
+      saveAccountOwner(expectedOwner, true);
       applySaveObject(snapshotToSave(payload), { keepUpdatedAt: true, upload: false });
     },
-    applySyncedSave(data) {
+    applySyncedSave(data, expectedOwner) {
+      saveAccountOwner(expectedOwner);
       // Rebase acknowledged counters without leaving the current exercise.
       save = snapshotToSave(data);
       // The received snapshot's globals belong to its selected course. Swap

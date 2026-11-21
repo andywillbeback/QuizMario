@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const source = fs.readFileSync(__dirname + '/../grok/sw.js', 'utf8');
-const currentCache = 'juguang-shell-20261120-oral1';
+const currentCache = 'juguang-shell-20261120-ise1';
 const currentBanks = 'juguang-banks-20261113-set1';
 function deferred() { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; }
 async function drain() { for (let i = 0; i < 20; i++) await Promise.resolve(); await new Promise(setImmediate); }
@@ -131,7 +131,9 @@ test('auth callbacks, private requests, scripts and legacy bank paths are never 
     base + 'login.html?refresh_token=fixture-secret', base + 'login.html?error=fixture-error',
     base + 'index.html?error_description=fixture-error', base + 'user_progress',
     base + 'words.js', base + 'exam-tracks.js', base + 'bank-data/gaokao/unit-001.json',
-    base + 'game.js', base + 'sync.js',
+    base + 'game.js', base + 'sync.js', base + 'oral-output.js?v=20261120-ise1', base + 'oral-assessment.js?v=20261120-ise1',
+    'https://cmainasvlfdynidabunp.supabase.co/functions/v1/word-pronunciation',
+    'https://cmainasvlfdynidabunp.supabase.co/functions/v1/word-pronunciation?attemptId=fictional-oral-1',
     base + 'word-universe.html',
   ]) assert.equal(h.fetch(url), undefined, url);
   assert.equal(h.fetch(base + 'login.html', 'POST'), undefined);
