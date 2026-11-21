@@ -85,11 +85,16 @@ body.at-play #oral-output{order:4;width:100%;min-width:0;box-sizing:border-box;m
 #oral-title{font-size:13px;line-height:1.5;font-weight:650;margin:0;color:#c7d6ea}
 #oral-status{font-size:10px;line-height:1.5;color:#c6b58e;background:#342f244d;border:1px solid #68583b66;border-radius:5px;padding:3px 6px;font-variant-numeric:tabular-nums}
 #oral-status.is-recording{color:#f0b1bd;background:#361e2a;border-color:#885563}
+#oral-status.is-assessed{color:#b9cce7;background:#233449;border-color:#506c8c}
 .oral-actions{display:flex;gap:8px;flex-wrap:wrap}
-body.at-play #oral-record,body.at-play #oral-replay{min-height:44px;min-width:0;flex:1 1 120px;padding:9px 12px;border-radius:8px;font-size:12px;line-height:1.5;letter-spacing:0}
+body.at-play #oral-record,body.at-play #oral-replay,body.at-play #oral-assess{min-height:44px;min-width:0;flex:1 1 120px;padding:9px 12px;border-radius:8px;font-size:12px;line-height:1.5;letter-spacing:0}
 body.at-play #oral-record{background:#d0b580;color:#152133;box-shadow:none}
 body.at-play #oral-output[data-state="recording"] #oral-record{background:#754454;color:#fff0f4}
 #oral-note{margin:10px 0 0;font-size:11px;line-height:1.65;color:#a3b6cf;font-weight:400}
 #oral-count{margin:7px 0 0;font-size:10px;line-height:1.6;color:#849bbb;font-weight:400}
+#oral-result{margin-top:12px;padding:11px 12px;border:1px solid #3b526d;border-radius:8px;background:#142238;font-variant-numeric:tabular-nums}
+#oral-accuracy{margin:0;color:#d6e3f3;font-size:14px;line-height:1.65;font-weight:650}
+#oral-total{margin:4px 0 0;color:#afc2db;font-size:11px;line-height:1.6}
+.oral-result-note{margin:6px 0 0;color:#8fa4bf;font-size:10px;line-height:1.6;font-weight:400}
 .oral-policy{margin:7px 0 0;font-size:10px;line-height:1.65;color:#8495af;font-weight:400}
 @media(max-width:360px){body.at-play #oral-output{margin-top:14px;padding-top:13px}.oral-heading{gap:5px}#oral-status{font-size:9px}}
