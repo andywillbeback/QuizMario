@@ -222,7 +222,11 @@
     var created = normalizeIso(input.created_at || nowIso || new Date().toISOString());
     var payload = {};
     if (head) payload.headword = head;
-    if (input.track) payload.track = String(input.track);
+    var item = input.item_id || input.key || input.cardKey || "";
+    var cardTrack = /^(?:(zhongkao|gaokao|ielts|ket|pet)\|)?[0-9]+::.+/.exec(String(item));
+    var track = cardTrack ? (cardTrack[1] || "core") : input.track;
+    if (track) payload.track = String(track);
+    if (input.track && track !== input.track) payload.selected_track = String(input.track);
     var gloss = input.gloss_zh != null ? String(input.gloss_zh).trim() : "";
     if (gloss) payload.gloss_zh = gloss;
     if (type === TYPES.DUE) payload.due_at = normalizeIso(input.due_at) || dueAtIso(input.due_ms != null ? input.due_ms : input.dueAt) || created;
@@ -249,10 +253,9 @@
       ev.canonical_learner_id = input.canonical_learner_id || learner;
       ev.source_user_id = input.source_user_id || input.user_id || learner;
     }
-    var item = input.item_id || input.key || input.cardKey || "";
     if (item) ev.item_id = String(item);
     if (head) ev.headword = head;
-    var cefr = input.cefr_level || cefrForTrack(input.track);
+    var cefr = input.cefr_level || cefrForTrack(payload.track);
     if (cefr) ev.cefr_level = cefr;
 
     var lemma = headwordOf(input.lemma || head);
