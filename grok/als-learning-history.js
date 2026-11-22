@@ -22,6 +22,7 @@
   details.append(title, mode, status, list, previous, next);
   home.append(details);
   var active = '', generation = 0, page = 0;
+  var tracks = {zhongkao:'中考', gaokao:'高考', ielts:'雅思'};
   var stages = {Recognize:'辨认', Repair:'改错', Rebuild:'自主重建', Vary:'变换情境', Transfer:'段落迁移'};
 
   var authOwner = '';
@@ -84,7 +85,7 @@
         if (row.learner_id !== who || row.user_id !== who || !row.payload) return;
         var p = row.payload;
         var result = p.status==='verified' ? (p.passed?'通过':'未通过') : (p.status==='skipped'?'跳过':'待复核');
-        var text = [new Date(row.created_at).toLocaleString(), row.headword, stages[p.stage], result];
+        var text = [new Date(row.created_at).toLocaleString(), tracks[p.track], row.headword, stages[p.stage], result];
         if (p.revision>0) text.push('教师复核');
         var li = document.createElement('li');
         li.textContent = text.filter(Boolean).join(' · ');
