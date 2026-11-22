@@ -833,6 +833,7 @@
   const voCache = {};
   /** @type {HTMLAudioElement[]} */
   let voPlaying = [];
+  let voGeneration = 0;
 
   const VOICE_PROFILES = {
     "First blood": { rate: 1.14, pitch: 1.1, volume: 1 },
@@ -987,8 +988,11 @@
   }
 
   function stopCustomVo() {
+    voGeneration += 1;
     voPlaying.forEach((a) => {
       try {
+        a.onended = null;
+        a.onerror = null;
         a.pause();
         a.currentTime = 0;
       } catch (_) {}
@@ -1033,10 +1037,12 @@
     }
     if (!clips.length) return false;
     stopCustomVo();
+    const generation = voGeneration;
     cancelSpeech();
     let i = 0;
     let steps = 0;
     const playNext = () => {
+      if (generation !== voGeneration) return;
       // onerror and a rejected play() can both re-enter; cap so a broken clip
       // cannot recurse on the main thread.
       if (i >= clips.length || steps++ > clips.length) {
@@ -1818,7 +1824,7 @@
   }
 
   /**
-   * During the card: meaning/challenge show 读单词 and 读例句 and may auto-speak the word.
+   * English prompts show 读单词 and 读例句 and automatically read only the word.
    * Spelling and other ZH→EN modes hide both buttons until the answer is on screen,
    * so 读例句 cannot leak the headword. The hint on screen stays blanked.
    */
@@ -1957,10 +1963,12 @@
   function closeRelatedPeek() {
     const peek = relatedPeekEl();
     if (!peek) return;
+    const wasOpen = !peek.hidden;
     peek.hidden = true;
     peek.removeAttribute("data-copy");
     const card = peek.querySelector(".related-peek-card");
     if (card) card.classList.remove("is-here");
+    if (wasOpen) cancelSpeech();
   }
 
   function closeRelatedPeekOnKey(e) {
@@ -2027,6 +2035,7 @@
       if (close && typeof close.focus === "function") {
         try { close.focus(); } catch (_) {}
       }
+      speakTeaching(surface, { example: false, gesture: true });
     } catch (_) {
       closeRelatedPeek();
     }
@@ -2087,13 +2096,15 @@
     if (closeBtn) closeBtn.addEventListener("click", () => closeRelatedPeek());
   }
 
-  /** English prompt only. Stays behind the streak-voice toggle and never plays a kill clip. */
-  function maybeSpeakPrompt() {
+  /** Read the displayed headword on each appearance, independently of streak audio. */
+  function maybeSpeakPrompt(revealed) {
     const api = window.QuizMarioCloze;
     if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") return;
-    const plan = api.cardSpeechPlan(currentCard, sessionDirection);
-    if (!plan.autoSpeakWord || sessionDirection !== "meaning" || !currentCard.word) return;
-    if (!voiceOn) return;
+    const plan = api.cardSpeechPlan(currentCard, sessionDirection, { revealed: !!revealed });
+    if (!plan.autoSpeakWord || !currentCard.word) return;
+    // A newly displayed answer is a new read, even if it is the same word.
+    // Card entry has already stopped the previous request in doEnter().
+    if (revealed) stopTeachingSpeech();
     speakTeaching(currentCard.word, { example: false });
   }
 
@@ -2185,6 +2196,7 @@
     if (queueEl) queueEl.textContent = String(queue.length + requeueSoon.length);
     updateProgress();
     noteNotebookFeedback();
+    maybeSpeakPrompt(true);
   }
 
   function grade(correct, easy, chosen, outcome) {
@@ -2369,6 +2381,7 @@
     $("play-queue").textContent = String(queue.length + requeueSoon.length);
     updateProgress();
     noteNotebookFeedback();
+    maybeSpeakPrompt(true);
   }
 
   function nextAfterFeedback() {
@@ -3820,6 +3833,8 @@
   function speakTeaching(text, opts) {
     const spoken = String(text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
     if (!spoken) return false;
+    // The displayed word takes priority over a recorded streak announcement.
+    stopCustomVo();
     if (/^(loading|requesting|recording|stopping)$/.test(oralPhase)) {
       cancelOralOutput({ keepVisible: true, message: "已停止录音。听完示范后，再录自己的朗读。" });
     }

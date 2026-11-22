@@ -81,8 +81,8 @@
   }
 
   /**
-   * During-card speech. Meaning (and challenge, which is meaning) may auto-speak
-   * the English prompt and offers 读单词 plus the full example.
+   * Automatically read only the displayed headword: English prompts in meaning
+   * (including challenge) and polysemy, or an answer after it has been revealed.
    * Spelling and other ZH→EN modes hide 读单词 and 读例句 until the answer is
    * on screen (`opts.revealed`), so a tap cannot speak the headword early.
    * After reveal, 读例句 is the real sentence with the headword filled in.
@@ -90,17 +90,17 @@
   function cardSpeechPlan(card, direction, opts) {
     card = card || {};
     opts = opts || {};
-    var meaning = direction === "meaning";
+    var englishPrompt = direction === "meaning" || direction === "polysemy";
     var revealed = !!opts.revealed;
     var word = card.word || "";
     var example = card.example_en || "";
     var plan = {
-      autoSpeakWord: !!(meaning && word),
-      showWord: !!((meaning || revealed) && word),
+      autoSpeakWord: !!((englishPrompt || revealed) && word),
+      showWord: !!((englishPrompt || revealed) && word),
       exampleSay: "",
     };
     if (!example || isPlaceholderExample(example)) return plan;
-    if (!meaning && !revealed) return plan;
+    if (!englishPrompt && !revealed) return plan;
     plan.exampleSay = spokenExample(example, word);
     return plan;
   }
