@@ -1824,7 +1824,7 @@
   }
 
   /**
-   * English prompts show 读单词 and 读例句 and automatically read only the word.
+   * Meaning/challenge prompts show manual 读单词 and 读例句 controls.
    * Spelling and other ZH→EN modes hide both buttons until the answer is on screen,
    * so 读例句 cannot leak the headword. The hint on screen stays blanked.
    */

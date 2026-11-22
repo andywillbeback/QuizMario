@@ -83,6 +83,7 @@
   /**
    * Automatically read only the displayed headword: English prompts in meaning
    * (including challenge) and polysemy, or an answer after it has been revealed.
+   * Polysemy keeps its compact prompt without extra manual playback controls.
    * Spelling and other ZH→EN modes hide 读单词 and 读例句 until the answer is
    * on screen (`opts.revealed`), so a tap cannot speak the headword early.
    * After reveal, 读例句 is the real sentence with the headword filled in.
@@ -90,17 +91,18 @@
   function cardSpeechPlan(card, direction, opts) {
     card = card || {};
     opts = opts || {};
-    var englishPrompt = direction === "meaning" || direction === "polysemy";
+    var meaning = direction === "meaning";
+    var englishPrompt = meaning || direction === "polysemy";
     var revealed = !!opts.revealed;
     var word = card.word || "";
     var example = card.example_en || "";
     var plan = {
       autoSpeakWord: !!((englishPrompt || revealed) && word),
-      showWord: !!((englishPrompt || revealed) && word),
+      showWord: !!((meaning || revealed) && word),
       exampleSay: "",
     };
     if (!example || isPlaceholderExample(example)) return plan;
-    if (!englishPrompt && !revealed) return plan;
+    if (!meaning && !revealed) return plan;
     plan.exampleSay = spokenExample(example, word);
     return plan;
   }

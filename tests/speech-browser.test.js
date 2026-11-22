@@ -846,7 +846,7 @@ async function main() {
     await evaluate(`document.getElementById("btn-spelling").click()`);
     const polysemyCard = await waitFor(async () => {
       const s = await snap();
-      return s && s.active && s.prompt && s.label.includes("一词多义") && s.buttons.some((b) => b.kind === "word" && b.say === s.prompt) ? s : null;
+      return s && s.active && /^[A-Za-z]/.test(s.prompt) && s.label.includes("一词多义") ? s : null;
     }, 20000, "visible polysemy word");
     await expectAutomaticWord(polysemyFrom, polysemyCard.prompt, "polysemy prompt with streak voice off");
     const polysemyRevealFrom = (await snap()).spoken.length;

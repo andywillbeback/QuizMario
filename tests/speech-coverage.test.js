@@ -36,7 +36,8 @@ const safeExample = {
   assert.strictEqual(challenge.autoSpeakWord, true, "challenge uses the meaning prompt");
   const polysemy = cloze.cardSpeechPlan(real, "polysemy");
   assert.strictEqual(polysemy.autoSpeakWord, true, "polysemy already shows the English headword");
-  assert.strictEqual(polysemy.showWord, true);
+  assert.strictEqual(polysemy.showWord, false, "polysemy retains its compact prompt controls");
+  assert.strictEqual(polysemy.exampleSay, "", "automatic reading does not add an example control");
 }
 
 {
