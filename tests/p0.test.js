@@ -287,7 +287,7 @@ function clean(now) {
   const root = path.join(__dirname, "..");
   const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
   const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
-  assert.ok(index.includes('src="cloze.js"'), "the page loads the word-boundary blanker");
+  assert.ok(/src="cloze\.js(?:\?[^\"]*)?"/.test(index), "the page loads the word-boundary blanker, including a cache version");
   assert.ok(game.includes("QuizMarioCloze") && game.includes("blankExample"));
   assert.ok(!/new RegExp\(\s*word\.replace/.test(game), "softenHint must not substring-replace");
   assert.ok(!game.includes("setTimeout(nextCard, 2600)"), "wrong-answer feedback must not auto-advance");

@@ -34,6 +34,10 @@ const safeExample = {
   assert.strictEqual(meaning.exampleSay, real.example_en);
   const challenge = cloze.cardSpeechPlan(real, "meaning");
   assert.strictEqual(challenge.autoSpeakWord, true, "challenge uses the meaning prompt");
+  const polysemy = cloze.cardSpeechPlan(real, "polysemy");
+  assert.strictEqual(polysemy.autoSpeakWord, true, "polysemy already shows the English headword");
+  assert.strictEqual(polysemy.showWord, false, "polysemy retains its compact prompt controls");
+  assert.strictEqual(polysemy.exampleSay, "", "automatic reading does not add an example control");
 }
 
 {
@@ -59,7 +63,7 @@ const safeExample = {
     assert.strictEqual(plan.exampleSay, "", direction + " must not offer 读例句 before reveal");
     const revealed = cloze.cardSpeechPlan(real, direction, { revealed: true });
     assert.strictEqual(revealed.showWord, true, direction + " offers 读单词 after the answer is on screen");
-    assert.strictEqual(revealed.autoSpeakWord, false, direction + " still does not auto-speak");
+    assert.strictEqual(revealed.autoSpeakWord, true, direction + " reads the word once the answer is revealed");
     assert.strictEqual(revealed.exampleSay, real.example_en, direction + " 读例句 speaks the headword after reveal");
     assert.ok(!/\bblank\b/i.test(revealed.exampleSay), revealed.exampleSay);
     assert.ok(!/_{3,}/.test(revealed.exampleSay), revealed.exampleSay);
@@ -89,8 +93,8 @@ const safeExample = {
   assert.ok(enter.includes("maybeSpeakPrompt()"), "auto-speak runs on card enter");
   assert.ok(enter.indexOf("stopTeachingSpeech()") < enter.indexOf("maybeSpeakPrompt()"), "the previous word is stopped before the next read");
   const auto = game.slice(game.indexOf("function maybeSpeakPrompt"), game.indexOf("function bumpPractice"));
-  assert.ok(auto.includes('sessionDirection !== "meaning"'), "ZH→EN / spelling do not auto-speak");
-  assert.ok(auto.includes("if (!voiceOn) return"), "auto-speak stays behind the streak voice toggle");
+  assert.ok(auto.includes("revealed: !!revealed"), "hidden answers stay behind the speech plan's reveal gate");
+  assert.ok(!auto.includes("voiceOn"), "the streak switch does not mute teaching words");
   assert.ok(auto.includes("speakTeaching(currentCard.word"), "auto-speak uses the teaching voice");
   assert.ok(!auto.includes("speakLine("), "a headword must not play a kill-streak clip");
   const speak = game.slice(game.indexOf("function speakLine"), game.indexOf("function playSting"));
@@ -113,10 +117,14 @@ const safeExample = {
   assert.ok(!game.includes("speechBlank") && !clozeSourceIncludesBlank(), "nothing still asks TTS to say blank");
   const spellGrade = game.slice(game.indexOf("function gradeSpelling"), game.indexOf("function grade("));
   assert.ok(spellGrade.includes("renderCardSpeech(true)"), "spelling reveal keeps 读单词 on the card");
+  assert.ok(spellGrade.indexOf("maybeSpeakPrompt(true)") > spellGrade.indexOf("fb.innerHTML"), "spelling reads only after rendering the answer");
   assert.ok(!spellGrade.includes("setCardSpeakVisible(false)"));
   const gradeFn = game.slice(game.indexOf("function grade("), game.indexOf("function confirmCorrect"));
   assert.ok(gradeFn.includes("renderCardSpeech(true)"), "meaning reveal keeps 读单词 beside the headword");
   assert.ok(gradeFn.includes("speakButtons(currentCard)"), "feedback still has 读单词 and 读例句");
+  assert.ok(gradeFn.indexOf("maybeSpeakPrompt(true)") > gradeFn.indexOf("announceKillStreak()"), "the revealed word has the final audio priority");
+  const peek = game.slice(game.indexOf("function openRelatedPeek"), game.indexOf("function copyRelatedLemma"));
+  assert.ok(peek.includes("speakTeaching(surface, { example: false, gesture: true })"), "opening a word detail reads only its headword on every tap");
   const buttons = game.slice(game.indexOf("function speakButtons"), game.indexOf("function initV6Ui"));
   assert.ok(buttons.includes("isPlaceholderExample"), "feedback 读例句 skips placeholders");
   assert.ok(buttons.includes("🔊 读单词") && buttons.includes("🔊 读例句") && buttons.includes("slowSpeakButton"));

@@ -96,9 +96,13 @@ for (const card of cards) {
   assert.strictEqual(plan.exampleSay, card.example_en, card.word);
   assert.ok(!/\bblank\b/i.test(plan.exampleSay), card.word);
   assert.ok(!/_{3,}/.test(plan.exampleSay), card.word);
+  const hidden = cloze.cardSpeechPlan(card, "spelling");
+  assert.strictEqual(hidden.autoSpeakWord, false, card.word + " stays silent before reveal");
+  assert.strictEqual(hidden.showWord, false, card.word + " hides word playback before reveal");
+  assert.strictEqual(hidden.exampleSay, "", card.word + " hides example playback before reveal");
   const revealed = cloze.cardSpeechPlan(card, "spelling", { revealed: true });
   assert.strictEqual(revealed.exampleSay, card.example_en, card.word);
-  assert.strictEqual(revealed.autoSpeakWord, false, card.word);
+  assert.strictEqual(revealed.autoSpeakWord, true, card.word + " reads the word after reveal");
 }
 assert.strictEqual(relatedCards, 517);
 for (const card of gk.sets.slice(0, 86).flat()) {

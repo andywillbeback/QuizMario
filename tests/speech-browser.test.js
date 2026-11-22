@@ -85,12 +85,13 @@ const SESSION = {
   },
 };
 
-function earlyScript(progress = null) {
+function earlyScript(progress = null, deterministicSpeech = false) {
   return `(function () {
     try { localStorage.setItem("quizmario-auth", ${JSON.stringify(JSON.stringify(SESSION))}); } catch (e) {}
     try { sessionStorage.setItem("qm-phase", "signed"); } catch (e) {}
     window.__QM_SPOKEN = [];
     window.__QM_AUDIO = [];
+    window.__QM_SPEECH_CANCELS = 0;
     function noteUtterance(u) {
       window.__QM_SPOKEN.push({
         text: String(u && u.text || ""),
@@ -101,8 +102,19 @@ function earlyScript(progress = null) {
     }
     var OrigAudio = window.Audio;
     function RecAudio(src) {
-      try { window.__QM_AUDIO.push(String(src || "")); } catch (e) {}
-      return new OrigAudio(src);
+      var audio = new OrigAudio(src);
+      if (${JSON.stringify(deterministicSpeech)}) {
+        // A toggle preview may cache a clip before the scored answer. Track
+        // actual play requests so its later replay remains observable.
+        var play = audio.play.bind(audio);
+        audio.play = function () {
+          window.__QM_AUDIO.push(String(src || ""));
+          return play();
+        };
+      } else {
+        try { window.__QM_AUDIO.push(String(src || "")); } catch (e) {}
+      }
+      return audio;
     }
     RecAudio.prototype = OrigAudio.prototype;
     window.Audio = RecAudio;
@@ -117,6 +129,7 @@ function earlyScript(progress = null) {
       this.onend = null;
       this.onerror = null;
     }
+    var speechGeneration = 0;
     var synth = {
       speaking: false,
       pending: false,
@@ -132,23 +145,38 @@ function earlyScript(progress = null) {
       },
       speak: function (u) {
         noteUtterance(u);
+        var generation = ++speechGeneration;
         synth.speaking = true;
         setTimeout(function () {
+          if (generation !== speechGeneration) return;
           try { if (u.onstart) u.onstart(); } catch (e) {}
+          if (window.__QM_HOLD_SPEECH) return;
           setTimeout(function () {
+            if (generation !== speechGeneration) return;
             synth.speaking = false;
             try { if (u.onend) u.onend(); } catch (e) {}
           }, 40);
         }, 5);
       },
-      cancel: function () { synth.speaking = false; synth.pending = false; },
+      cancel: function () {
+        speechGeneration += 1;
+        window.__QM_SPEECH_CANCELS += 1;
+        synth.speaking = false;
+        synth.pending = false;
+      },
       resume: function () { synth.paused = false; },
       pause: function () { synth.paused = true; },
       addEventListener: function () {},
       removeEventListener: function () {},
     };
     var live = window.speechSynthesis;
-    if (live && typeof live.speak === "function") {
+    if (${JSON.stringify(deterministicSpeech)}) {
+      // Only this speech regression opts in. Shared login/IELTS harness users
+      // keep their existing native-speech behavior. A headless engine's
+      // synthesis errors/retries must not masquerade as duplicate app reads.
+      Object.defineProperty(window, "speechSynthesis", { configurable: true, value: synth });
+      window.SpeechSynthesisUtterance = Utterance;
+    } else if (live && typeof live.speak === "function") {
       var origSpeak = live.speak.bind(live);
       live.speak = function (u) {
         noteUtterance(u);
@@ -358,7 +386,7 @@ async function main() {
       deviceScaleFactor: 2,
       mobile: true,
     }, sessionId);
-    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: earlyScript() }, sessionId);
+    await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: earlyScript(null, true) }, sessionId);
 
     async function evaluate(expression) {
       const res = await cdp.send("Runtime.evaluate", {
@@ -434,6 +462,7 @@ async function main() {
       return s && s.home ? s : null;
     }, 20000, "practice home");
 
+    const firstSpokenFrom = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-continue").click()`);
 
     const samples = [];
@@ -463,6 +492,16 @@ async function main() {
         const s = await snap();
         throw new Error(err.message + " want=" + JSON.stringify(text) + " spoken=" + JSON.stringify(s && s.spoken) + " buttons=" + JSON.stringify(s && s.buttons) + " label=" + (s && s.label));
       }
+    }
+
+    async function expectAutomaticWord(from, word, phase) {
+      // This runs before any manual read button is clicked, so a replay tap
+      // cannot conceal a missing automatic read. No example/Chinese/UI text
+      // may be queued alongside the target word.
+      await waitUtterance(from, word, phase + " automatic word");
+      await sleep(80);
+      const fresh = (await snap()).spoken.slice(from).map((row) => row.text);
+      assert.deepStrictEqual(fresh, [word], phase + " automatically reads only the target word once");
     }
 
     function expectSentence(s, phase, wantExample) {
@@ -562,8 +601,17 @@ async function main() {
 
     const meaning1 = await waitCard("英文");
     assert.strictEqual(meaning1.vw, 390);
+    await expectAutomaticWord(firstSpokenFrom, meaning1.word, "meaning-1");
     await readAloud(meaning1, "meaning-1", { word: true, example: true });
     await shot("speech-meaning-1");
+    const streakDisabled = await evaluate(`(() => {
+      const toggle = document.getElementById("btn-voice-toggle");
+      toggle.click();
+      return { text: toggle.textContent, voiceOn: __QM.getSave().voiceOn };
+    })()`);
+    assert.strictEqual(streakDisabled.voiceOn, false, "disable only the streak voice");
+    assert.ok(streakDisabled.text.includes("Off"), "streak voice shows Off");
+    const meaning1RevealFrom = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-unknown").click()`);
     const meaning1Reveal = await waitFor(async () => {
       const s = await snap();
@@ -571,21 +619,74 @@ async function main() {
       if (!s.buttons.some((b) => b.kind === "word" && !b.slow && b.say === meaning1.word)) return null;
       return s;
     }, 8000, "meaning reveal");
+    await expectAutomaticWord(meaning1RevealFrom, meaning1.word, "meaning-1 feedback with streak voice off");
     await readAloud(meaning1Reveal, "meaning-1-reveal", { word: true, example: true });
 
+    // Route a test-only chip through the real delegated click handler. The
+    // dealt card is random; use an existing bank entry with an example so the
+    // popup test does not depend on that card having related words. No learner
+    // records, queue state, or application debug hooks are changed.
+    const peekWord = await evaluate(`(() => {
+      const bank = window.VOCAB_EXAM_TRACKS.find(t => t.id === __QM.track);
+      const entry = bank.sets.flat().find(row => row.word === "able" && row.example_en);
+      if (!entry) throw new Error("related popup fixture needs the real able entry");
+      const chip = document.createElement("button");
+      chip.id = "speech-test-related-chip";
+      chip.className = "related-chip";
+      chip.setAttribute("data-related", entry.word);
+      chip.textContent = entry.word;
+      document.getElementById("screen-play").appendChild(chip);
+      window.__QM_HOLD_SPEECH = true;
+      return entry.word;
+    })()`);
+    for (let opened = 1; opened <= 2; opened++) {
+      const peekFrom = (await snap()).spoken.length;
+      await evaluate(`document.getElementById("speech-test-related-chip").click()`);
+      const peek = await evaluate(`(() => {
+        const box = document.getElementById("related-peek");
+        return { visible: !box.hidden,
+          word: document.getElementById("related-peek-word").textContent,
+          example: document.getElementById("related-peek-example").textContent };
+      })()`);
+      assert.strictEqual(peek.visible, true, "related popup opened " + opened);
+      assert.strictEqual(peek.word, peekWord);
+      assert.ok(peek.example.includes(" "), "popup contains an example which must stay silent");
+      await expectAutomaticWord(peekFrom, peekWord, "related popup open " + opened);
+      const close = await evaluate(`(() => {
+        const before = window.__QM_SPEECH_CANCELS;
+        const speakingBefore = speechSynthesis.speaking;
+        document.getElementById("related-peek-close").click();
+        return { hidden: document.getElementById("related-peek").hidden,
+          speakingBefore, speaking: speechSynthesis.speaking,
+          cancelled: window.__QM_SPEECH_CANCELS > before };
+      })()`);
+      assert.strictEqual(close.speakingBefore, true, "popup word is still speaking before close");
+      assert.strictEqual(close.hidden, true, "related popup closed " + opened);
+      assert.strictEqual(close.cancelled, true, "closing the popup cancels its word");
+      assert.strictEqual(close.speaking, false, "closed popup is silent");
+    }
+    await evaluate(`(() => {
+      window.__QM_HOLD_SPEECH = false;
+      document.getElementById("speech-test-related-chip").remove();
+    })()`);
+
+    const meaning2From = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-feedback-continue").click()`);
     const meaning2 = await waitFor(async () => {
       const s = await waitCard("英文").catch(() => null);
       if (!s || s.word === meaning1.word) return null;
       return s;
     }, 15000, "second meaning card");
+    await expectAutomaticWord(meaning2From, meaning2.word, "meaning-2 with streak voice off");
     await readAloud(meaning2, "meaning-2", { word: true, example: true });
     await shot("speech-meaning-2");
+    const meaning2RevealFrom = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-unknown").click()`);
     await waitFor(async () => {
       const s = await snap();
       return s && s.cont ? s : null;
     }, 8000, "meaning 2 reveal");
+    await expectAutomaticWord(meaning2RevealFrom, meaning2.word, "meaning-2 feedback with streak voice off");
     await evaluate(`document.getElementById("btn-feedback-continue").click()`);
 
     await evaluate(`document.getElementById("btn-quit").click()`);
@@ -611,6 +712,7 @@ async function main() {
         return s;
       }, 15000, "spelling card " + n);
       await readAloud(card, "spelling-" + n + "-before", { word: false, example: false, spokenFrom: spellingSpokenFrom });
+      const revealedFrom = (await snap()).spoken.length;
       await evaluate(`document.getElementById("btn-unknown").click()`);
       const revealed = await waitFor(async () => {
         const s = await snap();
@@ -619,6 +721,7 @@ async function main() {
         if (!s.buttons.some((b) => b.kind === "example" && !b.slow && hasToken(b.say, card.word))) return null;
         return s;
       }, 8000, "spelling reveal " + n);
+      await expectAutomaticWord(revealedFrom, card.word, "spelling-" + n + " feedback with streak voice off");
       await readAloud(revealed, "spelling-" + n + "-reveal", { word: true, example: true });
       if (n === 1) await shot("speech-spelling-reveal");
       spelling.push(card);
@@ -650,6 +753,7 @@ async function main() {
         return s;
       }, 15000, "form card " + n);
       await readAloud(card, "form-" + n + "-before", { word: false, example: false, spokenFrom: formSpokenFrom });
+      const revealedFrom = (await snap()).spoken.length;
       await evaluate(`document.getElementById("btn-unknown").click()`);
       const revealed = await waitFor(async () => {
         const s = await snap();
@@ -657,6 +761,7 @@ async function main() {
         if (!s.buttons.some((b) => b.kind === "word" && !b.slow && b.say === card.word)) return null;
         return s;
       }, 8000, "form reveal " + n);
+      await expectAutomaticWord(revealedFrom, card.word, "form-" + n + " feedback with streak voice off");
       await readAloud(revealed, "form-" + n + "-reveal", { word: true, example: true });
       if (n === 1) await shot("speech-form-reveal");
       formSeen.push(card);
@@ -674,6 +779,8 @@ async function main() {
       }
       return s;
     }, 10000, "home before streak");
+    await evaluate(`document.getElementById("btn-voice-toggle").click()`);
+    assert.strictEqual(await evaluate(`__QM.getSave().voiceOn`), true, "restore streak clips for their existing check");
     const audioBefore = (await snap()).audio.length;
     const spokenBefore = (await snap()).spoken.length;
     await evaluate(`document.getElementById("btn-continue").click()`);
@@ -714,6 +821,38 @@ async function main() {
     assert.ok(freshAudio.some((src) => src.indexOf("01_first_blood.m4a") !== -1), freshAudio.join(","));
     assert.ok(!freshSpeech.some((text) => text === "First blood" || text === "Shut down"), freshSpeech.join(" | "));
     assert.ok(freshSpeech.indexOf(streakCard.word) !== -1, "headword still spoken on the streak card");
+
+    await evaluate(`(() => {
+      document.getElementById("btn-voice-toggle").click();
+      document.getElementById("btn-quit").click();
+    })()`);
+    await waitFor(async () => {
+      const s = await snap();
+      if (!s || !s.home) return null;
+      if (s.mustGate) {
+        await evaluate(`document.getElementById("btn-must-later").click()`);
+        return null;
+      }
+      return s;
+    }, 10000, "home before polysemy");
+    await evaluate(`(() => {
+      const select = document.getElementById("track-select");
+      select.value = "gaokao";
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    })()`);
+    await waitFor(async () => evaluate(`__QM.track === "gaokao" && document.getElementById("btn-spelling").textContent === "一词多义"`), 20000, "gaokao polysemy entry");
+    assert.strictEqual(await evaluate(`__QM.getSave().voiceOn`), false, "polysemy also keeps streak voice off");
+    const polysemyFrom = (await snap()).spoken.length;
+    await evaluate(`document.getElementById("btn-spelling").click()`);
+    const polysemyCard = await waitFor(async () => {
+      const s = await snap();
+      return s && s.active && /^[A-Za-z]/.test(s.prompt) && s.label.includes("一词多义") ? s : null;
+    }, 20000, "visible polysemy word");
+    await expectAutomaticWord(polysemyFrom, polysemyCard.prompt, "polysemy prompt with streak voice off");
+    const polysemyRevealFrom = (await snap()).spoken.length;
+    await evaluate(`document.getElementById("btn-unknown").click()`);
+    await waitFor(async () => (await snap()).cont, 8000, "polysemy feedback");
+    await expectAutomaticWord(polysemyRevealFrom, polysemyCard.prompt, "polysemy feedback with streak voice off");
 
     const outDir = path.join(require("os").tmpdir(), "quizmario-test-artifacts", path.basename(__filename));
     fs.mkdirSync(outDir, { recursive: true });
