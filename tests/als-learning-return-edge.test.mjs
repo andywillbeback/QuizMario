@@ -10,11 +10,11 @@ const owner=crypto.randomUUID(),anchor=crypto.randomUUID(),id=crypto.randomUUID(
 const item={learner_id:owner,anchor,event_id:id,attempt_id:id,created_at:new Date().toISOString(),submitted_at:new Date().toISOString(),
   stage:'Repair',track:'gaokao',status:'needs_review',passed:null,revision:0};
 const transport=async (url,opts)=>{
+  if(url.endsWith('rpc/als_training_anchors_v1') && JSON.parse(opts.body).anchor_ids.includes(anchor))return Response.json([{event_id:anchor,learner_id:anchorOwner,user_id:anchorOwner,source:'quizmario',event_type:'vocab.answer_wrong',headword:'test',payload:{}}]);
   if(opts.method==='POST') {
     for(const r of JSON.parse(opts.body)) if(!inserted.some(e=>e.event_id===r.event_id))inserted.push(r);
     return Response.json({});
   }
-  if(new URL(url).searchParams.get('event_id').includes(anchor))return Response.json([{event_id:anchor,learner_id:anchorOwner,user_id:anchorOwner,source:'quizmario',event_type:'vocab.answer_wrong',headword:'test',payload:{}}]);
   return Response.json(inserted);
 };
 new Function('Deno','fetch',stripTypeScriptTypes(text))(deno,transport);
