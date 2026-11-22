@@ -6,6 +6,12 @@
   var details = document.createElement('details');
   var title = document.createElement('summary');
   title.textContent = 'ALS 练习记录';
+  var mode = document.createElement('select');
+  mode.setAttribute('aria-label', 'ALS 记录类型');
+  [['results','五阶段成绩'],['activity','课堂活动与我的作答']].forEach(function(pair) {
+    var option=document.createElement('option');
+    option.value=pair[0]; option.textContent=pair[1]; mode.append(option);
+  });
   var status = document.createElement('p');
   var list = document.createElement('ul');
   var previous = document.createElement('button');
@@ -13,7 +19,7 @@
   previous.type = next.type = 'button';
   previous.textContent = '上一页';
   next.textContent = '下一页';
-  details.append(title, status, list, previous, next);
+  details.append(title, mode, status, list, previous, next);
   home.append(details);
   var active = '', generation = 0, page = 0;
   var stages = {Recognize:'辨认', Repair:'改错', Rebuild:'自主重建', Vary:'变换情境', Transfer:'段落迁移'};
@@ -42,16 +48,39 @@
     try {
       if (!who) {status.textContent = '请先登录聚光账号。'; return;}
       var client = window.QuizMarioCloudClient.client();
-      var response = await client.from('als_training_results').select('learner_id,user_id,created_at,headword,payload')
+      var activity=mode.value==='activity';
+      var query = activity ? client.from('als_student_activity')
+        .select('owner_id,record_id,recorded_at,title,details').eq('owner_id',who).eq('removed',false)
+        .order('recorded_at',{ascending:false}).order('record_id',{ascending:false}) :
+        client.from('als_training_results').select('learner_id,user_id,created_at,headword,payload')
         .eq('source', 'als').eq('event_type', 'als.training_result').eq('learner_id', who).eq('user_id', who)
-        .order('created_at', {ascending:false}).order('event_id', {ascending:false}).range(page*30, page*30+30);
+        .order('created_at', {ascending:false}).order('event_id', {ascending:false});
+      var response=await query.range(page*30,page*30+30);
       if (seq !== generation || owner() !== who) return;
       if (response.error || !Array.isArray(response.data)) throw Error();
       var rows = response.data;
       previous.disabled = page === 0;
       next.disabled = rows.length <= 30;
-      status.textContent = rows.length ? '第 '+(page+1)+' 页' : '此页暂无 ALS 练习记录。';
+      status.textContent = rows.length ? '第 '+(page+1)+' 页' : (activity?'暂无课堂活动。登录这台课堂的 ALS 后，会在这里看到自己的记录。':'此页暂无 ALS 练习记录。');
       rows.slice(0,30).forEach(function(row) {
+        if (activity) {
+          if (row.owner_id!==who) return;
+          var entry=document.createElement('li');
+          var item=document.createElement('details');
+          var heading=document.createElement('summary');
+          heading.textContent=new Date(row.recorded_at).toLocaleString()+' · '+row.title;
+          item.append(heading);
+          Object.entries(row.details||{}).forEach(function(pair) {
+            var line=document.createElement('p');
+            var value=pair[1];
+            if(Array.isArray(value)) value=value.join(' ／ ');
+            if(typeof value==='boolean') value=value?'是':'否';
+            if(typeof value!=='string' && typeof value!=='number') return;
+            line.textContent=pair[0]+'：'+value;
+            item.append(line);
+          });
+          entry.append(item); list.append(entry); return;
+        }
         if (row.learner_id !== who || row.user_id !== who || !row.payload) return;
         var p = row.payload;
         var result = p.status==='verified' ? (p.passed?'通过':'未通过') : (p.status==='skipped'?'跳过':'待复核');
@@ -67,6 +96,7 @@
       previous.disabled = page === 0;
     }
   }
+  mode.addEventListener('change',function(){page=0;read();});
   details.addEventListener('toggle', function () { if(details.open) read(); else reset(); });
   previous.addEventListener('click',function(){if(page>0){page--;read();}});
   next.addEventListener('click',function(){page++;read();});
