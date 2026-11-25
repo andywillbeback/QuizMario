@@ -134,6 +134,7 @@
     var playingVoice = null;
     var cancelCooling = false;
     var voicesSettled = false;
+    var blocked = null;
 
     try {
       var raw = storage && storage.getItem(STORAGE_KEY);
@@ -233,6 +234,7 @@
     }
 
     function stop(opts) {
+      blocked = null;
       release(!opts || opts.cancelSpeech !== false, false);
       if (!destroyed) notify("ready", "");
     }
@@ -337,6 +339,13 @@
           return;
         }
         if (code === "not-allowed") {
+          // A headword asked for by the card, not by a tap, can retry on the
+          // next touch. Example lines stay manual and are never stashed.
+          if (!req.gesture && !req.example) {
+            blocked = { text: req.text, slow: !!req.slow };
+            finish(req, "");
+            return;
+          }
           finish(req, "浏览器需要点按播放，请再点一次发音按钮。");
           return;
         }
@@ -393,6 +402,7 @@
       opts = opts || {};
       text = String(text == null ? "" : text).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
       if (destroyed || !text || !enabled()) return false;
+      blocked = null;
       if (!supported) {
         notify("unavailable", "此浏览器暂不支持发音，仍可继续练习。");
         return false;
@@ -482,6 +492,17 @@
       return true;
     }
 
+    function nudge(expected) {
+      try {
+        if (synth && synth.paused && typeof synth.resume === "function") synth.resume();
+      } catch (_) {}
+      if (!blocked) return false;
+      if (expected && blocked.text !== expected) return false;
+      var pending = blocked;
+      blocked = null;
+      return speak(pending.text, { example: false, slow: !!pending.slow, gesture: true });
+    }
+
     function replay(opts) {
       if (!last) return false;
       var next = opts || {};
@@ -554,6 +575,7 @@
 
     return {
       speak: speak,
+      nudge: nudge,
       replay: replay,
       stop: stop,
       setAccent: setAccent,

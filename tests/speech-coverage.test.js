@@ -133,7 +133,9 @@ const safeExample = {
   assert.ok(game.includes("playPartClearCue") && game.includes("if (!voiceOn) return"));
   assert.ok(game.includes('speakLine("Shut down")') && game.includes("announceKillStreak"));
   assert.ok(game.includes("audio/01_first_blood.m4a") && game.includes("audio/12_shut_down.m4a"), "streak clips stay on the recorded files");
-  assert.ok(index.includes('src="pronunciation.js"') && index.indexOf('src="pronunciation.js"') < index.indexOf('src="game.js'));
+  const pronunciationAt = index.search(/src="pronunciation\.js(?:\?[^"]*)?"/);
+  const gameAt = index.search(/src="game\.js(?:\?[^"]*)?"/);
+  assert.ok(pronunciationAt >= 0 && gameAt > pronunciationAt, "teaching speech loads before the practice page");
   assert.ok(index.includes('id="btn-accent"') && index.includes("英音"), "British default with an American switch");
   // Inspect visible copy, not identifiers such as ENTRY_WATCHDOG.
   const visibleCopy = index.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
