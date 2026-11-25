@@ -113,27 +113,28 @@ async function main() {
       (window.__QM_ENTRY_PHASE === 'content' || window.__QM_ENTRY_PHASE === 'ready')`,
       'auth and own progress read without the full banks');
     await wait(`document.documentElement.classList.contains('session-ok') &&
-      document.getElementById('screen-gate') && document.getElementById('screen-gate').classList.contains('active')`,
-      'exam picker while set files are still withheld', 20000);
+      document.getElementById('screen-home') && document.getElementById('screen-home').classList.contains('active') &&
+      window.__QM && window.__QM.track === 'gaokao'`,
+      'saved 高考 home while set files are still withheld', 20000);
     assert.equal(seen.includes('/grok/words.js'), false, 'startup does not request words.js');
     assert.equal(seen.includes('/grok/exam-tracks.js'), false, 'startup does not request exam-tracks.js');
     const prefetchAt = Date.now();
     while (!held.some((item) => item.pathname.endsWith('.json')) && Date.now() - prefetchAt < 5000) {
       await new Promise((resolve) => setTimeout(resolve, 40));
     }
-    assert.ok(held.some(item => item.pathname.endsWith('.json')), 'set files can still be in flight after the picker is visible');
+    assert.ok(held.some(item => item.pathname.endsWith('.json')), 'set files can still be in flight after the saved course home is visible');
     const before = await evaluate(`(() => {
       const hold = document.getElementById('auth-hold');
+      const home = document.getElementById('screen-home');
       const gate = document.getElementById('screen-gate');
-      const zk = document.getElementById('btn-gate-zhongkao');
-      const gs = getComputedStyle(gate);
-      const zs = getComputedStyle(zk);
+      const hs = getComputedStyle(home);
       return {
         path: location.pathname, phase: window.__QM_ENTRY_PHASE,
         sessionVisible: document.documentElement.classList.contains('session-ok'),
         holdText: hold.textContent,
-        gateVisible: gs.display !== 'none' && gs.visibility !== 'hidden' && zs.display !== 'none',
-        zk: zk.textContent.trim(),
+        homeVisible: home.classList.contains('active') && hs.display !== 'none' && hs.visibility !== 'hidden',
+        gateActive: !!(gate && gate.classList.contains('active')),
+        track: window.__QM && window.__QM.track,
         gameExists: !!window.__QM,
         text: document.body.innerText,
         requests: window.__CONTENT_PROGRESS_REQUESTS,
@@ -141,9 +142,10 @@ async function main() {
     })()`);
     assert.equal(before.path, '/grok/index.html');
     assert.equal(before.phase, 'ready');
-    assert.equal(before.sessionVisible, true, 'the exam picker opens before a full bank download');
-    assert.equal(before.gateVisible, true);
-    assert.equal(before.zk, '中考');
+    assert.equal(before.sessionVisible, true, 'the saved course home opens before a full bank download');
+    assert.equal(before.homeVisible, true);
+    assert.equal(before.gateActive, false, 'a cloud 高考 save does not stop on the exam chooser');
+    assert.equal(before.track, 'gaokao');
     assert.equal(before.gameExists, true);
     assert.doesNotMatch(before.text, /其他账号内容测试|未归属内容测试/);
     const earlyReads = before.requests.filter(row => row.method === 'GET');
@@ -184,10 +186,10 @@ async function main() {
     assert.equal(after.checking, false);
     fs.writeFileSync(path.join(artifactDir, 'verification.json'), JSON.stringify({
       before, after,
-      checks: ['picker before set files', 'no startup words.js or exam-tracks.js', 'first set opens from one json file',
+      checks: ['saved 高考 home before set files', 'no startup words.js or exam-tracks.js', 'first set opens from one json file',
         'early verified-account progress request', 'first-device own baseline', 'foreign and unowned records preserved', 'single startup progress GET'],
     }, null, 2));
-    console.log('login-content-latency-browser ok: exam picker opened while set files were held; the first 中考 set did not wait for the rest of the bank');
+    console.log('login-content-latency-browser ok: saved 高考 home opened while set files were held; the first 中考 set did not wait for the rest of the bank');
   } finally {
     if (ws) ws.close();
     if (launched?.chrome.exitCode === null && launched.chrome.signalCode === null) {

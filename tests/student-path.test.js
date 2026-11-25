@@ -14,10 +14,12 @@ if (typeof WebSocket === "undefined") {
  * QuizMario kept breaking in a loop because two questions were answered in
  * more than one place, and no test failed when those answers diverged:
  *
- *   Which screen?  index.html opens on the 中考/高考 gate, a head script may
- *   send unsigned visitors to login.html, sync.js may send them again, and
- *   game.js always finishes boot on the gate. The 注册/登录 tab is both the
- *   HTML attributes and auth-page.js mode.
+ *   Which screen?  This file drives the root legacy index.html. That page
+ *   still opens on the 中考/高考 gate, a head script may send unsigned visitors
+ *   to login.html, sync.js may send them again, and root game.js still finishes
+ *   boot on the gate. The grok student page resumes a saved 中考/高考/雅思 home;
+ *   that landing is tests/exam-track-landing.test.js. The 注册/登录 tab is both
+ *   the HTML attributes and auth-page.js mode.
  *
  *   Deal or clear? buildQueue used to drop every new card when a saved
  *   dueOnly flag was on, nextCard treated that empty queue as a pass, and

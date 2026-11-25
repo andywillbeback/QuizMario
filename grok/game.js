@@ -4963,6 +4963,40 @@
     }
   });
 
+  /**
+   * zhongkao / gaokao / ielts are the chooser courses. core and a missing
+   * track still belong on the chooser.
+   */
+  function examTrackId(id) {
+    return id === "zhongkao" || id === "gaokao" || id === "ielts" ? id : "";
+  }
+
+  let bootLandingDone = false;
+
+  /**
+   * Once the session is confirmed, open the saved exam home a single time.
+   * 更换考级, practice, and a later sync reveal are left where they are.
+   * Close / 退出 / Escape do not call this.
+   */
+  function landSavedExamTrack() {
+    if (bootLandingDone) return;
+    if (!document.documentElement.classList.contains("session-ok")) return;
+    const gate = $("screen-gate");
+    if (!gate || !gate.classList.contains("active")) {
+      bootLandingDone = true;
+      return;
+    }
+    bootLandingDone = true;
+    const id = examTrackId(save && save.track);
+    if (!id) {
+      showScreen("gate");
+      return;
+    }
+    showScreen("home");
+    const bank = findTrack(id);
+    if (bank && bank.lazy) followBanks(id);
+  }
+
   // Boot. A lazy bank has no cards yet; do not replace the home shell.
   if (!LEVELS.length && !TRACKS.some((t) => t.lazy)) {
     $("screen-home").innerHTML = "<p style='padding:24px;text-align:center'>No vocabulary loaded. Check words.js.</p>";
@@ -4981,7 +5015,11 @@
   } catch (_) {}
   initV6Ui();
   bindStudyDuration();
+  // The chooser stays up until a confirmed session can resume a saved course.
+  // A stored auth blob alone is not that confirmation.
   showScreen("gate");
+  window.addEventListener("quizmario:session-ready", landSavedExamTrack);
+  landSavedExamTrack();
 
   /**
    * Focused minutes only. Visible + recent pointer/key. Hidden and idle
