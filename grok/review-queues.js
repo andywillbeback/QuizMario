@@ -78,7 +78,7 @@
    * wrong-book rows whose card is not already in the due list.
    * A shared card stays in the due position and is marked fromWrong too.
    */
-  function mergePracticeQueue(dueItems, wrongItems) {
+  function mergePracticeQueue(dueItems, wrongItems, alsItems) {
     var due = dueItems || [];
     var wrong = wrongItems || [];
     var out = [];
@@ -108,7 +108,52 @@
       indexById[wid] = out.length;
       out.push(wcopy);
     }
+    for (const item of alsItems || []) {
+      const id = itemId(item);
+      if (!id || !Number.isFinite(item.alsReviewAt)) continue;
+      if (indexById[id] == null) {
+        indexById[id] = out.length;
+        out.push({ ...copyItem(item), fromDue: false, fromWrong: false });
+      }
+      const queued = out[indexById[id]];
+      queued.fromAls = true;
+      queued.alsReviewAt = Math.max(queued.alsReviewAt || 0, item.alsReviewAt);
+    }
     return out;
+  }
+
+  // Review the latest revision of each attempt. Separate attempts may still
+  // independently nominate the same card and are merged in the practice queue.
+  function alsReviewNominations(rows, owner) {
+    const latest = new Map();
+    for (const row of rows || []) {
+      const p = row.payload;
+      if (!owner || row.learner_id !== owner || row.user_id !== owner ||
+          !p || !p.attempt_id || !Number.isSafeInteger(p.revision) ||
+          typeof p.lexical_review !== "boolean") continue;
+      const prior = latest.get(p.attempt_id);
+      if (!prior || p.revision > prior.payload.revision) latest.set(p.attempt_id, row);
+    }
+    return [...latest.values()].filter(row => {
+      const p = row.payload;
+      return p.lexical_review && p.status === "verified" && p.passed === false &&
+        ["Rebuild", "Vary", "Transfer"].includes(p.stage) &&
+        typeof p.review_gloss_zh === "string" && p.review_gloss_zh.trim() &&
+        Number.isFinite(Date.parse(row.created_at));
+    });
+  }
+
+  function alsReviewMatches(row, card) {
+    const normalize = text => String(text || "").normalize("NFC").trim().toLowerCase();
+    const gloss = text => normalize(text).replace(/\s+/gu, "").replace(/[。；;]+$/u, "");
+    return row.payload.track === card.track && normalize(row.headword) === normalize(card.word) &&
+      gloss(row.payload.review_gloss_zh) !== "" &&
+      gloss(row.payload.review_gloss_zh) === gloss(card.meaning_zh) &&
+      (!row.payload.sense_id || [
+        card.sense, card.key, card.track + "::" + card.sense,
+        normalize(card.word) + ".." + gloss(card.meaning_zh),
+        normalize(card.word) + "." + normalize(card.pos).replace(/^\.|\.$/gu, "") + "." + gloss(card.meaning_zh),
+      ].some(id => gloss(id) === gloss(row.payload.sense_id)));
   }
 
   function combinedCount(dueItems, wrongItems) {
@@ -325,6 +370,8 @@
     continueTarget: continueTarget,
     itemId: itemId,
     mergePracticeQueue: mergePracticeQueue,
+    alsReviewNominations: alsReviewNominations,
+    alsReviewMatches: alsReviewMatches,
     combinedCount: combinedCount,
     freshDailyGate: freshDailyGate,
     markDailyGate: markDailyGate,

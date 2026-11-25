@@ -2415,6 +2415,9 @@
     pendingAttempt = null;
     const nowMs = opts.now || Date.now();
     schedule(prog, quality === 2 ? 2 : 1, nowMs, opts);
+    if (sessionKind === "must" && currentCard.fromAls && opts.firstTry && !opts.hintSeen) {
+      prog.alsReviewThrough = Math.max(prog.alsReviewThrough || 0, currentCard.alsReviewAt);
+    }
     let bookNote = "";
     if ((sessionKind === "wrongbook" || (sessionKind === "must" && cardInWrongBook(currentCard))) && currentCard) {
       const res = RQ.noteWrongBookCorrect(
@@ -4055,7 +4058,7 @@
   if ($("btn-copy-code")) $("btn-copy-code").addEventListener("click", copyBackupCode);
   if ($("btn-paste-code")) $("btn-paste-code").addEventListener("click", importFromBackupCode);
 
-  const MUST_EMPTY = "今天没有到期或错词。先去闯关，到时间的词和错过的词会进今日必练。";
+  const MUST_EMPTY = "今天没有到期词、错词或 ALS 复练建议。先去闯关，到时间的词和错过的词会进今日必练。";
 
   function normalizeMustPractice(raw) {
     const row = raw && typeof raw === "object" ? raw : {};
@@ -4281,8 +4284,78 @@
     return !!(row && row.active);
   }
 
+  let alsReviewOwner = "", alsReviewRows = [], alsReviewRefresh = null, alsReviewFetchedAt = 0;
+
+  function currentReviewOwner() {
+    const cloud = window.QuizMarioCloud;
+    return signedIn() && cloud.userId ? cloud.userId() : "";
+  }
+
+  function refreshAlsReview() {
+    const owner = currentReviewOwner();
+    if (owner !== alsReviewOwner) {
+      alsReviewOwner = owner;
+      alsReviewRows = [];
+      alsReviewRefresh = null;
+      alsReviewFetchedAt = 0;
+    }
+    if (!owner || alsReviewRefresh || Date.now() - alsReviewFetchedAt < 55000) return;
+    const client = window.QuizMarioCloudClient && window.QuizMarioCloudClient.client();
+    const sync = window.QuizMarioSyncCore;
+    if (!client || !sync) return;
+    const pull = (async () => {
+      const rows = [];
+      for (let offset = 0; currentReviewOwner() === owner; offset += 250) {
+        const query = client.from("als_training_results")
+          .select("learner_id,user_id,event_id,created_at,headword,payload")
+          .eq("source", "als").eq("event_type", "als.training_result")
+          .eq("learner_id", owner).eq("user_id", owner)
+          .not("payload->>lexical_review", "is", null)
+          .order("created_at", { ascending: false }).order("event_id")
+          .range(offset, offset + 249);
+        const answer = await sync.request(query, 6000);
+        if (answer.error || !Array.isArray(answer.data)) return;
+        rows.push(...answer.data);
+        if (answer.data.length < 250) break;
+      }
+      if (currentReviewOwner() !== owner || alsReviewRefresh !== pull) return;
+      alsReviewRows = RQ.alsReviewNominations(rows, owner);
+      alsReviewFetchedAt = Date.now();
+      const home = $("screen-home");
+      if (home && home.classList.contains("active")) refreshHomeQueues();
+    })();
+    alsReviewRefresh = pull;
+    pull.catch(() => {}).finally(() => {
+      if (alsReviewRefresh === pull) alsReviewRefresh = null;
+    });
+  }
+
+  function alsReviewItems() {
+    if (!alsReviewOwner || currentReviewOwner() !== alsReviewOwner || !alsReviewRows.length) return [];
+    const groups = openedLevelIdxs();
+    const result = [];
+    for (const row of alsReviewRows) {
+      if (row.payload.track !== currentTrack) continue;
+      const candidates = [];
+      for (const level of groups) {
+        for (const word of LEVELS[level] || []) {
+          const key = cardKey(level, word.word);
+          if (RQ.alsReviewMatches(row, { ...word, key, track: currentTrack, sense: Sense.senseId(word.word) })) {
+            candidates.push({ key, level, word });
+          }
+        }
+      }
+      if (candidates.length !== 1) continue;
+      const { key, level, word } = candidates[0];
+      const at = Date.parse(row.created_at);
+      if ((save.cards[key]?.alsReviewThrough || 0) >= at) continue;
+      result.push({ ...enrichItem(word, level, 0), alsReviewAt: at });
+    }
+    return result;
+  }
+
   function mustPracticeItems(now) {
-    return RQ.mergePracticeQueue(dueQueueItems(now), wrongBookQueueItems());
+    return RQ.mergePracticeQueue(dueQueueItems(now), wrongBookQueueItems(), alsReviewItems());
   }
 
   function queueModeLabel(kind) {
@@ -4380,7 +4453,7 @@
       return;
     }
     const copy = $("must-gate-copy");
-    if (copy) copy.textContent = "今天有 " + count + " 道到期/错词，先清掉？";
+    if (copy) copy.textContent = "今天有 " + count + " 道复练，先清掉？";
     const wasHidden = gate.hidden;
     gate.hidden = false;
     if (wasHidden) {
@@ -4395,7 +4468,7 @@
     const added = scanWrongBook();
     const dueItems = dueQueueItems();
     signalDueItems(dueItems);
-    const merged = RQ.mergePracticeQueue(dueItems, wrongBookQueueItems());
+    const merged = RQ.mergePracticeQueue(dueItems, wrongBookQueueItems(), alsReviewItems());
     setCountBadge("must-badge", merged.length);
     const mode = RQ.homePrimacy({
       count: merged.length,
@@ -4407,21 +4480,30 @@
     if (hint) {
       hint.hidden = false;
       if (merged.length > 0 && mode === "primary") {
-        hint.textContent = "今天有 " + merged.length + " 道到期/错词，先做今日必练。";
+        hint.textContent = "今天有 " + merged.length + " 道复练，先做今日必练。";
       } else if (merged.length > 0) {
         hint.textContent = "今日必练还剩 " + merged.length + " 道。继续闯关是看英文选中文。";
       } else {
-        hint.textContent = "今天没有到期或错词。继续闯关是看英文选中文。";
+        hint.textContent = "今天没有到期词、错词或 ALS 复练建议。继续闯关是看英文选中文。";
       }
     }
+    const alsCount = merged.filter(item => item.fromAls).length;
+    if (hint && alsCount) hint.textContent += " 其中 " + alsCount + " 道来自 ALS 搭配或词义复练建议。";
     maybeShowMustGate(merged.length);
     if (added > 0) persist();
   }
 
   window.__QM.onSessionReady = function () {
+    refreshAlsReview();
     const home = $("screen-home");
     if (home && home.classList.contains("active")) refreshHomeQueues();
   };
+
+  window.addEventListener("focus", refreshAlsReview);
+  setInterval(() => {
+    const home = $("screen-home");
+    if (!document.hidden && home && home.classList.contains("active")) refreshAlsReview();
+  }, 60000);
 
   function markMust(action) {
     save.mustPractice = RQ.markDailyGate(save.mustPractice, todayKey(), action);
@@ -4429,8 +4511,11 @@
   }
 
   async function startMustPractice() {
+    const owner = currentReviewOwner(), track = currentTrack;
+    refreshAlsReview();
     try { await ensurePlaySets(openedLevelIdxs()); }
     catch (error) { trackLoadStatus((error && error.message) || "今日必练暂时无法打开，请重试。"); return; }
+    if (track !== currentTrack || owner !== currentReviewOwner() || !signedIn()) return;
     const items = mustPracticeItems();
     markMust("start");
     dismissMustGate();

@@ -2,6 +2,7 @@
 const expectedHash = '__RETURN_SHA256__';
 const uuid = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const stage = new Set(['Recognize','Repair','Rebuild','Vary','Transfer']);
+const production = new Set(['Rebuild','Vary','Transfer']);
 const timestamp = (s:unknown) => typeof s === 'string' && s.length <= 40 &&
   /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d{1,6})?(Z|[+-]\d\d:\d\d)$/.test(s) &&
   Number.isFinite(Date.parse(s)) && Date.parse(s) <= Date.now()+60000;
@@ -25,10 +26,12 @@ Deno.serve(async req => {
     const ids = new Set<string>();
     for (const r of batch) {
       if (!r || ![r.learner_id,r.anchor,r.event_id,r.attempt_id].every(v=>typeof v==='string' && uuid.test(v)) ||
-          ids.has(r.event_id) || !stage.has(r.stage) || !['zhongkao','gaokao'].includes(r.track) ||
+          ids.has(r.event_id) || !stage.has(r.stage) || !['zhongkao','gaokao','ielts'].includes(r.track) ||
           !timestamp(r.created_at) || !timestamp(r.submitted_at) || !Number.isSafeInteger(r.revision) || r.revision<0 ||
           !['verified','skipped','needs_review'].includes(r.status) ||
-          (r.status === 'verified' ? typeof r.passed !== 'boolean' : r.passed !== null)) return respond(400,{});
+          (r.status === 'verified' ? typeof r.passed !== 'boolean' : r.passed !== null) ||
+          (r.lexical_review !== undefined && (typeof r.lexical_review !== 'boolean' || !production.has(r.stage) ||
+           (r.lexical_review && (r.status !== 'verified' || r.passed !== false))))) return respond(400,{});
       ids.add(r.event_id);
     }
     const base = 'https://cmainasvlfdynidabunp.supabase.co/rest/v1/';
@@ -44,7 +47,8 @@ Deno.serve(async req => {
       return await res.json();
     };
     step='read_anchors';
-    const anchorResponse = await fetch(base+'rpc/als_training_anchors_v1',{
+    const anchorReader = batch.some(r=>r.lexical_review === true) ? 'als_training_anchors_v3' : 'als_training_anchors_v2';
+    const anchorResponse = await fetch(base+'rpc/'+anchorReader,{
       method:'POST',headers,redirect:'error',signal:AbortSignal.timeout(9000),
       body:JSON.stringify({anchor_ids:[...new Set(batch.map(r=>r.anchor))]})
     });
@@ -53,12 +57,17 @@ Deno.serve(async req => {
     const rows = [];
     for (const r of batch) {
       const a=anchors.find((v:Record<string,unknown>)=>v.event_id===r.anchor);
-      if (!a || a.source!=='quizmario' || a.user_id!==r.learner_id || a.learner_id!==r.learner_id ||
-          !['vocab.answer_wrong','vocab.answer_unknown','vocab.answer_correct','vocab.wrong_book_add','vocab.due_review'].includes(a.event_type) ||
+      if (!a || a.track!==r.track || a.source!=='quizmario' || a.user_id!==r.learner_id || a.learner_id!==r.learner_id ||
+          !['vocab.answer_wrong','vocab.answer_unknown','vocab.answer_correct','vocab.wrong_book_add','vocab.due_review','vocab.notebook_add'].includes(a.event_type) ||
           (a.synthetic && a.synthetic!=='false') || (a.source_user && a.source_user!==r.learner_id)) return respond(422,{});
+      const gloss = typeof a.gloss_zh === 'string' ? a.gloss_zh.trim() : '';
+      const review = r.lexical_review === true && gloss.length > 0 && gloss.length <= 300;
+      const reviewFields = r.lexical_review === undefined ? {} : {
+        lexical_review:review, ...(review ? {review_gloss_zh:gloss} : {})
+      };
       rows.push({learner_id:r.learner_id,user_id:r.learner_id,event_id:r.event_id,source:'als',event_type:'als.training_result',
         headword:a.headword,created_at:r.created_at,payload:{version:1,stage:r.stage,track:r.track,
-          attempt_id:r.attempt_id,submitted_at:r.submitted_at,sense_id:a.sense_id||null,revision:r.revision,status:r.status,passed:r.passed,source_event_id:r.anchor}});
+          attempt_id:r.attempt_id,submitted_at:r.submitted_at,sense_id:a.sense_id||null,revision:r.revision,status:r.status,passed:r.passed,source_event_id:r.anchor,...reviewFields}});
     }
     step='insert';
     const insert=await fetch(base+'als_training_results?on_conflict=event_id',{method:'POST',headers:{...headers,Prefer:'resolution=ignore-duplicates'},
@@ -69,7 +78,9 @@ Deno.serve(async req => {
       const v=saved.find((item:Record<string,unknown>)=>item.event_id===r.event_id);
       if (!v || v.learner_id!==r.learner_id || v.user_id!==r.user_id || v.source!==r.source || v.event_type!==r.event_type ||
           v.headword!==r.headword || Date.parse(v.created_at)!==Date.parse(r.created_at) ||
-          Object.entries(r.payload).some(([k,x])=>v.payload?.[k]!==x)) return respond(409,{});
+          Object.entries(r.payload).some(([k,x])=>v.payload?.[k]!==x &&
+            !((k==='lexical_review' || k==='review_gloss_zh') &&
+              v.payload?.lexical_review === undefined))) return respond(409,{});
     }
     return respond(200,{acknowledged:[...ids]});
   } catch {return respond(503,{step});}

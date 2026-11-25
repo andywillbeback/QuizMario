@@ -266,3 +266,28 @@ assert.ok(game.includes("今天没有到期或错词"));
 assert.ok(game.includes("错词本毕业"));
 
 console.log("review-queues ok");
+
+// ALS nominations fill remaining slots and never duplicate a due or wrong card.
+{
+  const rq = require('../grok/review-queues');
+  const queue = rq.mergePracticeQueue([{ key: 'due' }], [{ key: 'wrong' }, { key: 'due' }], [
+    { key: 'due', alsReviewAt: 10 }, { key: 'lexical', alsReviewAt: 20 }, { key: 'lexical', alsReviewAt: 30 },
+  ]);
+  assert.deepStrictEqual(queue.map(item => item.key), ['due', 'wrong', 'lexical']);
+  assert.ok(queue[0].fromDue && queue[0].fromWrong && queue[0].fromAls);
+  assert.strictEqual(queue[2].alsReviewAt, 30);
+  const at = '2026-11-25T00:00:00Z';
+  const original = { user_id: 'owner', learner_id: 'owner', created_at: at, headword: 'take part in',
+    payload: { attempt_id: 'one', revision: 0, lexical_review: true, status: 'verified', passed: false,
+      stage: 'Rebuild', track: 'gaokao', review_gloss_zh: '参加', sense_id: 'take part in' } };
+  const correction = { ...original, payload: { ...original.payload, revision: 1, lexical_review: false } };
+  assert.deepStrictEqual(rq.alsReviewNominations([original, correction], 'owner'), []);
+  assert.deepStrictEqual(rq.alsReviewNominations([original], 'other'), []);
+  assert.deepStrictEqual(rq.alsReviewNominations([original], 'owner'), [original]);
+  const card = { track: 'gaokao', key: 'gaokao|0::take part in', word: 'take part in',
+    sense: 'take part in', meaning_zh: '参加' };
+  assert.ok(rq.alsReviewMatches(original, card));
+  assert.ok(!rq.alsReviewMatches(original, { ...card, track: 'ielts' }));
+  assert.ok(!rq.alsReviewMatches(original, { ...card, meaning_zh: '分担' }));
+  assert.ok(!rq.alsReviewMatches(original, { ...card, word: 'take' }));
+}

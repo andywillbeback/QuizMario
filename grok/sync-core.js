@@ -80,6 +80,9 @@
     base = compact(base); local = compact(local); remote = compact(remote);
     var preferLocal = Date.parse(local.updatedAt || 0) >= Date.parse(remote.updatedAt || 0);
     function merge(b,l,r,path) {
+      if (path.length === 3 && path[0] === 'cards' && path[2] === 'alsReviewThrough') {
+        return Math.max(Number(b) || 0, Number(l) || 0, Number(r) || 0);
+      }
       if (counter(path) && typeof l === 'number' && typeof r === 'number') {
         var start = typeof b === 'number' ? b : 0;
         if (l >= start && r >= start) return r + (l-start);
