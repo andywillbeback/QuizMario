@@ -897,6 +897,11 @@
           }
         },
       });
+      document.addEventListener("pointerdown", function () {
+        try {
+          if (wordSpeech && typeof wordSpeech.nudge === "function") wordSpeech.nudge(headwordOnScreen());
+        } catch (_) {}
+      }, true);
     } catch (_) {
       wordSpeech = null;
     }
@@ -1376,6 +1381,50 @@
     announceNotebookSnapshot();
   }
 
+  function missBandFor(prog) {
+    const api = window.QuizMarioNotebook;
+    if (!prog || !api || typeof api.missBand !== "function" || typeof api.errors !== "function") return null;
+    try {
+      const band = api.missBand(api.errors(prog));
+      if (!band || (band.tone !== "green" && band.tone !== "yellow" && band.tone !== "red")) return null;
+      return band;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function missWordHtml(word, prog) {
+    const safe = escapeHtml(word == null ? "" : word);
+    const band = missBandFor(prog);
+    if (!band) return safe;
+    return '<span class="miss-word miss-' + band.tone + '">' + safe + "</span>";
+  }
+
+  function paintHeadword(el, text, band) {
+    if (!el) return;
+    if (!band) {
+      el.textContent = text == null ? "" : text;
+      return;
+    }
+    el.innerHTML = '<span class="miss-word miss-' + band.tone + '">' + escapeHtml(text == null ? "" : text) + "</span>";
+  }
+
+  /** English headword currently on screen, or empty when speaking it would reveal a hidden answer. */
+  function headwordOnScreen() {
+    try {
+      const gate = $("prompt-box");
+      if (gate && gate.classList.contains("is-colloc-gate")) {
+        return String(gate.getAttribute("data-colloc-gate") || "").trim();
+      }
+      if (!currentCard || !currentCard.word) return "";
+      const main = $("prompt-main");
+      const prompt = main ? String(main.textContent || "").trim() : "";
+      if (prompt === currentCard.word) return currentCard.word;
+      if (awaiting) return currentCard.word;
+    } catch (_) {}
+    return "";
+  }
+
   function fillCardContent() {
     clearCollocChrome();
     updatePracticeUniverseLinks();
@@ -1384,15 +1433,20 @@
     const promptLabel = $("prompt-label");
     if (promptLabel) promptLabel.textContent = facing.label;
     const promptMain = $("prompt-main");
-    if (promptMain) promptMain.textContent = facing.main;
-    renderPromptIpa(currentCard && currentCard.ipa);
     const prog = getProg(currentCard.key);
+    const showEnglish = sessionDirection === "meaning" || sessionDirection === "polysemy";
+    const band = missBandFor(prog);
+    paintHeadword(promptMain, facing.main, showEnglish ? band : null);
+    renderPromptIpa(currentCard && currentCard.ipa);
     const filled = Math.floor(prog.mastery || 0);
     const starsHtml =
       '<span class="mastery-star-anim">' +
       "★".repeat(filled) +
       "☆".repeat(3 - filled) +
       "</span>";
+    const bandHtml = band
+      ? '<span class="miss-label miss-' + band.tone + '">' + escapeHtml(band.label) + "</span>"
+      : "";
     const metaBits = [];
     const now = Date.now();
     let srsTag;
@@ -1421,6 +1475,7 @@
     if (hintEl) {
       hintEl.innerHTML =
         starsHtml +
+        (bandHtml ? "  ·  " + bandHtml : "") +
         (metaBits.length ? "  ·  " + escapeHtml(metaBits.join(" · ")) : "") +
         (hint ? "  ·  hint: " + escapeHtml(hint) : "") +
         exampleZh;
@@ -1621,15 +1676,30 @@
     sessionSeen += 1;
 
     const box = $("prompt-box");
+    // A click that deals the next card still has user activation. Speak the
+    // headword in that turn; the entrance animation must not be the only chance,
+    // because a later timer is outside the gesture on phones.
+    let spokeThisCard = false;
+    if (!firstCardOfSession && card) {
+      try {
+        if (navigator.userActivation && navigator.userActivation.isActive) {
+          const held = currentCard;
+          currentCard = card;
+          try { spokeThisCard = maybeSpeakPrompt() === true; }
+          finally { currentCard = held; }
+        }
+      } catch (_) { spokeThisCard = false; }
+    }
     const doEnter = () => {
       if (gen !== playGen || challengeFailed) return;
       // Silence the previous word before a spelling card, then speak the new one
       // on a later turn so cancel() cannot clip the first syllable.
-      stopTeachingSpeech();
+      // Skip that stop when this card's headword is already the queued read.
+      if (!spokeThisCard) stopTeachingSpeech();
       currentCard = card;
       awaiting = false;
       fillCardContent();
-      maybeSpeakPrompt();
+      if (!spokeThisCard) maybeSpeakPrompt();
       animRestart(box, "card-enter");
       clearAnim(box, "card-enter", 420);
       firstCardOfSession = false;
@@ -2099,13 +2169,15 @@
   /** Read the displayed headword on each appearance, independently of streak audio. */
   function maybeSpeakPrompt(revealed) {
     const api = window.QuizMarioCloze;
-    if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") return;
+    if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") return false;
     const plan = api.cardSpeechPlan(currentCard, sessionDirection, { revealed: !!revealed });
-    if (!plan.autoSpeakWord || !currentCard.word) return;
+    if (!plan.autoSpeakWord || !currentCard.word) return false;
     // A newly displayed answer is a new read, even if it is the same word.
     // Card entry has already stopped the previous request in doEnter().
+    // Headword only: example lines stay on the manual 读例句 button.
     if (revealed) stopTeachingSpeech();
-    speakTeaching(currentCard.word, { example: false });
+    try { speakTeaching(currentCard.word, { example: false }); } catch (_) {}
+    return true;
   }
 
   function bumpPractice(bucket, good) {
@@ -2176,7 +2248,7 @@
     if (fb) {
       fb.innerHTML =
         '<div class="fb-title">' + title + indep + "</div>" +
-        '<div class="fb-answer">' + escapeHtml(currentCard.word) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
+        '<div class="fb-answer">' + missWordHtml(currentCard.word, prog) + " — " + escapeHtml(currentCard.meaning_zh || "") + "</div>" +
         ipaLine(currentCard) +
         feedbackHtml(view) +
         extraExampleHtml(currentCard) +
@@ -2275,7 +2347,7 @@
       const choiceBox = $("choices");
       if (choiceBox) choiceBox.hidden = true;
       fb.innerHTML =
-        '<div class="fb-title">Correct! +' + bonus + " · " + escapeHtml(currentCard.word) + "</div>" +
+        '<div class="fb-title">Correct! +' + bonus + " · " + missWordHtml(currentCard.word, prog) + "</div>" +
         ipaLine(currentCard) +
         '<div class="fb-detail">' +
         feedbackHtml(viewFor("correct", "", countsClearance ? "答对后选「记住了」或「太简单」" : "不计入通关", "")) +
@@ -2329,7 +2401,7 @@
         currentCard.explain_zh ||
         ("意思是「" + currentCard.meaning_zh + "」。");
       let why =
-        "<div class=\"fb-explain\"><b>答案</b> " + escapeHtml(currentCard.word) +
+        "<div class=\"fb-explain\"><b>答案</b> " + missWordHtml(currentCard.word, prog) +
         " — " + escapeHtml(currentCard.meaning_zh) + "</div>" +
         ipaLine(currentCard) +
         "<div class=\"fb-explain\">" + escapeHtml(explain) + "</div>";
@@ -2400,7 +2472,7 @@
       if (fb) {
         fb.innerHTML =
           '<div class="fb-title">Correct · ' + qName + "</div>" +
-          '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+          '<div class="fb-answer">' + missWordHtml(currentCard.word, peekProg(currentCard.key)) + "</div>" +
           ipaLine(currentCard) +
           '<div class="fb-meta">一词多义单独记，不改变本组通关。</div>';
         fb.className = "ok show";
@@ -2433,7 +2505,7 @@
     const qName = quality === 2 ? "太简单" : "记住了";
     fb.innerHTML =
       '<div class="fb-title">Correct · ' + qName + "</div>" +
-      '<div class="fb-answer">' + escapeHtml(currentCard.word) + "</div>" +
+      '<div class="fb-answer">' + missWordHtml(currentCard.word, prog) + "</div>" +
       feedbackHtml(viewFor("correct", "", formatDue(prog), "")) +
       '<div class="fb-meta">下次见 · ' + escapeHtml(formatDue(prog)) + "</div>" +
       extraExampleHtml(currentCard) +
@@ -2542,7 +2614,6 @@
     pendingRate = false;
     clearRateDock();
     setTypeRowVisible(false);
-    setCardSpeakVisible(false);
     const box = $("prompt-box");
     if (box) {
       box.classList.add("is-colloc-gate");
@@ -2551,7 +2622,19 @@
     const promptLabel = $("prompt-label");
     if (promptLabel) promptLabel.textContent = "搭配 · 英文 → 中文意思";
     const promptMain = $("prompt-main");
-    if (promptMain) promptMain.textContent = phrase.lemma;
+    let phraseBand = null;
+    try { phraseBand = missBandFor(peekProg(cardKey(phrase.levelIdx, phrase.lemma))); } catch (_) {}
+    paintHeadword(promptMain, phrase.lemma, phraseBand);
+    const speakRow = $("card-speak");
+    if (speakRow && phrase.lemma) {
+      speakRow.hidden = false;
+      speakRow.innerHTML =
+        '<button type="button" class="speak-btn" data-say="' + escapeHtml(phrase.lemma) + '" data-say-kind="word">🔊 读单词</button>' +
+        slowSpeakButton(phrase.lemma, "word");
+    } else {
+      setCardSpeakVisible(false);
+    }
+    try { speakTeaching(phrase.lemma, { example: false }); } catch (_) {}
     renderPromptIpa(phrase.card && phrase.card.ipa);
     const hintEl = $("prompt-hint");
     if (hintEl) {

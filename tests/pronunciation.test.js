@@ -628,4 +628,22 @@ const compactSam = voice("Samantha (Compact)", "en-GB");
   rig.synth.emit("voiceschanged");
 }
 
+{
+  const rig = mount([daniel]);
+  assert.strictEqual(rig.ctrl.speak("apple", { example: false }), true);
+  rig.synth.spoken[0].onerror({ error: "not-allowed" });
+  assert.strictEqual(rig.synth.spoken.length, 1, "a blocked autoplay does not throw or keep speaking");
+  assert.strictEqual(rig.ctrl.nudge("pear"), false, "a different word on screen does not replay the blocked headword");
+  assert.strictEqual(rig.ctrl.nudge("apple"), true, "the next touch retries only that headword");
+  rig.clock.flush(0);
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].text, "apple");
+  assert.strictEqual(rig.synth.spoken[rig.synth.spoken.length - 1].rate, speech.WORD_RATE);
+  const example = mount([daniel]);
+  assert.strictEqual(example.ctrl.speak("She ate an apple.", { example: true }), true);
+  example.synth.spoken[0].onerror({ error: "not-allowed" });
+  assert.strictEqual(example.ctrl.nudge("She ate an apple."), false, "an example line is never retried as autoplay");
+  example.ctrl.destroy();
+  rig.ctrl.destroy();
+}
+
 console.log("pronunciation ok");

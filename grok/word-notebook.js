@@ -8,6 +8,15 @@
   'use strict';
   function clean(v,max){return String(v==null?'':v).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,max);}
   function errors(p){p=p||{};var s=p.spelling||{};return Number(p.wrong||0)+Number(s.wrong!=null?s.wrong:Number((s.typed||{}).wrong||0)+Number((s.mc||{}).wrong||0))+Number((p.polysemy||{}).wrong||0)+Number((p.collocationEvidence||{}).wrong||0);}
+  /* Live miss total only. 0 and non-counts stay unlabeled so a manual add or「不会」is not called almost-mastered. */
+  function missBand(count){
+    var n=Number(count);
+    if(!isFinite(n)||n<1)return null;
+    n=Math.floor(n);
+    if(n===1)return {count:1,tone:'green',label:'几乎快掌握'};
+    if(n===2)return {count:2,tone:'yellow',label:'待定'};
+    return {count:n,tone:'red',label:'连续出错'};
+  }
   function put(book,input,now){
     var word=clean(input.word,120).replace(/\s+/g,' ');
     if(!/[a-z]/i.test(word))throw Error('请填写英文单词或词组。');
@@ -22,7 +31,7 @@
   }
   function archive(book,key,wrong,now){var row=book[key];if(!row)return;row.active=false;row.streak=0;row.wrongAtGrad=Number(wrong||0);row.updatedAt=now;}
   function rows(book,opts){opts=opts||{};var term=String(opts.search||'').toLowerCase();return Object.keys(book||{}).map(function(key){return Object.assign({key:key},book[key]);}).filter(function(r){return(!opts.track||r.track===opts.track)&&(opts.archived||r.active)&&(!term||[r.lemma,r.gloss_zh,r.note].join(' ').toLowerCase().indexOf(term)>=0);}).sort(function(a,b){return Number(b.updatedAt||b.lastMissAt||0)-Number(a.updatedAt||a.lastMissAt||0)||String(a.lemma).localeCompare(String(b.lemma));});}
-  return{put:put,archive:archive,rows:rows,errors:errors,clean:clean};
+  return{put:put,archive:archive,rows:rows,errors:errors,missBand:missBand,clean:clean};
 });
 function install(root,api){
   'use strict';var doc=root.document,qm=root.__QM,editing='';
@@ -32,6 +41,21 @@ function install(root,api){
   function note(text){$('notebook-status').textContent=text||'';}
   function pointer(word,track){return qm.notebookWord?qm.notebookWord(word,track):null;}
   function reset(){editing='';$('notebook-form').reset();$('notebook-word').readOnly=false;$('notebook-submit').textContent='加入笔记本';$('notebook-cancel-edit').hidden=true;}
+  function bandFor(row){
+    try{
+      var cards=(qm.getSave().cards)||{};
+      var known=pointer(row.lemma,row.track);
+      var card=(row.cardKey&&cards[row.cardKey])||(known&&known.cardKey&&cards[known.cardKey])||null;
+      if(!card||typeof api.missBand!=='function')return null;
+      return api.missBand(api.errors(card));
+    }catch(e){return null;}
+  }
+  function wordHtml(row){
+    var band=bandFor(row);
+    var tone=band&&(band.tone==='green'||band.tone==='yellow'||band.tone==='red')?band.tone:'';
+    if(!tone)return '<strong>'+esc(row.lemma)+'</strong>';
+    return '<strong class="miss-word miss-'+tone+'">'+esc(row.lemma)+'</strong><span class="miss-label miss-'+tone+'">'+esc(band.label)+'</span>';
+  }
   function render(){
     if(!dialog.open)return;
     var save=qm.getSave(),selected=$('notebook-scope').value;
@@ -39,7 +63,7 @@ function install(root,api){
     $('notebook-count').textContent=list.length+' 条';
     $('notebook-list').innerHTML=list.length?list.map(function(r){
       var known=pointer(r.lemma,r.track),gloss=r.gloss_zh||(known&&known.gloss)||'';
-      return '<article class="notebook-entry"><div><strong>'+esc(r.lemma)+'</strong><span class="notebook-tag">'+esc(r.track==='ielts'?'雅思':r.track==='gaokao'?'高考':r.track==='zhongkao'?'中考':r.track)+'</span><span class="notebook-tag">'+(r.active?'待巩固':'已移出')+'</span></div><p>'+esc(gloss||'待补充释义')+'</p>'+(r.note?'<p class="notebook-note">'+esc(r.note)+'</p>':'')+'<small>'+(r.source==='manual'?'手动加入':r.source==='self_report'?'标记不会':'自动收集')+(known?' · 可在今日必练巩固':' · 词库外笔记')+'</small><div class="btn-row"><button type="button" class="ghost" data-notebook-edit="'+esc(r.key)+'">编辑笔记</button><button type="button" class="ghost" data-notebook-toggle="'+esc(r.key)+'">'+(r.active?'移出待巩固':'重新巩固')+'</button></div></article>';
+      return '<article class="notebook-entry"><div>'+wordHtml(r)+'<span class="notebook-tag">'+esc(r.track==='ielts'?'雅思':r.track==='gaokao'?'高考':r.track==='zhongkao'?'中考':r.track)+'</span><span class="notebook-tag">'+(r.active?'待巩固':'已移出')+'</span></div><p>'+esc(gloss||'待补充释义')+'</p>'+(r.note?'<p class="notebook-note">'+esc(r.note)+'</p>':'')+'<small>'+(r.source==='manual'?'手动加入':r.source==='self_report'?'标记不会':'自动收集')+(known?' · 可在今日必练巩固':' · 词库外笔记')+'</small><div class="btn-row"><button type="button" class="ghost" data-notebook-edit="'+esc(r.key)+'">编辑笔记</button><button type="button" class="ghost" data-notebook-toggle="'+esc(r.key)+'">'+(r.active?'移出待巩固':'重新巩固')+'</button></div></article>';
     }).join(''):'<p class="sub">还没有条目。累计答错两次会自动收集，也可以在上方手动添加。</p>';
   }
   $('btn-notebook').addEventListener('click',function(){reset();note('');if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','');render();});

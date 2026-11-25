@@ -43,12 +43,31 @@ function installQuestionNotebook(root,api){
   function saved(){var s=current();return s&&(qm.getSave().questionNotebook||{})[api.key(s)];}
   function refreshButton(){var button=$('btn-bookmark-question'),s=current(),row=saved();if(button){button.disabled=!s;button.textContent=row&&!row.archived?'★ 已收入错题本':'☆ 收藏本题';button.setAttribute('aria-pressed',String(!!(row&&!row.archived)));}}
   function update(input,opts){var id=owner();qm.updateQuestionNotebook(function(book){api.put(book,input,opts);},id);}
-  function snapshotHtml(s){return '<p class="question-notebook-label">'+esc(s.label)+'</p><p class="question-notebook-prompt">'+esc(s.prompt)+'</p>'+(s.hint?'<p class="question-notebook-copy">'+esc(s.hint)+'</p>':'')+(s.choices.length?'<ol>'+s.choices.map(function(c){return '<li>'+esc(c)+'</li>';}).join('')+'</ol>':'')+'<p><b>我的作答：</b>'+esc(s.answer||'尚未作答')+' <small>'+esc({correct:'当时判定：答对',wrong:'当时判定：答错',unknown:'当时标记：不会',unanswered:'尚未提交'}[s.outcome])+'</small></p>'+(s.feedback?'<details open><summary>当时已展示的讲解</summary><p class="question-notebook-copy">'+esc(s.feedback)+'</p></details>':'<p class="sub">尚未展示讲解；收藏不会提前显示答案。</p>');}
+  function missFor(row){
+    try{
+      var book=root.QuizMarioNotebook;
+      if(!book||typeof book.missBand!=='function'||typeof book.errors!=='function')return null;
+      var id=String(row&&row.item_id||'').split('::collocation::')[0];
+      var card=id&&((qm.getSave().cards)||{})[id];
+      if(!card)return null;
+      var band=book.missBand(book.errors(card));
+      if(!band||(band.tone!=='green'&&band.tone!=='yellow'&&band.tone!=='red'))return null;
+      return band;
+    }catch(e){return null;}
+  }
+  function snapshotHtml(s,band){
+    var prompt=band?'<p class="question-notebook-prompt miss-word miss-'+band.tone+'">'+esc(s.prompt)+'</p>':'<p class="question-notebook-prompt">'+esc(s.prompt)+'</p>';
+    return '<p class="question-notebook-label">'+esc(s.label)+'</p>'+prompt+(s.hint?'<p class="question-notebook-copy">'+esc(s.hint)+'</p>':'')+(s.choices.length?'<ol>'+s.choices.map(function(c){return '<li>'+esc(c)+'</li>';}).join('')+'</ol>':'')+'<p><b>我的作答：</b>'+esc(s.answer||'尚未作答')+' <small>'+esc({correct:'当时判定：答对',wrong:'当时判定：答错',unknown:'当时标记：不会',unanswered:'尚未提交'}[s.outcome])+'</small></p>'+(s.feedback?'<details open><summary>当时已展示的讲解</summary><p class="question-notebook-copy">'+esc(s.feedback)+'</p></details>':'<p class="sub">尚未展示讲解；收藏不会提前显示答案。</p>');
+  }
   function render(){
     refreshButton();if(!dialog.open||!ready())return;
     var list=api.rows(qm.getSave().questionNotebook||{},{track:$('question-notebook-scope').value==='all'?'':qm.track,search:$('question-notebook-search').value,archived:$('question-notebook-archived').checked});
     $('question-notebook-count').textContent=list.length+' 题';
-    $('question-notebook-list').innerHTML=list.map(function(row){var h=api.history(row),last=h[h.length-1];return '<article class="notebook-entry"><div><strong>'+esc(row.title)+'</strong><span class="notebook-tag">'+'手动收藏 · '+esc({gaokao:'高考',zhongkao:'中考',ielts:'雅思',core:'核心词库'}[row.track]||'其他词库')+'</span></div>'+snapshotHtml(last.snapshot)+(h.length>1?'<details><summary>查看原题及此前记录（'+(h.length-1)+'份）</summary>'+h.slice(0,-1).map(function(item){return '<section class="question-notebook-history">'+snapshotHtml(item.snapshot)+'</section>';}).join('')+'</details>':'')+'<button class="ghost" type="button" data-question-archive="'+esc(row.id)+'">'+(row.archived?'恢复到错题本':'移出错题本')+'</button></article>';}).join('')||'<p class="sub">还没有收藏的题目。在题旁点“收藏本题”，即可留在这里。</p>';
+    $('question-notebook-list').innerHTML=list.map(function(row){
+      var h=api.history(row),last=h[h.length-1],band=missFor(row);
+      var title=band?'<strong class="miss-word miss-'+band.tone+'">'+esc(row.title)+'</strong><span class="miss-label miss-'+band.tone+'">'+esc(band.label)+'</span>':'<strong>'+esc(row.title)+'</strong>';
+      return '<article class="notebook-entry"><div>'+title+'<span class="notebook-tag">'+'手动收藏 · '+esc({gaokao:'高考',zhongkao:'中考',ielts:'雅思',core:'核心词库'}[row.track]||'其他词库')+'</span></div>'+snapshotHtml(last.snapshot,band)+(h.length>1?'<details><summary>查看原题及此前记录（'+(h.length-1)+'份）</summary>'+h.slice(0,-1).map(function(item){return '<section class="question-notebook-history">'+snapshotHtml(item.snapshot,null)+'</section>';}).join('')+'</details>':'')+'<button class="ghost" type="button" data-question-archive="'+esc(row.id)+'">'+(row.archived?'恢复到错题本':'移出错题本')+'</button></article>';
+    }).join('')||'<p class="sub">还没有收藏的题目。在题旁点“收藏本题”，即可留在这里。</p>';
   }
   function close(){if(dialog.close)dialog.close();else dialog.removeAttribute('open');}
   ['btn-question-notebook','btn-play-question-notebook'].forEach(function(id){var button=$(id);if(button)button.addEventListener('click',function(){if(!ready())return;status('');if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','');render();});});
