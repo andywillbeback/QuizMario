@@ -4986,15 +4986,20 @@
       bootLandingDone = true;
       return;
     }
-    bootLandingDone = true;
     const id = examTrackId(save && save.track);
     if (!id) {
+      bootLandingDone = true;
       showScreen("gate");
       return;
     }
+    // Open the home before remembering that boot finished. A failure while
+    // warming a lazy bank must not leave this confirmed session on the chooser.
     showScreen("home");
-    const bank = findTrack(id);
-    if (bank && bank.lazy) followBanks(id);
+    bootLandingDone = true;
+    try {
+      const bank = findTrack(id);
+      if (bank && bank.lazy) followBanks(id);
+    } catch (_) {}
   }
 
   // Boot. A lazy bank has no cards yet; do not replace the home shell.

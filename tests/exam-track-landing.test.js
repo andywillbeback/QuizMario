@@ -106,18 +106,48 @@ async function main() {
       }
       return res.result ? res.result.value : undefined;
     }
+    function navigated(err) {
+      return /context|destroyed|navigated/i.test(String(err && err.message));
+    }
     async function wait(expression, label, ms = 20000) {
       const start = Date.now();
       let last = null;
       while (Date.now() - start < ms) {
         try { last = await evaluate(expression); } catch (err) {
-          if (!/context|destroyed|navigated/i.test(String(err && err.message))) throw err;
-          last = null;
+          if (!navigated(err)) throw err;
+          last = { error: String(err && err.message || err) };
         }
-        if (last) return last;
+        if (last === true) return last;
+        if (last && last.ready === true) return last;
+        if (last && last.ready === undefined && !last.error) return last;
         await sleep(80);
       }
       throw new Error("timed out waiting for " + label + " last=" + JSON.stringify(last));
+    }
+    function landingProbe(readyWhen) {
+      return `(() => {
+        var el = document.documentElement;
+        var gate = document.getElementById("screen-gate");
+        var home = document.getElementById("screen-home");
+        var trackId = window.__QM ? window.__QM.track : "";
+        var sessionOk = !!(el && el.classList.contains("session-ok"));
+        var gateOn = !!(gate && gate.classList.contains("active"));
+        var homeOn = !!(home && home.classList.contains("active"));
+        var boot = el ? el.getAttribute("data-qm-boot") : null;
+        var href = "";
+        try { href = location.pathname; } catch (e) {}
+        var view = {
+          sessionOk: sessionOk,
+          boot: boot,
+          href: href,
+          hasGame: !!window.__QM,
+          gate: gateOn,
+          home: homeOn,
+          track: trackId
+        };
+        view.ready = sessionOk && boot !== "stale" && (${readyWhen});
+        return view;
+      })()`;
     }
     const snapExpr = `(() => {
       const gate = document.getElementById("screen-gate");
@@ -165,21 +195,31 @@ async function main() {
     assert.strictEqual(first.home, false);
     assert.ok(first.track !== "zhongkao" && first.track !== "gaokao" && first.track !== "ielts", first.track);
 
-    async function reloadTo(track) {
-      const payload = JSON.stringify(saveFor(track));
-      await evaluate(`localStorage.setItem(${JSON.stringify(SAVE_KEY)}, ${JSON.stringify(payload)}); sessionStorage.setItem("qm-cloud-save", ${JSON.stringify(payload)})`);
-      await evaluate(`document.documentElement.setAttribute("data-qm-boot", "stale")`);
-      await send("Page.reload", { ignoreCache: true });
-      return wait(`(() => {
-        if (!document.documentElement || document.documentElement.getAttribute("data-qm-boot") === "stale") return null;
-        const s = ${snapExpr};
-        if (!s || !s.home || s.gate || s.track !== ${JSON.stringify(track)}) return null;
-        return s;
-      })()`, track + " home after reload", 30000);
+    async function openSaved(save) {
+      const payload = JSON.stringify(save);
+      const track = save.track;
+      const expectHome = track === "zhongkao" || track === "gaokao" || track === "ielts";
+      // Landing warms the whole lazy bank. Stop those downloads before the next
+      // boot so they cannot hold the only connections the session check needs.
+      try {
+        await evaluate(`(() => {
+          try { window.stop(); } catch (e) {}
+          localStorage.setItem(${JSON.stringify(SAVE_KEY)}, ${JSON.stringify(payload)});
+          sessionStorage.setItem("qm-cloud-save", ${JSON.stringify(payload)});
+          location.replace("index.html");
+          return true;
+        })()`);
+      } catch (err) {
+        if (!navigated(err)) throw err;
+      }
+      const readyWhen = expectHome
+        ? `homeOn && !gateOn && trackId === ${JSON.stringify(track)}`
+        : `gateOn && !homeOn`;
+      return wait(landingProbe(readyWhen), (expectHome ? track + " home" : "chooser") + " after reload", 45000);
     }
 
     for (const track of ["zhongkao", "gaokao", "ielts"]) {
-      const home = await reloadTo(track);
+      const home = await openSaved(saveFor(track));
       assert.strictEqual(home.home, true, track);
       assert.strictEqual(home.gate, false, track);
       assert.strictEqual(home.track, track);
@@ -254,16 +294,7 @@ async function main() {
 
     const core = saveFor("gaokao");
     core.track = "core";
-    const corePayload = JSON.stringify(core);
-    await evaluate(`localStorage.setItem(${JSON.stringify(SAVE_KEY)}, ${JSON.stringify(corePayload)}); sessionStorage.setItem("qm-cloud-save", ${JSON.stringify(corePayload)})`);
-    await evaluate(`document.documentElement.setAttribute("data-qm-boot", "stale")`);
-    await send("Page.reload", { ignoreCache: true });
-    const noExam = await wait(`(() => {
-      if (!document.documentElement || document.documentElement.getAttribute("data-qm-boot") === "stale") return null;
-      const s = ${snapExpr};
-      if (!s || !s.gate || s.home) return null;
-      return s;
-    })()`, "core track still uses the chooser", 30000);
+    const noExam = await openSaved(core);
     assert.strictEqual(noExam.gate, true);
     assert.ok(noExam.track !== "zhongkao" && noExam.track !== "gaokao" && noExam.track !== "ielts", noExam.track);
   } finally {
