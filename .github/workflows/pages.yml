@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -36,6 +37,8 @@ jobs:
   deploy:
     needs: verify
     runs-on: ubuntu-latest
+    env:
+      PAGES_ARTIFACT_NAME: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -55,7 +58,26 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+          name: ${{ env.PAGES_ARTIFACT_NAME }}
+
+      - name: Confirm artifact is visible to Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in $(seq 1 8); do
+            if curl --silent --show-error --fail --max-time 10 \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=$PAGES_ARTIFACT_NAME" |
+              jq -e --arg name "$PAGES_ARTIFACT_NAME" '[.artifacts[] | select(.name == $name and .expired == false)] | length == 1' >/dev/null; then
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "::error::The Pages artifact has not appeared in the workflow run."
+          exit 1
 
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}
