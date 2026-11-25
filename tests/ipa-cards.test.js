@@ -397,14 +397,15 @@ async function browserSmoke() {
     async function openTrack(trackId, buttonId, save) {
       const added = await cdp.send("Page.addScriptToEvaluateOnNewDocument", { source: earlyScript(save) }, sessionId);
       await cdp.send("Page.navigate", { url: origin + "/grok/index.html" }, sessionId);
-      await waitFor(async () => evaluate(`(() => {
-        const btn = document.getElementById(${JSON.stringify(buttonId)});
+      const landed = await waitFor(async () => evaluate(`(() => {
+        if (!document.documentElement || !document.documentElement.classList.contains("session-ok")) return null;
+        const home = document.getElementById("screen-home");
         const gate = document.getElementById("screen-gate");
-        if (!btn || !gate || !gate.classList.contains("active")) return null;
-        if (!document.documentElement.classList.contains("session-ok")) return null;
-        return true;
-      })()`), 20000, "gate " + trackId);
-      await evaluate(`document.getElementById(${JSON.stringify(buttonId)}).click()`);
+        if (home && home.classList.contains("active")) return "home";
+        if (gate && gate.classList.contains("active")) return "gate";
+        return null;
+      })()`), 20000, "saved " + trackId + " home");
+      if (landed !== "home") await evaluate(`document.getElementById(${JSON.stringify(buttonId)}).click()`);
       await dismissHome();
       await cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: added.identifier }, sessionId);
     }

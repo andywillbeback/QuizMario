@@ -537,17 +537,15 @@ async function browserCheck() {
         source: earlyScript(plant(trackId, focusWord)),
       }, sessionId);
       await cdp.send("Page.navigate", { url: origin + "/grok/index.html" }, sessionId);
-      await waitFor(async () => {
-        const ready = await evaluate(`(() => {
-          const btn = document.getElementById(${JSON.stringify(buttonId)});
-          const gate = document.getElementById("screen-gate");
-          if (!btn || !gate || !gate.classList.contains("active")) return null;
-          if (!document.documentElement.classList.contains("session-ok")) return null;
-          return true;
-        })()`);
-        return ready;
-      }, 20000, "exam gate " + trackId);
-      await evaluate(`document.getElementById(${JSON.stringify(buttonId)}).click()`);
+      const landed = await waitFor(async () => evaluate(`(() => {
+        if (!document.documentElement || !document.documentElement.classList.contains("session-ok")) return null;
+        const home = document.getElementById("screen-home");
+        const gate = document.getElementById("screen-gate");
+        if (home && home.classList.contains("active")) return "home";
+        if (gate && gate.classList.contains("active")) return "gate";
+        return null;
+      })()`), 20000, "saved " + trackId + " home");
+      if (landed !== "home") await evaluate(`document.getElementById(${JSON.stringify(buttonId)}).click()`);
       await waitFor(async () => {
         const home = await evaluate(`(() => {
           const prompt = document.getElementById("profile-name-gate");
