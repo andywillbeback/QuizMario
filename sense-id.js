@@ -6,6 +6,10 @@
  * china/China). Other headwords stay on the lowercased surface, so old card
  * keys and 错词本 rows keep working. Aliases such as color/colour are not folded
  * here; that map belongs to the exam-track builder only.
+ *
+ * Q2 / Grok版本 / 聚光单词（grok）: shared sense_id contract for QuizMario ↔ ALS.
+ * Bank sense_id wins when present. Otherwise provisional lemma.pos.gloss_zh
+ * (POS trailing dot stripped). See docs/GROK版本_sense_id_contract_Q2.md.
  */
 (function (root, factory) {
   var api = factory();
@@ -100,6 +104,71 @@
     return next;
   }
 
+  /** Bank POS tags look like "v." / "adj.". The sense key stores them without the trailing dot. */
+  function posToken(pos) {
+    var p = String(pos || "").trim().toLowerCase();
+    if (p.charAt(p.length - 1) === ".") p = p.slice(0, -1);
+    return p;
+  }
+
+  function headwordOf(lemma) {
+    return String(lemma || "").trim().toLowerCase();
+  }
+
+  /**
+   * Provisional sense key when the card has no bank sense_id.
+   * lemma.pos.gloss_zh, POS trailing dot stripped.
+   * Missing POS keeps the empty slot: lemma..gloss_zh.
+   * Shared by QuizMario learner-events, home-loop, and ALS ingest (Q2 contract).
+   */
+  function provisionalSenseId(lemma, pos, gloss) {
+    var l = headwordOf(lemma);
+    var p = posToken(pos);
+    var g = String(gloss || "").trim().replace(/\s+/g, " ");
+    if (!l) return "";
+    if (p && g) return l + "." + p + "." + g;
+    if (!p && g) return l + ".." + g;
+    if (p && !g) return l + "." + p;
+    return l;
+  }
+
+  /**
+   * Resolve the sense id both ends should use for one attempt / handoff row.
+   * Bank sense_id wins. Else provisional lemma.pos.gloss.
+   * Returns { sense_id, sense_id_kind } or null.
+   */
+  function resolveSenseKey(input) {
+    input = input || {};
+    var explicit = input.sense_id != null ? String(input.sense_id).trim() : "";
+    if (explicit) {
+      return {
+        sense_id: explicit,
+        sense_id_kind: input.sense_id_kind ? String(input.sense_id_kind) : "bank",
+      };
+    }
+    var lemma = input.lemma != null ? input.lemma : input.headword;
+    var gloss = input.gloss_zh != null ? input.gloss_zh : input.gloss;
+    if (!lemma && !gloss) return null;
+    var id = provisionalSenseId(lemma, input.pos, gloss);
+    if (!id) return null;
+    var kind = "provisional";
+    if (!gloss) kind = input.pos ? "lemma_pos" : "lemma_only";
+    return { sense_id: id, sense_id_kind: kind };
+  }
+
+  /** Normalize for equality (trim only; ids are already lowercased lemmas). */
+  function normalizeSenseId(id) {
+    return String(id || "").trim();
+  }
+
+  /** True when both ends name the same sense (bank or provisional). */
+  function sameSenseId(a, b) {
+    var left = normalizeSenseId(a);
+    var right = normalizeSenseId(b);
+    if (!left || !right) return false;
+    return left === right;
+  }
+
   return {
     senseId: senseId,
     itemToken: itemToken,
@@ -108,5 +177,10 @@
     lemmaKey: lemmaKey,
     migrateCards: migrateCards,
     migrateWrongBook: migrateWrongBook,
+    posToken: posToken,
+    provisionalSenseId: provisionalSenseId,
+    resolveSenseKey: resolveSenseKey,
+    normalizeSenseId: normalizeSenseId,
+    sameSenseId: sameSenseId,
   };
 });
