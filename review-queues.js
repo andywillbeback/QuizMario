@@ -31,16 +31,20 @@
  *   A lemma enters when a review is quality 0 (wrong answer / Again),
  *   or when cumulative prog.wrong >= 2 and it is not already graduated
  *   at that same wrong count.
- *   Graduation: two consecutive correct ratings while that lemma is practiced
- *   inside 错词本 or 今日必练 (the caller decides). That sets active=false
- *   and snapshots wrongAtGrad. The lemma leaves the book.
- *   A later miss (or a higher wrong count) puts it back with streak 0.
+ *   Q3 graduation (Grok版本): long-term leave requires an actual spaced
+ *   interval. Same-calendar-day consecutive corrects only mark
+ *   sessionCleared (session_clear); they do NOT set active=false.
+ *   A correct on a later calendar day than lastCorrectAt graduates
+ *   (active=false, wrongAtGrad snapshot). That matches 已学会 / retention:
+ *   same-session streak ≠ long-term mastery.
+ *   A later miss (or a higher wrong count) puts it back with streak 0
+ *   and clears sessionCleared / lastCorrectAt.
  *   Correct ratings in 继续闯关 do not advance the streak.
  *   Inactive rows are kept so a later scan does not re-collect a graduate
  *   whose cumulative wrong is still >= 2.
  *   sense_id / gloss_zh / pos ride along when the caller has them.
- *   A new miss clears alsDeepDone and stamps lastMissAt. Two correct
- *   recognition ratings do not set the flag: ALS deep practice is a
+ *   A new miss clears alsDeepDone and stamps lastMissAt. Session clear
+ *   and delayed graduation do not set the flag: ALS deep practice is a
  *   separate debt from graduating the book. Home paint may set the flag
  *   again only from a sense_return newer than that miss.
  */
@@ -49,7 +53,18 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.QuizMarioQueues = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  /** Same-day corrects needed before sessionCleared. Does not graduate. */
   var WRONG_BOOK_GRADUATE = 2;
+  var DAY_MS = 24 * 60 * 60 * 1000;
+
+  /** Local calendar day, same clock as srs-rules.js retention. */
+  function calendarDay(ms) {
+    var d = new Date(ms);
+    if (isNaN(d.getTime())) return "";
+    var m = d.getMonth() + 1;
+    var day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
 
   function lemmaKey(track, word) {
     var api = typeof globalThis !== "undefined" ? globalThis.QuizMarioSense : null;
@@ -254,10 +269,20 @@
       cardKey: entry.cardKey,
       active: false,
       streak: 0,
+      sessionCleared: false,
       priority: 0,
       lastMissAt: 0,
+      lastCorrectAt: 0,
       wrongAtGrad: 0,
     };
+  }
+
+  /** Reset session / delay evidence when the lemma re-enters or is missed. */
+  function resetGraduationProgress(row) {
+    if (!row) return;
+    row.streak = 0;
+    row.sessionCleared = false;
+    row.lastCorrectAt = 0;
   }
 
   function assignPointer(row, entry, prog) {
@@ -295,7 +320,7 @@
       assignPointer(row, entry, prog);
       stampSense(row, entry, true);
       row.active = true;
-      row.streak = 0;
+      resetGraduationProgress(row);
       row.priority = wrong;
       row.lastMissAt = entry.now || Date.now();
       return { entered: created || wasInactive, row: row };
@@ -306,7 +331,7 @@
       assignPointer(row, entry, prog);
       stampSense(row, entry, true);
       row.active = true;
-      row.streak = 0;
+      resetGraduationProgress(row);
       row.priority = wrong;
       row.lastMissAt = entry.now || Date.now();
       return { entered: true, row: row };
@@ -320,7 +345,7 @@
       assignPointer(row, entry, prog);
       stampSense(row, entry, true);
       row.active = true;
-      row.streak = 0;
+      resetGraduationProgress(row);
       row.priority = wrong;
       row.lastMissAt = entry.now || Date.now();
       return { entered: true, row: row };
@@ -340,21 +365,53 @@
     return added;
   }
 
-  /** One correct rating inside 错词本. Two in a row graduates (removes) the lemma. */
-  function noteWrongBookCorrect(book, key, wrongNow) {
+  /**
+   * One correct rating inside 错词本 / 今日必练 (caller decides).
+   * Same calendar day as lastCorrectAt: session progress only. Hitting
+   * WRONG_BOOK_GRADUATE sets sessionCleared; never graduates that day.
+   * Later calendar day than lastCorrectAt: delayed keep check → graduate.
+   * opts.now overrides the clock (tests).
+   */
+  function noteWrongBookCorrect(book, key, wrongNow, opts) {
+    opts = opts || {};
+    var now = opts.now || Date.now();
     var row = book && book[key];
     if (!row || !row.active) {
-      return { graduated: false, streak: row ? (row.streak || 0) : 0, row: row || null };
+      return {
+        graduated: false,
+        sessionCleared: !!(row && row.sessionCleared),
+        streak: row ? (row.streak || 0) : 0,
+        row: row || null,
+      };
     }
-    row.streak = (row.streak || 0) + 1;
-    if (row.streak >= WRONG_BOOK_GRADUATE) {
+    if (row.sessionCleared == null) row.sessionCleared = false;
+    if (row.lastCorrectAt == null) row.lastCorrectAt = 0;
+    var prevAt = row.lastCorrectAt || 0;
+    var prevDay = prevAt ? calendarDay(prevAt) : "";
+    var today = calendarDay(now);
+    var delayed = !!(prevDay && today && prevDay !== today);
+
+    if (delayed) {
       row.active = false;
       row.streak = 0;
+      row.sessionCleared = false;
       row.priority = 0;
       row.wrongAtGrad = wrongNow || 0;
-      return { graduated: true, streak: 0, row: row };
+      row.lastCorrectAt = now;
+      return { graduated: true, sessionCleared: false, streak: 0, row: row };
     }
-    return { graduated: false, streak: row.streak, row: row };
+
+    row.streak = (row.streak || 0) + 1;
+    row.lastCorrectAt = now;
+    if (row.streak >= WRONG_BOOK_GRADUATE) {
+      row.sessionCleared = true;
+    }
+    return {
+      graduated: false,
+      sessionCleared: !!row.sessionCleared,
+      streak: row.streak,
+      row: row,
+    };
   }
 
   function activeWrongEntries(book, track) {
@@ -377,6 +434,8 @@
 
   return {
     WRONG_BOOK_GRADUATE: WRONG_BOOK_GRADUATE,
+    DAY_MS: DAY_MS,
+    calendarDay: calendarDay,
     lemmaKey: lemmaKey,
     isOpenedGroup: isOpenedGroup,
     continueTarget: continueTarget,

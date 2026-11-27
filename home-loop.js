@@ -455,8 +455,8 @@
       ? ("练完了，然后继续闯关第 " + n + " 组。")
       : ("这轮做完了，今天还剩 " + left + " 道，稍后还会再出现。");
     var detail = cleared
-      ? "这批到期的词都见过了。错词本里连续答对两次的已经离开。"
-      : "到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。";
+      ? "这批到期的词都见过了。错词本里隔天再认对的已经离开。"
+      : "到期的按记忆曲线再出现，错词本里同轮连对只算当轮清掉，隔天再认对才离开。";
     var deep = deepTrainDebt(opts.deepItems, opts.events);
     var showDeep = deep.length > 0;
     var message = nextLine + detail;
