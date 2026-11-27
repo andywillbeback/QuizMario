@@ -542,13 +542,15 @@ async function browserSmoke() {
     assert.strictEqual(card.ipa, deck.ipa);
     assert.ok(card.hint.indexOf(deck.example_en.slice(0, 12)) !== -1);
     await shot("gaokao-polysemy-prompt");
-    await evaluate(`(() => {
+    const clicked = await evaluate(`(() => {
       const gloss = ${JSON.stringify(entry.glossAnchor)};
-      const hit = [...document.querySelectorAll("#choices .choice")].find((b) => b.textContent.indexOf(gloss) !== -1);
-      if (!hit) return false;
+      const buttons = [...document.querySelectorAll("#choices .choice")];
+      const hit = buttons.find((b) => (b.textContent || "").trim() === gloss);
+      if (!hit) return buttons.map((b) => b.textContent);
       hit.click();
       return true;
     })()`);
+    assert.strictEqual(clicked, true, "polysemy correct choice, saw " + JSON.stringify(clicked));
     const rated = await waitFor(async () => evaluate(`(() => {
       const good = document.getElementById("btn-rate-good");
       const easy = document.getElementById("btn-rate-easy");
