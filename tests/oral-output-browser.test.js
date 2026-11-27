@@ -468,7 +468,20 @@ async function main() {
     await click('btn-unknown');
     state=await until(s=>s.continue&&s.oral,'spelling answer revealed');
     assert.equal(state.record,true);
-    await home();await click('btn-must-practice');
+    await home();
+    // A single miss is green and not due for ten minutes, so it no longer fills 今日必练.
+    // Pull the card just practiced onto today's due list without changing its miss record.
+    await run(`(() => {
+      const save = __QM.getSave();
+      Object.keys(save.cards || {}).forEach((key) => {
+        const card = save.cards[key];
+        if (!card || card.state === "new") return;
+        card.due = Date.now() - 1000;
+      });
+      __QM.updateNotebook(function () {});
+      return true;
+    })()`);
+    await click('btn-must-practice');
     state=await until(s=>s.play&&/中文/.test(s.label)&&!/拼写/.test(s.label),'Chinese-to-English recall');
     assert.equal(state.oral,false,'Chinese-to-English recall also hides oral controls before reveal.');
     await click('btn-unknown');

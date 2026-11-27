@@ -122,7 +122,17 @@ const safeExample = {
   const gradeFn = game.slice(game.indexOf("function grade("), game.indexOf("function confirmCorrect"));
   assert.ok(gradeFn.includes("renderCardSpeech(true)"), "meaning reveal keeps 读单词 beside the headword");
   assert.ok(gradeFn.includes("speakButtons(currentCard)"), "feedback still has 读单词 and 读例句");
-  assert.ok(gradeFn.indexOf("maybeSpeakPrompt(true)") > gradeFn.indexOf("announceKillStreak()"), "the revealed word has the final audio priority");
+  const meaningVoice = gradeFn.slice(gradeFn.indexOf("const englishPrompt"), gradeFn.indexOf("pendingRevealKill = true"));
+  assert.ok(meaningVoice.includes("announceKillStreak()"), "meaning correct still announces the kill voice");
+  assert.ok(!meaningVoice.includes("maybeSpeakPrompt"), "meaning and polysemy correct do not replay the headword");
+  const revealKill = gradeFn.slice(gradeFn.indexOf("if (pendingRevealKill)"), gradeFn.indexOf('else if (kind !== "correct")'));
+  assert.ok(revealKill.includes("preserveVo: true"), "今日必练 autoplay does not stop the kill clip");
+  assert.ok(revealKill.includes("onDone: announceKillStreak"));
+  assert.ok(revealKill.indexOf("maybeSpeakPrompt") < revealKill.indexOf("announceKillStreak"), "今日必练 reads the word before the kill voice");
+  const wrongVoice = gradeFn.slice(gradeFn.indexOf('else if (kind !== "correct")'));
+  assert.ok(wrongVoice.includes("preserveVo: true"), "a wrong reveal must not cut an in-flight Shut down clip");
+  const teaching = game.slice(game.indexOf("function speakTeaching"), game.indexOf("function armTeachingDone"));
+  assert.ok(teaching.includes("if (!opts.preserveVo) stopCustomVo()"), "only a manual read stops kill audio");
   const peek = game.slice(game.indexOf("function openRelatedPeek"), game.indexOf("function copyRelatedLemma"));
   assert.ok(peek.includes("speakTeaching(surface, { example: false, gesture: true })"), "opening a word detail reads only its headword on every tap");
   const buttons = game.slice(game.indexOf("function speakButtons"), game.indexOf("function initV6Ui"));

@@ -30,8 +30,9 @@
     return{key:key,row:row,created:created};
   }
   function archive(book,key,wrong,now){var row=book[key];if(!row)return;row.active=false;row.streak=0;row.wrongAtGrad=Number(wrong||0);row.updatedAt=now;}
-  function rows(book,opts){opts=opts||{};var term=String(opts.search||'').toLowerCase();return Object.keys(book||{}).map(function(key){return Object.assign({key:key},book[key]);}).filter(function(r){return(!opts.track||r.track===opts.track)&&(opts.archived||r.active)&&(!term||[r.lemma,r.gloss_zh,r.note].join(' ').toLowerCase().indexOf(term)>=0);}).sort(function(a,b){return Number(b.updatedAt||b.lastMissAt||0)-Number(a.updatedAt||a.lastMissAt||0)||String(a.lemma).localeCompare(String(b.lemma));});}
-  return{put:put,archive:archive,rows:rows,errors:errors,missBand:missBand,clean:clean};
+  function listRank(row,tone){var auto=!!row&&row.source!=='manual'&&row.source!=='self_report';if(auto&&tone==='red')return 0;if(auto&&tone==='yellow')return 1;return 2;}
+  function rows(book,opts){opts=opts||{};var term=String(opts.search||'').toLowerCase();return Object.keys(book||{}).map(function(key){return Object.assign({key:key},book[key]);}).filter(function(r){return(!opts.track||r.track===opts.track)&&(opts.archived||r.active||r.watching)&&(!term||[r.lemma,r.gloss_zh,r.note].join(' ').toLowerCase().indexOf(term)>=0);}).sort(function(a,b){return Number(b.updatedAt||b.lastMissAt||0)-Number(a.updatedAt||a.lastMissAt||0)||String(a.lemma).localeCompare(String(b.lemma));});}
+  return{put:put,archive:archive,rows:rows,errors:errors,missBand:missBand,clean:clean,listRank:listRank};
 });
 function install(root,api){
   'use strict';var doc=root.document,qm=root.__QM,editing='';
@@ -60,10 +61,18 @@ function install(root,api){
     if(!dialog.open)return;
     var save=qm.getSave(),selected=$('notebook-scope').value;
     var list=api.rows(save.wrongBook||{},{track:selected==='all'?'':qm.track,search:$('notebook-search').value,archived:$('notebook-archived').checked});
+    list.sort(function(a,b){var bandA=bandFor(a),bandB=bandFor(b);var rank=api.listRank(a,bandA&&bandA.tone)-api.listRank(b,bandB&&bandB.tone);if(rank)return rank;return String(a.lemma||'').localeCompare(String(b.lemma||''));});
     $('notebook-count').textContent=list.length+' 条';
     $('notebook-list').innerHTML=list.length?list.map(function(r){
       var known=pointer(r.lemma,r.track),gloss=r.gloss_zh||(known&&known.gloss)||'';
-      return '<article class="notebook-entry"><div>'+wordHtml(r)+'<span class="notebook-tag">'+esc(r.track==='ielts'?'雅思':r.track==='gaokao'?'高考':r.track==='zhongkao'?'中考':r.track)+'</span><span class="notebook-tag">'+(r.active?'待巩固':'已移出')+'</span></div><p>'+esc(gloss||'待补充释义')+'</p>'+(r.note?'<p class="notebook-note">'+esc(r.note)+'</p>':'')+'<small>'+(r.source==='manual'?'手动加入':r.source==='self_report'?'标记不会':'自动收集')+(known?' · 可在今日必练巩固':' · 词库外笔记')+'</small><div class="btn-row"><button type="button" class="ghost" data-notebook-edit="'+esc(r.key)+'">编辑笔记</button><button type="button" class="ghost" data-notebook-toggle="'+esc(r.key)+'">'+(r.active?'移出待巩固':'重新巩固')+'</button></div></article>';
+      var exampleEn=known&&known.example_en?String(known.example_en):'';
+      var exampleZh=known&&known.example_zh?String(known.example_zh):'';
+      var example=(exampleEn||exampleZh)?'<p class="notebook-example">'+esc([exampleEn,exampleZh].filter(Boolean).join(' '))+'</p>':'';
+      var band=bandFor(r);
+      var intensive=!!(band&&(band.tone==='red'||band.tone==='yellow')&&r.active&&!r.watching);
+      var place=r.watching?'待观察，记录保留':(!known?'词库外笔记':(intensive?'在今日必练':'记录保留'));
+      var status=r.watching?'待观察':(r.active?'待巩固':'记录保留');
+      return '<article class="notebook-entry"><div>'+wordHtml(r)+'<span class="notebook-tag">'+esc(r.track==='ielts'?'雅思':r.track==='gaokao'?'高考':r.track==='zhongkao'?'中考':r.track)+'</span><span class="notebook-tag">'+status+'</span></div><p>'+esc(gloss||'待补充释义')+'</p>'+example+(r.note?'<p class="notebook-note">'+esc(r.note)+'</p>':'')+'<small>'+(r.source==='manual'?'手动加入':r.source==='self_report'?'标记不会':'自动收集')+' · '+place+'</small><div class="btn-row"><button type="button" class="ghost" data-notebook-edit="'+esc(r.key)+'">编辑笔记</button><button type="button" class="ghost" data-notebook-toggle="'+esc(r.key)+'">'+(r.active?'移出待巩固':'重新巩固')+'</button></div></article>';
     }).join(''):'<p class="sub">还没有条目。累计答错两次会自动收集，也可以在上方手动添加。</p>';
   }
   $('btn-notebook').addEventListener('click',function(){reset();note('');if(dialog.showModal)dialog.showModal();else dialog.setAttribute('open','');render();});

@@ -1323,7 +1323,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   .notebook-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}.notebook-form label{display:grid;gap:6px;font-size:.9rem}.notebook-wide{grid-column:1/-1}
   #word-notebook input:not([type=checkbox]),#word-notebook textarea,#word-notebook select{box-sizing:border-box;width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:#080f1c;color:var(--text);font:inherit}
   .notebook-filters>input{flex:1;min-width:160px}.notebook-filters>select{max-width:135px}.notebook-filters label{white-space:nowrap;font-size:.85rem}
-  .notebook-entry{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.notebook-entry p{margin:8px 0}.notebook-note{white-space:pre-wrap;overflow-wrap:anywhere}.notebook-tag{font-size:.75rem;padding:3px 7px;border-radius:5px;background:#25334a;margin-left:8px}.notebook-entry small{color:var(--muted)}
+  .notebook-entry{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.025)}.notebook-entry p{margin:8px 0}.notebook-note{white-space:pre-wrap;overflow-wrap:anywhere}.notebook-example{color:var(--muted);font-size:.92rem}.notebook-tag{font-size:.75rem;padding:3px 7px;border-radius:5px;background:#25334a;margin-left:8px}.notebook-entry small{color:var(--muted)}
   @media(max-width:540px){.notebook-form{grid-template-columns:1fr}.notebook-entry .btn-row{gap:6px}#word-notebook{padding:16px}}
 </style>
 <link rel="stylesheet" href="mobile-ui.css?v=20261125-misscolor1">
@@ -1568,7 +1568,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
 
 <dialog id="word-notebook" aria-labelledby="notebook-title">
   <div class="notebook-heading"><h2 id="notebook-title">我的错词笔记本 <small id="notebook-count"></small></h2><button id="notebook-close" type="button" class="ghost">关闭</button></div>
-  <p class="sub">单词和词组累计答错两次自动加入；点击“不会”也会加入待巩固。可以手动添加和写笔记，手动添加及“不会”都不计成答错。词库内的条目可在今日必练巩固；词库外的条目保存在笔记里。移出后笔记仍保留。</p>
+  <p class="sub">单词和词组累计答错两次自动加入；点击“不会”也会加入。可以手动添加和写笔记，手动添加及“不会”都不计成答错。红色和黄色的词进入今日必练。连续答对三次后移出今日任务，待观察；记录保留。</p>
   <form id="notebook-form" class="notebook-form">
     <label>单词或词组<input id="notebook-word" maxlength="120" required autocomplete="off" placeholder="例如 achieve / be close to"></label>
     <label>中文释义<input id="notebook-gloss" maxlength="240" placeholder="可以稍后补充"></label>
@@ -1602,7 +1602,7 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="ielts-loader.js?v=20261109-ielts1" defer></script>
   <script src="sense-id.js" defer></script>
   <script src="srs-rules.js" defer></script>
-  <script src="review-queues.js?v=20261125-als-review1" defer></script>
+  <script src="review-queues.js?v=20261127-today3" defer></script>
   <script src="learner-events.js?v=20261110-localsave" defer></script>
   <script src="session-duration.js" defer></script>
   <script src="cloze.js?v=20261123-wordvoice1" defer></script>
@@ -1617,9 +1617,9 @@ html:not(.session-ok) #screen-gate,html:not(.session-ok) .gate-actions,html:not(
   <script src="universe-progress.js?v=20261105" defer></script>
   <script src="study-metrics.js?v=20261109-ielts1" defer></script>
   <script src="own-study.js?v=20261113-set1" defer></script>
-  <script src="game.js?v=20261125-misscolor1" defer></script>
-  <script src="question-notebook.js?v=20261125-misscolor1" defer></script>
-  <script src="word-notebook.js?v=20261125-misscolor1" defer></script>
+  <script src="game.js?v=20261127-today3" defer></script>
+  <script src="question-notebook.js?v=20261127-today3" defer></script>
+  <script src="word-notebook.js?v=20261127-today3" defer></script>
   <script src="profile-name.js?v=20261109-ielts1" defer></script>
   <script src="sync.js?v=20261120-ise1" defer></script>
   <script src="als-learning-history.js?v=20261122-1" defer></script>

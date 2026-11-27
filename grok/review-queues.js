@@ -11,6 +11,10 @@
  * 今日必练
  *   One practice queue: due cards first, then active 错词本 rows that are
  *   not already in that due list (same card key is kept once, in the due slot).
+ *   Wrong-book intake is yellow and red only (2 and 3+ misses). Green and
+ *   uncolored book rows stay out. Uncolored SM-2 due cards (0 misses) stay
+ *   on the due path. A card marked 待观察 today is left out even if SM-2
+ *   due is still today; a later calendar day can take that due card again.
  *   Storage stays split: SM-2 due is still collectDue; the book is still
  *   touchWrongBook / noteWrongBookCorrect.
  *   Home primacy: count >= 1 and not started today → "primary";
@@ -28,10 +32,12 @@
  *   A lemma enters when a review is quality 0 (wrong answer / Again),
  *   or when cumulative prog.wrong >= 2 and it is not already graduated
  *   at that same wrong count.
- *   Graduation: two consecutive correct ratings while that lemma is practiced
- *   inside 错词本 or 今日必练 (the caller decides). That sets active=false
- *   and snapshots wrongAtGrad. The lemma leaves the book.
- *   A later miss (or a higher wrong count) puts it back with streak 0.
+ *   Graduation from today's intensive queue: three consecutive correct
+ *   ratings while that lemma is practiced inside 错词本 or 今日必练 (the
+ *   caller decides). That sets active=false, watching=true, and snapshots
+ *   wrongAtGrad. The row stays in the book as 待观察. It is not deleted.
+ *   A later miss (or a higher wrong count) clears watching and puts it
+ *   back with streak 0.
  *   Correct ratings in 继续闯关 do not advance the streak.
  *   Inactive rows are kept so a later scan does not re-collect a graduate
  *   whose cumulative wrong is still >= 2.
@@ -41,7 +47,7 @@
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   if (root) root.QuizMarioQueues = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  var WRONG_BOOK_GRADUATE = 2;
+  var WRONG_BOOK_GRADUATE = 3;
 
   function lemmaKey(track, word) {
     var api = typeof globalThis !== "undefined" ? globalThis.QuizMarioSense : null;
@@ -286,6 +292,10 @@
       var wasInactive = !row.active;
       assignPointer(row, entry, prog);
       row.active = true;
+      if (row.watching) {
+        row.watching = false;
+        row.watchedDay = "";
+      }
       row.streak = 0;
       row.priority = wrong;
       row.lastMissAt = entry.now || Date.now();
@@ -308,6 +318,10 @@
     if (wrong > (row.wrongAtGrad || 0)) {
       assignPointer(row, entry, prog);
       row.active = true;
+      if (row.watching) {
+        row.watching = false;
+        row.watchedDay = "";
+      }
       row.streak = 0;
       row.priority = wrong;
       row.lastMissAt = entry.now || Date.now();
@@ -328,21 +342,163 @@
     return added;
   }
 
-  /** One correct rating inside 错词本. Two in a row graduates (removes) the lemma. */
-  function noteWrongBookCorrect(book, key, wrongNow) {
+  /**
+   * Miss colors match QuizMarioNotebook.missBand: 1 green, 2 yellow, 3+ red.
+   * 0 and non-counts stay uncolored.
+   */
+  function missTone(count) {
+    var n = Number(count);
+    if (!isFinite(n) || n < 1) return "";
+    n = Math.floor(n);
+    if (n === 1) return "green";
+    if (n === 2) return "yellow";
+    return "red";
+  }
+
+  function bookRowFor(book, item) {
+    if (!book || !item) return null;
+    var id = itemId(item);
+    var keys = Object.keys(book);
+    var i;
+    for (i = 0; i < keys.length; i++) {
+      var row = book[keys[i]];
+      if (!row) continue;
+      if (id && (row.cardKey === id || row.lemmaKey === id || keys[i] === id)) return row;
+      if (item.lemmaKey && (row.lemmaKey === item.lemmaKey || keys[i] === item.lemmaKey)) return row;
+      if (item.cardKey && row.cardKey === item.cardKey) return row;
+    }
+    return null;
+  }
+
+  function heldFromMustToday(row, day) {
+    if (!row || !row.watching) return false;
+    if (!day) return false;
+    return String(row.watchedDay || "") === String(day);
+  }
+
+  /** Yellow and red active rows only. 待观察 and green stay out of the book intake. */
+  function includeInMustWrong(row, tone) {
+    if (!row || !row.active || row.watching) return false;
+    return tone === "yellow" || tone === "red";
+  }
+
+  function toneFor(item, opts) {
+    opts = opts || {};
+    if (typeof opts.tone === "function") return String(opts.tone(item) || "");
+    if (typeof opts.missCount === "function") return missTone(opts.missCount(item));
+    return "";
+  }
+
+  function normalizeMustDayHold(raw) {
+    var out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    var keys = Object.keys(raw);
+    for (var i = 0; i < keys.length; i++) {
+      var row = raw[keys[i]];
+      if (!row || typeof row !== "object") continue;
+      var day = String(row.day || "");
+      var streak = Math.max(0, Math.floor(Number(row.streak) || 0));
+      var held = !!row.held && !!day;
+      if (!held && streak <= 0) continue;
+      out[String(keys[i])] = { streak: streak, day: day, held: held };
+    }
+    return out;
+  }
+
+  /** Due-only 今日必练 streak. This is not a 错词本 row and does not touch SRS. */
+  function noteMustDayCorrect(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var key = String(cardKey || "");
+    day = String(day || "");
+    if (!key || !day) return { hold: book, held: false, streak: 0 };
+    var row = book[key];
+    if (row && row.held && row.day === day) return { hold: book, held: true, streak: row.streak };
+    var streak = row && row.day === day && !row.held ? (row.streak || 0) + 1 : 1;
+    var held = streak >= WRONG_BOOK_GRADUATE;
+    book[key] = { streak: streak, day: day, held: held };
+    return { hold: book, held: held, streak: streak };
+  }
+
+  /** A miss before the third correct restarts the count. A same-day hold stays. */
+  function noteMustDayMiss(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var key = String(cardKey || "");
+    day = String(day || "");
+    var row = key ? book[key] : null;
+    if (!row) return { hold: book, held: false, streak: 0 };
+    if (row.held && row.day === day) return { hold: book, held: true, streak: row.streak };
+    delete book[key];
+    return { hold: book, held: false, streak: 0 };
+  }
+
+  function mustDayHeld(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var row = book[String(cardKey || "")];
+    return !!(row && row.held && row.day === String(day || ""));
+  }
+
+  /**
+   * 今日必练 membership. Due cards keep their order. Green is left out of
+   * every slot, including SM-2 due. Uncolored (0-miss) due cards stay.
+   * Wrong-book rows must be yellow or red. A 待观察 row or a due-only
+   * same-day hold is omitted from every slot, including a short SM-2 due.
+   */
+  function buildMustQueue(dueItems, wrongItems, alsItems, opts) {
+    opts = opts || {};
+    var day = opts.day == null ? "" : String(opts.day);
+    var book = opts.book || {};
+    var due = [];
+    var wrong = [];
+    var als = [];
+    var i;
+    function blocked(item) {
+      if (!item) return true;
+      if (heldFromMustToday(bookRowFor(book, item), day)) return true;
+      if (mustDayHeld(opts.hold, itemId(item), day)) return true;
+      if (toneFor(item, opts) === "green") return true;
+      return false;
+    }
+    var list = dueItems || [];
+    for (i = 0; i < list.length; i++) {
+      var dueItem = list[i];
+      if (blocked(dueItem)) continue;
+      due.push(dueItem);
+    }
+    list = wrongItems || [];
+    for (i = 0; i < list.length; i++) {
+      var wrongItem = list[i];
+      if (blocked(wrongItem)) continue;
+      var wrongRow = bookRowFor(book, wrongItem) || wrongItem;
+      if (!includeInMustWrong(wrongRow, toneFor(wrongItem, opts))) continue;
+      wrong.push(wrongItem);
+    }
+    list = alsItems || [];
+    for (i = 0; i < list.length; i++) {
+      var alsItem = list[i];
+      if (blocked(alsItem)) continue;
+      als.push(alsItem);
+    }
+    return mergePracticeQueue(due, wrong, als);
+  }
+
+  /** One correct rating inside 错词本 or 今日必练. Three in a row leaves today's queue and keeps the row. */
+  function noteWrongBookCorrect(book, key, wrongNow, opts) {
+    opts = opts || {};
     var row = book && book[key];
     if (!row || !row.active) {
-      return { graduated: false, streak: row ? (row.streak || 0) : 0, row: row || null };
+      return { graduated: false, watching: !!(row && row.watching), streak: row ? (row.streak || 0) : 0, row: row || null };
     }
     row.streak = (row.streak || 0) + 1;
     if (row.streak >= WRONG_BOOK_GRADUATE) {
       row.active = false;
+      row.watching = true;
+      if (opts.day) row.watchedDay = String(opts.day);
       row.streak = 0;
       row.priority = 0;
       row.wrongAtGrad = wrongNow || 0;
-      return { graduated: true, streak: 0, row: row };
+      return { graduated: true, watching: true, streak: 0, row: row };
     }
-    return { graduated: false, streak: row.streak, row: row };
+    return { graduated: false, watching: false, streak: row.streak, row: row };
   }
 
   function activeWrongEntries(book, track) {
@@ -382,5 +538,12 @@
     scanCumulative: scanCumulative,
     noteWrongBookCorrect: noteWrongBookCorrect,
     activeWrongEntries: activeWrongEntries,
+    missTone: missTone,
+    includeInMustWrong: includeInMustWrong,
+    buildMustQueue: buildMustQueue,
+    normalizeMustDayHold: normalizeMustDayHold,
+    noteMustDayCorrect: noteMustDayCorrect,
+    noteMustDayMiss: noteMustDayMiss,
+    mustDayHeld: mustDayHeld,
   };
 });
