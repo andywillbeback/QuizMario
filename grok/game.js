@@ -2166,18 +2166,20 @@
     if (closeBtn) closeBtn.addEventListener("click", () => closeRelatedPeek());
   }
 
-  /** Read the displayed headword on each appearance, independently of streak audio. */
-  function maybeSpeakPrompt(revealed) {
+  /** Read the displayed headword on each appearance. Example lines stay on 读例句. */
+  function maybeSpeakPrompt(revealed, opts) {
+    opts = opts || {};
     const api = window.QuizMarioCloze;
     if (!currentCard || !api || typeof api.cardSpeechPlan !== "function") return false;
     const plan = api.cardSpeechPlan(currentCard, sessionDirection, { revealed: !!revealed });
     if (!plan.autoSpeakWord || !currentCard.word) return false;
-    // A newly displayed answer is a new read, even if it is the same word.
     // Card entry has already stopped the previous request in doEnter().
     // Headword only: example lines stay on the manual 读例句 button.
     if (revealed) stopTeachingSpeech();
-    try { speakTeaching(currentCard.word, { example: false }); } catch (_) {}
-    return true;
+    const teach = { example: false };
+    if (opts.preserveVo) teach.preserveVo = true;
+    if (typeof opts.onDone === "function") teach.onDone = opts.onDone;
+    try { return speakTeaching(currentCard.word, teach) === true; } catch (_) { return false; }
   }
 
   function bumpPractice(bucket, good) {
@@ -2313,6 +2315,7 @@
     setUnknownVisible(false);
     renderCardSpeech(true);
     const kind = outcome || (correct ? "correct" : "wrong");
+    let pendingRevealKill = false;
     const prog = getProg(currentCard.key);
     const prevMastery = Math.floor(prog.mastery || 0);
     const fb = $("feedback");
@@ -2367,7 +2370,14 @@
       clearAnim($("stat-points"), "points-pop", 450);
       animRestart($("stat-streak"), "bounce");
       clearAnim($("stat-streak"), "bounce", 500);
-      announceKillStreak();
+      const englishPrompt = sessionDirection === "meaning" || sessionDirection === "polysemy";
+      if (englishPrompt) {
+        // The headword or collocation already played when the card appeared.
+        // A correct answer plays only the kill voice, never that word again.
+        announceKillStreak();
+      } else {
+        pendingRevealKill = true;
+      }
       persist();
 
       const bindRate = (id, q) => {
@@ -2416,7 +2426,7 @@
         why += '<div class="fb-meta">下次 · 约 10 分钟后再练（短间隔 Again）· 本局稍后重现</div>';
       }
       if (sessionKind === "wrongbook" || (sessionKind === "must" && cardInWrongBook(currentCard))) {
-        why += '<div class="fb-meta">还在错词本里 · 连续答对两次才会毕业</div>';
+        why += '<div class="fb-meta">连续答对三次后移出今日任务，待观察；记录保留</div>';
       }
       why += feedbackHtml(viewFor(kind, chosen, "约 10 分钟后", ""));
       why += extraExampleHtml(currentCard);
@@ -2453,7 +2463,20 @@
     $("play-queue").textContent = String(queue.length + requeueSoon.length);
     updateProgress();
     noteNotebookFeedback();
-    maybeSpeakPrompt(true);
+    if (pendingRevealKill) {
+      // 今日必练 and other ZH→EN cards: the headword is first heard at reveal.
+      // Read it once, then the kill voice. Autoplay must not stop that clip.
+      let spoke = false;
+      try {
+        spoke = maybeSpeakPrompt(true, { preserveVo: true, onDone: announceKillStreak }) === true;
+      } catch (_) {
+        spoke = false;
+      }
+      if (!spoke) announceKillStreak();
+    } else if (kind !== "correct") {
+      // Wrong-answer reveal may read the headword, but must not cut Shut down.
+      try { maybeSpeakPrompt(true, { preserveVo: true }); } catch (_) {}
+    }
   }
 
   function nextAfterFeedback() {
@@ -2495,11 +2518,12 @@
       const res = RQ.noteWrongBookCorrect(
         ensureWrongBook(),
         RQ.lemmaKey(currentTrack, currentCard.word),
-        notebookErrors(prog)
+        notebookErrors(prog),
+        { day: todayKey() }
       );
       bookNote = res.graduated
-        ? '<div class="fb-meta">错词本毕业 · 这个词先离开错词本了</div>'
-        : '<div class="fb-meta">错词本连续答对 ' + res.streak + "/2</div>";
+        ? '<div class="fb-meta">连续答对三次后移出今日任务，待观察；记录保留</div>'
+        : '<div class="fb-meta">连续答对 ' + res.streak + "/3</div>";
     }
     const fb = $("feedback");
     const qName = quality === 2 ? "太简单" : "记住了";
@@ -2634,7 +2658,7 @@
     } else {
       setCardSpeakVisible(false);
     }
-    try { speakTeaching(phrase.lemma, { example: false }); } catch (_) {}
+    try { speakTeaching(phrase.lemma, { example: false, preserveVo: true }); } catch (_) {}
     renderPromptIpa(phrase.card && phrase.card.ipa);
     const hintEl = $("prompt-hint");
     if (hintEl) {
@@ -3919,24 +3943,71 @@
   function speakTeaching(text, opts) {
     const spoken = String(text || "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
     if (!spoken) return false;
-    // The displayed word takes priority over a recorded streak announcement.
-    stopCustomVo();
+    opts = opts || {};
+    // 读单词 / 读例句 may cut a kill clip. Card autoplay must not.
+    if (!opts.preserveVo) stopCustomVo();
     if (/^(loading|requesting|recording|stopping)$/.test(oralPhase)) {
       cancelOralOutput({ keepVisible: true, message: "已停止录音。听完示范后，再录自己的朗读。" });
     }
     if (oralPlayback) { try { oralPlayback.pause(); } catch (_) {} }
-    opts = opts || {};
+    let started = false;
     if (wordSpeech) {
       try {
         if (wordSpeech.speak(spoken, {
           example: !!opts.example,
           slow: !!opts.slow,
           gesture: !!opts.gesture,
-        })) return true;
+        })) started = true;
       } catch (_) {}
     }
+    if (started) {
+      if (typeof opts.onDone === "function") {
+        let state = null;
+        try { state = wordSpeech.getState(); } catch (_) {}
+        if (state && (state.status === "error" || state.status === "unavailable")) opts.onDone(false);
+        else armTeachingDone(opts.onDone);
+      }
+      return true;
+    }
     if (opts.slow) return false;
-    return sayEn(spoken);
+    return sayEn(spoken, opts.onDone);
+  }
+
+  /** Call onDone once the current teaching read settles. A newer read abandons it. */
+  function armTeachingDone(onDone) {
+    if (typeof onDone !== "function") return;
+    const gen = speakGen;
+    let settled = false;
+    let sawLive = false;
+    let unsub = null;
+    let timer = null;
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      if (typeof unsub === "function") {
+        try { unsub(); } catch (_) {}
+      }
+      if (speakGen !== gen) return;
+      try { onDone(!!ok); } catch (_) {}
+    };
+    timer = setTimeout(() => finish(false), 12000);
+    if (!wordSpeech || typeof wordSpeech.subscribe !== "function") {
+      finish(false);
+      return;
+    }
+    unsub = wordSpeech.subscribe((state) => {
+      if (settled) return;
+      if (speakGen !== gen) {
+        finish(false);
+        return;
+      }
+      const live = state.status === "queued" || state.status === "speaking" || state.status === "loading";
+      if (live) sawLive = true;
+      if (sawLive && (state.status === "ready" || state.status === "error" || state.status === "unavailable")) {
+        finish(state.status === "ready");
+      }
+    });
   }
 
   function pickGbVoice() {
@@ -3945,7 +4016,7 @@
     return vs.find((v) => /en[-_]GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || null;
   }
 
-  function sayEn(text) {
+  function sayEn(text, onDone) {
     if (!text || !("speechSynthesis" in window)) return false;
     try {
       const u = new SpeechSynthesisUtterance(text);
@@ -3953,6 +4024,17 @@
       const v = pickGbVoice();
       if (v) u.voice = v;
       u.rate = 0.9;
+      if (typeof onDone === "function") {
+        let settled = false;
+        const done = (ok) => {
+          if (settled) return;
+          settled = true;
+          try { onDone(!!ok); } catch (_) {}
+        };
+        u.onend = () => done(true);
+        u.onerror = () => done(false);
+        setTimeout(() => done(false), 12000);
+      }
       speakUtterance(u);
       return true;
     } catch (_) { return false; }
@@ -4057,7 +4139,16 @@
       const bank = findTrack(track || currentTrack);
       for (let li = 0; li < (bank.sets || []).length; li++) {
         const found = findSurface(bank.sets[li], word);
-        if (found) return {levelIdx:li,cardKey:Sense.cardKeyFor(bank.id,li,found.word),gloss:found.meaning_zh || ""};
+        if (found) {
+          const exampleEn = found.example_en && !isPlaceholderExample(found.example_en) ? String(found.example_en) : "";
+          return {
+            levelIdx: li,
+            cardKey: Sense.cardKeyFor(bank.id, li, found.word),
+            gloss: found.meaning_zh || "",
+            example_en: exampleEn,
+            example_zh: exampleEn && found.example_zh ? String(found.example_zh) : "",
+          };
+        }
       }
       return null;
     },
@@ -4437,8 +4528,25 @@
     return result;
   }
 
+  function practiceTone(item) {
+    const key = item && (item.key || item.cardKey);
+    const prog = key ? (save.cards || {})[key] : null;
+    const count = prog ? notebookErrors(prog) : 0;
+    const api = window.QuizMarioNotebook;
+    if (api && typeof api.missBand === "function") {
+      const band = api.missBand(count);
+      return band && band.tone ? band.tone : "";
+    }
+    return RQ.missTone(count);
+  }
+
   function mustPracticeItems(now) {
-    return RQ.mergePracticeQueue(dueQueueItems(now), wrongBookQueueItems(), alsReviewItems());
+    const when = now || Date.now();
+    return RQ.buildMustQueue(dueQueueItems(when), wrongBookQueueItems(), alsReviewItems(), {
+      day: todayKey(when),
+      book: ensureWrongBook(),
+      tone: practiceTone,
+    });
   }
 
   function queueModeLabel(kind) {
@@ -4549,9 +4657,8 @@
     if (!$("btn-must-practice")) return;
     hideQueueEmpty();
     const added = scanWrongBook();
-    const dueItems = dueQueueItems();
-    signalDueItems(dueItems);
-    const merged = RQ.mergePracticeQueue(dueItems, wrongBookQueueItems(), alsReviewItems());
+    const merged = mustPracticeItems();
+    signalDueItems(merged.filter((it) => it.fromDue));
     setCountBadge("must-badge", merged.length);
     const mode = RQ.homePrimacy({
       count: merged.length,
@@ -4780,8 +4887,8 @@
       const left = mustPracticeItems().length;
       if (title) title.textContent = left ? "这轮今日必练练完了" : "今日必练清空了";
       if (msg) msg.textContent = left
-        ? ("还剩 " + left + " 道。到期的按记忆曲线再出现，错词本里的要连续答对两次才离开。")
-        : "这批到期的词都见过了。错词本里连续答对两次的已经离开。";
+        ? ("还剩 " + left + " 道。连续答对三次后移出今日任务，待观察；记录保留。")
+        : "这批到期的词都见过了。连续答对三次后移出今日任务，待观察；记录保留。";
     } else if (kind === "due") {
       if (title) title.textContent = "今日到期练完了";
       if (msg) msg.textContent = "这批到期的词都见过了。还没到时间的，会按记忆曲线再出现。";
@@ -4795,10 +4902,10 @@
       }
     } else {
       const left = wrongBookQueueItems().length;
-      if (title) title.textContent = left ? "这轮错词练完了" : "错词本清空了";
+      if (title) title.textContent = "这轮错词练完了";
       if (msg) msg.textContent = left
-        ? ("错词本还剩 " + left + " 个。同一个词在错词本里连续答对两次，就会毕业离开。")
-        : "这些词都在错词本里连续答对了两次，已经毕业离开。";
+        ? ("错词本还剩 " + left + " 个。连续答对三次后移出今日任务，待观察；记录保留。")
+        : "连续答对三次后移出今日任务，待观察；记录保留。";
     }
     if (kind === "spelling" && UniverseProgress) {
       UniverseProgress.recordCompleted(save, currentTrack, currentLevel, Date.now());

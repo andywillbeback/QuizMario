@@ -91,14 +91,17 @@ function earlyScript(progress = null, deterministicSpeech = false) {
     try { sessionStorage.setItem("qm-phase", "signed"); } catch (e) {}
     window.__QM_SPOKEN = [];
     window.__QM_AUDIO = [];
+    window.__QM_MEDIA = [];
     window.__QM_SPEECH_CANCELS = 0;
     function noteUtterance(u) {
+      var text = String(u && u.text || "");
       window.__QM_SPOKEN.push({
-        text: String(u && u.text || ""),
+        text: text,
         rate: u && u.rate,
         lang: u && u.lang,
         ok: true,
       });
+      window.__QM_MEDIA.push({ kind: "tts", text: text });
     }
     var OrigAudio = window.Audio;
     function RecAudio(src) {
@@ -109,10 +112,14 @@ function earlyScript(progress = null, deterministicSpeech = false) {
         var play = audio.play.bind(audio);
         audio.play = function () {
           window.__QM_AUDIO.push(String(src || ""));
+          window.__QM_MEDIA.push({ kind: "audio", src: String(src || "") });
           return play();
         };
       } else {
-        try { window.__QM_AUDIO.push(String(src || "")); } catch (e) {}
+        try {
+          window.__QM_AUDIO.push(String(src || ""));
+          window.__QM_MEDIA.push({ kind: "audio", src: String(src || "") });
+        } catch (e) {}
       }
       return audio;
     }
@@ -343,6 +350,7 @@ const SNAP = `(() => {
     meaning: hit ? hit.meaning_zh || "" : "",
     spoken: (window.__QM_SPOKEN || []).map((row) => ({ text: row.text, rate: row.rate, ok: !!row.ok })),
     audio: (window.__QM_AUDIO || []).slice(),
+    media: (window.__QM_MEDIA || []).slice(),
     vw: window.innerWidth,
     vh: window.innerHeight,
   };
@@ -730,6 +738,19 @@ async function main() {
     }
 
     await evaluate(`document.getElementById("btn-quit").click()`);
+    // 不会-only rows are uncolored, so they no longer enter 今日必练 by themselves.
+    // The cards just practiced are marked due and yellow/red so this page can open that queue.
+    await evaluate(`(() => {
+      const save = __QM.getSave();
+      Object.keys(save.cards || {}).forEach((key) => {
+        const card = save.cards[key];
+        if (!card || card.state === "new") return;
+        card.wrong = Math.max(Number(card.wrong) || 0, 3);
+        card.due = Date.now() - 1000;
+      });
+      __QM.updateNotebook(function () {});
+      return true;
+    })()`);
     await waitFor(async () => {
       const s = await snap();
       if (!s || !s.home) return null;
@@ -781,8 +802,52 @@ async function main() {
     }, 10000, "home before streak");
     await evaluate(`document.getElementById("btn-voice-toggle").click()`);
     assert.strictEqual(await evaluate(`__QM.getSave().voiceOn`), true, "restore streak clips for their existing check");
+
+    const mustMediaBefore = (await snap()).media.length;
+    await evaluate(`document.getElementById("btn-must-practice").click()`);
+    const mustCard = await waitFor(async () => {
+      const s = await waitCard("中文", { needExample: false, forbidExample: true }).catch(() => null);
+      if (!s || s.label.indexOf("拼写") !== -1) return null;
+      if (s.buttons.some((b) => b.kind === "word" || b.kind === "example")) return null;
+      return s;
+    }, 15000, "今日必练 card before a correct answer");
+    const mustSpokenEarly = (await snap()).media.slice(mustMediaBefore).filter((row) => row.kind === "tts" && row.text === mustCard.word);
+    assert.deepStrictEqual(mustSpokenEarly, [], "今日必练 does not read the headword before the answer");
+    const mustPicked = await evaluate(`((word) => {
+      const buttons = [...document.querySelectorAll("#choices button")];
+      const btn = buttons.find((b) => (b.textContent || "").replace(/^\\d+\\.\\s+/, "") === word);
+      if (!btn) return buttons.map((b) => (b.textContent || "").trim());
+      btn.click();
+      return true;
+    })(${JSON.stringify(mustCard.word)})`);
+    assert.strictEqual(mustPicked, true, "今日必练 correct choice, saw " + JSON.stringify(mustPicked));
+    const mustAfter = await waitFor(async () => {
+      const s = await snap();
+      const fresh = (s.media || []).slice(mustMediaBefore);
+      const heardWord = fresh.some((row) => row.kind === "tts" && row.text === mustCard.word);
+      const heardKill = fresh.some((row) => row.kind === "audio" && String(row.src).indexOf("01_first_blood.m4a") !== -1);
+      if (!heardWord || !heardKill) return null;
+      return s;
+    }, 8000, "今日必练 word then kill");
+    const mustFresh = mustAfter.media.slice(mustMediaBefore);
+    const mustWordAt = mustFresh.findIndex((row) => row.kind === "tts" && row.text === mustCard.word);
+    const mustKillAt = mustFresh.findIndex((row) => row.kind === "audio" && String(row.src).indexOf("01_first_blood.m4a") !== -1);
+    assert.ok(mustWordAt !== -1 && mustKillAt !== -1 && mustWordAt < mustKillAt, "今日必练 plays the headword before the kill voice: " + JSON.stringify(mustFresh));
+    assert.strictEqual(mustFresh.filter((row) => row.kind === "tts" && row.text === mustCard.word).length, 1, "今日必练 does not read the headword twice");
+    await evaluate(`document.getElementById("btn-quit").click()`);
+    await waitFor(async () => {
+      const s = await snap();
+      if (!s || !s.home) return null;
+      if (s.mustGate) {
+        await evaluate(`document.getElementById("btn-must-later").click()`);
+        return null;
+      }
+      return s;
+    }, 10000, "home after 今日必练 correct");
+
     const audioBefore = (await snap()).audio.length;
     const spokenBefore = (await snap()).spoken.length;
+    const mediaBefore = (await snap()).media.length;
     await evaluate(`document.getElementById("btn-continue").click()`);
     const streakCard = await waitCard("英文");
     await waitUtterance(spokenBefore, streakCard.word, "streak-card auto headword");
@@ -818,9 +883,16 @@ async function main() {
     }, 8000, "First blood clip");
     const freshAudio = after.audio.slice(audioBefore);
     const freshSpeech = after.spoken.slice(spokenBefore).map((r) => r.text);
+    const freshMedia = after.media.slice(mediaBefore);
     assert.ok(freshAudio.some((src) => src.indexOf("01_first_blood.m4a") !== -1), freshAudio.join(","));
     assert.ok(!freshSpeech.some((text) => text === "First blood" || text === "Shut down"), freshSpeech.join(" | "));
-    assert.ok(freshSpeech.indexOf(streakCard.word) !== -1, "headword still spoken on the streak card");
+    assert.strictEqual(freshSpeech.filter((text) => text === streakCard.word).length, 1, "meaning correct does not replay the headword");
+    const streakWordAt = freshMedia.findIndex((row) => row.kind === "tts" && row.text === streakCard.word);
+    const streakKillAt = freshMedia.findIndex((row) => row.kind === "audio" && String(row.src).indexOf("01_first_blood.m4a") !== -1);
+    assert.ok(streakWordAt !== -1 && streakKillAt !== -1 && streakWordAt < streakKillAt, "the headword is heard before the kill voice: " + JSON.stringify(freshMedia));
+    if (gatedStreak.gated && gatedStreak.phrase) {
+      assert.strictEqual(freshMedia.filter((row) => row.kind === "tts" && row.text === gatedStreak.phrase).length, 1, "the collocation is not read twice");
+    }
 
     await evaluate(`(() => {
       document.getElementById("btn-voice-toggle").click();

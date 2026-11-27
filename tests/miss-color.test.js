@@ -46,13 +46,14 @@ assert.ok(css.includes(".miss-word.miss-green") && css.includes(".miss-word.miss
 assert.ok(game.includes("missWordHtml") && game.includes("paintHeadword"));
 
 const auto = game.slice(game.indexOf("function maybeSpeakPrompt"), game.indexOf("function bumpPractice"));
-assert.ok(auto.includes("speakTeaching(currentCard.word, { example: false })"));
+assert.ok(auto.includes("speakTeaching(currentCard.word"));
+assert.ok(auto.includes("example: false"));
 assert.ok(!auto.includes("gesture"), "card autoplay stays on the cancel-safe path");
 assert.ok(!auto.includes("exampleSay"), "card autoplay does not read an example");
 assert.ok(!auto.includes("example: true"));
 
 const gate = game.slice(game.indexOf("function renderCollocGate"), game.indexOf("function scoreDistractor"));
-assert.ok(gate.includes("speakTeaching(phrase.lemma, { example: false })"), "a shown collocation headword autoplays");
+assert.ok(gate.includes("speakTeaching(phrase.lemma, { example: false, preserveVo: true })"), "a shown collocation headword autoplays");
 assert.ok(gate.includes('data-say-kind="word"'));
 assert.ok(!gate.includes("读例句"), "the collocation card does not autoplay or offer example speech");
 assert.ok(!gate.includes("example: true"));
@@ -122,15 +123,26 @@ assert.ok(game.includes("announceKillStreak"));
       getSave: () => save,
       notebookWord(word) {
         if (word === "manual") return null;
-        return { levelIdx: 0, cardKey: "synthetic|0::" + word, gloss: word };
+        const examples = {
+          often: { example_en: "She comes here often after class.", example_zh: "她放学后经常来这里。" },
+          twice: { example_en: "I have been there twice.", example_zh: "我去过那里两次。" },
+        };
+        return Object.assign({ levelIdx: 0, cardKey: "synthetic|0::" + word, gloss: word }, examples[word] || {});
       },
       updateNotebook(fn) { fn(save.wrongBook); },
     },
   };
+  const bookFrozen = JSON.stringify(save.wrongBook);
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(root, "grok/word-notebook.js"), "utf8"), ctx);
   el("btn-notebook").listeners.click();
   const html = el("notebook-list").innerHTML;
+  assert.strictEqual(JSON.stringify(save.wrongBook), bookFrozen, "looking up an example does not rewrite notebook rows");
+  assert.ok(html.includes("She comes here often after class."));
+  assert.ok(html.includes("她放学后经常来这里。"));
+  assert.ok(html.includes("I have been there twice."));
+  assert.ok(html.indexOf("miss-red") < html.indexOf("miss-yellow"), "auto-collected red is listed before yellow");
+  assert.ok(html.indexOf("miss-yellow") < html.indexOf("miss-green"), "yellow is listed before green");
   assert.ok(html.includes('class="miss-word miss-green">once</strong>'), html);
   assert.ok(html.includes("几乎快掌握"));
   assert.ok(html.includes('class="miss-word miss-yellow">twice</strong>'));

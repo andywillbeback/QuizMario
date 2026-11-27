@@ -13,4 +13,15 @@ assert.strictEqual(n.rows(book,{track:'gaokao',archived:true}).length,1);assert.
 const fs=require('fs'),path=require('path'),html=fs.readFileSync(path.join(__dirname,'../grok/index.html'),'utf8'),js=fs.readFileSync(path.join(__dirname,'../grok/word-notebook.js'),'utf8'),game=fs.readFileSync(path.join(__dirname,'../grok/game.js'),'utf8');
 assert.ok(html.includes('id="btn-notebook"')&&html.includes('id="notebook-note"'));assert.ok(js.includes("event_type:'vocab.notebook_add'"));assert.ok(!js.includes("event_type:'vocab.answer_wrong'"));assert.ok(js.includes('esc(r.note)'),'arbitrary notebook text is escaped');assert.ok(game.includes('mistakes < 2'),'a first error alone does not auto-add a new notebook entry');
 assert.ok(game.includes('rememberMiss({word:phrase.lemma'),'collocation errors use the same auto collection rule');assert.ok(game.includes('studyDaily: Object.assign({}, payload.studyDaily'),'cloud restoration preserves study time');
+assert.strictEqual(n.listRank({source:'auto'},'red'),0);
+assert.strictEqual(n.listRank({source:'auto',lemma:'take part in'},'red'),0,'a phrase uses the same red rank as a word');
+assert.strictEqual(n.listRank({source:'auto'},'yellow'),1);
+assert.strictEqual(n.listRank({source:'auto'},'green'),2);
+assert.strictEqual(n.listRank({source:'manual'},'red'),2,'a manual note is not auto-collected');
+assert.strictEqual(n.listRank({source:'self_report'},'yellow'),2);
+assert.strictEqual(n.listRank({source:'auto'},''),2);
+const watched={lemmaKey:'gaokao::watch',lemma:'watch',track:'gaokao',active:false,watching:true,watchedDay:'2026-11-27',source:'auto',gloss_zh:'观察',note:'keep me'};
+book[watched.lemmaKey]=watched;
+assert.ok(n.rows(book).some(function(r){return r.lemma==='watch'&&r.watching&&r.note==='keep me';}),'待观察 stays in the book');
+assert.strictEqual(book[watched.lemmaKey].example_en,undefined,'the row does not store a looked-up example');
 console.log('word-notebook ok: manual word/phrase notes, edit, archive, error evidence, XSS boundary and auxiliary practice');

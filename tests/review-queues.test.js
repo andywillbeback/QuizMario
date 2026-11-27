@@ -291,3 +291,102 @@ console.log("review-queues ok");
   assert.ok(!rq.alsReviewMatches(original, { ...card, meaning_zh: '分担' }));
   assert.ok(!rq.alsReviewMatches(original, { ...card, word: 'take' }));
 }
+
+{
+  const rq = require("../grok/review-queues");
+  const notebook = require("../grok/word-notebook");
+  assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 3);
+  assert.strictEqual(rq.missTone(0), "");
+  assert.strictEqual(rq.missTone(1), notebook.missBand(1).tone);
+  assert.strictEqual(rq.missTone(2), notebook.missBand(2).tone);
+  assert.strictEqual(rq.missTone(3), notebook.missBand(3).tone);
+  assert.strictEqual(rq.missTone(9), notebook.missBand(9).tone);
+
+  const book = {};
+  const entry = {
+    lemmaKey: "zhongkao::alpha",
+    lemma: "alpha",
+    track: "zhongkao",
+    levelIdx: 0,
+    cardKey: "zhongkao|0::alpha",
+    gloss_zh: "阿尔法",
+    note: "保留",
+    now: T0,
+  };
+  const entered = rq.touchWrongBook(book, entry, { wrong: 4 }, "miss");
+  assert.strictEqual(entered.entered, true);
+  book[entry.lemmaKey].gloss_zh = "阿尔法";
+  book[entry.lemmaKey].note = "保留";
+  const day = "2026-11-27";
+  let step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 4, { day: day });
+  assert.strictEqual(step.graduated, false);
+  assert.strictEqual(step.streak, 1);
+  step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 4, { day: day });
+  assert.strictEqual(step.graduated, false);
+  assert.strictEqual(step.streak, 2);
+  assert.strictEqual(book[entry.lemmaKey].active, true);
+  step = rq.noteWrongBookCorrect(book, entry.lemmaKey, 4, { day: day });
+  assert.strictEqual(step.graduated, true);
+  assert.strictEqual(step.watching, true);
+  assert.strictEqual(book[entry.lemmaKey].active, false);
+  assert.strictEqual(book[entry.lemmaKey].watching, true);
+  assert.strictEqual(book[entry.lemmaKey].watchedDay, day);
+  assert.strictEqual(book[entry.lemmaKey].lemma, "alpha");
+  assert.strictEqual(book[entry.lemmaKey].gloss_zh, "阿尔法");
+  assert.strictEqual(book[entry.lemmaKey].note, "保留", "three correct answers keep the notebook row");
+  assert.strictEqual(rq.activeWrongEntries(book, "zhongkao").length, 0);
+
+  const due = [{ key: "zhongkao|0::alpha", word: "alpha", dueAt: T0 }];
+  const today = rq.buildMustQueue(due, [book[entry.lemmaKey]], [], {
+    day: day,
+    book: book,
+    missCount: function () { return 4; },
+  });
+  assert.deepStrictEqual(today, [], "待观察 stays out of 今日必练 the same day, even when SM-2 is due");
+  const tomorrow = rq.buildMustQueue(due, [book[entry.lemmaKey]], [], {
+    day: "2026-11-28",
+    book: book,
+    missCount: function () { return 4; },
+  });
+  assert.strictEqual(tomorrow.length, 1, "a later day can take the normal due card");
+  assert.strictEqual(tomorrow[0].fromDue, true);
+  assert.strictEqual(tomorrow[0].fromWrong, false, "the kept row is not wrong-book intake while inactive");
+
+  const again = rq.touchWrongBook(book, Object.assign({}, entry, { now: T0 + 100 }), { wrong: 5 }, "miss");
+  assert.strictEqual(again.entered, true);
+  assert.strictEqual(book[entry.lemmaKey].active, true);
+  assert.strictEqual(book[entry.lemmaKey].watching, false);
+  assert.strictEqual(book[entry.lemmaKey].streak, 0);
+  assert.strictEqual(book[entry.lemmaKey].note, "保留");
+  const back = rq.buildMustQueue([], [book[entry.lemmaKey]], [], {
+    day: day,
+    book: book,
+    missCount: function () { return 5; },
+  });
+  assert.strictEqual(back.length, 1);
+  assert.strictEqual(back[0].fromWrong, true, "a later miss re-enters 今日必练");
+
+  const green = { lemmaKey: "g", cardKey: "g", active: true, lemma: "green" };
+  const yellow = { lemmaKey: "y", cardKey: "y", active: true, lemma: "yellow" };
+  const red = { lemmaKey: "r", cardKey: "r", active: true, lemma: "be close to" };
+  const plain = { lemmaKey: "n", cardKey: "n", active: true, lemma: "plain" };
+  const intakeBook = { g: green, y: yellow, r: red, n: plain };
+  function intakeCount(item) {
+    const id = item.key || item.cardKey;
+    if (id === "g" || id === "als-green") return 1;
+    if (id === "y") return 2;
+    if (id === "r") return 4;
+    return 0;
+  }
+  const queued = rq.buildMustQueue(
+    [{ key: "due0", word: "plain-due" }],
+    [green, yellow, red, plain],
+    [{ key: "als-green", alsReviewAt: 1 }, { key: "als-ok", alsReviewAt: 2 }],
+    { day: day, book: intakeBook, missCount: intakeCount }
+  );
+  assert.deepStrictEqual(queued.map(function (item) { return item.key || item.cardKey; }), ["due0", "y", "r", "als-ok"]);
+  assert.strictEqual(queued[0].fromDue, true);
+  assert.strictEqual(queued[0].fromWrong, false, "an uncolored due card stays on the due path");
+  assert.ok(!queued.some(function (item) { return (item.key || item.cardKey) === "g"; }), "green is not added from the wrong book");
+  assert.ok(queued.some(function (item) { return item.cardKey === "r" && item.lemma === "be close to"; }));
+}
