@@ -437,11 +437,23 @@
     return !!(row && row.held && row.day === String(day || ""));
   }
 
+  /** Same-day streak of 1 or 2. These cards stay in 今日必练 even when SM-2 due is later. */
+  function unheldMustStreak(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var row = book[String(cardKey || "")];
+    if (!row || row.held || row.day !== String(day || "")) return 0;
+    var streak = row.streak || 0;
+    if (streak < 1 || streak >= WRONG_BOOK_GRADUATE) return 0;
+    return streak;
+  }
+
   /**
    * 今日必练 membership. Due cards keep their order. Green is left out of
    * every slot, including SM-2 due. Uncolored (0-miss) due cards stay.
    * Wrong-book rows must be yellow or red. A 待观察 row or a due-only
    * same-day hold is omitted from every slot, including a short SM-2 due.
+   * opts.continuing re-adds same-day unheld streaks of 1 or 2 that are no
+   * longer SM-2 due. They leave only when held becomes true at 3 correct.
    */
   function buildMustQueue(dueItems, wrongItems, alsItems, opts) {
     opts = opts || {};
@@ -478,7 +490,23 @@
       if (blocked(alsItem)) continue;
       als.push(alsItem);
     }
-    return mergePracticeQueue(due, wrong, als);
+    var merged = mergePracticeQueue(due, wrong, als);
+    var seen = {};
+    for (i = 0; i < merged.length; i++) seen[itemId(merged[i])] = true;
+    list = opts.continuing || [];
+    for (i = 0; i < list.length; i++) {
+      var extra = list[i];
+      var extraId = itemId(extra);
+      if (!extra || !extraId || seen[extraId] || blocked(extra)) continue;
+      if (!unheldMustStreak(opts.hold, extraId, day)) continue;
+      seen[extraId] = true;
+      var kept = copyItem(extra);
+      kept.fromDue = false;
+      kept.fromWrong = !!kept.fromWrong;
+      kept.fromContinuing = true;
+      merged.push(kept);
+    }
+    return merged;
   }
 
   /** One correct rating inside 错词本 or 今日必练. Three in a row leaves today's queue and keeps the row. */
@@ -545,5 +573,6 @@
     noteMustDayCorrect: noteMustDayCorrect,
     noteMustDayMiss: noteMustDayMiss,
     mustDayHeld: mustDayHeld,
+    unheldMustStreak: unheldMustStreak,
   };
 });

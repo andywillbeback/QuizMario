@@ -431,4 +431,103 @@ console.log("review-queues ok");
   assert.ok(grokGame.includes("noteMustDayCorrect(save.mustDayHold"));
   assert.ok(grokGame.includes("noteMustDayMiss(save.mustDayHold"));
   assert.ok(grokGame.includes("hold: save.mustDayHold"));
+  assert.ok(grokGame.includes("continuing: continuingMustItems(day)"));
+  assert.ok(grokGame.includes("mustProgressHtml()"));
+}
+
+{
+  const rq = require("../grok/review-queues");
+  const srs = require("../grok/srs-rules");
+  const day = "2026-11-27";
+  const advice = "zhongkao|0::advice";
+  const prog = srs.defaultCardProg();
+  srs.schedule(prog, 1, T0);
+  assert.strictEqual(prog.due, T0 + srs.LEARN_MS, "first Good still uses the 10-minute step");
+  let hold = rq.noteMustDayCorrect({}, advice, day).hold;
+  assert.strictEqual(hold[advice].streak, 1);
+  assert.strictEqual(hold[advice].held, false);
+  const beforeTen = rq.buildMustQueue([], [], [], {
+    day: day,
+    hold: hold,
+    continuing: [{ key: advice, word: "advice" }],
+    missCount: function () { return 0; },
+  });
+  assert.strictEqual(beforeTen.length, 1, "streak 1 stays in 今日必练 before the 10-minute due");
+  assert.strictEqual(beforeTen[0].fromContinuing, true);
+
+  srs.schedule(prog, 1, T0 + 1000);
+  assert.ok(prog.due >= T0 + 1000 + srs.DAY_MS - 1, "second Good moves SM-2 due out by a day");
+  hold = rq.noteMustDayCorrect(hold, advice, day).hold;
+  assert.strictEqual(hold[advice].streak, 2);
+  assert.strictEqual(hold[advice].held, false);
+  const afterDay = rq.buildMustQueue([], [], [], {
+    day: day,
+    hold: hold,
+    continuing: [{ key: advice, word: "advice" }],
+    missCount: function () { return 0; },
+  });
+  assert.strictEqual(afterDay.length, 1, "streak 2 stays even though the card is not due today");
+  assert.strictEqual(afterDay[0].key, advice);
+  const once = rq.buildMustQueue(
+    [{ key: advice, word: "advice", dueAt: prog.due }],
+    [],
+    [],
+    {
+      day: day,
+      hold: hold,
+      continuing: [{ key: advice, word: "advice" }],
+      missCount: function () { return 0; },
+    }
+  );
+  assert.strictEqual(once.length, 1, "a still-due streak card is not listed twice");
+
+  const veteran = srs.defaultCardProg();
+  srs.schedule(veteran, 1, T0);
+  srs.schedule(veteran, 1, T0 + 1);
+  const veteranDue = veteran.due;
+  srs.schedule(veteran, 1, veteranDue);
+  assert.ok(veteran.reps >= 2);
+  assert.ok(veteran.due >= veteranDue + srs.DAY_MS, "a card that already had two Goods jumps at least a day");
+  const adult = "zhongkao|0::adult";
+  const vetHold = rq.noteMustDayCorrect({}, adult, day).hold;
+  const vetQueue = rq.buildMustQueue([], [], [], {
+    day: day,
+    hold: vetHold,
+    continuing: [{ key: adult, word: "adult" }],
+    missCount: function () { return 0; },
+  });
+  assert.strictEqual(vetQueue.length, 1, "one Good on an already-solid card still stays until 3");
+  assert.strictEqual(vetHold[adult].streak, 1);
+
+  hold = rq.noteMustDayCorrect(hold, advice, day).hold;
+  assert.strictEqual(hold[advice].held, true);
+  assert.strictEqual(hold[advice].streak, 3);
+  const left = rq.buildMustQueue([], [], [], {
+    day: day,
+    hold: hold,
+    continuing: [{ key: advice, word: "advice" }],
+    missCount: function () { return 0; },
+  });
+  assert.deepStrictEqual(left, [], "the third correct removes it as 待观察");
+  assert.deepStrictEqual(prog.wrong, 0, "the hold does not rewrite the miss count");
+
+  let partial = rq.noteMustDayCorrect({}, "zhongkao|0::add", day).hold;
+  partial = rq.noteMustDayCorrect(partial, "zhongkao|0::add", day).hold;
+  partial = rq.noteMustDayMiss(partial, "zhongkao|0::add", day).hold;
+  const missed = rq.buildMustQueue([], [], [], {
+    day: day,
+    hold: partial,
+    continuing: [{ key: "zhongkao|0::add", word: "add" }],
+    missCount: function () { return 0; },
+  });
+  assert.deepStrictEqual(missed, [], "a miss before the third correct drops the unheld streak");
+
+  const greenHold = rq.noteMustDayCorrect({}, "green-due", day).hold;
+  const greenStay = rq.buildMustQueue([], [], [], {
+    day: day,
+    hold: greenHold,
+    continuing: [{ key: "green-due", word: "once" }],
+    missCount: function () { return 1; },
+  });
+  assert.deepStrictEqual(greenStay, [], "green stays out even with an unheld streak");
 }

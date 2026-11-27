@@ -2358,6 +2358,7 @@
         '<div class="fb-detail">' +
         feedbackHtml(viewFor("correct", "", countsClearance ? "答对后选「记住了」或「太简单」" : "不计入通关", "")) +
         '<div class="fb-meta">' + (countsClearance ? "选下次再练的时间" : "这题不计入通关") + "</div>" +
+        mustProgressHtml() +
         speakButtons(currentCard) +
         "</div>";
       fb.className = "ok show";
@@ -4553,12 +4554,61 @@
     return RQ.missTone(count);
   }
 
+  function itemForCardKey(key) {
+    const idxs = openedLevelIdxs();
+    for (let i = 0; i < idxs.length; i++) {
+      const li = idxs[i];
+      const words = LEVELS[li] || [];
+      for (let w = 0; w < words.length; w++) {
+        if (!words[w] || cardKey(li, words[w].word) !== key) continue;
+        const it = enrichItem(words[w], li, 0);
+        it.levelIdx = li;
+        return it;
+      }
+    }
+    return null;
+  }
+
+  /** Same-day 1/3 and 2/3 answers stay in 今日必练 after SM-2 moves their due date. */
+  function continuingMustItems(day) {
+    const hold = RQ.normalizeMustDayHold(save.mustDayHold);
+    const keys = Object.keys(hold);
+    const items = [];
+    for (let i = 0; i < keys.length; i++) {
+      if (!RQ.unheldMustStreak(hold, keys[i], day)) continue;
+      const it = itemForCardKey(keys[i]);
+      if (it) items.push(it);
+    }
+    return items;
+  }
+
+  function mustProgressHtml() {
+    if (sessionKind !== "must" || !currentCard || !currentCard.key) return "";
+    let next = 1;
+    if (cardInWrongBook(currentCard)) {
+      const row = ensureWrongBook()[RQ.lemmaKey(currentTrack, currentCard.word)];
+      next = ((row && row.streak) || 0) + 1;
+    } else {
+      const hold = RQ.normalizeMustDayHold(save.mustDayHold);
+      const row = hold[currentCard.key];
+      const same = row && row.day === todayKey() && !row.held;
+      next = (same ? (row.streak || 0) : 0) + 1;
+    }
+    next = Math.min(RQ.WRONG_BOOK_GRADUATE, Math.max(1, next));
+    if (next >= RQ.WRONG_BOOK_GRADUATE) {
+      return '<div class="fb-meta">连续答对 ' + next + "/3，确认后移出今日任务，待观察；记录保留</div>";
+    }
+    return '<div class="fb-meta">连续答对 ' + next + "/3</div>";
+  }
+
   function mustPracticeItems(now) {
     const when = now || Date.now();
+    const day = todayKey(when);
     return RQ.buildMustQueue(dueQueueItems(when), wrongBookQueueItems(), alsReviewItems(), {
-      day: todayKey(when),
+      day: day,
       book: ensureWrongBook(),
       hold: save.mustDayHold,
+      continuing: continuingMustItems(day),
       tone: practiceTone,
     });
   }
