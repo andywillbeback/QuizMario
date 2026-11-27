@@ -189,6 +189,9 @@
     );
     sv.questionNotebook = data.questionNotebook && typeof data.questionNotebook === "object" && !Array.isArray(data.questionNotebook) ? JSON.parse(JSON.stringify(data.questionNotebook)) : {};
     sv.mustPractice = normalizeMustPractice(data.mustPractice);
+    sv.mustDayHold = typeof RQ !== "undefined" && RQ.normalizeMustDayHold
+      ? RQ.normalizeMustDayHold(data.mustDayHold)
+      : {};
     const practice = data.practice && typeof data.practice === "object" ? data.practice : {};
     sv.practice = {
       meaning: Object.assign({ n: 0, good: 0 }, practice.meaning || {}),
@@ -2391,6 +2394,9 @@
       if (countsClearance) {
         schedule(prog, 0, nowMs, opts);
       }
+      if (sessionKind === "must" && currentCard && !cardInWrongBook(currentCard) && (kind === "wrong" || kind === "unknown")) {
+        save.mustDayHold = RQ.noteMustDayMiss(save.mustDayHold, currentCard.key, todayKey()).hold;
+      }
       if (kind === "wrong" || kind === "unknown") rememberMiss(currentCard, prog, kind === "unknown");
       emitLearnerAnswer(false, currentCard, kind === "unknown" ? "" : chosen, kind);
       save.streak = 0;
@@ -2524,6 +2530,12 @@
       bookNote = res.graduated
         ? '<div class="fb-meta">连续答对三次后移出今日任务，待观察；记录保留</div>'
         : '<div class="fb-meta">连续答对 ' + res.streak + "/3</div>";
+    } else if (sessionKind === "must" && currentCard) {
+      const held = RQ.noteMustDayCorrect(save.mustDayHold, currentCard.key, todayKey());
+      save.mustDayHold = held.hold;
+      bookNote = held.held
+        ? '<div class="fb-meta">连续答对三次后移出今日任务，待观察；记录保留</div>'
+        : '<div class="fb-meta">连续答对 ' + held.streak + "/3</div>";
     }
     const fb = $("feedback");
     const qName = quality === 2 ? "太简单" : "记住了";
@@ -3041,6 +3053,7 @@
       wrongBook: payload.wrongBook && typeof payload.wrongBook === "object" ? payload.wrongBook : {},
       practice: payload.practice && typeof payload.practice === "object" ? payload.practice : {},
       mustPractice: payload.mustPractice,
+      mustDayHold: payload.mustDayHold,
       questionNotebook: payload.questionNotebook,
     });
   }
@@ -4545,6 +4558,7 @@
     return RQ.buildMustQueue(dueQueueItems(when), wrongBookQueueItems(), alsReviewItems(), {
       day: todayKey(when),
       book: ensureWrongBook(),
+      hold: save.mustDayHold,
       tone: practiceTone,
     });
   }

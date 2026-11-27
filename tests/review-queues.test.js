@@ -373,13 +373,13 @@ console.log("review-queues ok");
   const intakeBook = { g: green, y: yellow, r: red, n: plain };
   function intakeCount(item) {
     const id = item.key || item.cardKey;
-    if (id === "g" || id === "als-green") return 1;
+    if (id === "g" || id === "als-green" || id === "green-due") return 1;
     if (id === "y") return 2;
     if (id === "r") return 4;
     return 0;
   }
   const queued = rq.buildMustQueue(
-    [{ key: "due0", word: "plain-due" }],
+    [{ key: "due0", word: "plain-due" }, { key: "green-due", word: "once" }],
     [green, yellow, red, plain],
     [{ key: "als-green", alsReviewAt: 1 }, { key: "als-ok", alsReviewAt: 2 }],
     { day: day, book: intakeBook, missCount: intakeCount }
@@ -388,5 +388,47 @@ console.log("review-queues ok");
   assert.strictEqual(queued[0].fromDue, true);
   assert.strictEqual(queued[0].fromWrong, false, "an uncolored due card stays on the due path");
   assert.ok(!queued.some(function (item) { return (item.key || item.cardKey) === "g"; }), "green is not added from the wrong book");
+  assert.ok(!queued.some(function (item) { return item.key === "green-due"; }), "a green due card does not enter 今日必练");
   assert.ok(queued.some(function (item) { return item.cardKey === "r" && item.lemma === "be close to"; }));
+
+  const srsBefore = { reps: 1, due: T0, wrong: 0, interval: 0 };
+  const srsCard = Object.assign({}, srsBefore);
+  let hold = {};
+  let stepHold = rq.noteMustDayCorrect(hold, "zhongkao|0::plain", day);
+  hold = stepHold.hold;
+  assert.strictEqual(stepHold.held, false);
+  assert.strictEqual(stepHold.streak, 1);
+  stepHold = rq.noteMustDayCorrect(hold, "zhongkao|0::plain", day);
+  hold = stepHold.hold;
+  assert.strictEqual(stepHold.streak, 2);
+  const reset = rq.noteMustDayMiss(hold, "zhongkao|0::plain", day);
+  assert.strictEqual(reset.held, false);
+  assert.strictEqual(reset.streak, 0);
+  hold = {};
+  for (let n = 0; n < 3; n++) {
+    stepHold = rq.noteMustDayCorrect(hold, "zhongkao|0::plain", day);
+    hold = stepHold.hold;
+  }
+  assert.strictEqual(stepHold.held, true);
+  assert.strictEqual(stepHold.streak, 3);
+  assert.deepStrictEqual(srsCard, srsBefore, "the day hold does not rewrite SRS history");
+  assert.strictEqual(Object.keys(book).indexOf("zhongkao|0::plain"), -1, "a due-only hold is not a 错词本 row");
+  const dueOnly = [{ key: "zhongkao|0::plain", word: "plain", dueAt: T0 }];
+  const heldToday = rq.buildMustQueue(dueOnly, [], [], { day: day, hold: hold, missCount: function () { return 0; } });
+  assert.deepStrictEqual(heldToday, [], "three corrects keep a due-only card out for the rest of the day");
+  const stillHeld = rq.noteMustDayMiss(hold, "zhongkao|0::plain", day);
+  assert.strictEqual(stillHeld.held, true);
+  const afterMiss = rq.buildMustQueue(dueOnly, [], [], { day: day, hold: stillHeld.hold, missCount: function () { return 0; } });
+  assert.deepStrictEqual(afterMiss, [], "a same-day miss does not bring a held due-only card back");
+  const reloaded = rq.normalizeMustDayHold(JSON.parse(JSON.stringify(stillHeld.hold)));
+  const afterReload = rq.buildMustQueue(dueOnly, [], [], { day: day, hold: reloaded, missCount: function () { return 0; } });
+  assert.deepStrictEqual(afterReload, [], "reloading the same day keeps the hold");
+  const later = rq.buildMustQueue(dueOnly, [], [], { day: "2026-11-28", hold: reloaded, missCount: function () { return 0; } });
+  assert.strictEqual(later.length, 1);
+  assert.strictEqual(later[0].fromDue, true, "the next day can take the normal due card");
+  const grokGame = fs.readFileSync(path.join(root, "grok/game.js"), "utf8");
+  assert.ok(grokGame.includes("normalizeMustDayHold(data.mustDayHold)"));
+  assert.ok(grokGame.includes("noteMustDayCorrect(save.mustDayHold"));
+  assert.ok(grokGame.includes("noteMustDayMiss(save.mustDayHold"));
+  assert.ok(grokGame.includes("hold: save.mustDayHold"));
 }

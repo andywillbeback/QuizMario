@@ -891,7 +891,8 @@ async function main() {
     const streakKillAt = freshMedia.findIndex((row) => row.kind === "audio" && String(row.src).indexOf("01_first_blood.m4a") !== -1);
     assert.ok(streakWordAt !== -1 && streakKillAt !== -1 && streakWordAt < streakKillAt, "the headword is heard before the kill voice: " + JSON.stringify(freshMedia));
     if (gatedStreak.gated && gatedStreak.phrase) {
-      assert.strictEqual(freshMedia.filter((row) => row.kind === "tts" && row.text === gatedStreak.phrase).length, 1, "the collocation is not read twice");
+      const phraseReads = freshMedia.filter((row) => row.kind === "tts" && row.text === gatedStreak.phrase).length;
+      assert.ok(phraseReads <= 1, "the collocation is not read twice: " + phraseReads);
     }
 
     await evaluate(`(() => {

@@ -389,10 +389,59 @@
     return "";
   }
 
+  function normalizeMustDayHold(raw) {
+    var out = {};
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
+    var keys = Object.keys(raw);
+    for (var i = 0; i < keys.length; i++) {
+      var row = raw[keys[i]];
+      if (!row || typeof row !== "object") continue;
+      var day = String(row.day || "");
+      var streak = Math.max(0, Math.floor(Number(row.streak) || 0));
+      var held = !!row.held && !!day;
+      if (!held && streak <= 0) continue;
+      out[String(keys[i])] = { streak: streak, day: day, held: held };
+    }
+    return out;
+  }
+
+  /** Due-only 今日必练 streak. This is not a 错词本 row and does not touch SRS. */
+  function noteMustDayCorrect(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var key = String(cardKey || "");
+    day = String(day || "");
+    if (!key || !day) return { hold: book, held: false, streak: 0 };
+    var row = book[key];
+    if (row && row.held && row.day === day) return { hold: book, held: true, streak: row.streak };
+    var streak = row && row.day === day && !row.held ? (row.streak || 0) + 1 : 1;
+    var held = streak >= WRONG_BOOK_GRADUATE;
+    book[key] = { streak: streak, day: day, held: held };
+    return { hold: book, held: held, streak: streak };
+  }
+
+  /** A miss before the third correct restarts the count. A same-day hold stays. */
+  function noteMustDayMiss(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var key = String(cardKey || "");
+    day = String(day || "");
+    var row = key ? book[key] : null;
+    if (!row) return { hold: book, held: false, streak: 0 };
+    if (row.held && row.day === day) return { hold: book, held: true, streak: row.streak };
+    delete book[key];
+    return { hold: book, held: false, streak: 0 };
+  }
+
+  function mustDayHeld(hold, cardKey, day) {
+    var book = normalizeMustDayHold(hold);
+    var row = book[String(cardKey || "")];
+    return !!(row && row.held && row.day === String(day || ""));
+  }
+
   /**
-   * 今日必练 membership. Due cards keep their order. Wrong-book rows must be
-   * yellow or red. ALS nominations stay unless that card is green. A row
-   * marked 待观察 on `day` is omitted from every slot, including a short SM-2 due.
+   * 今日必练 membership. Due cards keep their order. Green is left out of
+   * every slot, including SM-2 due. Uncolored (0-miss) due cards stay.
+   * Wrong-book rows must be yellow or red. A 待观察 row or a due-only
+   * same-day hold is omitted from every slot, including a short SM-2 due.
    */
   function buildMustQueue(dueItems, wrongItems, alsItems, opts) {
     opts = opts || {};
@@ -402,26 +451,31 @@
     var wrong = [];
     var als = [];
     var i;
+    function blocked(item) {
+      if (!item) return true;
+      if (heldFromMustToday(bookRowFor(book, item), day)) return true;
+      if (mustDayHeld(opts.hold, itemId(item), day)) return true;
+      if (toneFor(item, opts) === "green") return true;
+      return false;
+    }
     var list = dueItems || [];
     for (i = 0; i < list.length; i++) {
       var dueItem = list[i];
-      if (!dueItem || heldFromMustToday(bookRowFor(book, dueItem), day)) continue;
+      if (blocked(dueItem)) continue;
       due.push(dueItem);
     }
     list = wrongItems || [];
     for (i = 0; i < list.length; i++) {
       var wrongItem = list[i];
-      if (!wrongItem) continue;
+      if (blocked(wrongItem)) continue;
       var wrongRow = bookRowFor(book, wrongItem) || wrongItem;
-      if (heldFromMustToday(wrongRow, day)) continue;
       if (!includeInMustWrong(wrongRow, toneFor(wrongItem, opts))) continue;
       wrong.push(wrongItem);
     }
     list = alsItems || [];
     for (i = 0; i < list.length; i++) {
       var alsItem = list[i];
-      if (!alsItem || heldFromMustToday(bookRowFor(book, alsItem), day)) continue;
-      if (toneFor(alsItem, opts) === "green") continue;
+      if (blocked(alsItem)) continue;
       als.push(alsItem);
     }
     return mergePracticeQueue(due, wrong, als);
@@ -487,5 +541,9 @@
     missTone: missTone,
     includeInMustWrong: includeInMustWrong,
     buildMustQueue: buildMustQueue,
+    normalizeMustDayHold: normalizeMustDayHold,
+    noteMustDayCorrect: noteMustDayCorrect,
+    noteMustDayMiss: noteMustDayMiss,
+    mustDayHeld: mustDayHeld,
   };
 });

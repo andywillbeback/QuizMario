@@ -55,6 +55,21 @@ function installQuestionNotebook(root,api){
       return band;
     }catch(e){return null;}
   }
+  function bankExample(row){
+    try{
+      if(!qm.notebookWord)return '';
+      var id=String(row&&row.item_id||'').split('::collocation::')[0];
+      var parts=id.split('::');
+      var surface=parts.length>1?parts.slice(1).join('::'):'';
+      if(!surface)return '';
+      var known=qm.notebookWord(surface,row.track);
+      if(!known)return '';
+      var en=known.example_en?String(known.example_en):'';
+      var zh=known.example_zh?String(known.example_zh):'';
+      if(!en&&!zh)return '';
+      return '<p class="notebook-example">'+esc([en,zh].filter(Boolean).join(' '))+'</p>';
+    }catch(e){return '';}
+  }
   function snapshotHtml(s,band){
     var prompt=band?'<p class="question-notebook-prompt miss-word miss-'+band.tone+'">'+esc(s.prompt)+'</p>':'<p class="question-notebook-prompt">'+esc(s.prompt)+'</p>';
     return '<p class="question-notebook-label">'+esc(s.label)+'</p>'+prompt+(s.hint?'<p class="question-notebook-copy">'+esc(s.hint)+'</p>':'')+(s.choices.length?'<ol>'+s.choices.map(function(c){return '<li>'+esc(c)+'</li>';}).join('')+'</ol>':'')+'<p><b>我的作答：</b>'+esc(s.answer||'尚未作答')+' <small>'+esc({correct:'当时判定：答对',wrong:'当时判定：答错',unknown:'当时标记：不会',unanswered:'尚未提交'}[s.outcome])+'</small></p>'+(s.feedback?'<details open><summary>当时已展示的讲解</summary><p class="question-notebook-copy">'+esc(s.feedback)+'</p></details>':'<p class="sub">尚未展示讲解；收藏不会提前显示答案。</p>');
@@ -66,7 +81,7 @@ function installQuestionNotebook(root,api){
     $('question-notebook-list').innerHTML=list.map(function(row){
       var h=api.history(row),last=h[h.length-1],band=missFor(row);
       var title=band?'<strong class="miss-word miss-'+band.tone+'">'+esc(row.title)+'</strong><span class="miss-label miss-'+band.tone+'">'+esc(band.label)+'</span>':'<strong>'+esc(row.title)+'</strong>';
-      return '<article class="notebook-entry"><div>'+title+'<span class="notebook-tag">'+'手动收藏 · '+esc({gaokao:'高考',zhongkao:'中考',ielts:'雅思',core:'核心词库'}[row.track]||'其他词库')+'</span></div>'+snapshotHtml(last.snapshot,band)+(h.length>1?'<details><summary>查看原题及此前记录（'+(h.length-1)+'份）</summary>'+h.slice(0,-1).map(function(item){return '<section class="question-notebook-history">'+snapshotHtml(item.snapshot,null)+'</section>';}).join('')+'</details>':'')+'<button class="ghost" type="button" data-question-archive="'+esc(row.id)+'">'+(row.archived?'恢复到错题本':'移出错题本')+'</button></article>';
+      return '<article class="notebook-entry"><div>'+title+'<span class="notebook-tag">'+'手动收藏 · '+esc({gaokao:'高考',zhongkao:'中考',ielts:'雅思',core:'核心词库'}[row.track]||'其他词库')+'</span></div>'+bankExample(row)+snapshotHtml(last.snapshot,band)+(h.length>1?'<details><summary>查看原题及此前记录（'+(h.length-1)+'份）</summary>'+h.slice(0,-1).map(function(item){return '<section class="question-notebook-history">'+snapshotHtml(item.snapshot,null)+'</section>';}).join('')+'</details>':'')+'<button class="ghost" type="button" data-question-archive="'+esc(row.id)+'">'+(row.archived?'恢复到错题本':'移出错题本')+'</button></article>';
     }).join('')||'<p class="sub">还没有收藏的题目。在题旁点“收藏本题”，即可留在这里。</p>';
   }
   function close(){if(dialog.close)dialog.close();else dialog.removeAttribute('open');}
