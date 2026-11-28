@@ -796,3 +796,86 @@ console.log("review-queues ok");
   assert.ok(!nextSave.mustPractice.cleared, "the next calendar day drops the same-day clear flag");
   assert.strictEqual(nextSave.mustPractice.clearedAt, clearAt, "the clear time still blocks automatic refill");
 }
+
+{
+  const rq = require("../grok/review-queues");
+  const core = require("../grok/sync-core");
+  const day = "2026-11-28";
+  const next = "2026-11-29";
+  const open = { day: day, started: true, dismissed: true };
+  assert.ok(!rq.markDailyGate(open, day, "start").cleared, "start is not a clear");
+  assert.ok(!rq.markDailyGate(open, day, "dismiss").cleared, "dismiss is not a clear");
+  const leftover = rq.noteMustRoundEnd(open, day, 2, T0);
+  assert.strictEqual(leftover.cleared, false, "a leftover round is not a clear");
+  assert.ok(!leftover.record.clearedAt);
+
+  // The end screen never ran. The last 记住了 still reports an empty rebuilt queue.
+  const missedScreen = rq.noteMustRoundEnd(open, day, 0, T0 + 80);
+  assert.strictEqual(missedScreen.cleared, true, "an empty must queue writes the clear without the end screen");
+  assert.strictEqual(missedScreen.record.cleared, true);
+  assert.strictEqual(missedScreen.record.clearedAt, T0 + 80);
+  assert.strictEqual(missedScreen.record.started, true);
+  assert.strictEqual(missedScreen.record.dismissed, true);
+
+  const oldYellow = { lemmaKey: "y", cardKey: "old-yellow", active: true, lemma: "beta", practiceMissAt: T0 };
+  const due = [{ key: "due-plain", word: "plain", dueAt: 1 }];
+  const als = [{ key: "als-tip", alsReviewAt: 3 }];
+  function tone(item) {
+    const id = item.key || item.cardKey;
+    if (id === "old-yellow" || id === "again") return 2;
+    if (id === "green-phrase") return 1;
+    return 0;
+  }
+  assert.deepStrictEqual(rq.buildMustQueue(due, [oldYellow], als, {
+    day: day, record: missedScreen.record, book: { y: oldYellow }, missCount: tone,
+  }), [], "after the missed end screen, due, old yellow, and ALS do not refill");
+
+  const green = { lemmaKey: "g", cardKey: "green-phrase", active: true, lemma: "a lot of", practiceMissAt: T0 + 200 };
+  const book = { y: oldYellow, g: green };
+  assert.deepStrictEqual(rq.buildMustQueue([], [green], [], {
+    day: day, record: missedScreen.record, book: book, missCount: tone,
+  }), [], "a first miss stays green and stays out");
+  const again = { lemmaKey: "a", cardKey: "again", active: true, lemma: "take part in", practiceMissAt: T0 + 300 };
+  book.a = again;
+  const returned = rq.buildMustQueue(due, [oldYellow, green, again], als, {
+    day: day, record: missedScreen.record, book: book, missCount: tone,
+  });
+  assert.deepStrictEqual(returned.map(function (item) { return item.cardKey; }), ["again"],
+    "a later yellow miss re-enters the same day");
+
+  const rebased = rq.retainMustClear(missedScreen.record, open);
+  assert.strictEqual(rebased.cleared, true, "a rebase that omits the new clear puts it back");
+  assert.strictEqual(rebased.clearedAt, T0 + 80);
+  assert.strictEqual(rebased.dismissed, true);
+  const nextDay = rq.retainMustClear(missedScreen.record, { day: next, started: false, dismissed: false });
+  assert.ok(!nextDay.cleared, "the next day does not keep the same-day flag");
+  assert.strictEqual(nextDay.clearedAt, T0 + 80);
+
+  const server = {
+    updatedAt: "2026-11-28T03:00:00.000Z",
+    mustPractice: open,
+    cards: { "zhongkao|0::plain": { correct: 1, wrong: 0, unknown: 0, reps: 1 } },
+  };
+  const answered = {
+    updatedAt: "2026-11-28T03:00:01.000Z",
+    mustPractice: missedScreen.record,
+    cards: server.cards,
+  };
+  const merged = core.reconcile(server, answered, server);
+  assert.strictEqual(merged.mustPractice.cleared, true, "rebasing onto the server keeps the clear just written");
+  assert.strictEqual(merged.mustPractice.clearedAt, T0 + 80);
+
+  const grokGame = fs.readFileSync(path.join(root, "grok/game.js"), "utf8");
+  const confirm = grokGame.slice(grokGame.indexOf("function confirmCorrect"), grokGame.indexOf("function recordCollocationAnswer"));
+  const graded = confirm.slice(confirm.indexOf("schedule(prog"));
+  const lockAt = graded.indexOf("RQ.noteMustRoundEnd(save.mustPractice, todayKey(nowMs), leftNow, nowMs)");
+  const persistAt = graded.indexOf("persist()");
+  const nextAt = graded.indexOf("nextAfterFeedback()");
+  assert.ok(lockAt > 0 && lockAt < persistAt && persistAt < nextAt,
+    "the clear is saved on the last 记住了, before sync can remount home");
+  const refresh = grokGame.slice(grokGame.indexOf("function refreshHomeQueues"), grokGame.indexOf("window.__QM.onSessionReady"));
+  assert.ok(!refresh.includes("noteMustRoundEnd"), "an empty home is not a clear");
+  const synced = grokGame.slice(grokGame.indexOf("applySyncedSave(data, expectedOwner)"), grokGame.indexOf("touchUpdatedAt()"));
+  assert.ok(synced.indexOf("RQ.retainMustClear(save && save.mustPractice, incoming.mustPractice)") < synced.indexOf("save = incoming"),
+    "a sync rebase keeps a clear that the incoming snapshot dropped");
+}

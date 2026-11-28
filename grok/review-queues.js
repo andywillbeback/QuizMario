@@ -26,9 +26,11 @@
  *   The soft gate shows once per calendar day for a signed-in student
  *   while the combined count is at least 1 and they have neither
  *   dismissed nor started 今日必练 that day. A same-day clear hides it.
- *   A real clear is the round that ends on 「今日必练清空了」 because the
- *   rebuilt queue is empty. That stores cleared for today and clearedAt
- *   on the mustPractice row. clearedAt stays across calendar days.
+ *   A real clear is a 今日必练 round whose rebuilt queue is empty. That
+ *   stores cleared for today and clearedAt on the mustPractice row as
+ *   soon as the last answer empties it, even if 「今日必练清空了」 never
+ *   paints. clearedAt stays across calendar days. A rebase keeps the
+ *   newer clear.
  *   Due cards, older wrong-book rows, ALS suggestions, and continuing
  *   streaks do not refill 今日必练 after that time. A wrong answer after
  *   clearedAt can bring that one card back the same day, and it can
@@ -226,6 +228,21 @@
       if (at) next.clearedAt = at;
     }
     return { record: next, cleared: cleared };
+  }
+
+  /**
+   * Keep a clear that one copy has and the other lost. Incoming supplies
+   * the day and the start/dismiss flags. The later clearedAt wins. The
+   * same-day cleared flag stays only when that day is still the row's day.
+   */
+  function retainMustClear(local, incoming) {
+    var next = freshDailyGate(incoming, incoming && incoming.day);
+    var at = Math.max(positiveTime(local && local.clearedAt), positiveTime(next.clearedAt));
+    if (at) next.clearedAt = at;
+    var day = next.day;
+    if (local && local.cleared && String(local.day || "") === day) next.cleared = true;
+    if (incoming && incoming.cleared && String(incoming.day || "") === day) next.cleared = true;
+    return next;
   }
 
   /**
@@ -635,6 +652,7 @@
     freshDailyGate: freshDailyGate,
     markDailyGate: markDailyGate,
     noteMustRoundEnd: noteMustRoundEnd,
+    retainMustClear: retainMustClear,
     shouldShowSoftGate: shouldShowSoftGate,
     homePrimacy: homePrimacy,
     collectDue: collectDue,

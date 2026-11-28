@@ -2559,6 +2559,14 @@
 
     // Frontier only. An early 固定搭配 clear must not open the vocab sets in between.
     if (isLevelClear(currentLevel)) advanceFrontier(currentLevel);
+    // The official 「今日必练清空了」 screen runs later, after a timer, and only
+    // while the play screen is still up. A sync remount can send the student
+    // home before that. Write the clear on this answer, in the same save.
+    if (sessionKind === "must") {
+      const leftNow = mustPracticeItems(nowMs).length;
+      const round = RQ.noteMustRoundEnd(save.mustPractice, todayKey(nowMs), leftNow, nowMs);
+      if (round.cleared) save.mustPractice = round.record;
+    }
     persist();
     updateProgress();
     nextAfterFeedback();
@@ -4199,7 +4207,10 @@
     applySyncedSave(data, expectedOwner) {
       saveAccountOwner(expectedOwner);
       // Rebase acknowledged counters without leaving the current exercise.
-      save = snapshotToSave(data);
+      // A clear written on this page must survive an older snapshot.
+      const incoming = snapshotToSave(data);
+      incoming.mustPractice = RQ.retainMustClear(save && save.mustPractice, incoming.mustPractice);
+      save = incoming;
       // The received snapshot's globals belong to its selected course. Swap
       // them through the existing maps before keeping this page's course.
       save.trackUnlock[save.track] = save.unlockedLevel;
