@@ -14,10 +14,14 @@ if (typeof WebSocket === "undefined") {
  * QuizMario kept breaking in a loop because two questions were answered in
  * more than one place, and no test failed when those answers diverged:
  *
- *   Which screen?  This file drives the root legacy index.html. That page
- *   still opens on the 中考/高考 gate, a head script may send unsigned visitors
- *   to login.html, sync.js may send them again, and root game.js still finishes
- *   boot on the gate. The grok student page resumes a saved 中考/高考/雅思 home;
+ *   Which screen?  This file drives the preserved legacy pages in
+ *   legacy-root/. The test server maps /index.html, /login.html, and
+ *   /teacher.html to those copies so this smoke path still boots the old
+ *   gate. The public Pages files at those names redirect to /grok/ and are
+ *   locked by tests/root-doors.test.js. A head script may send unsigned
+ *   visitors to login.html, sync.js may send them again, and root game.js
+ *   still finishes boot on the gate. The grok student page resumes a saved
+ *   中考/高考/雅思 home;
  *   that landing is tests/exam-track-landing.test.js. The 注册/登录 tab is both
  *   the HTML attributes and auth-page.js mode.
  *
@@ -50,9 +54,9 @@ function read(name) {
 }
 
 function staticGuards() {
-  const login = read("login.html");
+  const login = read("legacy-root/login.html");
   const auth = read("auth-page.js");
-  const index = read("index.html");
+  const index = read("legacy-root/index.html");
   const game = read("game.js");
   const sync = read("sync.js");
 
@@ -204,7 +208,10 @@ function contentType(file) {
 function startServer() {
   const server = http.createServer((req, res) => {
     const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
-    const rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
+    let rel = urlPath === "/" ? "index.html" : urlPath.replace(/^\/+/, "");
+    if (rel === "index.html" || rel === "login.html" || rel === "teacher.html") {
+      rel = "legacy-root/" + rel;
+    }
     const file = path.normalize(path.join(root, rel));
     if (!file.startsWith(root)) {
       res.writeHead(403);

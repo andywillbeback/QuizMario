@@ -52,7 +52,7 @@ jobs:
       - name: Collect static site
         run: |
           mkdir -p _site
-          tar --exclude .git --exclude _site --exclude .github -cf - . | tar -C _site -xf -
+          tar --exclude .git --exclude _site --exclude .github --exclude legacy-root -cf - . | tar -C _site -xf -
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

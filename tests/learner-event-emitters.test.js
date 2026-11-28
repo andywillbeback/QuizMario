@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const game = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
-const login = fs.readFileSync(path.join(__dirname, "../login.html"), "utf8");
+const login = fs.readFileSync(path.join(__dirname, "../legacy-root/login.html"), "utf8");
 
 assert.ok(game.includes("function emitLearnerAnswer"), "answer emitter still exists");
 assert.ok(game.includes("function emitWrongBook"), "wrong-book emitter still exists");

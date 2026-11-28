@@ -164,7 +164,7 @@ assert.strictEqual(srs.evaluateChallenge({
 /* Source still shows the hint line, and the voice paths are the documented ones. */
 const root = path.join(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const index = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 assert.ok(game.includes('hint: '), "training card still renders the hint");
 assert.ok(game.includes("例："), "training card still renders the example");
 assert.ok(index.includes('src="srs-rules.js"'));

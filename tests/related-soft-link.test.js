@@ -63,7 +63,7 @@ function load(file, name) {
   const game = read("grok/game.js");
   const index = read("grok/index.html");
   const rootGame = read("game.js");
-  const rootIndex = read("index.html");
+  const rootIndex = read("legacy-root/index.html");
 
   assert.ok(index.includes('id="card-related"'), "the practice card has a related row");
   assert.ok(index.includes('id="related-peek"'), "tapping a chip opens a peek");

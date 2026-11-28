@@ -55,7 +55,7 @@ assert.strictEqual(tip.practiceReminderLine(-4), "今天还有 0 道今日必练
 assert.strictEqual(tip.STORAGE_KEY, "vocabSpotlight_mustRemind_v1");
 
 const root = path.join(__dirname, "..");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const index = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const self = fs.readFileSync(path.join(root, "practice-reminder.js"), "utf8");
 assert.ok(index.includes('id="must-reminder"'));

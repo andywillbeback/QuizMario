@@ -124,7 +124,7 @@ assert.strictEqual(merge.isBlank({
 }), false, "a finished placement must sync, even when the start set is 1");
 assert.strictEqual(merge.isBlank({ points: 0, unlockedLevel: 1, cards: {}, placement: {} }), true);
 
-const index = read("index.html");
+const index = read("legacy-root/index.html");
 const game = read("game.js");
 assert.ok(index.includes('src="placement.js"'), "placement.js loads");
 assert.ok(index.indexOf('src="placement.js"') < index.indexOf('src="game.js'), "placement.js loads before game.js");

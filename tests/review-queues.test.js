@@ -244,7 +244,7 @@ assert.strictEqual(rq.WRONG_BOOK_GRADUATE, 2);
 
 const root = path.join(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const index = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 assert.ok(index.includes('id="btn-must-practice"'));
 assert.ok(index.includes("今日必练"));
 assert.ok(index.includes('id="must-gate"'));
