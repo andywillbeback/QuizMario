@@ -203,6 +203,9 @@ as $$
 declare
   body jsonb;
 begin
+  if not public.is_teacher() then
+    raise exception 'not_teacher' using errcode = '42501';
+  end if;
   perform pg_advisory_xact_lock(87214401);
   select c.snapshot
     into body
@@ -223,7 +226,7 @@ revoke all on function private.teacher_class_board_payload() from authenticated;
 create or replace function public.teacher_class_board()
 returns jsonb
 language plpgsql
-security invoker
+security definer
 set search_path = public
 set statement_timeout = '20s'
 as $$
@@ -236,7 +239,7 @@ end;
 $$;
 
 comment on function public.teacher_class_board() is
-  'Teacher-only class snapshot: touched cards plus 7 days of practice events and a short per-student timeline. Cached for 60s. Requires app_metadata.role=teacher.';
+  'Teacher-only class snapshot: touched cards plus 7 days of practice events and a short per-student timeline. Cached for 60s. Requires app_metadata.role=teacher. Runs as security definer only after that check so it can read the private cache helper.';
 
 revoke all on function public.teacher_class_board() from public;
 revoke all on function public.teacher_class_board() from anon;
