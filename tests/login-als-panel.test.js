@@ -23,7 +23,7 @@ const banned = [
   "btn-copy-learner-events",
 ];
 
-const login = read("login.html");
+const login = read("legacy-root/login.html");
 const loginScripts = [];
 for (const match of login.matchAll(/<script\s+[^>]*src="([^"]+)"/g)) {
   if (!/^https?:/i.test(match[1])) loginScripts.push(match[1]);
@@ -31,14 +31,14 @@ for (const match of login.matchAll(/<script\s+[^>]*src="([^"]+)"/g)) {
 assert.ok(loginScripts.includes("auth-page.js"), "login still loads auth-page.js");
 assert.ok(!loginScripts.includes("learner-events.js"), "login must not load the ingest script");
 
-for (const name of ["login.html", ...loginScripts]) {
+for (const name of ["legacy-root/login.html", ...loginScripts]) {
   const text = read(name);
   for (const needle of banned) {
     assert.ok(!text.includes(needle), name + " exposes ALS ingest copy to students: " + needle);
   }
 }
 
-const index = read("index.html");
+const index = read("legacy-root/index.html");
 for (const needle of [
   "ALS 学习信号",
   "下载 JSONL",

@@ -69,7 +69,7 @@ function read(name) {
   const index = read("grok/index.html");
   const game = read("grok/game.js");
   const prac = read("grok/practice.js");
-  const rootIndex = read("index.html");
+  const rootIndex = read("legacy-root/index.html");
   const rootGame = read("game.js");
   assert.ok(index.includes('id="answer-input"') && index.includes('id="type-row"'));
   assert.ok(index.includes('id="btn-check-spelling"'));

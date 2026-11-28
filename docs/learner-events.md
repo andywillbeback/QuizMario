@@ -1,5 +1,7 @@
 # QuizMario learner_events → ALS
 
+The official student entrance is the 1st edition at `/grok/`. Root `index.html`, `login.html`, and `teacher.html` redirect there and keep the query string and hash. The 1st edition does not show localhost ALS buttons. A wrong-book row leaves 今日必练 after three consecutive corrects and stays on record as 待观察. Button and `http://127.0.0.1:8501/` details later in this file describe the preserved legacy root pages.
+
 QuizMario emits **signals**. The Anki-lite / SM-2 clock stays in `srs-rules.js` (`due`, `interval`, `reps`). ALS must not schedule cards from these rows.
 
 This is the QuizMario half of the closed loop. ALS already writes its own SQLite `learner_events` and can ingest this JSONL. There is no browser-to-browser sync with the ALS Mac app.

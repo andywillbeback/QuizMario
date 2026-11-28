@@ -298,7 +298,7 @@ function findCard(tracks, id, word) {
 /* Wiring stays in the static app. */
 {
   const game = read("game.js");
-  const index = read("index.html");
+  const index = read("legacy-root/index.html");
   assert.ok(index.includes('id="btn-challenge"') && index.includes("12分钟挑战"));
   assert.ok(index.includes('id="btn-spelling"') && index.includes(">拼写</button>"));
   assert.ok(index.includes('src="sense-id.js"'));

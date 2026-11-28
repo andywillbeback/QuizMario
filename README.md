@@ -2,14 +2,18 @@
 
 剑桥口语考官带练的间隔重复背单词游戏（纯静态站点，可「添加到主屏幕」）。
 
-线上：https://andywillbeback.github.io/QuizMario/ · 教师看板：teacher.html
+官方入口只有聚光单词 · 1st edition：
 
-聚光单词 · 1st edition：https://andywillbeback.github.io/QuizMario/grok/ · 教师图表看板：https://andywillbeback.github.io/QuizMario/grok/teacher.html
+- 学生首页：https://andywillbeback.github.io/QuizMario/grok/
+- 登录：https://andywillbeback.github.io/QuizMario/grok/login.html
+- 教师图表看板：https://andywillbeback.github.io/QuizMario/grok/teacher.html
+
+旧的站点根地址（https://andywillbeback.github.io/QuizMario/ 、`login.html`、`teacher.html`）会转到上面的对应页面，并保留网址里的查询参数和哈希。登录、忘记密码和进度仍走 1st edition 现有账号，不另开一套入口。
 
 - 词库：原版核心 8 组 400 词 · 中考核心 100 · KET(A2) 100 · PET(B1) 100 · 四级基础 100（每组 50 词，新词库均含例句）
 - Anki-lite SRS（Good / Easy）。通关：本组至少 80% 的词条进入复习且间隔 ≥1 天。答错会把那一张退回学习、稍后重问，但不再要求新词 / 到期 / 学习中全部为 0。
 - 今日必练：首页把「今日到期」（已打开的组里 `due <= 现在` 且不是纯新词）和「错词本」收成一条练习。先到期，再补还没出现在到期里的错词。看中文选英文，答完仍走 `schedule()`。到期账本和错词本账本分开存。
-- 错词本：答错（quality 0）或累计 `wrong >= 2` 会自动收录。在今日必练里，这个词连续答对两次后毕业移出；再答错会重新收录。继续闯关里答对不推进毕业。收录写在原存档里，登录后随云同步。
+- 错词本：答错（quality 0）或累计 `wrong >= 2` 会自动收录。在今日必练里，连续答对三次后移出今日任务，待观察；记录保留。再答错会重新收录。继续闯关里答对不推进毕业。收录写在原存档里，登录后随云同步。
 - 错因：选择题答错时，用词条、释义、词性和已有干扰项归进 形近、义近、词性，或 其他/未归类。不调用模型。「不会」不计入。首页和今日必练练完的画面会列出最近这些错因，方便对着同一类再练。
 - 进度叙事：已登录并进入词库首页后，回流条和错因下面有 1–3 句白话。内容来自现有存档：今日必练还剩几道或已经清完、已经通关几组和现在在第几组、这场考试的摸底是否做完，以及最近错因里最多的一类。不新开计分，也不另写口号。
 - 每天第一次进入学生首页时，若已登录且今日必练至少 1 道、当天还没点过「开始」或「稍后」，会问「今天有 N 道到期/错词，先清掉？」。开始才进入练习，稍后只关掉当天的提示。不会自动跳进卡片。
@@ -26,25 +30,27 @@
 
 学生不登录也能玩，进度仍在本机 `localStorage`（`vocabSpotlight_v1`）。登录后，同一邮箱可以在手机和电脑上恢复进度。
 
-站点地址（Auth Site URL）：`https://andywillbeback.github.io/QuizMario/`
+站点地址（Auth Site URL）：`https://andywillbeback.github.io/QuizMario/grok/`
+
+这是 `grok/config.js` 里的 `SITE_URL`。忘记密码和登录回跳留在这个地址。`SUPABASE_URL` 仍是 `https://cmainasvlfdynidabunp.supabase.co`。
 
 ### Andy 需要做的一次性配置
 
 1. 在 [supabase.com](https://supabase.com) 新建一个免费项目。
 2. **Authentication → Providers → Email**：保持 Email 开启。课堂使用建议关掉 **Confirm email**，这样注册后立刻进入游戏。若保持开启，学生必须在**同一浏览器**里点确认邮件（PKCE）。
 3. **Authentication → URL Configuration**
-   - Site URL：`https://andywillbeback.github.io/QuizMario/`
+   - Site URL：`https://andywillbeback.github.io/QuizMario/grok/`
    - Redirect URLs 再加上：
-     - `https://andywillbeback.github.io/QuizMario/`
-     - `https://andywillbeback.github.io/QuizMario/index.html`
-     - `https://andywillbeback.github.io/QuizMario/login.html`
-4. **Project Settings → API**，把两个值贴进仓库根目录的 `config.js`（替换占位符，不要发明假密钥）：
+     - `https://andywillbeback.github.io/QuizMario/grok/`
+     - `https://andywillbeback.github.io/QuizMario/grok/index.html`
+     - `https://andywillbeback.github.io/QuizMario/grok/login.html`
+4. **Project Settings → API** 的 Project URL 和 anon / publishable key 已经写在 `grok/config.js`。`SUPABASE_URL` 保持 `https://cmainasvlfdynidabunp.supabase.co`，`SITE_URL` 保持上面的 1st edition 地址。不要为了旧的根地址改这两个值，也不要发明假密钥：
    - Project URL → `SUPABASE_URL`
    - `anon` `public` 密钥（或新的 publishable key）→ `SUPABASE_ANON_KEY`
    - **不要**把 `service_role` 密钥放进 `config.js` 或网页。anon key 可以公开，行级安全会挡住别人的进度。
 5. 打开 **SQL Editor**，把 `supabase/user_progress.sql` 整段粘贴运行。这会创建 `user_progress`（`user_id`、`save jsonb`、`updated_at`）并打开 RLS：每个登录用户只能读写自己的那一行。
 6. 再运行 `supabase/learner_events.sql`。这张表只收学习信号（答对、答错、错词本收录、今日到期），不保存 SM-2 时钟。详见 `docs/learner-events.md`。
-7. 提交更新后的 `config.js`，等 GitHub Pages 更新。首页「登录 / 同步进度」进入 `login.html`。
+7. 1st edition 读 `grok/config.js`。等 GitHub Pages 更新后，学生从官方首页进入 `grok/login.html`。旧的根地址会转到这里。
 
 本地试玩可以用任意静态服务器打开本目录；没填真实密钥时，登录页会提示未配置，游戏照常可玩。
 
@@ -91,7 +97,7 @@ where lower(email) = 'teacher@example.com';
 
 ## 学习信号（ALS）
 
-间隔重复仍在本机 `srs-rules.js`。登录后，答对、答错、错词本收录、今日到期会写入 Supabase `learner_events`（`source=quizmario`），并留一份本机 JSONL。登录页和首页不显示「ALS 学习信号」。在游戏页控制台调用 `QuizMarioLearnerEvents.download()` 或 `copyJsonl()`，或打开 `?alsDebug=1`，再把 JSONL 交给 ALS：
+间隔重复仍在本机 `srs-rules.js`。登录后，答对、答错、错词本收录、今日到期会写入 Supabase `learner_events`（`source=quizmario`），并留一份本机 JSONL。1st edition 的登录页和首页不显示「ALS 学习信号」，也没有「去 ALS 深练」或「去 ALS 修语法」。在游戏页控制台可以调用 `QuizMarioLearnerEvents.download()` 或 `copyJsonl()`，再把 JSONL 交给 ALS：
 
 ```bash
 .venv/bin/python scripts/ingest_learner_events.py \
@@ -103,4 +109,4 @@ where lower(email) = 'teacher@example.com';
 
 `schema_version` 2 在 JSONL 行上和 `payload` 里加上义项和作答证据（`sense_id`、词性、recognition/production、第一次还是重试、答案是否已露出、真实复习间隔、词库版本、Good/Easy/Again）。没有 `schema_version` 的旧行仍然能解析。Supabase 不新增列。样本：`node tools/sample-learner-event.js`。这是给闭环探针的事件，不是登录页上的同步开关。
 
-错词本里还没做完 ALS 深练的词，登录后的学生首页会显示「N 个错词待 ALS 深练」，今日必练没清空也可以点。按钮打开本机 Streamlit `http://127.0.0.1:8501/`，并在网址里带上这些词的义项。ALS 没开时可以先保存这批错词，交给本机 ALS 读。今日必练练完后的「去 ALS 修语法」仍是旁边的入口，网址同样是 `http://127.0.0.1:8501/`，不带这批错词。只有这台 Mac 上 ALS 已经在跑时才能打开；还没有公开的 ALS 网址。识别间隔仍只由本机 `schedule()` 决定。字段和 ALS 怎么读这批错词见 `docs/learner-events.md`。
+1st edition 学生页面不打开本机 ALS 或 Streamlit。识别间隔仍只由本机 `schedule()` 决定。字段说明见 `docs/learner-events.md`。

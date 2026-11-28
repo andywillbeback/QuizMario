@@ -368,7 +368,7 @@ const mixedBook = openBook.concat([
 }
 
 const root = path.join(__dirname, "..");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const index = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(index.includes('id="home-loop"'));
 assert.ok(index.includes("薄弱点 → 今日必练"));

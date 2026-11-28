@@ -180,7 +180,7 @@ assert.strictEqual(et.classifyMiss({
 }
 
 const root = path.join(__dirname, "..");
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const index = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(index.includes('src="error-types.js"'));
 assert.ok(index.indexOf('src="error-types.js"') < index.indexOf('src="game.js'));

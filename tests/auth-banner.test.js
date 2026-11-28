@@ -28,7 +28,7 @@ const LIVE_URL = "https://cmainasvlfdynidabunp.supabase.co";
 const GROK_PROXY_URL = "https://quizmario-supabase-proxy.juguang-qm.workers.dev";
 
 function staticGuards() {
-  for (const file of ["login.html", "index.html", "grok/login.html", "grok/index.html"]) {
+  for (const file of ["legacy-root/login.html", "legacy-root/index.html", "grok/login.html", "grok/index.html"]) {
     const html = read(file);
     assert.ok(html.includes('src="vendor/supabase.umd.js"'), file + " loads the vendored SDK");
     assert.ok(!html.includes("cdn.jsdelivr.net/npm/@supabase/supabase-js"), file + " still loads supabase from jsDelivr");

@@ -67,7 +67,7 @@ assert.equal((missSrc.match(/requeueSoon\.push/g) || []).length, 1);
 assert.ok(!/queue\.splice/.test(missSrc), "a miss must not also splice the word back into the queue");
 assert.ok(!practice.some((c) => /finished the work|The teacher is coming|She spoke \S+ in front of the class/i.test(c.example_en)));
 
-const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const html = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(html.includes('id="play-chrome"'), "compact play chrome");
 assert.ok(html.includes("连击"), "streak sits on the play bar");

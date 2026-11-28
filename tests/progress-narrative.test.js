@@ -154,7 +154,7 @@ function linesOf(opts) {
   assert.ok(!/太棒了|加油|连击|挑战成功|传奇|Godlike|Unstoppable/.test(text), text);
 }
 
-const index = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const index = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 assert.ok(index.includes('id="today-narrative"'));
 assert.ok(index.includes('id="today-narrative-lines"'));

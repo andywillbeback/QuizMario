@@ -219,7 +219,7 @@ assert.strictEqual(summary.juniorEntries, 1600);
 assert.strictEqual(summary.seniorEntries, 2999);
 assert.ok(summary.newGlosses > 700);
 
-const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const html = fs.readFileSync(path.join(root, "legacy-root/index.html"), "utf8");
 assert.ok(html.includes('id="screen-gate" class="screen active"'), "gate is the landing screen");
 assert.ok(html.includes('id="btn-gate-zhongkao"'), "中考 button");
 assert.ok(html.includes('id="btn-gate-gaokao"'), "高考 button");
