@@ -384,9 +384,10 @@ console.log("review-queues ok");
     [{ key: "als-green", alsReviewAt: 1 }, { key: "als-ok", alsReviewAt: 2 }],
     { day: day, book: intakeBook, missCount: intakeCount }
   );
-  assert.deepStrictEqual(queued.map(function (item) { return item.key || item.cardKey; }), ["due0", "y", "r", "als-ok"]);
-  assert.strictEqual(queued[0].fromDue, true);
-  assert.strictEqual(queued[0].fromWrong, false, "an uncolored due card stays on the due path");
+  assert.deepStrictEqual(queued.map(function (item) { return item.key || item.cardKey; }), ["r", "y", "due0", "als-ok"]);
+  const plainDue = queued.filter(function (item) { return item.key === "due0"; })[0];
+  assert.strictEqual(plainDue.fromDue, true);
+  assert.strictEqual(plainDue.fromWrong, false, "an uncolored due card stays on the due path");
   assert.ok(!queued.some(function (item) { return (item.key || item.cardKey) === "g"; }), "green is not added from the wrong book");
   assert.ok(!queued.some(function (item) { return item.key === "green-due"; }), "a green due card does not enter 今日必练");
   assert.ok(queued.some(function (item) { return item.cardKey === "r" && item.lemma === "be close to"; }));
@@ -534,6 +535,61 @@ console.log("review-queues ok");
 
 {
   const rq = require("../grok/review-queues");
+  const day = "2026-11-28";
+  const redWord = { lemmaKey: "rw", cardKey: "red-word", active: true, lemma: "apple" };
+  const redPhrase = { lemmaKey: "rp", cardKey: "red-phrase", active: true, lemma: "be close to" };
+  const yellowWord = { lemmaKey: "yw", cardKey: "yellow-word", active: true, lemma: "beta" };
+  const yellowPhrase = { lemmaKey: "yp", cardKey: "yellow-phrase", active: true, lemma: "take part in" };
+  const greenWord = { lemmaKey: "gw", cardKey: "green-word", active: true, lemma: "green" };
+  const greenPhrase = { lemmaKey: "gp", cardKey: "green-phrase", active: true, lemma: "a lot of" };
+  const book = {
+    rw: redWord, rp: redPhrase, yw: yellowWord, yp: yellowPhrase, gw: greenWord, gp: greenPhrase,
+  };
+  function misses(item) {
+    const id = item.key || item.cardKey;
+    if (id === "red-word" || id === "red-phrase") return 4;
+    if (id === "yellow-word" || id === "yellow-phrase") return 2;
+    if (id === "green-word" || id === "green-phrase" || id === "green-due") return 1;
+    return 0;
+  }
+  const hold = rq.noteMustDayCorrect({}, "cont-word", day).hold;
+  const queued = rq.buildMustQueue(
+    [
+      { key: "yellow-word", word: "beta", dueAt: 1 },
+      { key: "due-plain", word: "plain", dueAt: 2 },
+      { key: "red-word", word: "apple", dueAt: 3 },
+      { key: "green-due", word: "once", dueAt: 4 },
+    ],
+    [yellowPhrase, greenWord, redPhrase, greenPhrase, redWord, yellowWord],
+    [{ key: "als-tip", word: "als", alsReviewAt: 8 }, { key: "red-word", alsReviewAt: 9 }],
+    {
+      day: day,
+      book: book,
+      hold: hold,
+      continuing: [{ key: "cont-word", word: "advice" }],
+      missCount: misses,
+    }
+  );
+  assert.deepStrictEqual(queued.map(function (item) { return item.key || item.cardKey; }), [
+    "red-word", "red-phrase", "yellow-word", "yellow-phrase", "due-plain", "als-tip", "cont-word",
+  ], "red words and collocations, then yellow, then due, ALS, and continuing");
+  assert.strictEqual(queued.filter(function (item) { return item.key === "red-word"; }).length, 1,
+    "the same card is listed once");
+  assert.strictEqual(queued[0].fromDue, true);
+  assert.strictEqual(queued[0].fromWrong, true);
+  assert.strictEqual(queued[0].fromAls, true);
+  assert.strictEqual(queued[1].lemma, "be close to");
+  assert.strictEqual(queued[2].word, "beta");
+  assert.strictEqual(queued[3].lemma, "take part in");
+  assert.strictEqual(queued[6].fromContinuing, true);
+  assert.ok(!queued.some(function (item) {
+    const id = item.key || item.cardKey;
+    return id === "green-word" || id === "green-phrase" || id === "green-due";
+  }), "green words and collocations stay out");
+}
+
+{
+  const rq = require("../grok/review-queues");
   const srs = require("../grok/srs-rules");
   const core = require("../grok/sync-core");
   const day = "2026-11-28";
@@ -559,24 +615,25 @@ console.log("review-queues ok");
 
   const morning = rq.freshDailyGate(null, day);
   assert.ok(!morning.cleared, "morning-empty is not a clear");
-  assert.deepStrictEqual(ids(queue(morning, day)), ["due-later", "y", "als-later"],
-    "an empty morning still takes the first due, wrong-book, and ALS items");
+  assert.deepStrictEqual(ids(queue(morning, day)), ["y", "due-later", "als-later"],
+    "an empty morning still takes yellow, then uncolored due, then ALS");
   assert.strictEqual(rq.homePrimacy({ count: 3, day: day, record: morning }), "primary");
   assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 3, day: day, record: morning }), true);
 
   const started = rq.markDailyGate(null, day, "start");
   const dismissed = rq.markDailyGate(started, day, "dismiss");
   assert.ok(!started.cleared && !dismissed.cleared, "start and 稍后 do not clear the day");
-  assert.deepStrictEqual(ids(queue(dismissed, day)), ["due-later", "y", "als-later"],
+  assert.deepStrictEqual(ids(queue(dismissed, day)), ["y", "due-later", "als-later"],
     "never having cleared still lets later items enter");
 
-  const leftover = rq.noteMustRoundEnd(dismissed, day, 2);
+  const leftover = rq.noteMustRoundEnd(dismissed, day, 2, T0);
   assert.strictEqual(leftover.cleared, false, "leftover round is not a clear");
   assert.ok(!leftover.record.cleared);
+  assert.ok(!leftover.record.clearedAt, "a leftover round does not start observation");
   assert.strictEqual(leftover.record.started, true);
   assert.strictEqual(leftover.record.dismissed, true);
   assert.ok(!dismissed.cleared, "a leftover round does not rewrite the stored row");
-  assert.deepStrictEqual(ids(queue(leftover.record, day)), ["due-later", "y", "als-later"],
+  assert.deepStrictEqual(ids(queue(leftover.record, day)), ["y", "due-later", "als-later"],
     "items left after a round stay available the same day");
   assert.strictEqual(rq.noteMustRoundEnd(leftover.record, day).cleared, false,
     "a missing remainder is not a clear");
@@ -591,13 +648,16 @@ console.log("review-queues ok");
     missCount: function () { return 0; },
   }).length, 1, "a 1/3 card still stays when the day is not cleared");
 
-  const done = rq.noteMustRoundEnd(leftover.record, day, 0);
+  const clearAt = T0 + 1000;
+  const done = rq.noteMustRoundEnd(leftover.record, day, 0, clearAt);
   assert.strictEqual(done.cleared, true, "an empty round is 今日必练清空了");
   assert.strictEqual(done.record.cleared, true);
+  assert.strictEqual(done.record.clearedAt, clearAt);
   assert.strictEqual(done.record.day, day);
   assert.strictEqual(done.record.started, true, "the clear keeps the rest of today's gate");
   assert.ok(!leftover.record.cleared, "locking the day copies the row");
-  assert.deepStrictEqual(queue(done.record, day), [], "after a clear, due, wrong-book, and ALS stay out");
+  yellow.practiceMissAt = clearAt;
+  assert.deepStrictEqual(queue(done.record, day), [], "after a clear, due, older wrong-book, and ALS stay out");
   assert.deepStrictEqual(rq.buildMustQueue([], [], [], {
     day: day,
     record: done.record,
@@ -605,9 +665,9 @@ console.log("review-queues ok");
     continuing: continuing,
     missCount: function () { return 0; },
   }), [], "after a clear, a same-day continuing streak stays out");
-  assert.strictEqual(rq.homePrimacy({ count: 3, day: day, record: done.record }), "hidden");
+  assert.strictEqual(rq.homePrimacy({ count: 0, day: day, record: done.record }), "hidden");
   assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: 3, day: day, record: done.record }), false,
-    "home and the soft gate stay hidden for the rest of the cleared day");
+    "the soft gate stays hidden for the rest of the cleared day");
   assert.strictEqual(rq.markDailyGate(done.record, day, "start").cleared, true,
     "another start the same day does not lift the clear");
 
@@ -621,41 +681,58 @@ console.log("review-queues ok");
     levelIdx: 0,
     cardKey: "later-miss",
     note: "保留",
-    now: T0,
+    now: clearAt + 5000,
   };
   const noted = rq.touchWrongBook(book, laterEntry, { wrong: 4 }, "miss");
   assert.strictEqual(noted.entered, true, "a miss after the clear still enters 错词本");
+  assert.ok(book[laterEntry.lemmaKey].practiceMissAt > clearAt);
   book[laterEntry.lemmaKey].note = "保留";
-  assert.strictEqual(book[laterEntry.lemmaKey].active, true);
+  const scanEntry = {
+    lemmaKey: "zhongkao::scanned",
+    lemma: "scanned",
+    track: "zhongkao",
+    levelIdx: 0,
+    cardKey: "scanned",
+    now: clearAt + 6000,
+  };
+  const scanned = rq.touchWrongBook(book, scanEntry, { wrong: 4 }, "scan");
+  assert.strictEqual(scanned.entered, true, "a scan can still open a wrong-book row");
+  assert.ok(!book[scanEntry.lemmaKey].practiceMissAt, "a scan is not a new miss");
   const prog = srs.defaultCardProg();
   srs.schedule(prog, 0, T0);
   const before = JSON.parse(JSON.stringify(prog));
-  assert.deepStrictEqual(rq.buildMustQueue(
-    [{ key: "later-miss", word: "later", dueAt: prog.due }],
-    [book[laterEntry.lemmaKey]],
-    [{ key: "als-after", alsReviewAt: 4 }],
-    { day: day, book: book, record: reloaded, missCount: function () { return 4; } }
-  ), [], "the new miss, its due card, and a new ALS suggestion wait until tomorrow");
+  function afterClear(on, record) {
+    return rq.buildMustQueue(
+      due.concat([{ key: "later-miss", word: "later", dueAt: prog.due }, { key: "scanned", word: "scanned", dueAt: prog.due }]),
+      [yellow, book[laterEntry.lemmaKey], book[scanEntry.lemmaKey]],
+      als.concat([{ key: "als-after", alsReviewAt: 4 }]),
+      { day: on, book: book, record: record, missCount: function (item) {
+        const id = item.key || item.cardKey;
+        if (id === "y" || id === "later-miss" || id === "scanned") return 4;
+        return 0;
+      } }
+    );
+  }
+  const sameDay = afterClear(day, reloaded);
+  assert.deepStrictEqual(ids(sameDay), ["later-miss"],
+    "the same day, only the new miss comes back; due, older book rows, and ALS stay out");
+  assert.strictEqual(sameDay[0].fromWrong, true);
   assert.strictEqual(book[laterEntry.lemmaKey].active, true);
   assert.strictEqual(book[laterEntry.lemmaKey].note, "保留", "the clear keeps the wrong-book row");
+  assert.strictEqual(book[scanEntry.lemmaKey].active, true, "the scanned row stays in the book");
   assert.deepStrictEqual(prog, before, "the clear lock does not rewrite SRS");
+  assert.strictEqual(rq.homePrimacy({ count: sameDay.length, day: day, record: reloaded }), "secondary",
+    "a same-day miss is reachable from home without reopening the soft gate");
+  assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: sameDay.length, day: day, record: reloaded }), false);
 
-  const tomorrow = rq.buildMustQueue(
-    due.concat([{ key: "later-miss", word: "later", dueAt: prog.due }]),
-    [yellow, book[laterEntry.lemmaKey]],
-    als,
-    { day: next, book: book, record: reloaded, missCount: function (item) {
-      const id = item.key || item.cardKey;
-      return id === "y" || id === "later-miss" ? 4 : 0;
-    } }
-  );
-  assert.deepStrictEqual(ids(tomorrow), ["due-later", "later-miss", "y", "als-later"],
-    "the next calendar day takes due cards, wrong-book rows, and ALS again");
-  assert.strictEqual(tomorrow.find(function (item) { return item.cardKey === "y"; }).lemma, "yellow");
+  const tomorrow = afterClear(next, reloaded);
+  assert.deepStrictEqual(ids(tomorrow), ["later-miss"],
+    "the next day still takes the miss, and still does not auto-fill due, old wrong-book, or ALS");
   assert.strictEqual(rq.homePrimacy({ count: tomorrow.length, day: next, record: reloaded }), "primary");
   assert.strictEqual(rq.shouldShowSoftGate({ signedIn: true, count: tomorrow.length, day: next, record: reloaded }), true);
   const rolled = rq.markDailyGate(reloaded, next, "start");
-  assert.ok(!rolled.cleared, "the next day starts without yesterday's clear");
+  assert.ok(!rolled.cleared, "the next day drops the same-day clear flag");
+  assert.strictEqual(rolled.clearedAt, clearAt, "the next day still remembers the clear");
   assert.strictEqual(rolled.day, next);
 
   const grokGame = fs.readFileSync(path.join(root, "grok/game.js"), "utf8");
@@ -665,7 +742,7 @@ console.log("review-queues ok");
   );
   const normalize = new Function(normalizeSrc + "\nreturn normalizeMustPractice;")();
   assert.deepStrictEqual(normalize(done.record), {
-    day: day, started: true, dismissed: true, cleared: true,
+    day: day, started: true, dismissed: true, cleared: true, clearedAt: clearAt,
   }, "a saved clear reloads onto the same daily record");
   const openRow = normalize({ day: day, started: false, dismissed: false });
   assert.deepStrictEqual(openRow, { day: day, started: false, dismissed: false });
@@ -682,7 +759,7 @@ console.log("review-queues ok");
     grokGame.indexOf("async function enterExam")
   );
   assert.ok(finishFn.indexOf("const left = mustPracticeItems().length") < finishFn.indexOf("noteMustRoundEnd"));
-  assert.ok(finishFn.includes("RQ.noteMustRoundEnd(save.mustPractice, todayKey(), left)"));
+  assert.ok(finishFn.includes("RQ.noteMustRoundEnd(save.mustPractice, todayKey(), left, Date.now())"));
   assert.ok(finishFn.includes("if (round.cleared)"));
   assert.ok(finishFn.includes("这轮今日必练练完了") && finishFn.includes("今日必练清空了"));
   assert.ok(grokGame.includes("record: save.mustPractice"));
@@ -705,14 +782,17 @@ console.log("review-queues ok");
   const fromOther = core.reconcile(base, newerMiss, clearedSave);
   const fromClearer = core.reconcile(base, clearedSave, newerMiss);
   assert.strictEqual(fromOther.mustPractice.cleared, true, "another device's newer save keeps a clear it did not change");
+  assert.strictEqual(fromOther.mustPractice.clearedAt, clearAt);
   assert.strictEqual(fromClearer.mustPractice.cleared, true);
+  assert.strictEqual(fromClearer.mustPractice.clearedAt, clearAt);
   assert.strictEqual(fromOther.cards["zhongkao|0::later"].wrong, 1, "the other device still keeps the new miss");
   const nextMorning = {
     updatedAt: "2026-11-29T01:00:00.000Z",
-    mustPractice: { day: next, started: false, dismissed: false },
+    mustPractice: rq.freshDailyGate(normalize(done.record), next),
     cards: {},
   };
   const nextSave = core.reconcile(clearedSave, nextMorning, clearedSave);
   assert.strictEqual(nextSave.mustPractice.day, next);
-  assert.ok(!nextSave.mustPractice.cleared, "the next calendar day does not keep yesterday's clear");
+  assert.ok(!nextSave.mustPractice.cleared, "the next calendar day drops the same-day clear flag");
+  assert.strictEqual(nextSave.mustPractice.clearedAt, clearAt, "the clear time still blocks automatic refill");
 }

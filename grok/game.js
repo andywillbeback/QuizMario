@@ -4256,6 +4256,8 @@
       dismissed: !!row.dismissed,
     };
     if (row.cleared) next.cleared = true;
+    const clearedAt = Number(row.clearedAt);
+    if (Number.isFinite(clearedAt) && clearedAt > 0) next.clearedAt = clearedAt;
     return next;
   }
 
@@ -4952,7 +4954,7 @@
     const msg = $("clear-msg");
     if (kind === "must") {
       const left = mustPracticeItems().length;
-      const round = RQ.noteMustRoundEnd(save.mustPractice, todayKey(), left);
+      const round = RQ.noteMustRoundEnd(save.mustPractice, todayKey(), left, Date.now());
       if (round.cleared) {
         save.mustPractice = round.record;
         persist();
