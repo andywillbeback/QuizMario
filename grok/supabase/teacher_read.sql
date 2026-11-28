@@ -245,25 +245,42 @@ grant execute on function private.board_card_touched(jsonb) to authenticated;
 grant execute on function private.board_slim_card(jsonb) to authenticated;
 grant execute on function private.board_slim_payload(jsonb) to authenticated;
 
-create or replace function public.teacher_class_board()
+-- Durable teacher board snapshot: slim 7-day events + 60s cache.
+-- Keeps teacher-board-v2 keys so live grok/teacher.js does not need to change.
+-- Authorization is unchanged: public.teacher_class_board() is security invoker
+-- and still requires JWT app_metadata.role=teacher. statement_timeout stays 20s.
+-- Learner rows are not rewritten. private cache is not exposed to the Data API.
+
+create table if not exists private.teacher_board_cache (
+  slot smallint primary key default 1 check (slot = 1),
+  generated_at timestamptz not null,
+  event_since timestamptz not null,
+  snapshot jsonb not null,
+  snapshot_bytes integer not null,
+  build_ms integer
+);
+
+alter table private.teacher_board_cache enable row level security;
+revoke all on table private.teacher_board_cache from public;
+revoke all on table private.teacher_board_cache from anon;
+revoke all on table private.teacher_board_cache from authenticated;
+
+create or replace function private.build_teacher_board_snapshot()
 returns jsonb
 language plpgsql
-stable
-security invoker
+security definer
 set search_path = public
 set statement_timeout = '20s'
 as $$
 declare
   body jsonb;
+  started timestamptz := clock_timestamp();
+  since_at timestamptz := now() - interval '7 days';
 begin
-  if not public.is_teacher() then
-    raise exception 'not_teacher' using errcode = '42501';
-  end if;
-
   select jsonb_build_object(
     'generated_at', now(),
     'snapshot_version', 'teacher-board-v2',
-    'event_since', now() - interval '14 days',
+    'event_since', since_at,
     'progress', coalesce(progress.rows, '[]'::jsonb),
     'events', coalesce(events.rows, '[]'::jsonb),
     'directory', coalesce(directory.rows, '[]'::jsonb)
@@ -345,22 +362,40 @@ begin
   ) progress
   cross join (
     select jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
-      'learner_id', e.learner_id,
-      'user_id', e.user_id,
-      'event_type', e.event_type,
-      'created_at', e.created_at,
-      'item_id', e.item_id,
-      'headword', e.headword,
-      'evidence_kind', nullif(e.evidence_kind, ''),
-      'task_direction', nullif(e.task_direction, ''),
-      'payload', case
-        when e.event_type in ('vocab.due_review', 'session.start', 'vocab.notebook_add') then null
-        else coalesce(e.payload, '{}'::jsonb)
-      end
+      'learner_id', w.learner_id,
+      'user_id', w.user_id,
+      'event_type', w.event_type,
+      'created_at', w.created_at,
+      'item_id', w.item_id,
+      'headword', w.headword,
+      'evidence_kind', nullif(w.evidence_kind, ''),
+      'task_direction', nullif(w.task_direction, ''),
+      'payload', w.payload
     ))) as rows
-    from public.learner_events e
-    where e.created_at >= now() - interval '14 days'
-      and e.created_at <= now()
+    from (
+      select e.learner_id, e.user_id, e.event_type, e.created_at, e.item_id, e.headword, e.evidence_kind, e.task_direction,
+             case
+               when e.event_type in ('vocab.due_review', 'session.start') then null
+               else coalesce(e.payload, '{}'::jsonb)
+             end as payload
+      from public.learner_events e
+      where e.created_at >= since_at
+        and e.created_at <= now()
+        and e.event_type not in ('vocab.due_review', 'session.start')
+      union
+      select s.learner_id, s.user_id, s.event_type, s.created_at, s.item_id, s.headword, s.evidence_kind, s.task_direction, null::jsonb
+      from (
+        select e.*, row_number() over (
+          partition by coalesce(e.user_id, e.learner_id)
+          order by e.created_at desc
+        ) as rn
+        from public.learner_events e
+        where e.created_at >= since_at
+          and e.created_at <= now()
+          and e.event_type not in ('session.start', 'session.end')
+      ) s
+      where s.rn <= 12
+    ) w
   ) events
   cross join (
     select jsonb_agg(
@@ -372,16 +407,83 @@ begin
     from public.teacher_directory() d
   ) directory;
 
-  return coalesce(body, jsonb_build_object(
+  body := coalesce(body, jsonb_build_object(
+    'generated_at', now(),
+    'snapshot_version', 'teacher-board-v2',
+    'event_since', since_at,
     'progress', '[]'::jsonb,
     'events', '[]'::jsonb,
     'directory', '[]'::jsonb
   ));
+
+  insert into private.teacher_board_cache as c (slot, generated_at, event_since, snapshot, snapshot_bytes, build_ms)
+  values (
+    1,
+    coalesce((body->>'generated_at')::timestamptz, now()),
+    since_at,
+    body,
+    pg_column_size(body),
+    greatest(0, (extract(epoch from (clock_timestamp() - started)) * 1000)::int)
+  )
+  on conflict (slot) do update
+  set generated_at = excluded.generated_at,
+      event_since = excluded.event_since,
+      snapshot = excluded.snapshot,
+      snapshot_bytes = excluded.snapshot_bytes,
+      build_ms = excluded.build_ms;
+
+  return body;
+end;
+$$;
+
+revoke all on function private.build_teacher_board_snapshot() from public;
+revoke all on function private.build_teacher_board_snapshot() from anon;
+revoke all on function private.build_teacher_board_snapshot() from authenticated;
+
+create or replace function private.teacher_class_board_payload()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+set statement_timeout = '20s'
+as $$
+declare
+  body jsonb;
+begin
+  perform pg_advisory_xact_lock(87214401);
+  select c.snapshot
+    into body
+  from private.teacher_board_cache c
+  where c.slot = 1
+    and c.generated_at > now() - interval '60 seconds';
+  if body is not null then
+    return body;
+  end if;
+  return private.build_teacher_board_snapshot();
+end;
+$$;
+
+revoke all on function private.teacher_class_board_payload() from public;
+revoke all on function private.teacher_class_board_payload() from anon;
+revoke all on function private.teacher_class_board_payload() from authenticated;
+
+create or replace function public.teacher_class_board()
+returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+set statement_timeout = '20s'
+as $$
+begin
+  if not public.is_teacher() then
+    raise exception 'not_teacher' using errcode = '42501';
+  end if;
+  return private.teacher_class_board_payload();
 end;
 $$;
 
 comment on function public.teacher_class_board() is
-  'Teacher-only class snapshot: touched cards plus 14 days of slim events. Requires app_metadata.role=teacher. Students get not_teacher.';
+  'Teacher-only class snapshot: touched cards plus 7 days of practice events and a short per-student timeline. Cached for 60s. Requires app_metadata.role=teacher.';
 
 revoke all on function public.teacher_class_board() from public;
 revoke all on function public.teacher_class_board() from anon;
