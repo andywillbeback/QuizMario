@@ -65,8 +65,10 @@ assert.ok(js.includes("每位学员一份 HTML 学情页"), "status after downlo
 assert.ok(!js.includes("请先打开学员报告"), "status does not name a pack index");
 assert.ok(!js.includes("附表"), "status does not mention a spreadsheet");
 assert.ok(html.includes("<th>待复习数量</th>"), "board column is 待复习数量");
+assert.ok(html.includes("<th>累计答题</th>"), "board column is 累计答题");
 assert.ok(!html.includes("已学会"), "teacher page does not say 已学会");
 assert.ok(js.includes('statChip("待复习数量"'), "detail chips include 待复习数量");
+assert.ok(js.includes('statChip("累计答题"'), "detail chips include 累计答题");
 assert.ok(!js.includes('statChip("已学会"'), "detail chips do not say 已学会");
 assert.ok(html.includes('id="board-class"'), "class filter");
 assert.ok(html.includes("未填班级"));
@@ -253,6 +255,9 @@ assert.ok(student.summary.indexOf("3 次练习事件") > 0);
 assert.ok(student.summary.indexOf("小王") === 0);
 assert.ok(student.summary.indexOf("已学会") === -1, "parent summary does not say 已学会");
 assert.ok(student.summary.indexOf("待复习数量 2 个") > 0);
+assert.ok(student.summary.indexOf("累计答题 4 次") > 0);
+assert.strictEqual(student.answersAll, 4);
+assert.strictEqual(student.answers7, 4);
 assert.strictEqual(api.reviewDueCount(student.forget), 2);
 assert.ok(student.summary.indexOf("样本不足") > 0);
 assert.ok(student.summary.indexOf("advice") > 0);
@@ -464,10 +469,12 @@ assert.ok(richSpecs.activity.eventData, "daily answers and practice events both 
 const csv = api.classCsv(rich);
 assert.ok(csv.indexOf("姓名,邮箱,班级,词库") === 0);
 assert.ok(csv.indexOf("待复习数量") > 0);
+assert.ok(csv.indexOf("累计答题") > 0);
 assert.ok(csv.indexOf("已学会") === -1, "class csv does not say 已学会");
 const csvHeaders = csv.split("\n")[0].split(",");
 const csvCells = csv.split("\n")[1].split(",");
 assert.strictEqual(csvCells[csvHeaders.indexOf("待复习数量")], "5");
+assert.strictEqual(csvCells[csvHeaders.indexOf("累计答题")], "5");
 assert.ok(csv.indexOf("小李") > 0);
 assert.ok(csv.indexOf("li***@school.com") > 0);
 assert.ok(csv.indexOf("lihua@school.com") === -1);
@@ -625,6 +632,23 @@ const zeroLearned = api.parentSummary({
 assert.ok(api.parentSummary.toString().indexOf("已学会") === -1);
 assert.ok(zeroLearned.indexOf("已学会") === -1);
 assert.ok(zeroLearned.indexOf("已接触 213 张词条卡，待复习数量 13 个") > 0);
+assert.ok(zeroLearned.indexOf("累计答题 0 次") > 0);
+
+const historySave = {
+  profile: { name: "小史" },
+  cards: {},
+  daily: {
+    "2026-09-01": { c: 10, w: 0, unk: 2 },
+    "2026-10-24": { c: 3, w: 1, unk: 0 },
+  },
+};
+const history = api.buildBoard([{ user_id: "history", updated_at: now.toISOString(), save: historySave }], [], [
+  { user_id: "history", masked_email: "hist@school.com" },
+], now);
+assert.strictEqual(history.students[0].answers7, 4, "7-day window does not include September");
+assert.strictEqual(history.students[0].answersAll, 16, "all-time daily includes days outside the 7-day window");
+assert.ok(history.students[0].summary.indexOf("累计答题 16 次") > 0);
+assert.ok(api.studentReportHtml(history.students[0], "2026-10-24").indexOf("累计答题 16 次") > 0);
 assert.strictEqual(api.reviewDueCount({ due: 10, overdue: 3 }), 13);
 assert.strictEqual(api.reviewDueCount(null), 0);
 

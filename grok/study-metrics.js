@@ -40,7 +40,7 @@
   var MASTERY_LABELS = ["0", "0.5", "1", "2", "3"];
   var DENIED_MESSAGE = "这个账号不是教师，不能打开班级看板。授权只认 app_metadata 里的 role=teacher，不认 user_metadata。";
   var SNAPSHOT_VERSION = "teacher-board-v2";
-  var CALCULATION_VERSION = "teacher-metrics-2026-11-09.ielts1";
+  var CALCULATION_VERSION = "teacher-metrics-2026-11-28.answers1";
 
   function num(v) {
     var n = Number(v);
@@ -285,6 +285,15 @@
   function dailyAnswers(bucket) {
     if (!bucket || typeof bucket !== "object") return 0;
     return num(bucket.c) + num(bucket.w) + num(bucket.unk);
+  }
+
+  /** All-time 答题次数 from save.daily: 答对 + 答错 + 不会. Not the 7-day event window. */
+  function allDailyAnswers(save) {
+    var daily = asObject(save && save.daily);
+    var keys = Object.keys(daily);
+    var total = 0;
+    for (var i = 0; i < keys.length; i++) total += dailyAnswers(daily[keys[i]]);
+    return total;
   }
 
   function round1(value) {
@@ -907,6 +916,7 @@
     else open += "的单词练习（实际词库待核对）";
     open += "；以下为全部词库累计学情，已接触 " + touched + " 张词条卡";
     open += "，待复习数量 " + reviewDueCount(st.forget) + " 个";
+    open += "，累计答题 " + num(st.answersAll) + " 次";
     open += "。";
     var activity;
     if (!st.active7) {
@@ -1308,7 +1318,7 @@
   }
 
   function classCsv(board) {
-    var headers = ["姓名", "邮箱", "班级", "词库", "已练词条卡", "进度指数", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
+    var headers = ["姓名", "邮箱", "班级", "词库", "已练词条卡", "累计答题", "进度指数", "认词", "搭配", "产出", "巩固", "近7日答题", "近7日学习分钟", "待复习数量", "今日到期", "逾期词数", "学习中", "已巩固", "薄弱词", "更新"];
     var lines = [headers.join(",")];
     var students = (board && board.students) || [];
     for (var i = 0; i < students.length; i++) {
@@ -1322,6 +1332,7 @@
         st.cls || "",
         st.trackLabel || "",
         st.touched,
+        num(st.answersAll),
         st.mastery == null ? "" : st.mastery,
         scoreCell(axes.recognition),
         scoreCell(axes.collocation),
@@ -1444,6 +1455,7 @@
       "</style></head><body><h1>" + escHtml(name) + "的学情</h1><p class=\"muted\">账号 " +
       escHtml(st.email || "—") + (st.cls ? " · 班级 " + escHtml(st.cls) : "") + " · 词库 " +
       escHtml(st.trackLabel || "—") + " · 待复习数量 " + reviewDueCount(st.forget) +
+      " · 累计答题 " + num(st.answersAll) + " 次" +
       " · 报告生成 " + escHtml(generated || "") + "</p><p class=\"muted\">" +
       escHtml(reportDataNotes(st)) + "</p><h2>简短评价</h2><p class=\"summary\">" +
       escHtml(st.summary || "") + "</p><div class=\"charts\"><section class=\"chart\"><h2>学情雷达</h2><p class=\"muted\">认词、搭配、产出、巩固。样本少于 " +
@@ -1470,7 +1482,7 @@
 
   function reportDataNotes(st) {
     st = st || {};
-    var notes = ["统计范围：全部词库累计存档及当前加载的事件。已接触按词条卡计数，同词在不同组或词库可能分别计数。"];
+    var notes = ["统计范围：全部词库累计存档及当前加载的事件。已接触按词条卡计数，同词在不同组或词库可能分别计数。累计答题是存档 daily 里答对、答错和「不会」的全部次数，不含拼写和一词多义，也不用近 7 日事件相加。"];
     if (st.trackContext) notes.push("存档中选中的词库：" + st.trackContext.selectedLabel + "（选择本身不证明已经练习）。");
     if (st.trackContext && st.trackContext.breakdown && st.trackContext.breakdown.length) notes.push("词库分布：" + st.trackContext.breakdown.map(function (b) {return b.label + " " + b.cards + " 张卡，待复习 " + b.due + " 张";}).join("；") + "。");
     if (st.sourceUpdatedAt) notes.push("存档更新时间：" + formatWhen(st.sourceUpdatedAt) + "。");
@@ -1999,6 +2011,7 @@
       answerEvents7: answerEvents7,
       wrongBookEvents7: wrongBookEvents7,
       answers7: sum(daily7),
+      answersAll: allDailyAnswers(save),
       timeline: timeline,
       masteryBins: masteryBins,
       modes: studentModeMix(evs, save),
@@ -2054,7 +2067,7 @@
     var progress = (payload && payload.progress) || [];
     var events = (payload && payload.events) || [];
     var students = (board && board.students) || [];
-    var fields = ["touched","learned","mastery","weakCount","weak","abilities","forget","answers7","practice7","answerEvents7","wrongBookEvents7","inventory","trackContext"];
+    var fields = ["touched","learned","mastery","weakCount","weak","abilities","forget","answers7","answersAll","practice7","answerEvents7","wrongBookEvents7","inventory","trackContext"];
     progress.forEach(function (source) {
       var row = students.filter(function (s) {return s.id === source.user_id;})[0];
       if (!row) {errors.push("missing-student");return;}
