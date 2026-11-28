@@ -862,6 +862,65 @@
     showLogin();
   }
 
+  function selectedStudent() {
+    var students = (board && board.students) || [];
+    for (var i = 0; i < students.length; i++) {
+      if (students[i].id === selectedId) return students[i];
+    }
+    return null;
+  }
+
+  /** Phone widths hide the roster, including its class picker and download button. */
+  function rosterHidden() {
+    var roster = $("roster");
+    if (!roster || !root.getComputedStyle) return false;
+    return root.getComputedStyle(roster).display === "none";
+  }
+
+  function downloadSavedMessage(pack) {
+    return "已下载「" + pack.label + "」学情（" + pack.count +
+      " 名学员）。解压后是每位学员一份 HTML 学情页，直接给家长打开。";
+  }
+
+  function anchorDownload(blob, filename) {
+    var link = document.createElement("a");
+    var url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+  }
+
+  /**
+   * iOS Safari and Android Chrome can save a File through the system share sheet.
+   * Desktop keeps the anchor download. Share is only attempted when the engine
+   * reports that this exact file can be shared.
+   */
+  function mobileShareTarget() {
+    var nav = root.navigator;
+    if (!nav || typeof nav.share !== "function" || typeof nav.canShare !== "function") return false;
+    if (!(nav.maxTouchPoints > 1)) return false;
+    var ua = String(nav.userAgent || "");
+    if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
+    return /Macintosh/.test(ua);
+  }
+
+  function shareZip(blob, filename) {
+    var nav = root.navigator;
+    var types = ["application/zip", "application/octet-stream"];
+    for (var i = 0; i < types.length; i++) {
+      var file = null;
+      try { file = new File([blob], filename, { type: types[i] }); } catch (err) { file = null; }
+      if (!file) continue;
+      try {
+        if (nav.canShare({ files: [file] })) return nav.share({ files: [file], title: filename });
+      } catch (err) {}
+    }
+    return null;
+  }
+
   function downloadClass(key) {
     var status = $("cloud-status");
     if (!board) {
@@ -880,18 +939,28 @@
         return;
       }
       var blob = new Blob([pack.bytes], { type: "application/zip" });
-      var link = document.createElement("a");
-      var url = URL.createObjectURL(blob);
-      link.href = url;
-      link.download = pack.filename;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
-      if (status) {
-        status.textContent = "已下载「" + pack.label + "」学情（" + pack.count +
-          " 名学员）。解压后是每位学员一份 HTML 学情页，直接给家长打开。";
+      var shared = mobileShareTarget() ? shareZip(blob, pack.filename) : null;
+      if (shared && typeof shared.then === "function") {
+        if (status) {
+          status.textContent = "正在打开系统分享，请保存「" + pack.label + "」学情（" + pack.count +
+            " 名学员）。解压后是每位学员一份 HTML 学情页，直接给家长打开。";
+        }
+        shared.then(function () {
+          var el = $("cloud-status");
+          if (el) el.textContent = downloadSavedMessage(pack);
+        }, function (err) {
+          var el = $("cloud-status");
+          if (err && err.name === "AbortError") {
+            if (el) el.textContent = "已取消保存。";
+            return;
+          }
+          try { anchorDownload(blob, pack.filename); } catch (e) {}
+          if (el) el.textContent = "系统分享没有完成，已改用浏览器下载。「" + pack.label + "」是每位学员一份 HTML 学情页。";
+        });
+        return;
       }
+      anchorDownload(blob, pack.filename);
+      if (status) status.textContent = downloadSavedMessage(pack);
     } catch (err) {
       if (status) status.textContent = "下载失败。请再试一次。";
     }
@@ -932,6 +1001,13 @@
       if (selectedClass !== null) {
         downloadClass(selectedClass);
         return;
+      }
+      if (rosterHidden()) {
+        var openStudent = selectedStudent();
+        if (openStudent) {
+          downloadClass(api.classKeyOf(openStudent));
+          return;
+        }
       }
       var groups = board.groups || [];
       if (groups.length === 1) {
@@ -991,6 +1067,18 @@
       if (!section) return;
       section.classList.add("is-open");
       btn.hidden = true;
+    });
+  }
+  var exportStudent = $("btn-export-student-class");
+  if (exportStudent) {
+    exportStudent.addEventListener("click", function () {
+      var st = selectedStudent();
+      var status = $("cloud-status");
+      if (!st) {
+        if (status) status.textContent = "请先点开一名学员。";
+        return;
+      }
+      downloadClass(api.classKeyOf(st));
     });
   }
   var back = $("btn-detail-back");
