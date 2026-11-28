@@ -4250,11 +4250,15 @@
 
   function normalizeMustPractice(raw) {
     const row = raw && typeof raw === "object" ? raw : {};
-    return {
+    const next = {
       day: typeof row.day === "string" ? row.day : "",
       started: !!row.started,
       dismissed: !!row.dismissed,
     };
+    if (row.cleared) next.cleared = true;
+    const clearedAt = Number(row.clearedAt);
+    if (Number.isFinite(clearedAt) && clearedAt > 0) next.clearedAt = clearedAt;
+    return next;
   }
 
   function ensureWrongBook() {
@@ -4610,6 +4614,7 @@
       hold: save.mustDayHold,
       continuing: continuingMustItems(day),
       tone: practiceTone,
+      record: save.mustPractice,
     });
   }
 
@@ -4949,6 +4954,11 @@
     const msg = $("clear-msg");
     if (kind === "must") {
       const left = mustPracticeItems().length;
+      const round = RQ.noteMustRoundEnd(save.mustPractice, todayKey(), left, Date.now());
+      if (round.cleared) {
+        save.mustPractice = round.record;
+        persist();
+      }
       if (title) title.textContent = left ? "这轮今日必练练完了" : "今日必练清空了";
       if (msg) msg.textContent = left
         ? ("还剩 " + left + " 道。连续答对三次后移出今日任务，待观察；记录保留。")

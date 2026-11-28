@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const source = fs.readFileSync(__dirname + '/../grok/sw.js', 'utf8');
-const currentCache = 'juguang-shell-20261127-stay3';
+const currentCache = 'juguang-shell-20261128-clear2';
 const currentBanks = 'juguang-banks-20261113-set1';
 function deferred() { let resolve; const promise = new Promise(yes => { resolve = yes; }); return { promise, resolve }; }
 async function drain() { for (let i = 0; i < 20; i++) await Promise.resolve(); await new Promise(setImmediate); }
@@ -27,7 +27,7 @@ function harness(fetcher, hit, options = {}) {
     clearTimeout: number => timers.delete(number),
     fetch(request, init) { requests.push({ request, init }); return fetcher(request, init); },
     caches: { open: async () => cache,
-      keys: async () => ['juguang-shell-v1', 'juguang-shell-20261110-localsave', 'juguang-shell-20261125-misscolor1', 'juguang-shell-20261127-today3', 'juguang-banks-20261111-loginfix', currentCache, currentBanks, 'another-app-cache'],
+      keys: async () => ['juguang-shell-v1', 'juguang-shell-20261110-localsave', 'juguang-shell-20261125-misscolor1', 'juguang-shell-20261127-today3', 'juguang-shell-20261127-stay3', 'juguang-shell-20261128-clear1', 'juguang-banks-20261111-loginfix', currentCache, currentBanks, 'another-app-cache'],
       delete: async name => deleted.push(name) },
     self: { location: { origin: 'https://example.test' }, addEventListener: (name, fn) => { events[name] = fn; },
       skipWaiting: async () => {}, clients: { claim: async () => {} } },
@@ -119,7 +119,7 @@ test('without cache the worker does not invent a page at the warm-cache deadline
 test('activation removes old shell versions but preserves current and unrelated caches', async () => {
   const h = harness(async () => response('ok')); let pending;
   h.events.activate({ waitUntil(value) { pending = value; } }); await pending;
-  assert.deepEqual(h.deleted, ['juguang-shell-v1', 'juguang-shell-20261110-localsave', 'juguang-shell-20261125-misscolor1', 'juguang-shell-20261127-today3', 'juguang-banks-20261111-loginfix']);
+  assert.deepEqual(h.deleted, ['juguang-shell-v1', 'juguang-shell-20261110-localsave', 'juguang-shell-20261125-misscolor1', 'juguang-shell-20261127-today3', 'juguang-shell-20261127-stay3', 'juguang-shell-20261128-clear1', 'juguang-banks-20261111-loginfix']);
 });
 
 test('auth callbacks, private requests, scripts and legacy bank paths are never intercepted', () => {

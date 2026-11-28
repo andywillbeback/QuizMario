@@ -17,12 +17,24 @@
  *   due is still today; a later calendar day can take that due card again.
  *   Storage stays split: SM-2 due is still collectDue; the book is still
  *   touchWrongBook / noteWrongBookCorrect.
+ *   Order: red, then yellow, for words and 搭配 alike. Uncolored due
+ *   cards, ALS suggestions, and same-day 1/3–2/3 continuing cards follow.
+ *   Green stays out. One card is listed once.
  *   Home primacy: count >= 1 and not started today → "primary";
  *   count >= 1 and started today → "secondary"; count 0 → "hidden".
  *   Dismissing the daily soft gate does not count as starting.
  *   The soft gate shows once per calendar day for a signed-in student
  *   while the combined count is at least 1 and they have neither
- *   dismissed nor started 今日必练 that day.
+ *   dismissed nor started 今日必练 that day. A same-day clear hides it.
+ *   A real clear is the round that ends on 「今日必练清空了」 because the
+ *   rebuilt queue is empty. That stores cleared for today and clearedAt
+ *   on the mustPractice row. clearedAt stays across calendar days.
+ *   Due cards, older wrong-book rows, ALS suggestions, and continuing
+ *   streaks do not refill 今日必练 after that time. A wrong answer after
+ *   clearedAt can bring that one card back the same day, and it can
+ *   still come back on a later day. A leftover round does not set the
+ *   clear. An empty queue before any clear does not either. The wrong
+ *   book and SM-2 scheduling stay; rows are not deleted.
  *
  * 继续闯关
  *   Always "latest" (the frontier group, English → meaning). Due and
@@ -166,18 +178,30 @@
     return mergePracticeQueue(dueItems, wrongItems).length;
   }
 
-  /** Today's gate row. A different calendar day clears started and dismissed. */
+  function positiveTime(value) {
+    var n = Number(value);
+    return isFinite(n) && n > 0 ? n : 0;
+  }
+
+  /**
+   * Today's gate row. A different calendar day drops started, dismissed,
+   * and the same-day clear. clearedAt is the last real clear and stays
+   * across days. Both are omitted unless set, so a save that never
+   * cleared does not write false or zero over another device.
+   */
   function freshDailyGate(record, day) {
     var row = record && typeof record === "object" ? record : {};
     var today = String(day || "");
-    if (row.day !== today) {
-      return { day: today, started: false, dismissed: false };
-    }
-    return {
+    var same = row.day === today;
+    var next = {
       day: today,
-      started: !!row.started,
-      dismissed: !!row.dismissed,
+      started: same && !!row.started,
+      dismissed: same && !!row.dismissed,
     };
+    var since = positiveTime(row.clearedAt);
+    if (since) next.clearedAt = since;
+    if (same && row.cleared) next.cleared = true;
+    return next;
   }
 
   function markDailyGate(record, day, action) {
@@ -188,22 +212,42 @@
   }
 
   /**
+   * End of one 今日必练 round. remaining is the rebuilt queue length.
+   * 0 is 「今日必练清空了」 and records clearedAt from now.
+   * A positive remainder is 「这轮今日必练练完了」 and does not lock.
+   * Call this only after a round. An empty queue before any round is not a clear.
+   */
+  function noteMustRoundEnd(record, day, remaining, now) {
+    var next = freshDailyGate(record, day);
+    var cleared = remaining === 0;
+    if (cleared) {
+      next.cleared = true;
+      var at = positiveTime(now);
+      if (at) next.clearedAt = at;
+    }
+    return { record: next, cleared: cleared };
+  }
+
+  /**
    * Soft gate: signed in, combined count >= 1, and this calendar day has
-   * neither a dismiss (稍后) nor a start (开始 / 今日必练). Not a redirect.
+   * neither a dismiss (稍后) nor a start (开始 / 今日必练). A same-day
+   * clear hides it too. Not a redirect.
    */
   function shouldShowSoftGate(opts) {
     opts = opts || {};
     if (!opts.signedIn) return false;
     if ((Number(opts.count) || 0) < 1) return false;
     var row = freshDailyGate(opts.record, opts.day);
-    if (row.started || row.dismissed) return false;
+    if (row.cleared || row.started || row.dismissed) return false;
     return true;
   }
 
   /**
    * primary: 今日必练 is the first, more prominent home button.
    * secondary: still listed, after the student has started the queue today.
-   * hidden: nothing to review. Dismiss alone does not demote the button.
+   * hidden: the queue is empty. Dismiss alone does not demote the button.
+   * A same-day clear hides the button only while the count is still 0.
+   * A miss after that clear can make the count non-zero again.
    */
   function homePrimacy(opts) {
     opts = opts || {};
@@ -299,6 +343,7 @@
       row.streak = 0;
       row.priority = wrong;
       row.lastMissAt = entry.now || Date.now();
+      row.practiceMissAt = row.lastMissAt;
       return { entered: created || wasInactive, row: row };
     }
     if (wrong < 2) return { entered: false, row: row || null };
@@ -454,10 +499,39 @@
    * same-day hold is omitted from every slot, including a short SM-2 due.
    * opts.continuing re-adds same-day unheld streaks of 1 or 2 that are no
    * longer SM-2 due. They leave only when held becomes true at 3 correct.
+   * After a real clear, opts.record.clearedAt closes automatic intake.
+   * A card comes back only when its wrong-book row has practiceMissAt
+   * after that time. Due, older book rows, and ALS do not.
+   * Red due and wrong-book cards are ordered before yellow, then the rest.
    */
+  function practicedMissAfter(book, item, cutoff) {
+    var row = bookRowFor(book, item);
+    var at = row && positiveTime(row.practiceMissAt);
+    return !!(row && row.active && !row.watching && at > cutoff);
+  }
+
+  /** Red, then yellow, for words and 搭配. ALS-only and continuing cards stay last. */
+  function mustPriorityBand(item, tone) {
+    if ((item.fromDue || item.fromWrong) && tone === "red") return 0;
+    if ((item.fromDue || item.fromWrong) && tone === "yellow") return 1;
+    return 2;
+  }
+
+  function orderMustBands(items, opts) {
+    var bands = [[], [], []];
+    var i;
+    for (i = 0; i < items.length; i++) {
+      bands[mustPriorityBand(items[i], toneFor(items[i], opts))].push(items[i]);
+    }
+    return bands[0].concat(bands[1], bands[2]);
+  }
+
   function buildMustQueue(dueItems, wrongItems, alsItems, opts) {
     opts = opts || {};
     var day = opts.day == null ? "" : String(opts.day);
+    var gate = freshDailyGate(opts.record, day);
+    var cutoff = gate.clearedAt || 0;
+    if (gate.cleared && !cutoff) return [];
     var book = opts.book || {};
     var due = [];
     var wrong = [];
@@ -468,6 +542,7 @@
       if (heldFromMustToday(bookRowFor(book, item), day)) return true;
       if (mustDayHeld(opts.hold, itemId(item), day)) return true;
       if (toneFor(item, opts) === "green") return true;
+      if (cutoff && !practicedMissAfter(book, item, cutoff)) return true;
       return false;
     }
     var list = dueItems || [];
@@ -506,7 +581,7 @@
       kept.fromContinuing = true;
       merged.push(kept);
     }
-    return merged;
+    return orderMustBands(merged, opts);
   }
 
   /** One correct rating inside 错词本 or 今日必练. Three in a row leaves today's queue and keeps the row. */
@@ -559,6 +634,7 @@
     combinedCount: combinedCount,
     freshDailyGate: freshDailyGate,
     markDailyGate: markDailyGate,
+    noteMustRoundEnd: noteMustRoundEnd,
     shouldShowSoftGate: shouldShowSoftGate,
     homePrimacy: homePrimacy,
     collectDue: collectDue,
