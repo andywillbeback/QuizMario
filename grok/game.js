@@ -3431,6 +3431,7 @@
       '<div class="stats-grid">' +
       "<div><b>" + st.streak + "</b>连续打卡(天)</div>" +
       "<div><b>" + st.learned + "</b>已学会词数</div>" +
+      "<div><b>" + st.answers + "</b>累计答题(次)</div>" +
       "<div><b>" + pct(st.acc7) + "</b>近7天正确率</div>" +
       "<div><b>" + pct(st.ret7) + "</b>近7天复习保持率</div>" +
       "</div>" + svg +
