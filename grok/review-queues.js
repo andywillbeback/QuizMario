@@ -23,6 +23,16 @@
  *   The soft gate shows once per calendar day for a signed-in student
  *   while the combined count is at least 1 and they have neither
  *   dismissed nor started 今日必练 that day.
+ *   A real clear is the round that ends on 「今日必练清空了」 because the
+ *   rebuilt queue is empty. That sets cleared on today's mustPractice
+ *   row. Until the next calendar day the queue admits nothing else:
+ *   newly due cards, red/yellow wrong-book rows, ALS suggestions, and
+ *   same-day continuing streaks stay out, so home and the soft gate
+ *   stay hidden. A leftover round (「这轮今日必练练完了」) does not set
+ *   cleared, and an empty queue before any clear does not either, so
+ *   the first due card or miss of the day can still enter. The flag is
+ *   stored only when true. The wrong book and SM-2 scheduling are
+ *   unchanged; a miss after the clear is kept and can enter tomorrow.
  *
  * 继续闯关
  *   Always "latest" (the frontier group, English → meaning). Due and
@@ -166,18 +176,22 @@
     return mergePracticeQueue(dueItems, wrongItems).length;
   }
 
-  /** Today's gate row. A different calendar day clears started and dismissed. */
+  /**
+   * Today's gate row. A different calendar day drops started, dismissed,
+   * and the same-day clear. cleared is omitted unless it is true, so a
+   * save that never cleared does not write false over another device.
+   */
   function freshDailyGate(record, day) {
     var row = record && typeof record === "object" ? record : {};
     var today = String(day || "");
-    if (row.day !== today) {
-      return { day: today, started: false, dismissed: false };
-    }
-    return {
+    var same = row.day === today;
+    var next = {
       day: today,
-      started: !!row.started,
-      dismissed: !!row.dismissed,
+      started: same && !!row.started,
+      dismissed: same && !!row.dismissed,
     };
+    if (same && row.cleared) next.cleared = true;
+    return next;
   }
 
   function markDailyGate(record, day, action) {
@@ -188,28 +202,43 @@
   }
 
   /**
+   * End of one 今日必练 round. remaining is the rebuilt queue length.
+   * 0 is 「今日必练清空了」 and locks intake for this calendar day.
+   * A positive remainder is 「这轮今日必练练完了」 and does not lock.
+   * Call this only after a round. An empty queue before any round is not a clear.
+   */
+  function noteMustRoundEnd(record, day, remaining) {
+    var next = freshDailyGate(record, day);
+    var cleared = remaining === 0;
+    if (cleared) next.cleared = true;
+    return { record: next, cleared: cleared };
+  }
+
+  /**
    * Soft gate: signed in, combined count >= 1, and this calendar day has
-   * neither a dismiss (稍后) nor a start (开始 / 今日必练). Not a redirect.
+   * neither a dismiss (稍后) nor a start (开始 / 今日必练). A same-day
+   * clear hides it too. Not a redirect.
    */
   function shouldShowSoftGate(opts) {
     opts = opts || {};
     if (!opts.signedIn) return false;
     if ((Number(opts.count) || 0) < 1) return false;
     var row = freshDailyGate(opts.record, opts.day);
-    if (row.started || row.dismissed) return false;
+    if (row.cleared || row.started || row.dismissed) return false;
     return true;
   }
 
   /**
    * primary: 今日必练 is the first, more prominent home button.
    * secondary: still listed, after the student has started the queue today.
-   * hidden: nothing to review. Dismiss alone does not demote the button.
+   * hidden: nothing to review, or today was already cleared. Dismiss alone does not demote the button.
    */
   function homePrimacy(opts) {
     opts = opts || {};
+    var row = freshDailyGate(opts.record, opts.day);
+    if (row.cleared) return "hidden";
     var count = Number(opts.count) || 0;
     if (count < 1) return "hidden";
-    var row = freshDailyGate(opts.record, opts.day);
     if (row.started) return "secondary";
     return "primary";
   }
@@ -454,10 +483,13 @@
    * same-day hold is omitted from every slot, including a short SM-2 due.
    * opts.continuing re-adds same-day unheld streaks of 1 or 2 that are no
    * longer SM-2 due. They leave only when held becomes true at 3 correct.
+   * opts.record is today's mustPractice row. After a real clear that row
+   * keeps every intake path empty until the next calendar day.
    */
   function buildMustQueue(dueItems, wrongItems, alsItems, opts) {
     opts = opts || {};
     var day = opts.day == null ? "" : String(opts.day);
+    if (freshDailyGate(opts.record, day).cleared) return [];
     var book = opts.book || {};
     var due = [];
     var wrong = [];
@@ -559,6 +591,7 @@
     combinedCount: combinedCount,
     freshDailyGate: freshDailyGate,
     markDailyGate: markDailyGate,
+    noteMustRoundEnd: noteMustRoundEnd,
     shouldShowSoftGate: shouldShowSoftGate,
     homePrimacy: homePrimacy,
     collectDue: collectDue,
