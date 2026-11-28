@@ -50,14 +50,14 @@ create policy user_progress_select_teacher
   on public.user_progress
   for select
   to authenticated
-  using (public.is_teacher());
+  using ((select public.is_teacher()));
 
 drop policy if exists learner_events_select_teacher on public.learner_events;
 create policy learner_events_select_teacher
   on public.learner_events
   for select
   to authenticated
-  using (public.is_teacher());
+  using ((select public.is_teacher()));
 
 -- Masked emails for the board. auth.users is not readable by the browser role.
 -- The lookup runs as the function owner in an unexposed schema. The public
@@ -344,41 +344,20 @@ begin
     ) slim on true
   ) progress
   cross join (
-    select jsonb_agg(
-      jsonb_build_object(
-        'event_id', e.event_id,
-        'item_id', e.item_id,
-        'learner_id', e.learner_id,
-        'user_id', e.user_id,
-        'event_type', e.event_type,
-        'created_at', e.created_at,
-        'headword', e.headword,
-        'evidence_kind', e.evidence_kind,
-        'task_direction', e.task_direction,
-        'payload', case
-          when e.payload is null or jsonb_typeof(e.payload) <> 'object' then '{}'::jsonb
-          else jsonb_strip_nulls(jsonb_build_object(
-            'track', e.payload->'track',
-            'gloss_zh', e.payload->'gloss_zh',
-            'headword', e.payload->'headword',
-            'lemma', e.payload->'lemma',
-            'task_direction', e.payload->'task_direction',
-            'task_direction_detail', e.payload->'task_direction_detail',
-            'evidence_kind', e.payload->'evidence_kind',
-            'duration_ms', e.payload->'duration_ms',
-            'duration_sec', e.payload->'duration_sec',
-            'review_interval_days', e.payload->'review_interval_days',
-            'item_kind', e.payload->'item_kind',
-            'card_kind', e.payload->'card_kind',
-            'kind', e.payload->'kind',
-            'task', e.payload->'task',
-            'related', e.payload->'related',
-            'collocation', e.payload->'collocation',
-            'scene', e.payload->'scene'
-          ))
-        end
-      ) order by e.created_at, e.event_id
-    ) as rows
+    select jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+      'learner_id', e.learner_id,
+      'user_id', e.user_id,
+      'event_type', e.event_type,
+      'created_at', e.created_at,
+      'item_id', e.item_id,
+      'headword', e.headword,
+      'evidence_kind', nullif(e.evidence_kind, ''),
+      'task_direction', nullif(e.task_direction, ''),
+      'payload', case
+        when e.event_type in ('vocab.due_review', 'session.start', 'vocab.notebook_add') then null
+        else coalesce(e.payload, '{}'::jsonb)
+      end
+    ))) as rows
     from public.learner_events e
     where e.created_at >= now() - interval '14 days'
       and e.created_at <= now()
@@ -407,6 +386,7 @@ comment on function public.teacher_class_board() is
 revoke all on function public.teacher_class_board() from public;
 revoke all on function public.teacher_class_board() from anon;
 grant execute on function public.teacher_class_board() to authenticated;
+
 
 -- Re-assert the seeded teacher accounts. Idempotent.
 update auth.users
